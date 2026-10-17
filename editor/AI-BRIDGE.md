@@ -119,7 +119,11 @@ files) aren't part of that undo: to take them back, send the old values again. N
 - POST /api/model/edit {"id": ..., "recolour": [[hsl, hsl or "#rrggbb"]], "scale": [x%, y%, z%], "lift": units, "saveAs": "new"|"over"}.
 
 ## Animations
-- GET /api/anims?from=&limit=&skeletal=1, GET /api/anim?id=... (frames and delays, which NPCs and items use it).
+- GET /api/anims?from=&limit=&skeletal=1&category=&q= lists animations with a name and a category (Weapons, Player,
+  Emotes, Skilling, NPCs, Pets, Objects, Graphics, Unknown). q searches names ("whip", "graardor attack") or ids.
+  GET /api/anim?id=... (name, category, everything that uses it, frames and delays, which NPCs and items use it).
+- POST /api/anim/name {"id": 1658, "name": "..."} renames one ("name": null puts the worked-out name back).
+- POST /api/anims/rebuild-names works every name out again from the cache and the server folder (about 30 s).
 - GET /api/anim/render?id=...&on=npc:ID|model:ID|item:ID&frame=N|frames=4 (PNG).
 - POST /api/anim/timing {"id": ..., "delays": [...]} or {"allDelays": 4}; "frames": ["group:file", ...] reorders/copies frames.
   Skeletal (2021+) animations keep their timing in their keyframes and can't be changed this way.
