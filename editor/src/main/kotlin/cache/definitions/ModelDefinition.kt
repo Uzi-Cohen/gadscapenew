@@ -42,6 +42,9 @@ open class ModelDefinition {
     var textureRenderTypes: ByteArray? = null
     var vertexSkins: IntArray? = null
     var faceSkins: IntArray? = null
+    /** Skeletal (2021+) animation weights per vertex: bone indices and their weights (0-255). */
+    var animayaGroups: Array<IntArray?>? = null
+    var animayaScales: Array<IntArray?>? = null
     var priority: Byte = 0
 
     @Transient
@@ -604,6 +607,8 @@ open class ModelDefinition {
             if (anyCoord) m.textureCoordinates = ByteArray(m.faceCount)
             if (anyVSkin) m.vertexSkins = IntArray(m.vertexCount)
             if (anyFSkin) m.faceSkins = IntArray(m.faceCount)
+            val anyMaya = models.any { it.animayaGroups != null }
+            if (anyMaya) { m.animayaGroups = arrayOfNulls(m.vertexCount); m.animayaScales = arrayOfNulls(m.vertexCount) }
             if (m.textureTriangleCount > 0) {
                 m.textureTriangleVertexIndices1 = ShortArray(m.textureTriangleCount)
                 m.textureTriangleVertexIndices2 = ShortArray(m.textureTriangleCount)
@@ -618,6 +623,7 @@ open class ModelDefinition {
                     m.vertexPositionsY[v + i] = src.vertexPositionsY[i]
                     m.vertexPositionsZ[v + i] = src.vertexPositionsZ[i]
                     if (anyVSkin) m.vertexSkins!![v + i] = src.vertexSkins?.get(i) ?: 0
+                    if (anyMaya) { m.animayaGroups!![v + i] = src.animayaGroups?.get(i); m.animayaScales!![v + i] = src.animayaScales?.get(i) }
                 }
                 for (i in 0 until src.faceCount) {
                     m.faceVertexIndices1!![f + i] = src.faceVertexIndices1!![i] + v

@@ -229,6 +229,8 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     private val timingList = ListView(timing).apply { prefHeight = 220.0 }
     private var seq: SeqDef? = null
     private var animator: Animator? = null
+    /** Set while a skeletal (2021+) animation is shown: one frame per client cycle, no frame list to edit. */
+    private var skelClip: AnimClip? = null
     private var playing = true
     private var frameIndex = 0
     private var frameTime = 0.0
@@ -237,8 +239,15 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         override fun handle(now: Long) {
             val dt = if (lastNanos == 0L) 0.0 else (now - lastNanos) / 1e9
             lastNanos = now
-            if (!playing || timing.isEmpty()) return
             val mult = when (speed.selectionModel.selectedIndex) { 0 -> 0.25; 1 -> 0.5; 3 -> 2.0; else -> 1.0 }
+            skelClip?.let { c ->
+                if (!playing || c.frameCount == 0) return
+                frameTime += dt * 50 * mult
+                val steps = frameTime.toInt()
+                if (steps > 0) { frameTime -= steps; showFrame((frameIndex + steps) % c.frameCount) }
+                return
+            }
+            if (!playing || timing.isEmpty()) return
             frameTime += dt * 50 * mult // the game counts frame delays in 20 ms cycles
             val d = timing[frameIndex.coerceIn(0, timing.size - 1)][1].coerceAtLeast(1)
             if (frameTime >= d) { frameTime -= d; showFrame((frameIndex + 1) % timing.size) }
@@ -246,6 +255,15 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     }
 
     private fun showFrame(i: Int) {
+        skelClip?.let { c ->
+            if (c.frameCount == 0) return
+            frameIndex = Math.floorMod(i, c.frameCount)
+            val (x, y, z) = c.pose(frameIndex)
+            animView.update(x, y, z)
+            if (frameSlider.value.toInt() != frameIndex) frameSlider.value = frameIndex.toDouble()
+            frameLabel.text = "frame ${frameIndex + 1} / ${c.frameCount}   (skeletal, 1 cycle = 20 ms each)"
+            return
+        }
         if (timing.isEmpty()) return
         frameIndex = i.coerceIn(0, timing.size - 1)
         val a = animator ?: return
@@ -263,6 +281,19 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         onModel.text.trim().toIntOrNull()?.let { return (try { models?.get(it) } catch (e: Exception) { null }) to "model $it" }
         val user = npcs.values.firstOrNull { (it.standAnim == s.id || it.walkAnim == s.id) && it.models.isNotEmpty() }
         if (user != null) return npcModel(user.id) to "NPC ${user.id} ${user.name} (it uses this animation)"
+        if (s.skeletalModel != -1) {
+            // an NPC whose own skeletal stand/walk uses the same skeleton
+            val a = anims ?: return null to "nothing (type an NPC or model id)"
+            val skel = try { SkeletalAnims.load(a, s)?.skeletonId } catch (e: Exception) { null }
+            if (skel != null) for (n in npcs.values) {
+                if (n.standAnim < 0 || n.models.isEmpty()) continue
+                val ns = try { a.seq(n.standAnim) } catch (e: Exception) { null } ?: continue
+                if (ns.skeletalModel == -1) continue
+                val nskel = try { SkeletalAnims.load(a, ns)?.skeletonId } catch (e: Exception) { null }
+                if (nskel == skel) return npcModel(n.id) to "NPC ${n.id} ${n.name} (same skeleton)"
+            }
+            return null to "nothing (type an NPC or model id)"
+        }
         // find an NPC whose model fits this animation's skeleton
         val skel = s.frameIds.firstOrNull()?.let { anims?.frame(it)?.skeleton?.id }
         if (skel != null) {
@@ -291,8 +322,21 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         val s = try { anims?.seq(id) } catch (e: Exception) { null }
         seq = s
         timing.clear()
+        skelClip = null
         if (s == null) { animInfo.text = "Animation $id couldn't be read."; return }
-        if (s.skeletalModel != -1) { animInfo.text = "Animation $id uses the new skeletal format (2021+ animations), which this editor can't play."; animView.show(null); return }
+        if (s.skeletalModel != -1) {
+            val (md, onWhat) = previewModel(s)
+            animView.show(md)
+            if (md == null) { animInfo.text = "Animation $id is skeletal (2021+). Type an NPC or model id to show it on."; return }
+            val (clip, note) = AnimPlayback.clipFor(md, s.id, anims ?: return)
+            skelClip = clip
+            frameSlider.max = ((clip?.frameCount ?: 1) - 1).coerceAtLeast(0).toDouble()
+            animInfo.text = "Animation $id: skeletal (2021+), ${clip?.frameCount ?: 0} cycles (${(clip?.frameCount ?: 0) * 20} ms). Showing it on $onWhat. " +
+                    (if (note.isNotEmpty()) "$note " else "") + "Its timing is in its keyframes, so there's no frame list to edit."
+            frameIndex = 0; frameTime = 0.0
+            showFrame(0)
+            return
+        }
         for (i in s.frameIds.indices) timing.add(intArrayOf(s.frameIds[i], s.delays[i]))
         val (md, onWhat) = previewModel(s)
         animator = md?.let { Animator(it.vertexPositionsX.clone(), it.vertexPositionsY.clone(), it.vertexPositionsZ.clone(), it.vertexSkins) }

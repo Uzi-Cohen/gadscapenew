@@ -14,6 +14,11 @@ class SeqDef(val id: Int, val raw: ByteArray) {
     var chatFrameIds: IntArray? = null
     /** Uses the newer skeletal format (opcode 14), which this editor can't play. */
     var skeletalModel = -1
+    /** Skeletal length: frames run 0 until (end - start), one client cycle each (opcode 16). */
+    var skeletalStart = 0
+    var skeletalEnd = 0
+    /** Bones the animation drives when it plays over a walk/stand (opcode 17), or null. */
+    var skeletalMasks: BooleanArray? = null
     var loopOffset = -1
     var maxLoops = 99
     var priority = 5
@@ -29,18 +34,21 @@ class SeqDef(val id: Int, val raw: ByteArray) {
     /** Length in game ticks of 20 ms (client cycles). */
     val lengthCycles get() = delays.sum()
 
-    override fun toString() = "$id" + if (skeletalModel != -1) "  (skeletal)" else "  ($frameCount frames)"
+    override fun toString() = "$id" + if (skeletalModel != -1) "  (skeletal, ${skeletalEnd - skeletalStart} cycles)" else "  ($frameCount frames)"
 
     /** The same definition with new frames/delays; every other setting byte-for-byte as it was. */
-    fun encode(newFrames: IntArray, newDelays: IntArray, newChatFrames: IntArray? = chatFrameIds): ByteArray {
+    fun encode(newFrames: IntArray, newDelays: IntArray, newChatFrames: IntArray? = chatFrameIds, newSkeletal: Int = skeletalModel): ByteArray {
         require(newFrames.size == newDelays.size) { "every frame needs a delay" }
-        require(newFrames.size in 1..65535) { "an animation needs 1 to 65535 frames" }
+        require(newFrames.size in 1..65535 || (newFrames.isEmpty() && skeletalModel != -1)) { "an animation needs 1 to 65535 frames" }
         val out = ByteArrayOutputStream()
         fun u16(v: Int) { out.write(v shr 8); out.write(v) }
         var wroteFrames = false
         var wroteChat = false
-        fun frames() {
-            if (wroteFrames) return; wroteFrames = true
+        fun frames(hadIt: Boolean = false) {
+            if (wroteFrames) return
+            // skeletal animations keep an empty frame list where they had one
+            if (newFrames.isEmpty() && !hadIt) return
+            wroteFrames = true
             out.write(1); u16(newFrames.size)
             for (d in newDelays) u16(d)
             for (f in newFrames) u16(f and 0xFFFF)
@@ -54,8 +62,9 @@ class SeqDef(val id: Int, val raw: ByteArray) {
         }
         for ((op, s, e) in parts) {
             when (op) {
-                1 -> frames()
+                1 -> frames(true)
                 12 -> chat()
+                14 -> { out.write(14); u16(newSkeletal ushr 16); u16(newSkeletal and 0xFFFF) }
                 else -> out.write(raw, s, e - s)
             }
         }
@@ -101,8 +110,8 @@ class SeqDef(val id: Int, val raw: ByteArray) {
                         13 -> { val n = u8(); repeat(n) { u24() } }
                         14 -> { d.skeletalModel = (u16() shl 16) or u16() }
                         15 -> { val n = u16(); repeat(n) { u16(); u24() } }
-                        16 -> { u16(); u16() }
-                        17 -> { val n = u8(); p += n }
+                        16 -> { d.skeletalStart = u16(); d.skeletalEnd = u16() }
+                        17 -> { val n = u8(); val m = BooleanArray(256); repeat(n) { m[u8()] = true }; d.skeletalMasks = m }
                         else -> { d.readOk = false; return d }
                     }
                     d.parts.add(Triple(op, start, p))
@@ -259,4 +268,9 @@ class AnimCache(private val lib: CacheLibrary) {
     }
 
     fun frame(frameId: Int): Frame? = frames(frameId ushr 16)?.get(frameId and 0xFFFF)
+
+    /** A skeletal animation's keyframe set (index 0, like frames, but starting with a version byte). */
+    fun keyframeData(group: Int, file: Int): ByteArray? = lib.data(0, group, file).also { lib.index(0).unCache() }
+
+    fun skeletonData(id: Int): ByteArray? = lib.data(1, id, 0)
 }

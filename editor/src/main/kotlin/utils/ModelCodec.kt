@@ -38,6 +38,8 @@ object ModelCodec {
      */
     fun encodeOld(md: ModelDefinition): EncodeResult {
         val warnings = ArrayList<String>()
+        if (md.animayaGroups?.any { it != null && it.isNotEmpty() } == true)
+            warnings.add("This model had skeletal (2021+) animation weights, which the old format can't hold: skeletal animations won't move the saved copy (classic ones still do).")
         val vc = md.vertexCount
         val fc = md.faceCount
         require(vc in 1..65535 && fc in 1..65535) { "the model is empty or too big ($vc vertices, $fc faces)" }

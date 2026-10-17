@@ -107,6 +107,13 @@ object CacheEdits {
                 put("seq/$id.dat", raw)
                 manifest.append("seq ").append(id).append('\n')
                 (seq.frameIds.toList() + (seq.chatFrameIds?.toList() ?: emptyList())).forEach { groups.add(it ushr 16) }
+                // a skeletal animation's keyframe set: index 0 too, skeleton id after a version byte
+                if (seq.skeletalModel != -1) {
+                    val g = seq.skeletalModel ushr 16; val f = seq.skeletalModel and 0xFFFF
+                    val b = src.data(0, g, f)
+                    if (b != null && b.size >= 3) { put("keyframes/$g/$f.dat", b); skels.add(((b[1].toInt() and 255) shl 8) or (b[2].toInt() and 255)) }
+                    src.index(0).unCache()
+                }
             }
             for (g in groups) {
                 val arch = src.index(0).archive(g) ?: continue
@@ -132,6 +139,7 @@ object CacheEdits {
      */
     fun importBundle(zipFile: File, replaceSeq: Int?): ImportResult {
         val seqs = HashMap<Int, ByteArray>(); val frames = HashMap<Int, HashMap<Int, ByteArray>>(); val skels = HashMap<Int, ByteArray>()
+        val keyframes = HashMap<Int, HashMap<Int, ByteArray>>()
         ZipInputStream(zipFile.inputStream()).use { zip ->
             while (true) {
                 val e = zip.nextEntry ?: break
@@ -144,6 +152,10 @@ object CacheEdits {
                         if (g != null && f != null) frames.getOrPut(g) { HashMap() }[f] = bytes
                     }
                     parts.size == 2 && parts[0] == "skeletons" -> parts[1].removeSuffix(".dat").toIntOrNull()?.let { skels[it] = bytes }
+                    parts.size == 3 && parts[0] == "keyframes" -> {
+                        val g = parts[1].toIntOrNull(); val f = parts[2].removeSuffix(".dat").toIntOrNull()
+                        if (g != null && f != null) keyframes.getOrPut(g) { HashMap() }[f] = bytes
+                    }
                 }
             }
         }
@@ -176,6 +188,15 @@ object CacheEdits {
                 for ((f, b) in patched) lib.put(0, nextGroup, f, b)
                 groupMap[g] = nextGroup; nextGroup++
             }
+            // keyframe sets (skeletal animations): one file each; a new group unless it's already here byte for byte
+            val keyMap = HashMap<Int, Int>() // old (group << 16 | file) -> new
+            for ((g, files) in keyframes) for ((f, b) in files) {
+                val s = ((b[1].toInt() and 255) shl 8) or (b[2].toInt() and 255)
+                val to = skelMap[s] ?: s
+                val patched = if (to == s) b else b.clone().also { c -> c[1] = (to shr 8).toByte(); c[2] = to.toByte() }
+                if (lib.data(0, g, f)?.contentEquals(patched) == true) { keyMap[(g shl 16) or f] = (g shl 16) or f; continue }
+                lib.put(0, nextGroup, 0, patched); keyMap[(g shl 16) or f] = nextGroup shl 16; nextGroup++
+            }
             // sequences
             val added = ArrayList<Int>()
             var nextSeq = (lib.index(2).archive(12)?.fileIds()?.max() ?: -1) + 1
@@ -183,14 +204,15 @@ object CacheEdits {
                 val seq = SeqDef.decode(id, raw)
                 if (!seq.readOk) { notes.add("Animation $id has settings this editor doesn't know; it was copied as it is."); }
                 fun remap(f: Int) = ((groupMap[f ushr 16] ?: (f ushr 16)) shl 16) or (f and 0xFFFF)
-                val bytes = if (seq.readOk && seq.frameIds.isNotEmpty())
-                    seq.encode(seq.frameIds.map(::remap).toIntArray(), seq.delays, seq.chatFrameIds?.map(::remap)?.toIntArray()) else raw
+                val bytes = if (seq.readOk && (seq.frameIds.isNotEmpty() || seq.skeletalModel != -1))
+                    seq.encode(seq.frameIds.map(::remap).toIntArray(), seq.delays, seq.chatFrameIds?.map(::remap)?.toIntArray(),
+                        keyMap[seq.skeletalModel] ?: seq.skeletalModel) else raw
                 val target = replaceSeq ?: nextSeq++
                 lib.put(2, 12, target, bytes)
                 added.add(target)
             }
             lib.index(0).update(); lib.index(1).update(); lib.index(2).update()
-            val newGroups = groupMap.count { it.key != it.value }
+            val newGroups = groupMap.count { it.key != it.value } + keyMap.count { it.key != it.value }
             ImportResult("Imported ${added.size} animation(s) as id ${added.joinToString(", ")}" +
                     (if (newGroups > 0) ", with $newGroups new frame set(s)" else "") + ". " + notes.joinToString(" "), added)
         }

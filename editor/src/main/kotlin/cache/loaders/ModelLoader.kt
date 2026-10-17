@@ -771,8 +771,8 @@ class ModelLoader @Inject constructor(
             def.textureCoordinates = ByteArray(var10)
         }
         if (var18 == 1) {
-//            def.animayaGroups = arrayOfNulls<IntArray>(var9)
-//            def.animayaScales = arrayOfNulls<IntArray>(var9)
+            def.animayaGroups = arrayOfNulls<IntArray>(var9)
+            def.animayaScales = arrayOfNulls<IntArray>(var9)
         }
         def.faceColors = ShortArray(var10)
         if (var11 > 0) {
@@ -823,16 +823,16 @@ class ModelLoader @Inject constructor(
             var51 = 0
             while (var51 < var9) {
                 var52 = var6.readUnsignedByte()
-//                def.animayaGroups.get(var51) = IntArray(var52)
-//                def.animayaScales.get(var51) = IntArray(var52)
+                val groups = IntArray(var52)
+                val scales = IntArray(var52)
                 var53 = 0
                 while (var53 < var52) {
-                    var6.readUnsignedByte()
-                    var6.readUnsignedByte()
-//                    def.animayaGroups.get(var51).get(var53) = var6.readUnsignedByte()
-//                    def.animayaScales.get(var51).get(var53) = var6.readUnsignedByte()
+                    groups[var53] = var6.readUnsignedByte()
+                    scales[var53] = var6.readUnsignedByte()
                     ++var53
                 }
+                def.animayaGroups!![var51] = groups
+                def.animayaScales!![var51] = scales
                 ++var51
             }
         }
@@ -1030,8 +1030,8 @@ class ModelLoader @Inject constructor(
             def.faceSkins = IntArray(var10)
         }
         if (var17 == 1) {
-//            def.animayaGroups = arrayOfNulls<IntArray>(var9)
-//            def.animayaScales = arrayOfNulls<IntArray>(var9)
+            def.animayaGroups = arrayOfNulls<IntArray>(var9)
+            def.animayaScales = arrayOfNulls<IntArray>(var9)
         }
         def.faceColors = ShortArray(var10)
         var4.position(var23.toInt())
@@ -1077,16 +1077,16 @@ class ModelLoader @Inject constructor(
             var40 = 0
             while (var40 < var9) {
                 var41 = var8.readUnsignedByte()
-//                def.animayaGroups.get(var40) = IntArray(var41)
-//                def.animayaScales.get(var40) = IntArray(var41)
+                val groups = IntArray(var41)
+                val scales = IntArray(var41)
                 var42 = 0
                 while (var42 < var41) {
-                    var8.readUnsignedByte()
-                    var8.readUnsignedByte()
-//                    def.animayaGroups.get(var40).get(var42) = var8.readUnsignedByte()
-//                    def.animayaScales.get(var40).get(var42) = var8.readUnsignedByte()
+                    groups[var42] = var8.readUnsignedByte()
+                    scales[var42] = var8.readUnsignedByte()
                     ++var42
                 }
+                def.animayaGroups!![var40] = groups
+                def.animayaScales!![var40] = scales
                 ++var40
             }
         }
