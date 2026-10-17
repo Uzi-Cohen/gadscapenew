@@ -408,7 +408,7 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     private fun askText(q: String, def: String): String? = TextInputDialog(def).apply { title = "Models and animations"; headerText = null; contentText = q; initOwner(stage) }.showAndWait().orElse(null)
     private fun askNumber(q: String, def: String): Double? = askText(q, def)?.trim()?.toDoubleOrNull()
 
-    private val itemsTab = ItemsTab(stage, { lib }, { models }, { currentId }, { say(it) }, { reopen(); refreshModelIds() })
+    private val itemsTab = ItemsTab(stage, { lib }, { models }, { anims }, { currentId }, { say(it) }, { reopen(); refreshModelIds() })
     private var tabs: TabPane? = null
 
     fun show(tab: Int = 0) {

@@ -17,6 +17,7 @@ class Deployer(private val log: (String) -> Unit) {
     private val remoteCache = cfg.deployRemoteCache!!.trimEnd('/')
     private val service = cfg.deployService!!
     private val sudo = if (user == "root") "" else "sudo -n "
+    private val remoteData = cfg.deployRemoteData!!.trimEnd('/')
 
     private fun sshOpts(portFlag: String): List<String> {
         val opts = mutableListOf("-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new",
@@ -211,7 +212,7 @@ class Deployer(private val log: (String) -> Unit) {
 
     /**
      * Compile just the shops module on this PC and copy the classes of the edited shops into a folder
-     * laid out like the jar (com/near_reality/plugins/shops/...). Returns that folder, or null.
+     * laid out like the jar (com/gadscape/plugins/shops/...). Returns that folder, or null.
      */
     fun buildShopClasses(serverDirGuess: File): File? {
         val pending = pendingShops()
@@ -225,7 +226,7 @@ class Deployer(private val log: (String) -> Unit) {
         val allRoots = (roots + deep).distinct()
         fun resolve(e: String): File? = File(e).takeIf { it.isAbsolute && it.isFile }
             ?: allRoots.asSequence().map { File(it, e) }.firstOrNull { it.isFile }
-            ?: allRoots.asSequence().map { File(it, "$SHOPS_PATH/$e") }.firstOrNull { it.isFile }
+            ?: allRoots.asSequence().map { File(it, "${ServerSource.shopsPath(it)}/$e") }.firstOrNull { it.isFile }
         val missing = pending.filter { resolve(it) == null }
         // kept, not thrown away: they may turn up when the right folder is picked
         if (missing.isNotEmpty()) log("Can't find ${missing.size} edited file(s) on this PC: ${missing.joinToString(", ")} (looked in ${allRoots.joinToString { it.path }})")
@@ -320,7 +321,7 @@ print('PATCHED replaced=%d added=%d' % (dropped, len(repl)))
 
     /** Upload the shop .kt files into the server's source tree (for servers that build themselves on start). */
     private fun shopSources(serverDir: File): List<File> =
-        File(serverDir, SHOPS_PATH).listFiles { f -> f.extension == "kt" }?.toList() ?: emptyList()
+        File(serverDir, ServerSource.shopsPath(serverDir)).listFiles { f -> f.extension == "kt" }?.toList() ?: emptyList()
 
     /**
      * One upload, one restart: the map (cache-out) and/or a new server jar.
@@ -345,7 +346,7 @@ print('PATCHED replaced=%d added=%d' % (dropped, len(repl)))
         if (shopFiles.isNotEmpty()) log("Shops to send: ${shopFiles.joinToString(", ") { it.name }}")
         if (remoteJar != null) log("The server runs $remoteJar: only the edited shop classes inside it will be swapped.")
         if (sourceRoot != null) log("The server builds itself from $sourceRoot: your ${shopFiles.size} shop files go into its source, then it restarts and rebuilds.")
-        val remoteShops = sourceRoot?.takeIf { shopFiles.isNotEmpty() }?.let { "$it/$SHOPS_PATH" }
+        val remoteShops = sourceRoot?.takeIf { shopFiles.isNotEmpty() }?.let { "$it/${ServerSource.shopsPath(serverDir)}" }
 
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
         val staging = "/tmp/gadscape-deploy-$stamp"
@@ -409,6 +410,67 @@ print('PATCHED replaced=%d added=%d' % (dropped, len(repl)))
         return ok
     }
 
+    // ---------------- server data (item stats, special attacks) ----------------
+
+    /**
+     * Sends the server data files saved in the editor (data/items/ItemDefinitions.json, special-attacks.json) to the
+     * live server's data folder, and the exported cache too when [withCache]. The live files are backed up first and
+     * the server is restarted once.
+     */
+    fun deployServerData(serverDir: File, withCache: Boolean): Boolean {
+        val rels = ServerItems.pending().toList()
+        val files = rels.map { it to File(ServerItems.dataDir(serverDir), it) }.filter { it.second.isFile }
+        val cacheFiles = if (withCache) GadTools.exportCacheDir.listFiles()?.filter { it.isFile && it.name.startsWith("main_file_cache") }?.sortedBy { it.name } ?: emptyList() else emptyList()
+        if (withCache && cacheFiles.none { it.name == "main_file_cache.dat2" }) { log("No exported cache in ${GadTools.exportCacheDir.path}. Save first."); return false }
+        if (files.isEmpty() && cacheFiles.isEmpty()) { log("No item stats waiting to be sent (save them in the Items tab first)."); return false }
+        val stamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
+        val staging = "/tmp/gadscape-deploy-$stamp"
+        val backup = "${remoteCache}-backups/$stamp"
+        if (ssh("mkdir -p $staging/data && ${sudo}test -d $remoteData && echo found-data" +
+                    (if (withCache) " && ${sudo}test -f $remoteCache/main_file_cache.dat2 && echo found-live-cache" else "")) != 0) {
+            log("Could not reach the server, or $remoteData isn't there (set deployRemoteData in the Settings file). Stopping.")
+            return false
+        }
+        log("Uploading ${files.size + cacheFiles.size} file(s)...")
+        for ((rel, f) in files) {
+            val dir = rel.substringBeforeLast('/', "")
+            if (ssh("mkdir -p $staging/data/$dir") != 0 || exec(listOf("scp") + sshOpts("-P") + listOf(f.absolutePath, "$user@$host:$staging/data/$rel")) != 0) {
+                log("Upload failed. The live server was not touched."); ssh("rm -rf $staging"); return false
+            }
+        }
+        if (cacheFiles.isNotEmpty() && exec(listOf("scp") + sshOpts("-P") + cacheFiles.map { it.absolutePath } + listOf("$user@$host:$staging/")) != 0) {
+            log("Upload failed. The live server was not touched."); ssh("rm -rf $staging"); return false
+        }
+        val steps = mutableListOf("set -e", "${sudo}mkdir -p $backup/data", "echo $remoteData | ${sudo}tee $backup/data-path.txt >/dev/null")
+        for ((rel, _) in files) {
+            val dir = rel.substringBeforeLast('/', "")
+            steps.add("${sudo}mkdir -p $backup/data/$dir")
+            steps.add("if [ -f $remoteData/$rel ]; then ${sudo}cp -p $remoteData/$rel $backup/data/$rel; fi")
+        }
+        if (withCache) steps.add("${sudo}cp -p $remoteCache/main_file_cache.* $backup/")
+        steps.add("${sudo}systemctl stop $service")
+        for ((rel, _) in files) {
+            steps.add("${sudo}mkdir -p $remoteData/${rel.substringBeforeLast('/', "")}")
+            steps.add("${sudo}cp -f $staging/data/$rel $remoteData/$rel")
+        }
+        if (withCache) steps.add("${sudo}cp -f $staging/main_file_cache.* $remoteCache/")
+        steps.addAll(listOf("${sudo}systemctl start $service", "rm -rf $staging",
+            "ls -1dt ${remoteCache}-backups/*/ 2>/dev/null | tail -n +6 | xargs -r ${sudo}rm -rf",
+            "sleep 5", "${sudo}systemctl is-active $service"))
+        log("Swapping ${rels.joinToString(", ")}${if (withCache) " + cache" else ""} and restarting $service...")
+        val ok = ssh(steps.joinToString(" && ")) == 0
+        log(if (ok) "Done. Previous version saved in $backup (Rollback restores it)." else "Swap failed. If the server is down, run Rollback.")
+        if (ok) ServerItems.clearPending()
+        lastBackup = backup
+        return ok
+    }
+
+    /** Copies a file from the live server's data folder (e.g. items/ItemDefinitions.json) to [to]. */
+    fun fetchServerData(rel: String, to: File): Boolean {
+        to.parentFile.mkdirs()
+        return exec(listOf("scp") + sshOpts("-P") + listOf("$user@$host:$remoteData/$rel", to.absolutePath)) == 0
+    }
+
     fun rollback(): Boolean {
         val target = lastBackup
         val pick = target ?: "\$(ls -1dt ${remoteCache}-backups/*/ | head -n 1)"
@@ -420,6 +482,7 @@ print('PATCHED replaced=%d added=%d' % (dropped, len(repl)))
             "if [ -f \$B/main_file_cache.dat2 ]; then ${sudo}cp -f \$B/main_file_cache.* $remoteCache/; fi",
             "if [ -f \$B/server.jar ]; then ${sudo}cp -f \$B/server.jar \$(cat \$B/jar-path.txt); fi",
             "if [ -d \$B/shops ]; then ${sudo}cp -f \$B/shops/*.kt \$(cat \$B/shops-path.txt)/; fi",
+            "if [ -d \$B/data ]; then ${sudo}cp -rf \$B/data/. \$(cat \$B/data-path.txt)/; fi",
             "${sudo}systemctl start $service",
             "sleep 3",
             "${sudo}systemctl is-active $service",
@@ -444,7 +507,6 @@ print('PATCHED replaced=%d added=%d' % (dropped, len(repl)))
             val now = (if (f.isFile) f.readLines() else emptyList()).map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
             now.add(name); f.writeText(now.joinToString("\n"))
         }
-        const val SHOPS_PATH = "plugins/shops/src/main/kotlin/com/near_reality/plugins/shops"
         @Volatile var lastBackup: String? = null
         fun settingsFile(): File = GadTools.templatesPath
     }

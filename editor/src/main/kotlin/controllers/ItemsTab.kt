@@ -15,6 +15,7 @@ import javafx.scene.paint.Color
 import javafx.scene.shape.Rectangle
 import javafx.stage.Stage
 import utils.*
+import models.Configuration as EditorConfiguration
 import java.io.File
 
 /**
@@ -25,6 +26,7 @@ class ItemsTab(
     private val stage: Stage,
     private val lib: () -> CacheLibrary?,
     private val models: () -> ModelLoader?,
+    private val anims: () -> AnimCache?,
     private val modelsTabId: () -> Int,
     private val say: (String) -> Unit,
     private val reopen: () -> Unit
@@ -40,6 +42,8 @@ class ItemsTab(
     private val viewMode = ComboBox(FXCollections.observableArrayList(
         "Inventory model", "Worn (male)", "Worn (female)", "On a player (male)", "On a player (female)")).apply { selectionModel.select(0) }
     private val info = Label("Pick an item on the left, or make a new one.").apply { isWrapText = true }
+    private val playback = AnimPlayback(view)
+    private val playInfo = Label("")
 
     /** The item as it is in the cache, and the copy being edited. */
     private var original: ItemFull? = null
@@ -68,6 +72,29 @@ class ItemsTab(
     private val pKey = num(6); private val pVal = TextField().apply { prefColumnCount = 10 }
     private val noteInfo = Label("")
 
+    // ---------- server stats (data/items/ItemDefinitions.json, special-attacks.json, enum 906) ----------
+    private val configuration = EditorConfiguration()
+    private var serverDefs: ServerItems.Definitions? = null
+    private var serverDefsDir: File? = null
+    private var stats: ServerItemStats? = null
+    private val statsInfo = Label("").apply { isWrapText = true }
+    private val sWeight = num(6)
+    private val sSlot = ComboBox(FXCollections.observableArrayList(ItemFull.SLOTS.entries.map { it.value }))
+    private val sType = ComboBox(FXCollections.observableArrayList(ServerItems.EQUIPMENT_TYPES))
+    private val sBonus = Array(14) { num(4) }
+    private val sReqSkill = Array(3) { ComboBox(FXCollections.observableArrayList(listOf("-") + ServerItems.SKILLS)) }
+    private val sReqLevel = Array(3) { num(3) }
+    private val sIsWeapon = CheckBox("Weapon")
+    private val sTwoHanded = CheckBox("Two-handed")
+    private val sSpeed = num(3)
+    private val sCategory = ComboBox(FXCollections.observableArrayList(ServerItems.WEAPON_CATEGORIES.mapIndexed { i, n -> "$i $n" }))
+    private val sDist = num(3); private val sLongDist = num(3)
+    private val animKeys = listOf("stand", "walk", "run", "standTurn", "turn90", "turn180", "turn270", "block", "accurate", "aggressive", "controlled", "defensive")
+    private val animLabels = listOf("Stand", "Walk", "Run", "Turn on spot", "Turn 90", "Turn 180", "Turn 270", "Block", "Accurate", "Aggressive", "Controlled", "Defensive")
+    private val sAnim = Array(animKeys.size) { num(5) }
+    private val sSpecial = ComboBox<String>()
+    private val sEnergy = num(3)
+
     private fun int(t: TextField, def: Int) = t.text.trim().toIntOrNull() ?: def
     private fun idOrNone(t: TextField) = t.text.trim().toIntOrNull()?.takeIf { it >= 0 } ?: -1
     private fun showId(v: Int) = if (v < 0) "" else v.toString()
@@ -80,6 +107,7 @@ class ItemsTab(
         if (!d.readOk) { work = null; info.text = "Item $id (${d.name}) can't be edited: ${d.problem}."; bigIcon.image = null; view.show(null); return }
         work = d.copy(d.id)
         fill()
+        loadStats(id)
         info.text = "Item $id: ${d.name}" + (if (d.isNoted) " - this is the noted version of item ${d.noteLinked}; change the real item instead." else "")
     }
 
@@ -149,6 +177,7 @@ class ItemsTab(
                 d.recolorFrom.joinToString() + d.recolorTo.joinToString()
         if (!force && key == lastViewKey) return
         lastViewKey = key
+        playback.stop(); playInfo.text = ""
         val md = try {
             when (mode) {
                 1 -> ItemPreview.wornModel(d, false, m)
@@ -228,6 +257,200 @@ class ItemsTab(
         else -> ""
     }
 
+    // ---------- server stats ----------
+    private fun server(): File? = ServerSource.dir(configuration)
+
+    private fun defs(): ServerItems.Definitions? {
+        val s = server() ?: return null
+        val f = ServerItems.definitionsFile(s)
+        if (!f.isFile) return null
+        if (serverDefs == null || serverDefsDir != s) { serverDefs = try { ServerItems.Definitions(f) } catch (e: Exception) { say("Couldn't read ${f.path}: ${e.message}"); null }; serverDefsDir = s }
+        return serverDefs
+    }
+
+    private fun loadStats(id: Int) {
+        val s = server()
+        val d = defs()
+        if (s == null) { stats = null; statsInfo.text = "Pick the server folder (Tools > NPCs or Shops) to edit bonuses, attack speed and specials."; fillStats(); return }
+        if (d == null) { stats = null; statsInfo.text = "${ServerItems.definitionsFile(s).path} isn't there. Get it from the live server, or copy the server's data folder next to its code."; fillStats(); return }
+        val st = d.read(id)
+        st.special = try { ServerItems.readSpecials(s)[id] } catch (e: Exception) { null }
+            ?: specialNames().entries.firstOrNull { id in it.value }?.key
+        st.specialEnergy = lib()?.let { ServerItems.specialEnergy(it, id) }
+        stats = st
+        statsInfo.text = if (d.has(id)) "From ${ServerItems.definitionsFile(s).path}." else "The server has no stats for item $id yet; saving adds them."
+        fillStats()
+    }
+
+    private var specialCache: Pair<File, LinkedHashMap<String, List<Int>>>? = null
+    private fun specialNames(): LinkedHashMap<String, List<Int>> {
+        val s = server() ?: return LinkedHashMap()
+        specialCache?.let { if (it.first == s) return it.second }
+        val n = try { ServerItems.specialNames(s) } catch (e: Exception) { LinkedHashMap<String, List<Int>>() }
+        specialCache = s to n
+        return n
+    }
+
+    private fun fillStats() {
+        val st = stats
+        val off = st == null
+        for (n in listOf<javafx.scene.Node>(sWeight, sSlot, sType, sIsWeapon, sTwoHanded, sSpeed, sCategory, sDist, sLongDist, sSpecial, sEnergy) + sBonus + sReqSkill + sReqLevel + sAnim) n.isDisable = off
+        if (st == null) return
+        sWeight.text = st.weight.toString()
+        sSlot.selectionModel.select(ItemFull.SLOTS.keys.indexOf(st.slot).coerceAtLeast(0))
+        sType.selectionModel.select(ServerItems.EQUIPMENT_TYPES.indexOf(st.equipmentType).coerceAtLeast(0))
+        for (i in 0 until 14) sBonus[i].text = st.bonuses[i].toString()
+        val reqs = st.requirements.entries.toList()
+        for (i in 0 until 3) { val r = reqs.getOrNull(i); sReqSkill[i].selectionModel.select(if (r == null) 0 else r.key + 1); sReqLevel[i].text = r?.value?.toString() ?: "" }
+        val w = st.weapon
+        sIsWeapon.isSelected = w != null
+        val shown = w ?: ServerItemStats.Weapon()
+        sTwoHanded.isSelected = shown.twoHanded; sSpeed.text = shown.attackSpeed.toString()
+        sCategory.selectionModel.select(shown.category.coerceIn(0, ServerItems.WEAPON_CATEGORIES.size - 1))
+        sDist.text = shown.normalDistance.toString(); sLongDist.text = shown.longDistance.toString()
+        val anims = shown.animations()
+        for ((i, k) in animKeys.withIndex()) sAnim[i].text = anims[k].toString()
+        sSpecial.items.setAll(listOf("(none)") + specialNames().keys)
+        sSpecial.selectionModel.select(st.special?.let { sSpecial.items.indexOf(it) }?.takeIf { it >= 0 } ?: 0)
+        sEnergy.text = st.specialEnergy?.toString() ?: ""
+    }
+
+    /** Fields -> stats. */
+    private fun readStats(): ServerItemStats? {
+        val st = stats?.copy() ?: return null
+        st.weight = sWeight.text.trim().toDoubleOrNull() ?: st.weight
+        st.slot = ItemFull.SLOTS.keys.elementAtOrElse(sSlot.selectionModel.selectedIndex) { -1 }
+        st.equipmentType = sType.value ?: "DEFAULT"
+        for (i in 0 until 14) st.bonuses[i] = sBonus[i].text.trim().toIntOrNull() ?: 0
+        st.requirements.clear()
+        for (i in 0 until 3) { val sk = sReqSkill[i].selectionModel.selectedIndex - 1; val lv = sReqLevel[i].text.trim().toIntOrNull()
+            if (sk >= 0 && lv != null && lv in 1..99) st.requirements[sk] = lv }
+        st.weapon = if (!sIsWeapon.isSelected) null else ServerItemStats.Weapon().apply {
+            twoHanded = sTwoHanded.isSelected; attackSpeed = (sSpeed.text.trim().toIntOrNull() ?: 4).coerceIn(1, 20)
+            category = sCategory.selectionModel.selectedIndex.coerceAtLeast(0)
+            normalDistance = sDist.text.trim().toIntOrNull() ?: 0; longDistance = sLongDist.text.trim().toIntOrNull() ?: 0
+            fun a(k: String, d: Int) = sAnim[animKeys.indexOf(k)].text.trim().toIntOrNull() ?: d
+            stand = a("stand", stand); walk = a("walk", walk); run = a("run", run); standTurn = a("standTurn", standTurn)
+            turn90 = a("turn90", turn90); turn180 = a("turn180", turn180); turn270 = a("turn270", turn270); block = a("block", block)
+            accurate = a("accurate", accurate); aggressive = a("aggressive", aggressive); controlled = a("controlled", controlled); defensive = a("defensive", defensive)
+        }
+        st.special = sSpecial.value?.takeIf { it != "(none)" }
+        st.specialEnergy = sEnergy.text.trim().toIntOrNull()?.coerceIn(0, 100)
+        return st
+    }
+
+    /** Saves the stats into the server's data files (and the special energy into the exported cache). */
+    fun saveStats(st: ServerItemStats): String {
+        val s = server() ?: return "Pick the server folder first (Tools > NPCs or Shops)."
+        val d = defs() ?: return "${ServerItems.definitionsFile(s).path} isn't there; get it from the live server first."
+        d.put(st); d.write()
+        val specials = ServerItems.readSpecials(s)
+        val built = specialNames().entries.firstOrNull { st.id in it.value }?.key
+        val wanted = st.special
+        // only weapons the server code doesn't already give a special go in the file
+        if (wanted == null || wanted == built) specials.remove(st.id) else specials[st.id] = wanted
+        if (specials != ServerItems.readSpecials(s)) ServerItems.writeSpecials(s, specials)
+        val oldEnergy = lib()?.let { ServerItems.specialEnergy(it, st.id) }
+        val energy = if (wanted == null) null else st.specialEnergy
+        var cache = false
+        if (energy != oldEnergy) { ServerItems.setSpecialEnergy(st.id, energy); cache = true; reopen() }
+        if (wanted == null && built != null) return "Saved. Item ${st.id} keeps the ${built} special: the server code gives it that one."
+        return "Saved the server stats of item ${st.id}" + (if (cache) " and its special energy (in the exported cache)" else "") +
+                ". Send to live server puts them live" + (if (cache) " (tick 'with the cache' for the energy)" else "") + "."
+    }
+
+    private fun saveStatsClicked() {
+        val st = readStats() ?: return say("There are no server stats to save here (see the note above them).")
+        try { say(saveStats(st)); stats = st } catch (e: Exception) { say("Couldn't save the stats: ${e.message}") }
+    }
+
+    private fun copyStatsFrom() {
+        val other = TextInputDialog("").apply { title = "Copy stats"; headerText = null; contentText = "Item id to copy bonuses, speed, animations and special from"; initOwner(stage) }
+            .showAndWait().orElse(null)?.trim()?.toIntOrNull() ?: return
+        val d = defs() ?: return say("The server's ItemDefinitions.json isn't loaded.")
+        val cur = stats ?: return
+        val src = d.read(other)
+        cur.weight = src.weight; cur.slot = src.slot; cur.equipmentType = src.equipmentType; cur.bonuses = src.bonuses.clone()
+        cur.requirements.clear(); cur.requirements.putAll(src.requirements); cur.weapon = src.copy().weapon
+        val s = server()
+        cur.special = (if (s != null) ServerItems.readSpecials(s)[other] else null) ?: specialNames().entries.firstOrNull { other in it.value }?.key
+        cur.specialEnergy = lib()?.let { ServerItems.specialEnergy(it, other) }
+        fillStats()
+        say("Copied the stats of item $other. Save stats to keep them.")
+    }
+
+    private fun fetchStats() {
+        val s = server() ?: return say("Pick the server folder first (Tools > NPCs or Shops).")
+        say("Getting ItemDefinitions.json from the live server...")
+        Thread {
+            val d = Deployer { m -> javafx.application.Platform.runLater { say(m) } }
+            val ok = d.fetchServerData("items/ItemDefinitions.json", ServerItems.definitionsFile(s))
+            d.fetchServerData("items/special-attacks.json", ServerItems.specialsFile(s))
+            javafx.application.Platform.runLater {
+                serverDefs = null
+                work?.let { loadStats(it.id) }
+                say(if (ok) "Got the live ItemDefinitions.json." else "Couldn't get it (check Tools > Deploy > Test connection).")
+            }
+        }.start()
+    }
+
+    private fun sendStats() {
+        val s = server() ?: return say("Pick the server folder first.")
+        val pending = ServerItems.pending()
+        val withCache = Alert(Alert.AlertType.CONFIRMATION, "Send ${if (pending.isEmpty()) "nothing from the server files" else pending.joinToString(", ")} to the live server and restart it?\n\n" +
+                "Yes: also send the exported cache (needed for new items, models and special energy).\nNo: only the server files.",
+            ButtonType.YES, ButtonType.NO, ButtonType.CANCEL).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.CANCEL)
+        if (withCache == ButtonType.CANCEL) return
+        say("Sending...")
+        Thread {
+            val ok = Deployer { m -> javafx.application.Platform.runLater { say(m) } }.deployServerData(s, withCache == ButtonType.YES)
+            javafx.application.Platform.runLater { say(if (ok) "Item stats are live." else "Not sent; see the messages above (Tools > Deploy shows the full log).") }
+        }.start()
+    }
+
+    /** Shows the item on a plain player (the view's male/female choice) and plays [seq] on both. */
+    fun playOnPlayer(seq: Int?): String {
+        if (seq == null || seq < 0) return "No animation id there.".also { say(it) }
+        val d = work ?: return "Pick an item first.".also { say(it) }
+        val l = lib() ?: return ""; val m = models() ?: return ""; val a = anims() ?: return ""
+        val female = viewMode.selectionModel.selectedIndex == 2 || viewMode.selectionModel.selectedIndex == 4
+        val md = try { ItemPreview.onPlayer(d, female, l, m) } catch (e: Exception) { null } ?: return "Couldn't build the player model.".also { say(it) }
+        lastViewKey = "playing"
+        view.show(md)
+        val (clip, note) = AnimPlayback.clipFor(md, seq, a)
+        playback.play(clip)
+        val msg = if (clip == null) note else "Playing animation $seq (${clip.frameCount} frames) on a ${if (female) "female" else "male"} player holding ${d.name}." +
+                (if (note.isNotEmpty()) " $note" else "")
+        playInfo.text = msg
+        say(msg)
+        return msg
+    }
+
+    private fun statsForm(): VBox {
+        val bonusGrid = GridPane().apply { hgap = 6.0; vgap = 4.0 }
+        for (i in 0 until 14) { val col = (i % 5) * 2; val row = i / 5
+            bonusGrid.add(Label(ServerItems.BONUS_NAMES[i]), col, row); bonusGrid.add(sBonus[i], col + 1, row) }
+        val animGrid = GridPane().apply { hgap = 6.0; vgap = 4.0 }
+        for (i in animKeys.indices) { val col = (i % 3) * 3; val row = i / 3
+            animGrid.add(Label(animLabels[i]), col, row); animGrid.add(sAnim[i], col + 1, row)
+            animGrid.add(Button("Play").apply { setOnAction { playOnPlayer(sAnim[i].text.trim().toIntOrNull()) } }, col + 2, row) }
+        return VBox(7.0,
+            Label("Server stats (the server's data files, not the cache)").apply { styleClass.add("section") },
+            statsInfo,
+            row("Weight kg", sWeight, Label("Slot"), sSlot, Label("Covers"), sType),
+            Label("Equipment bonuses"), bonusGrid,
+            row("Needs", sReqSkill[0], sReqLevel[0], sReqSkill[1], sReqLevel[1], sReqSkill[2], sReqLevel[2]),
+            HBox(10.0, sIsWeapon, sTwoHanded, Label("Attack speed (ticks)"), sSpeed).apply { alignment = Pos.CENTER_LEFT },
+            row("Combat options", sCategory, Label("Range"), sDist, Label("long"), sLongDist),
+            Label("Animations while holding it (Play shows it on a player with this item)"), animGrid,
+            row("Special attack", sSpecial, Label("energy %"), sEnergy),
+            HBox(6.0, Button("Save stats").apply { styleClass.add("accent"); setOnAction { saveStatsClicked() } },
+                Button("Copy from item...").apply { setOnAction { copyStatsFrom() } },
+                Button("Get from live server").apply { setOnAction { fetchStats() } },
+                Button("Send to live server...").apply { setOnAction { sendStats() } })
+        )
+    }
+
     // ---------- saving ----------
     private fun save(asNew: Boolean) {
         val d = work ?: return say("Pick an item first.")
@@ -270,6 +493,7 @@ class ItemsTab(
         }
         original = null; work = d
         fill()
+        loadStats(d.id)
         info.text = "New item ${d.id} (not saved yet). Set it up, then Save."
     }
 
@@ -412,6 +636,8 @@ class ItemsTab(
             row("Heads (chat)", Label("M"), fMH, fMH2, Label("F"), fFH, fFH2),
             Button("Female = male").apply { setOnAction { fF0.text = fM0.text; fF1.text = fM1.text; fF2.text = fM2.text; fFOff.text = fMOff.text; fFH.text = fMH.text; fFH2.text = fMH2.text } },
             Separator(),
+            statsForm(),
+            Separator(),
             Label("Recolours (a colour of the model -> a new colour)"),
             recolBox,
             Separator(),
@@ -441,7 +667,11 @@ class ItemsTab(
                 Button("Import bundle...").apply { maxWidth = Double.MAX_VALUE; HBox.setHgrow(this, Priority.ALWAYS); setOnAction { importBundle() } })
         ).apply { padding = Insets(8.0); VBox.setVgrow(list, Priority.ALWAYS) }
         val iconBox = StackPane(bigIcon).apply { style = "-fx-background-color: #3e3529; -fx-border-color: #5a4d3b;"; prefWidth = 160.0; prefHeight = 140.0; maxWidth = 160.0; maxHeight = 140.0 }
-        val center = VBox(8.0, HBox(12.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view"), viewMode)), view).apply {
+        val center = VBox(8.0, HBox(12.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view"), viewMode,
+            HBox(6.0, Button("Play stand").apply { setOnAction { playOnPlayer(sAnim[0].text.trim().toIntOrNull()) } },
+                Button("Play attack").apply { setOnAction { playOnPlayer(sAnim[8].text.trim().toIntOrNull()) } },
+                Button("Stop").apply { setOnAction { playback.stop(); refresh(true) } }),
+            playInfo.apply { isWrapText = true; maxWidth = 320.0 })), view).apply {
             padding = Insets(8.0); VBox.setVgrow(view, Priority.ALWAYS)
         }
         return Tab("Items", BorderPane(center, null, right, null, left)).apply { isClosable = false }

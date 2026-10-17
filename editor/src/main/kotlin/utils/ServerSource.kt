@@ -61,8 +61,20 @@ object ServerSource {
         cached = null
         val known = dir(configuration)
         return Pair(known, if (known != null) "${picked.path} has no server code (no NpcId), so I used ${known.path}."
-                           else "${picked.path} has no server code (no NpcId.java). Pick the near-reality-server-main folder.")
+                           else "${picked.path} has no server code (no NpcId.java). Pick the server folder (the one with gradlew and plugins/).")
     }
+
+    /**
+     * The server's own package root: "gadscape" (com.gadscape...) for GadScape, "near_reality" for a Near-Reality
+     * checkout that wasn't renamed.
+     */
+    fun pkg(server: File?): String {
+        val base = server?.let { File(it, "plugins/shops/src/main/kotlin/com") }
+        return if (base != null && File(base, "near_reality").isDirectory && !File(base, "gadscape").isDirectory) "near_reality" else "gadscape"
+    }
+
+    /** Where the shop scripts are, relative to the server folder. */
+    fun shopsPath(server: File?): String = "plugins/shops/src/main/kotlin/com/${pkg(server)}/plugins/shops"
 
     private fun remember(configuration: Configuration, d: File) {
         cached = d

@@ -26,7 +26,9 @@ data class ToolTemplates(
     val deployRemoteCache: String? = "/opt/gadscape/cache/data/cache",
     val deployService: String? = "gadscape",
     /** Path of the server jar on the server; empty = read it from the systemd service. */
-    val deployJar: String? = ""
+    val deployJar: String? = "",
+    /** The server's data folder (ItemDefinitions.json and other server data). */
+    val deployRemoteData: String? = "/opt/gadscape/data"
 )
 
 object GadTools {
@@ -118,7 +120,7 @@ object GadTools {
             t.tele ?: d.tele, t.npcSpawn ?: d.npcSpawn, t.objectSpawn ?: d.objectSpawn,
             t.deployHost ?: d.deployHost, t.deployPort ?: d.deployPort, t.deployUser ?: d.deployUser,
             t.deployKey ?: d.deployKey, t.deployRemoteCache ?: d.deployRemoteCache, t.deployService ?: d.deployService,
-            t.deployJar ?: d.deployJar
+            t.deployJar ?: d.deployJar, t.deployRemoteData ?: d.deployRemoteData
         )
         // write back so new settings show up in the file
         if (merged != loaded) try { f.writeText(gson.toJson(merged)) } catch (e: Exception) {}

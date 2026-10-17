@@ -130,7 +130,7 @@ class NpcWindow(private val gadToolsModel: GadToolsModel, private val configurat
         NpcDefs.loadInBackground()
 
         // ---- server folder + spawn files ----
-        val txtDir = TextField(serverDir(configuration)?.path ?: "").apply { promptText = "Server folder (near-reality-server-main)"; HBox.setHgrow(this, Priority.ALWAYS) }
+        val txtDir = TextField(serverDir(configuration)?.path ?: "").apply { promptText = "Server folder (the folder with gradlew and plugins/)"; HBox.setHgrow(this, Priority.ALWAYS) }
         val btnBrowse = Button("Browse...").apply { setOnAction {
             DirectoryChooser().apply { title = "Server folder" }.showDialog(stage)?.let { txtDir.text = it.path }
         } }

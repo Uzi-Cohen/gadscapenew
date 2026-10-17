@@ -1,6 +1,7 @@
 package controllers
 
 import cache.CachePaths
+import utils.ServerSource
 import cache.loaders.ModelLoader
 import cache.loaders.TextureLoader
 import com.displee.cache.CacheLibrary
@@ -242,7 +243,7 @@ class ShopBuilderWindow(
     /** The file with every shop block regenerated and everything else untouched. */
     private fun render(sf: ShopFile): String {
         if (sf.isNew) return buildString {
-            append(defaultHeader)
+            append(defaultHeader(ServerSource.pkg(server)))
             val cls = sf.file.nameWithoutExtension
             appendln("class $cls : ShopScript() {")
             appendln("    init {")
@@ -266,8 +267,10 @@ class ShopBuilderWindow(
         return out.joinToString("\n") + "\n"
     }
 
-    private val defaultHeader = """
-        import com.near_reality.scripts.shops.ShopScript
+    private fun defaultHeader(pkg: String) = """
+        package com.$pkg.plugins.shops
+
+        import com.$pkg.scripts.shops.ShopScript
         import com.zenyte.game.model.shop.*
         import com.zenyte.game.model.shop.ShopPolicy
         import com.zenyte.game.model.shop.ShopPolicy.*
@@ -275,17 +278,17 @@ class ShopBuilderWindow(
         import com.zenyte.game.model.shop.ShopCurrency.*
         import com.zenyte.game.item.ItemId
         import com.zenyte.game.item.ItemId.*
-        import com.near_reality.game.content.universalshop.*
-        import com.near_reality.game.content.universalshop.UnivShopItem
-        import com.near_reality.game.content.universalshop.UnivShopItem.*
+        import com.$pkg.game.content.universalshop.*
+        import com.$pkg.game.content.universalshop.UnivShopItem
+        import com.$pkg.game.content.universalshop.UnivShopItem.*
     """.trimIndent() + "\n\n"
 
     // ---------------- server source lookups ----------------
 
     private fun guessServerDir(): File? = utils.ServerSource.dir(configuration)
 
-    private fun shopsDir(server: File) = File(server, "plugins/shops/src/main/kotlin/com/near_reality/plugins/shops")
-    private val UNIV_DIR = "core-model/src/main/kotlin/com/near_reality/game/content/universalshop"
+    private fun shopsDir(server: File) = File(server, ServerSource.shopsPath(server))
+    private fun univDir(server: File) = "core-model/src/main/kotlin/com/${ServerSource.pkg(server)}/game/content/universalshop"
 
     private fun findSource(server: File, vararg names: String): File? = server.walkTopDown().maxDepth(16)
         .onEnter { it.name != "build" && it.name != ".git" && it.name != "node_modules" }
@@ -372,7 +375,7 @@ class ShopBuilderWindow(
 
         fun reloadFiles() {
             val s = server
-            lblServer.text = s?.path ?: "Pick your server folder (near-reality-server-main)."
+            lblServer.text = s?.path ?: "Pick your server folder (the folder with gradlew and plugins/)."
             currencies.clear(); policies.clear(); itemIdConsts.clear()
             if (s == null) { allFiles.clear(); return }
             loadItemIds(s)
@@ -380,14 +383,14 @@ class ShopBuilderWindow(
             enumConstants(findSource(s, "ShopPolicy.java", "ShopPolicy.kt")).forEach { policies.add(it) }
             val bad = ArrayList<String>()
             categoryCurrency.clear()
-            File(s, "$UNIV_DIR/UnivShopCategory.kt").takeIf { it.isFile }?.readLines()?.forEach { line ->
+            File(s, "${univDir(s)}/UnivShopCategory.kt").takeIf { it.isFile }?.readLines()?.forEach { line ->
                 Regex("""^\s*(\w+)\s*\((.*)\)\s*[,;]?\s*$""").find(line)?.let { m ->
                     val cur = Regex("""currency\s*=\s*([\w.]+)""").find(m.groupValues[2])?.groupValues?.get(1)
                     categoryCurrency[m.groupValues[1]] = cur ?: "ShopCurrency.COINS"
                     if (cur != null) currencies.add(cur)
                 }
             }
-            val home = File(s, "$UNIV_DIR/UnivShopTable.kt").takeIf { it.isFile }?.let { f ->
+            val home = File(s, "${univDir(s)}/UnivShopTable.kt").takeIf { it.isFile }?.let { f ->
                 try { parse(f) } catch (e: Throwable) { bad.add(f.name); null }
             }
             val files = listOfNotNull(home) + (shopsDir(s).listFiles { f -> f.extension == "kt" }?.sortedBy { it.name }?.mapNotNull { f ->
@@ -403,7 +406,7 @@ class ShopBuilderWindow(
         }
         val btnServer = Button("Server folder...").apply {
             setOnAction {
-                val d = DirectoryChooser().apply { title = "Pick near-reality-server-main"; server?.let { initialDirectory = it } }
+                val d = DirectoryChooser().apply { title = "Pick the server folder"; server?.let { initialDirectory = it } }
                     .showDialog(scene?.window) ?: return@setOnAction
                 server = utils.ServerSource.fromPicked(configuration, d).first ?: d; reloadFiles()
             }
