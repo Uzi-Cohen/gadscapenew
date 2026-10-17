@@ -344,6 +344,8 @@ class Renderer @Inject constructor(
         val pickerId: Int =
             pboBytes[3].toInt() and 0xFF shl 24 or (pboBytes[2].toInt() and 0xFF shl 16) or (pboBytes[1].toInt() and 0xFF shl 8) or (pboBytes[0].toInt() and 0xFF)
         gl.glUnmapBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER)
+        // left bound, every later glReadPixels (the AI bridge's screenshots) would read into it and fail
+        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, 0)
         if (pickerId == 1058050193) { // clear sky coor
             return
         }
@@ -1554,6 +1556,7 @@ class Renderer @Inject constructor(
     private fun grabFrame(): java.awt.image.BufferedImage {
         val w = canvasWidth; val h = canvasHeight
         val buf = java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder())
+        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, 0)
         gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, fboMainRenderer)
         gl.glReadBuffer(GL.GL_COLOR_ATTACHMENT0)
         gl.glReadPixels(0, 0, w, h, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, buf)

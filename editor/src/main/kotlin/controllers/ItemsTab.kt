@@ -471,24 +471,32 @@ class ItemsTab(
     }
 
     private fun statsForm(): VBox {
+        fun fixed(text: String) = Label(text).apply { minWidth = Region.USE_PREF_SIZE }
+        // attack bonuses in the first column, defence in the second, the rest in the third
         val bonusGrid = GridPane().apply { hgap = 6.0; vgap = 4.0 }
-        for (i in 0 until 14) { val col = (i % 5) * 2; val row = i / 5
-            bonusGrid.add(Label(ServerItems.BONUS_NAMES[i]), col, row); bonusGrid.add(sBonus[i], col + 1, row) }
+        for (i in 0 until 14) { val col = (if (i < 5) 0 else if (i < 10) 1 else 2) * 2; val row = if (i < 10) i % 5 else i - 10
+            bonusGrid.add(fixed(ServerItems.BONUS_NAMES[i]), col, row); bonusGrid.add(sBonus[i], col + 1, row) }
         val animGrid = GridPane().apply { hgap = 6.0; vgap = 4.0 }
-        for (i in animKeys.indices) { val col = (i % 3) * 3; val row = i / 3
-            animGrid.add(Label(animLabels[i]), col, row); animGrid.add(sAnim[i], col + 1, row)
+        for (i in animKeys.indices) { val col = (i % 2) * 3; val row = i / 2
+            animGrid.add(fixed(animLabels[i]), col, row); animGrid.add(sAnim[i], col + 1, row)
             animGrid.add(Button("Play").apply { setOnAction { playOnPlayer(sAnim[i].text.trim().toIntOrNull()) } }, col + 2, row) }
+        for (l in sReqLevel) l.prefColumnCount = 4
         return VBox(7.0,
             Label("Server stats (the server's data files, not the cache)").apply { styleClass.add("section") },
             statsInfo,
-            row("Weight kg", sWeight, Label("Slot"), sSlot, Label("Covers"), sType),
+            row("Weight kg", sWeight),
+            row("Slot", sSlot, fixed("Covers"), sType),
             Label("Equipment bonuses"), bonusGrid,
-            row("Needs", sReqSkill[0], sReqLevel[0], sReqSkill[1], sReqLevel[1], sReqSkill[2], sReqLevel[2]),
-            HBox(10.0, sIsWeapon, sTwoHanded, Label("Attack speed (ticks)"), sSpeed).apply { alignment = Pos.CENTER_LEFT },
-            row("Combat options", sCategory, Label("Range"), sDist, Label("long"), sLongDist),
+            row("Needs", sReqSkill[0], sReqLevel[0]),
+            row("", sReqSkill[1], sReqLevel[1]),
+            row("", sReqSkill[2], sReqLevel[2]),
+            HBox(10.0, sIsWeapon, sTwoHanded, fixed("Attack speed (ticks)"), sSpeed).apply { alignment = Pos.CENTER_LEFT },
+            row("Combat options", sCategory),
+            row("Attack range", sDist, fixed("long range"), sLongDist),
             Label("Animations while holding it (Play shows it on a player with this item)"), animGrid,
-            row("Special attack", sSpecial, Label("energy %"), sEnergy),
-            HBox(6.0, Button("Save stats").apply { styleClass.add("accent"); setOnAction { saveStatsClicked() } },
+            row("Special attack", sSpecial),
+            row("Energy %", sEnergy),
+            javafx.scene.layout.FlowPane(6.0, 6.0, Button("Save stats").apply { styleClass.add("accent"); setOnAction { saveStatsClicked() } },
                 Button("Copy from item...").apply { setOnAction { copyStatsFrom() } },
                 Button("Get from live server").apply { setOnAction { fetchStats() } },
                 Button("Send to live server...").apply { setOnAction { sendStats() } })
@@ -711,8 +719,9 @@ class ItemsTab(
                 Button("Import bundle...").apply { maxWidth = Double.MAX_VALUE; HBox.setHgrow(this, Priority.ALWAYS); setOnAction { importBundle() } })
         ).apply { padding = Insets(8.0); VBox.setVgrow(list, Priority.ALWAYS) }
         val iconBox = StackPane(bigIcon).apply { style = "-fx-background-color: #3e3529; -fx-border-color: #5a4d3b;"; prefWidth = 160.0; prefHeight = 140.0; maxWidth = 160.0; maxHeight = 140.0 }
-        val center = VBox(8.0, HBox(12.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view"), viewMode,
-            HBox(6.0, Button("Play stand").apply { setOnAction { playOnPlayer(sAnim[0].text.trim().toIntOrNull()) } },
+        val center = VBox(8.0, HBox(12.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view"), viewMode)),
+            javafx.scene.layout.FlowPane(6.0, 6.0,
+                Button("Play stand").apply { setOnAction { playOnPlayer(sAnim[0].text.trim().toIntOrNull()) } },
                 Button("Play attack").apply { setOnAction { playOnPlayer(sAnim[8].text.trim().toIntOrNull()) } },
                 Button("Play special").apply { setOnAction {
                     val name = sSpecial.value?.takeIf { it != "(none)" } ?: return@setOnAction say("This item has no special attack.")
@@ -720,14 +729,14 @@ class ItemsTab(
                         ?: return@setOnAction say("The $name special sets its animation in code (it changes with the situation), so there's no single one to play.")
                     playOnPlayer(anim)
                 } },
-                Button("Stop").apply { setOnAction { playback.stop(); refresh(true) } }),
-            HBox(6.0, Button("Pause").apply { setOnAction { playback.playing = !playback.playing; text = if (playback.playing) "Pause" else "Resume" } },
+                Button("Stop").apply { setOnAction { playback.stop(); refresh(true) } },
+                Button("Pause").apply { setOnAction { playback.playing = !playback.playing; text = if (playback.playing) "Pause" else "Resume" } },
                 Button("<").apply { setOnAction { playback.playing = false; playback.show(playback.frame - 1) } },
                 Button(">").apply { setOnAction { playback.playing = false; playback.show(playback.frame + 1) } },
                 MenuButton("Save pose").apply { items.addAll(
                     MenuItem("As OBJ...").apply { setOnAction { exportPose() } },
                     MenuItem("As a new model").apply { setOnAction { savePoseAsModel() } }) }),
-            playInfo.apply { isWrapText = true; maxWidth = 320.0 })), view).apply {
+            playInfo.apply { isWrapText = true }, view).apply {
             padding = Insets(8.0); VBox.setVgrow(view, Priority.ALWAYS)
         }
         return Tab("Items", BorderPane(center, null, right, null, left)).apply { isClosable = false }

@@ -412,7 +412,9 @@ class AiBridge(
         Thread.sleep(250) // a couple of frames so the new view is drawn
         val f = CompletableFuture<java.awt.image.BufferedImage>()
         model.screenshotRequest = f
-        val img = try { f.get(10, TimeUnit.SECONDS) } catch (e: Exception) { fail("The editor didn't draw a frame (is its window open and not minimised?).") }
+        val img = try { f.get(10, TimeUnit.SECONDS) }
+            catch (e: java.util.concurrent.TimeoutException) { model.screenshotRequest = null; fail("The editor didn't draw a frame in 10 seconds (is its window open and not minimised?).") }
+            catch (e: java.util.concurrent.ExecutionException) { fail("The editor couldn't read its frame: ${e.cause ?: e}") }
         val max = (q["max"]?.toIntOrNull() ?: 1280).coerceIn(200, 4000)
         val scaled = if (img.width <= max) img else {
             val h = img.height * max / img.width
