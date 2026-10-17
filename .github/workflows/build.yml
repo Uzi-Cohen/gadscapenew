@@ -1,8 +1,9 @@
 name: Build
 
 on:
+  # main pushes and pull requests (one run each: a branch with a pull request isn't built twice)
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -47,7 +48,7 @@ jobs:
         run: |
           mv "uzis-map-editor-1.0-build-$BUILD.jar" "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar"
           unzip -p "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" version.properties
-          unzip -l "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" | grep -q "AppKt.class"
+          unzip -l "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" AppKt.class
       - uses: actions/upload-artifact@v4
         with:
           name: uzis-map-editor-1.0-build-${{ env.BUILD }}-${{ matrix.os }}
