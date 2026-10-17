@@ -113,7 +113,8 @@ object ItemPreview {
             var nx = uy * vz - uz * vy; var ny = uz * vx - ux * vz; var nz = ux * vy - uy * vx
             val nl = sqrt(nx * nx + ny * ny + nz * nz); if (nl > 0) { nx /= nl; ny /= nl; nz /= nl }
             val dot = (nx * lx + ny * ly + nz * lz) / ll
-            val shade = ((0.62 + amb / 160.0) + (0.55 + con / 200.0) * dot).coerceIn(0.25, 1.35)
+            // the game lights items with ambient 64 + ambient and contrast 768 + contrast * 5
+            val shade = (0.62 * (64 + amb) / 64.0 + 0.55 * (768 + con * 5) / 768.0 * dot).coerceIn(0.25, 1.35)
             val tex = md.faceTextures?.get(f)?.toInt() ?: -1
             val hsl = if (tex >= 0) (textures?.getAverageTextureRGB(tex) ?: 0) else (colors?.get(f)?.toInt() ?: 0) and 0xFFFF
             val rgb = ModelCodec.palette[hsl and 0xFFFF]
@@ -212,7 +213,7 @@ object ItemPreview {
         val parts = ArrayList<ModelDefinition>()
         for (bp in 0..6) {
             if (bp in skip) continue
-            val kit = kits.entries.filter { it.value.bodyPart == base + bp && it.value.selectable }.minBy { it.key }?.value ?: continue
+            val kit = kits.entries.filter { it.value.bodyPart == base + bp && it.value.selectable }.minByOrNull { it.key }?.value ?: continue
             for (m in kit.models) {
                 val md = try { models.get(m) } catch (e: Exception) { null } ?: continue
                 val cp = copy(md)

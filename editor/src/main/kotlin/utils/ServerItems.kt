@@ -35,6 +35,7 @@ class ServerItemStats(val id: Int) {
 
     class Weapon {
         var twoHanded = false
+        /** In game ticks (0.6 s): 4 = whip, 5 = scythe, 6 = slow. The file stores 10 - ticks. */
         var attackSpeed = 4
         /** Combat options shown (varbit 357): see [ServerItems.WEAPON_CATEGORIES]. */
         var category = 0
@@ -79,94 +80,80 @@ object ServerItems {
     fun definitionsFile(server: File): File = File(server, "data/items/ItemDefinitions.json")
     fun specialsFile(server: File): File = File(server, "data/items/special-attacks.json")
 
-    /** The server's item file, kept as JSON so every field the editor doesn't touch is written back as it was. */
-    class Definitions(val file: File) {
-        private var array: JsonArray = JsonParser().parse(file.readText(Charsets.UTF_8)).asJsonArray
-        private val byId = HashMap<Int, JsonObject>()
-        init { for (e in array) if (e.isJsonObject) e.asJsonObject["id"]?.asInt?.let { byId[it] = e.asJsonObject } }
+    /**
+     * The item's stats from the server's ItemDefinitions.json. With [effective] (the default), OSRS items get the OSRS
+     * wiki data merged in the way the server does it, so this shows what the item really has in game.
+     */
+    fun read(server: File, id: Int, effective: Boolean = true): ServerItemStats =
+        fromJson(id, if (effective) ItemStats.effective(server, id) else ItemStats.get(server, id))
 
-        fun has(id: Int) = id in byId
+    /** True when the server's file has its own entry for [id]. */
+    fun has(server: File, id: Int) = ItemStats.get(server, id) != null
 
-        fun read(id: Int): ServerItemStats {
-            val s = ServerItemStats(id)
-            val o = byId[id] ?: return s
-            o["weight"]?.takeIf { !it.isJsonNull }?.let { s.weight = it.asDouble }
-            o["slot"]?.takeIf { !it.isJsonNull }?.let { s.slot = it.asInt }
-            o["equipmentType"]?.takeIf { !it.isJsonNull }?.let { s.equipmentType = it.asString }
-            val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
-            eq["bonuses"]?.takeIf { !it.isJsonNull }?.asString?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.let { list ->
-                for (i in 0 until minOf(14, list.size)) s.bonuses[i] = list[i]
-            }
-            eq["requirements"]?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { (k, v) ->
-                val skill = k.toIntOrNull(); if (skill != null && !v.isJsonNull) s.requirements[skill] = v.asInt
-            }
-            val w = eq["weaponDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
-            fun int(k: String, d: Int) = w[k]?.takeIf { !it.isJsonNull }?.asInt ?: d
-            s.weapon = ServerItemStats.Weapon().apply {
-                twoHanded = w["twoHanded"]?.takeIf { !it.isJsonNull }?.asBoolean ?: false
-                attackSpeed = int("attackSpeed", attackSpeed); category = int("interfaceVarbit", category)
-                stand = int("standAnimation", stand); walk = int("walkAnimation", walk); run = int("runAnimation", run)
-                standTurn = int("standTurnAnimation", standTurn); turn90 = int("rotate90Animation", turn90)
-                turn180 = int("rotate180Animation", turn180); turn270 = int("rotate270Animation", turn270)
-                block = int("blockAnimation", block); accurate = int("accurateAnimation", accurate); aggressive = int("aggressiveAnimation", aggressive)
-                controlled = int("controlledAnimation", controlled); defensive = int("defensiveAnimation", defensive)
-                normalDistance = int("normalAttackDistance", 0); longDistance = int("longAttackDistance", 0)
-            }
-            return s
+    fun fromJson(id: Int, o: JsonObject?): ServerItemStats {
+        val s = ServerItemStats(id)
+        o ?: return s
+        o["weight"]?.takeIf { !it.isJsonNull }?.let { s.weight = it.asDouble }
+        o["slot"]?.takeIf { !it.isJsonNull }?.let { s.slot = it.asInt }
+        o["equipmentType"]?.takeIf { !it.isJsonNull }?.let { s.equipmentType = it.asString }
+        val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
+        eq["bonuses"]?.takeIf { !it.isJsonNull }?.asString?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.let { list ->
+            for (i in 0 until minOf(14, list.size)) s.bonuses[i] = list[i]
         }
-
-        /** Puts [s] into the file in memory; [write] saves it. */
-        fun put(s: ServerItemStats) {
-            val o = byId[s.id] ?: JsonObject().also { n ->
-                n.addProperty("id", s.id)
-                // keep the file sorted by id, like the server writes it
-                val at = (0 until array.size()).firstOrNull { (array[it].asJsonObject["id"]?.asInt ?: 0) > s.id } ?: array.size()
-                val rebuilt = JsonArray()
-                for (i in 0 until array.size()) { if (i == at) rebuilt.add(n); rebuilt.add(array[i]) }
-                if (at == array.size()) rebuilt.add(n)
-                array = rebuilt
-                byId[s.id] = n
-            }
-            o.addProperty("weight", if (s.weight == Math.floor(s.weight)) s.weight.toLong() as Number else s.weight as Number)
-            o.addProperty("slot", s.slot)
-            o.addProperty("equipmentType", s.equipmentType)
-            val wearable = s.slot >= 0 || s.bonuses.any { it != 0 } || s.requirements.isNotEmpty() || s.weapon != null
-            if (!wearable) { o.remove("equipmentDefinition"); return }
-            val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject().also { o.add("equipmentDefinition", it) }
-            val w = s.weapon
-            if (w == null) eq.remove("weaponDefinition") else {
-                val wd = eq["weaponDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject()
-                wd.addProperty("twoHanded", w.twoHanded)
-                wd.addProperty("blockAnimation", w.block); wd.addProperty("standAnimation", w.stand); wd.addProperty("walkAnimation", w.walk)
-                wd.addProperty("runAnimation", w.run); wd.addProperty("standTurnAnimation", w.standTurn)
-                wd.addProperty("rotate90Animation", w.turn90); wd.addProperty("rotate180Animation", w.turn180); wd.addProperty("rotate270Animation", w.turn270)
-                wd.addProperty("accurateAnimation", w.accurate); wd.addProperty("aggressiveAnimation", w.aggressive)
-                wd.addProperty("controlledAnimation", w.controlled); wd.addProperty("defensiveAnimation", w.defensive)
-                wd.addProperty("attackSpeed", w.attackSpeed); wd.addProperty("interfaceVarbit", w.category)
-                wd.addProperty("normalAttackDistance", w.normalDistance); wd.addProperty("longAttackDistance", w.longDistance)
-                eq.add("weaponDefinition", wd)
-            }
-            if (s.requirements.isEmpty()) eq.remove("requirements") else eq.add("requirements", JsonObject().also { r ->
-                for ((k, v) in s.requirements) r.addProperty(k.toString(), v)
-            })
-            eq.addProperty("bonuses", s.bonuses.joinToString(", "))
-            if (eq.has("equipmentType")) eq.addProperty("equipmentType", s.equipmentType)
+        eq["requirements"]?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { (k, v) ->
+            val skill = k.toIntOrNull(); if (skill != null && !v.isJsonNull) s.requirements[skill] = v.asInt
         }
-
-        /** Writes the file the way the server does (tab indents), after keeping a copy of the old one. */
-        fun write() {
-            backup(file)
-            val sw = StringWriter()
-            val jw = JsonWriter(sw).apply { setIndent("\t"); isHtmlSafe = false }
-            com.google.gson.internal.Streams.write(array, jw)
-            jw.flush()
-            val tmp = File(file.path + ".tmp")
-            tmp.writeText(sw.toString(), Charsets.UTF_8)
-            // read back before replacing the real one
-            JsonParser().parse(tmp.readText(Charsets.UTF_8)).asJsonArray
-            if (!tmp.renameTo(file)) { file.writeText(tmp.readText(Charsets.UTF_8), Charsets.UTF_8); tmp.delete() }
-            markPending("items/ItemDefinitions.json")
+        val w = eq["weaponDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
+        fun int(k: String, d: Int) = w[k]?.takeIf { !it.isJsonNull }?.asInt ?: d
+        s.weapon = ServerItemStats.Weapon().apply {
+            twoHanded = w["twoHanded"]?.takeIf { !it.isJsonNull }?.asBoolean ?: false
+            attackSpeed = w["attackSpeed"]?.takeIf { !it.isJsonNull }?.let { ItemStats.ticks(it.asInt) } ?: attackSpeed
+            category = int("interfaceVarbit", category)
+            stand = int("standAnimation", stand); walk = int("walkAnimation", walk); run = int("runAnimation", run)
+            standTurn = int("standTurnAnimation", standTurn); turn90 = int("rotate90Animation", turn90)
+            turn180 = int("rotate180Animation", turn180); turn270 = int("rotate270Animation", turn270)
+            block = int("blockAnimation", block); accurate = int("accurateAnimation", accurate); aggressive = int("aggressiveAnimation", aggressive)
+            controlled = int("controlledAnimation", controlled); defensive = int("defensiveAnimation", defensive)
+            normalDistance = int("normalAttackDistance", 0); longDistance = int("longAttackDistance", 0)
         }
+        return s
+    }
+
+    /** [s] written over [base] (the item's current entry, so fields the editor doesn't show stay as they are). */
+    fun toJson(s: ServerItemStats, base: JsonObject?): JsonObject {
+        val o = base?.deepCopy() ?: JsonObject()
+        o.addProperty("id", s.id)
+        ItemStats.setWeight(o, s.weight)
+        o.addProperty("slot", s.slot)
+        o.addProperty("equipmentType", s.equipmentType)
+        val wearable = s.slot >= 0 || s.bonuses.any { it != 0 } || s.requirements.isNotEmpty() || s.weapon != null
+        if (!wearable) { o.remove("equipmentDefinition"); return o }
+        val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject().also { o.add("equipmentDefinition", it) }
+        val w = s.weapon
+        if (w == null) eq.remove("weaponDefinition") else {
+            val wd = eq["weaponDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject()
+            wd.addProperty("twoHanded", w.twoHanded)
+            wd.addProperty("blockAnimation", w.block); wd.addProperty("standAnimation", w.stand); wd.addProperty("walkAnimation", w.walk)
+            wd.addProperty("runAnimation", w.run); wd.addProperty("standTurnAnimation", w.standTurn)
+            wd.addProperty("rotate90Animation", w.turn90); wd.addProperty("rotate180Animation", w.turn180); wd.addProperty("rotate270Animation", w.turn270)
+            wd.addProperty("accurateAnimation", w.accurate); wd.addProperty("aggressiveAnimation", w.aggressive)
+            wd.addProperty("controlledAnimation", w.controlled); wd.addProperty("defensiveAnimation", w.defensive)
+            wd.addProperty("attackSpeed", ItemStats.stored(w.attackSpeed)); wd.addProperty("interfaceVarbit", w.category)
+            wd.addProperty("normalAttackDistance", w.normalDistance); wd.addProperty("longAttackDistance", w.longDistance)
+            eq.add("weaponDefinition", wd)
+        }
+        if (s.requirements.isEmpty()) eq.remove("requirements") else eq.add("requirements", JsonObject().also { r ->
+            for ((k, v) in s.requirements) r.addProperty(k.toString(), v)
+        })
+        eq.addProperty("bonuses", s.bonuses.joinToString(", "))
+        if (eq.has("equipmentType")) eq.addProperty("equipmentType", s.equipmentType)
+        return o
+    }
+
+    /** Saves [s] into the server's ItemDefinitions.json (only that item's entry changes) and marks it for Deploy. */
+    fun write(server: File, s: ServerItemStats) {
+        backup(definitionsFile(server))
+        ItemStats.put(server, toJson(s, ItemStats.get(server, s.id)))
     }
 
     /** item id -> special attack name, from data/items/special-attacks.json. */
@@ -251,7 +238,7 @@ object ServerItems {
 
     private val pendingFile get() = File(System.getProperty("user.home"), ".uzis-map-editor/data-pending.txt")
 
-    /** Server data files (relative to data/) saved here and not deployed yet. */
+    /** Server data files (relative to data/) saved here and not deployed yet, other than item stats ([ItemStats.pending]). */
     fun pending(): Set<String> = pendingFile.takeIf { it.isFile }?.readLines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
     fun markPending(rel: String) { pendingFile.parentFile.mkdirs(); pendingFile.writeText((pending() + rel).joinToString("\n")) }
     fun clearPending() { pendingFile.delete() }

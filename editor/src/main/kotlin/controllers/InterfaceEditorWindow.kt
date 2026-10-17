@@ -132,7 +132,7 @@ class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val 
         showHidden.selectedProperty().addListener { _, _, _ -> draw() }
         canvas.setOnMouseClicked { e ->
             val hit = comps.filter { visible(it) && e.x >= it.ax && e.y >= it.ay && e.x < it.ax + it.aw && e.y < it.ay + it.ah }
-                .minBy { it.aw * it.ah }
+                .minByOrNull { it.aw * it.ah }
             if (hit != null) compList.selectionModel.select(hit)
         }
 

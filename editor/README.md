@@ -30,6 +30,12 @@ Tools > Models and animations (Ctrl+Shift+M):
   with their models from any 211-style cache (an OSRS cache, say), keeping the same ids where they're free.
   Equipment bonuses, attack speed and what an item does are set on the server, not in the cache.
 - Changes go into the exported cache (cache-out), which Deploy sends to the server. "Undo last change" puts it back.
+- **In game (server stats)**: the Items tab also shows and edits what an item does in game, which the server keeps in
+  `data/items/ItemDefinitions.json`: slot, two-handed, weight, the 14 bonuses, attack speed (ticks), weapon type,
+  attack range, weapon animations and requirements. "Copy stats from item" copies what an item really has in game
+  (the server also merges the OSRS wiki data for original items). "Save stats" writes the server folder's file,
+  "Send stats to server" merges just those items into the live file and restarts the server. Special attacks and
+  effects (like the scythe hitting 3 times) are code on the server, tied to the original item's id.
 
 ## AI bridge (Claude edits the map)
 Tools > AI bridge turns on a small local connection (only this PC, with a key) that lets Claude read the loaded map
@@ -43,7 +49,7 @@ take screenshots of the 3D view. Every request Claude sends is one Ctrl+Z.
 How Claude uses it is in AI-BRIDGE.md. Claude doesn't save or deploy; you do that (Ctrl+S, Deploy).
 
 ## Run
-Requires Java 21.
+Requires Java 21 (built with Gradle 8.10, Kotlin 1.9 and JavaFX 21; the first run downloads Gradle once).
 
     .\gradlew.bat run
 

@@ -23,14 +23,18 @@ class ObjectLoader @Inject constructor(
         return objectDefinitionCache[id]
     }
 
-    // Caches from revision 220+ store one extra byte in the ambient sound opcodes (78/79).
-    // Detected automatically on load.
-    private var rev220Sounds = true
+    // Caches from revision 220+ store one extra byte in the ambient sound opcodes (78/79). The GadScape client
+    // reads that byte only for objects above 47337 (newer objects added to a 211 cache): mode 2. Mode 1 = every
+    // object has it, 0 = none. Picked on load: whichever reads the most objects.
+    private var soundMode = 2
+    private fun wideSounds(id: Int) = when (soundMode) { 0 -> false; 1 -> true; else -> id > utils.ObjDefs.WIDE_SOUNDS_ABOVE }
+    private var loadingId = -1
 
     fun load(id: Int, b: ByteArray?): ObjectDefinition {
         val def = ObjectDefinition()
         val inputStream = ByteBuffer.wrap(b)
         def.id = id
+        loadingId = id
         while (true) {
             val opcode = inputStream.readUnsignedByte()
             if (opcode == 0) {
@@ -175,12 +179,12 @@ class ObjectLoader @Inject constructor(
         } else if (opcode == 78) {
             def.ambientSoundId = inputStream.readUnsignedShort()
             def.anInt2083 = inputStream.readUnsignedByte()
-            if (rev220Sounds) inputStream.readUnsignedByte()
+            if (wideSounds(loadingId)) inputStream.readUnsignedByte()
         } else if (opcode == 79) {
             def.anInt2112 = inputStream.readUnsignedShort()
             def.anInt2113 = inputStream.readUnsignedShort()
             def.anInt2083 = inputStream.readUnsignedByte()
-            if (rev220Sounds) inputStream.readUnsignedByte()
+            if (wideSounds(loadingId)) inputStream.readUnsignedByte()
             val length: Int = inputStream.readUnsignedByte()
             val anIntArray2084 = IntArray(length)
             for (index in 0 until length) {
@@ -266,8 +270,8 @@ class ObjectLoader @Inject constructor(
         val archive = index.archive(ConfigType.OBJECT.id)
         val entries = archive!!.fileIds().map { it to cacheLibrary.data(IndexType.CONFIGS.id, ConfigType.OBJECT.id, it) }
 
-        fun parseAll(flag: Boolean): Pair<HashMap<Int, ObjectDefinition>, Int> {
-            rev220Sounds = flag
+        fun parseAll(mode: Int): Pair<HashMap<Int, ObjectDefinition>, Int> {
+            soundMode = mode
             val out = HashMap<Int, ObjectDefinition>()
             var failures = 0
             for ((id, data) in entries) {
@@ -283,18 +287,15 @@ class ObjectLoader @Inject constructor(
             return out to failures
         }
 
-        var (defs, failures) = parseAll(true)
-        if (failures > 0) {
-            val (alt, altFailures) = parseAll(false)
-            if (altFailures < failures) {
-                defs = alt
-                failures = altFailures
-            } else {
-                rev220Sounds = true
-            }
+        var (defs, failures) = parseAll(2)
+        var mode = 2
+        if (failures > 0) for (m in intArrayOf(0, 1)) {
+            val (alt, altFailures) = parseAll(m)
+            if (altFailures < failures) { defs = alt; failures = altFailures; mode = m }
         }
+        soundMode = mode
         objectDefinitionCache.putAll(defs)
-        println("Loaded ${defs.size} object definitions (rev220 sound format: $rev220Sounds, unreadable: $failures)")
+        println("Loaded ${defs.size} object definitions (sound format: ${listOf("211", "220+", "GadScape: wide above 47337")[soundMode]}, unreadable: $failures)")
         index.unCache()
     }
 }

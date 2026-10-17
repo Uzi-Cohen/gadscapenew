@@ -35,6 +35,11 @@ class ItemFull(var id: Int) {
     var recolorFrom = ShortArray(0); var recolorTo = ShortArray(0)
     var retextureFrom = ShortArray(0); var retextureTo = ShortArray(0)
     var shiftClickIndex: Int? = null
+    /**
+     * Opcode 43 (GadScape client): sub-options of an inventory option, kept byte for byte. Each entry is everything
+     * after the opcode: option index, then (sub-option + 1, text) pairs, then 0.
+     */
+    val subOptions43 = ArrayList<ByteArray>()
     var tradeable = false
     var weight: Int? = null
     var category = -1
@@ -99,6 +104,7 @@ class ItemFull(var id: Int) {
                 40 -> if (recolorFrom.isNotEmpty()) { u8(40); u8(recolorFrom.size); for (i in recolorFrom.indices) { u16(recolorFrom[i].toInt()); u16(recolorTo[i].toInt()) } }
                 41 -> if (retextureFrom.isNotEmpty()) { u8(41); u8(retextureFrom.size); for (i in retextureFrom.indices) { u16(retextureFrom[i].toInt()); u16(retextureTo[i].toInt()) } }
                 42 -> shiftClickIndex?.let { u8(42); u8(it) }
+                43 -> for (raw in subOptions43) { u8(43); out.write(raw) }
                 65 -> if (tradeable) u8(65)
                 75 -> weight?.let { u8(75); u16(it and 0xFFFF) }
                 78 -> if (maleModel2 != -1) { u8(78); u16(maleModel2) }
@@ -156,7 +162,8 @@ class ItemFull(var id: Int) {
                 while (true) {
                     if (p >= b.size) { d.readOk = false; d.problem = "it has no end marker"; break }
                     val o = u8()
-                    if (o == 0) { if (p != b.size) { d.readOk = false; d.problem = "there's data after its end" }; break }
+                    // zeros after the end marker are padding some server packers leave; the game ignores them
+                    if (o == 0) { if (p != b.size && (p until b.size).any { b[it].toInt() != 0 }) { d.readOk = false; d.problem = "there's data after its end" }; break }
                     if (o !in 100..109 && o in d.order && o != 249) { /* repeated setting: keep the last, the game does too */ }
                     if (o !in d.order) d.order.add(o)
                     when (o) {
@@ -186,6 +193,7 @@ class ItemFull(var id: Int) {
                         41 -> { val n = u8(); d.retextureFrom = ShortArray(n); d.retextureTo = ShortArray(n)
                             for (i in 0 until n) { d.retextureFrom[i] = u16().toShort(); d.retextureTo[i] = u16().toShort() } }
                         42 -> d.shiftClickIndex = u8()
+                        43 -> { val st = p; u8(); while (u8() != 0) str(); d.subOptions43.add(b.copyOfRange(st, p)) }
                         65 -> d.tradeable = true
                         75 -> d.weight = s16()
                         78 -> d.maleModel2 = u16()
@@ -249,13 +257,13 @@ object ItemStore {
         }
     }
 
-    fun nextFreeId(lib: CacheLibrary): Int = (lib.index(2).archive(10)?.fileIds()?.max() ?: -1) + 1
+    fun nextFreeId(lib: CacheLibrary): Int = (lib.index(2).archive(10)?.fileIds()?.maxOrNull() ?: -1) + 1
 
     /** The noted version's template (the "paper" item, 799 in OSRS): the one most noted items use. */
     fun noteTemplate(lib: CacheLibrary): Int {
         val counts = HashMap<Int, Int>()
         for (id in ids(lib)) { val d = read(lib, id) ?: continue; if (d.noteTemplate != -1) counts[d.noteTemplate] = (counts[d.noteTemplate] ?: 0) + 1 }
-        return counts.maxBy { it.value }?.key ?: 799
+        return counts.maxByOrNull { it.value }?.key ?: 799
     }
 
     /** A noted item for [real], as the game makes them: only the links, the rest comes from the real item and the template. */

@@ -55,26 +55,28 @@ object ServerSource {
         return found
     }
 
+    /** The server folder without a saved setting: the one found earlier this run, or one in the usual places. */
+    fun guess(): File? = cached?.takeIf { it.isDirectory } ?: knownPlaces().asSequence().mapNotNull { near(it) }.firstOrNull()?.also { cached = it }
+
     /** A folder picked in a window: use it if it has the code, else the code near it, else the known one. */
     fun fromPicked(configuration: Configuration, picked: File): Pair<File?, String?> {
         near(picked)?.let { remember(configuration, it); return Pair(it, if (it != picked) "Using the server code in ${it.path}." else null) }
         cached = null
         val known = dir(configuration)
         return Pair(known, if (known != null) "${picked.path} has no server code (no NpcId), so I used ${known.path}."
-                           else "${picked.path} has no server code (no NpcId.java). Pick the server folder (the one with gradlew and plugins/).")
+                           else "${picked.path} has no server code (no NpcId.java). Pick your server folder (the one with gradlew and settings.gradle.kts).")
     }
 
     /**
-     * The server's own package root: "gadscape" (com.gadscape...) for GadScape, "near_reality" for a Near-Reality
-     * checkout that wasn't renamed.
+     * The package the server's own code uses: "gadscape" now, "near_reality" in older copies of the source.
+     * Found from the shops folder, so files the editor writes match the code they go into.
      */
-    fun pkg(server: File?): String {
-        val base = server?.let { File(it, "plugins/shops/src/main/kotlin/com") }
-        return if (base != null && File(base, "near_reality").isDirectory && !File(base, "gadscape").isDirectory) "near_reality" else "gadscape"
-    }
+    fun pkg(server: File?): String =
+        if (server != null && !File(server, "plugins/shops/src/main/kotlin/com/gadscape").isDirectory &&
+            File(server, "plugins/shops/src/main/kotlin/com/near_reality").isDirectory) "near_reality" else "gadscape"
 
-    /** Where the shop scripts are, relative to the server folder. */
-    fun shopsPath(server: File?): String = "plugins/shops/src/main/kotlin/com/${pkg(server)}/plugins/shops"
+    /** [base]/com/<pkg>/[sub] for this server, e.g. pkgPath(s, "plugins/shops/src/main/kotlin", "plugins/shops"). */
+    fun pkgPath(server: File?, base: String, sub: String): String = "$base/com/${pkg(server)}/$sub"
 
     private fun remember(configuration: Configuration, d: File) {
         cached = d

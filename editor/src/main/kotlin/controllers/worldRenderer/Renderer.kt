@@ -524,7 +524,7 @@ class Renderer @Inject constructor(
         val plane = currentPlane
         val candidates = region.locationsDefinition.locations
             .filter { it.x == lx && it.y == ly && typeGroup(it.type) == wanted }
-        val target = (if (plane == 0) candidates.minBy { it.z } else candidates.firstOrNull { it.z == plane }) ?: return null
+        val target = (if (plane == 0) candidates.minByOrNull { it.z } else candidates.firstOrNull { it.z == plane }) ?: return null
         return Pair(region, target)
     }
 
@@ -1590,9 +1590,9 @@ class Renderer @Inject constructor(
 
     private fun npcSize(id: Int) = utils.NpcDefs.cachedOrNull()?.get(id)?.size ?: 1
 
-    private fun npcHeight(s: utils.NpcSpawn): Int {
-        val d = editorRegions.region(models.regionIdOf(s.x, s.y)) ?: return 0
-        return d.tiles[s.z.coerceIn(0, 3)][s.x and 63][s.y and 63]?.height ?: 0
+    private fun npcHeight(s: utils.NpcSpawn, x: Int = s.x, y: Int = s.y): Int {
+        val d = editorRegions.region(models.regionIdOf(x, y)) ?: return 0
+        return d.tiles[s.z.coerceIn(0, 3)][x and 63][y and 63]?.height ?: 0
     }
 
     private fun drawNpcs() {
@@ -1604,14 +1604,17 @@ class Renderer @Inject constructor(
         val camTx = camera.cameraX / 128; val camTy = camera.cameraY / 128
         val sel = gadToolsModel.selectedNpc
         var n = 0
-        for (s in utils.NpcSpawns.all) {
+        // the server's extra copies of some spawns (offset lines in the spawn file) are drawn too, labelled as copies
+        val shown = utils.NpcSpawns.all.flatMap { s -> listOf(Triple(s, s.x, s.y)) + s.copies.map { (dx, dy) -> Triple(s, s.x + dx, s.y + dy) } }
+        for ((s, sx, sy) in shown) {
             if (s.z > top) continue
-            val sc = GadTools.worldToScene(scene, s.x, s.y) ?: continue
+            val copy = sx != s.x || sy != s.y
+            val sc = GadTools.worldToScene(scene, sx, sy) ?: continue
             if (Math.abs(sc.first - camTx) > 70 || Math.abs(sc.second - camTy) > 70) continue
             val def = defs[s.id]
-            val h = npcHeight(s)
+            val h = npcHeight(s, sx, sy)
             val size = def?.size ?: 1
-            npcLabels.add(TileLabels.Extra(sc.first * 128 + size * 64, h - 230, sc.second * 128 + size * 64, s.id.toString(), s === sel))
+            npcLabels.add(TileLabels.Extra(sc.first * 128 + size * 64, h - 230, sc.second * 128 + size * 64, if (copy) "${s.id} (copy)" else s.id.toString(), s === sel && !copy))
             def ?: continue
             if (n >= 250) continue
             val model = npcModels.model(def, s.direction) ?: continue

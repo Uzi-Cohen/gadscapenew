@@ -103,7 +103,7 @@ class AssetBridge(private val log: (String) -> Unit) {
         "bonuses" to ServerItems.BONUS_NAMES.mapIndexed { i, n -> n to s.bonuses[i] }.toMap(LinkedHashMap()),
         "requirements" to s.requirements.mapKeys { e -> ServerItems.SKILLS.getOrElse(e.key) { i -> i.toString() } },
         "weapon" to s.weapon?.let { w -> linkedMapOf("twoHanded" to w.twoHanded, "attackSpeed" to w.attackSpeed,
-            "category" to w.category, "categoryName" to ServerItems.WEAPON_CATEGORIES.getOrNull(w.category),
+            "attackSpeedNote" to "game ticks (0.6 s): 4 = whip, 5 = scythe", "category" to w.category, "categoryName" to ServerItems.WEAPON_CATEGORIES.getOrNull(w.category),
             "range" to w.normalDistance, "longRange" to w.longDistance, "animations" to w.animations()) },
         "special" to s.special, "specialEnergy" to s.specialEnergy)
 
@@ -111,10 +111,10 @@ class AssetBridge(private val log: (String) -> Unit) {
         val srv = server() ?: return mapOf("note" to "The server folder isn't set in the editor (Tools > NPCs or Shops), so server stats can't be read.")
         val f = ServerItems.definitionsFile(srv)
         if (!f.isFile) return mapOf("note" to "${f.path} isn't there (Items tab > Get from live server).")
-        val s = ServerItems.Definitions(f).read(id)
+        val s = ServerItems.read(srv, id)
         s.special = ServerItems.readSpecials(srv)[id] ?: ServerItems.specialNames(srv).entries.firstOrNull { id in it.value }?.key
         s.specialEnergy = ServerItems.specialEnergy(lib, id)
-        return statsJson(s)
+        return statsJson(s) + ("osrsItem" to (ItemStats.osrs(srv, id) != null))
     }
 
     private fun item(id: Int): Map<String, Any?> = withCache { lib, _, _ ->
@@ -222,7 +222,7 @@ class AssetBridge(private val log: (String) -> Unit) {
         val srv = server()
         val statsIn = o["server"]?.takeIf { it.isJsonObject }?.asJsonObject
         if (statsIn != null && srv == null) fail("The server folder isn't set in the editor (Tools > NPCs or Shops), so server stats can't be saved.")
-        val defs = if (statsIn != null) ServerItems.Definitions(ServerItems.definitionsFile(srv!!).also { if (!it.isFile) fail("${it.path} isn't there.") }) else null
+        if (statsIn != null) ServerItems.definitionsFile(srv!!).also { if (!it.isFile) fail("${it.path} isn't there.") }
         // everything is worked out and checked with the cache open; it's written after it's closed
         val (base, st, oldEnergy) = withCache { lib, _, _ ->
             val b: ItemFull = when {
@@ -235,7 +235,11 @@ class AssetBridge(private val log: (String) -> Unit) {
             applyItem(b, o)
             for (m in b.modelIds()) if (m > 65535 || lib.index(7).archive(m) == null) fail("model $m isn't in the cache")
             val energy = ServerItems.specialEnergy(lib, b.id)
-            val stats = if (statsIn != null) defs!!.read(b.id).also { x ->
+            // a copy starts from the stats of the item it copies (what it really has in game)
+            val from = if (o.has("copyOf") && srv != null && ItemStats.get(srv, b.id) == null) o.int("copyOf") else b.id
+            val stats = if (statsIn != null) ServerItems.read(srv!!, from).let { r -> ServerItemStats(b.id).also { x ->
+                x.weight = r.weight; x.slot = r.slot; x.equipmentType = r.equipmentType; x.bonuses = r.bonuses.clone()
+                x.requirements.putAll(r.requirements); x.weapon = r.copy().weapon } }.also { x ->
                 x.special = ServerItems.readSpecials(srv!!)[b.id] ?: ServerItems.specialNames(srv).entries.firstOrNull { b.id in it.value }?.key
                 x.specialEnergy = energy
                 applyStats(x, statsIn)
@@ -250,7 +254,7 @@ class AssetBridge(private val log: (String) -> Unit) {
         ItemStore.save(listOf(base), "ai-item-${base.id}")
         val notes = ArrayList<String>()
         if (st != null) {
-            defs!!.put(st); defs.write()
+            ServerItems.write(srv!!, st)
             val specials = ServerItems.readSpecials(srv!!)
             val built = ServerItems.specialNames(srv).entries.firstOrNull { base.id in it.value }?.key
             if (st.special == null || st.special == built) specials.remove(base.id) else specials[base.id] = st.special!!

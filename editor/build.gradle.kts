@@ -1,9 +1,9 @@
 import org.gradle.jvm.tasks.Jar
 
 plugins {
-    kotlin("jvm") version "1.3.71"
+    kotlin("jvm") version "1.9.25"
     application
-    id("org.openjfx.javafxplugin") version "0.0.8"
+    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
 group = "org.example"
@@ -14,9 +14,9 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib"))
     implementation("com.displee:rs-cache-library:6.4")
-    implementation("com.google.code.gson:gson:2.8.5")
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.bitbucket.akornilov.kotlin:binary-streams:0.33")
     implementation(files("lib/jogamp-fat.jar"))
     implementation(files("lib/dockfx-0.4-SNAPSHOT.jar"))
@@ -27,20 +27,25 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.20")
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
+}
+
 tasks {
-    compileKotlin {
-        kotlinOptions.jvmTarget = "1.8"
-    }
-    compileTestKotlin {
-        kotlinOptions.jvmTarget = "1.8"
-    }
     build {
-        dependsOn(fatJar)
+        dependsOn("fatJar")
     }
 }
 
 application {
-    mainClassName = "AppKt"
+    mainClass.set("AppKt")
     applicationDefaultJvmArgs = listOf(
         "--add-exports=javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED",
         "--add-opens=javafx.graphics/com.sun.javafx.scene.input=ALL-UNNAMED",
@@ -87,17 +92,20 @@ application {
 }
 
 javafx {
-    version = "14"
+    version = "21.0.5"
     modules = listOf("javafx.controls", "javafx.fxml", "javafx.graphics", "javafx.web")
 }
 
-val fatJar = task("fatJar", type = Jar::class) {
-    baseName = "${project.name}-fat"
+val fatJar = tasks.register<Jar>("fatJar") {
+    archiveBaseName.set("${project.name}-fat")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn(configurations.runtimeClasspath)
     manifest {
         attributes["Implementation-Version"] = version
         attributes["Main-Class"] = "AppKt"
     }
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     with(tasks.jar.get() as CopySpec)
 }
 

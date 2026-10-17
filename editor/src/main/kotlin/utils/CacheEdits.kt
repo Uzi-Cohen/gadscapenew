@@ -27,7 +27,7 @@ object CacheEdits {
         return dir
     }
 
-    fun lastBackup(): File? = backupRoot.listFiles()?.filter { it.isDirectory }?.maxBy { it.name }
+    fun lastBackup(): File? = backupRoot.listFiles()?.filter { it.isDirectory }?.maxByOrNull { it.name }
 
     /** Put the exported cache back as it was before the last model/animation change. */
     fun undoLast(): String {
@@ -167,7 +167,7 @@ object CacheEdits {
             repairAnimationsIfNeeded(lib).let { if (it.isNotEmpty()) notes.add(it.trim()) }
             // skeletons
             val skelMap = HashMap<Int, Int>()
-            var nextSkel = (lib.index(1).archiveIds().max() ?: -1) + 1
+            var nextSkel = (lib.index(1).archiveIds().maxOrNull() ?: -1) + 1
             for ((id, b) in skels) {
                 val existing = lib.data(1, id, 0)
                 if (existing != null && existing.contentEquals(b)) { skelMap[id] = id; continue }
@@ -175,7 +175,7 @@ object CacheEdits {
             }
             // frame sets
             val groupMap = HashMap<Int, Int>()
-            var nextGroup = (lib.index(0).archiveIds().max() ?: -1) + 1
+            var nextGroup = (lib.index(0).archiveIds().maxOrNull() ?: -1) + 1
             for ((g, files) in frames) {
                 val patched = files.mapValues { (_, b) ->
                     val s = ((b[0].toInt() and 255) shl 8) or (b[1].toInt() and 255)
@@ -199,7 +199,7 @@ object CacheEdits {
             }
             // sequences
             val added = ArrayList<Int>()
-            var nextSeq = (lib.index(2).archive(12)?.fileIds()?.max() ?: -1) + 1
+            var nextSeq = (lib.index(2).archive(12)?.fileIds()?.maxOrNull() ?: -1) + 1
             for ((id, raw) in seqs.toSortedMap()) {
                 val seq = SeqDef.decode(id, raw)
                 if (!seq.readOk) { notes.add("Animation $id has settings this editor doesn't know; it was copied as it is."); }

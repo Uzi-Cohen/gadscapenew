@@ -74,8 +74,6 @@ class ItemsTab(
 
     // ---------- server stats (data/items/ItemDefinitions.json, special-attacks.json, enum 906) ----------
     private val configuration = EditorConfiguration()
-    private var serverDefs: ServerItems.Definitions? = null
-    private var serverDefsDir: File? = null
     private var stats: ServerItemStats? = null
     private val statsInfo = Label("").apply { isWrapText = true }
     private val sWeight = num(6)
@@ -260,25 +258,20 @@ class ItemsTab(
     // ---------- server stats ----------
     private fun server(): File? = ServerSource.dir(configuration)
 
-    private fun defs(): ServerItems.Definitions? {
-        val s = server() ?: return null
-        val f = ServerItems.definitionsFile(s)
-        if (!f.isFile) return null
-        if (serverDefs == null || serverDefsDir != s) { serverDefs = try { ServerItems.Definitions(f) } catch (e: Exception) { say("Couldn't read ${f.path}: ${e.message}"); null }; serverDefsDir = s }
-        return serverDefs
-    }
-
     private fun loadStats(id: Int) {
         val s = server()
-        val d = defs()
         if (s == null) { stats = null; statsInfo.text = "Pick the server folder (Tools > NPCs or Shops) to edit bonuses, attack speed and specials."; fillStats(); return }
-        if (d == null) { stats = null; statsInfo.text = "${ServerItems.definitionsFile(s).path} isn't there. Get it from the live server, or copy the server's data folder next to its code."; fillStats(); return }
-        val st = d.read(id)
+        if (!ServerItems.definitionsFile(s).isFile) { stats = null; statsInfo.text = "${ServerItems.definitionsFile(s).path} isn't there. Get it from the live server, or copy the server's data folder next to its code."; fillStats(); return }
+        val st = try { ServerItems.read(s, id) } catch (e: Exception) { stats = null; statsInfo.text = "Couldn't read ${ServerItems.definitionsFile(s).path}: ${e.message}"; fillStats(); return }
         st.special = try { ServerItems.readSpecials(s)[id] } catch (e: Exception) { null }
             ?: specialNames().entries.firstOrNull { id in it.value }?.key
         st.specialEnergy = lib()?.let { ServerItems.specialEnergy(it, id) }
         stats = st
-        statsInfo.text = if (d.has(id)) "From ${ServerItems.definitionsFile(s).path}." else "The server has no stats for item $id yet; saving adds them."
+        statsInfo.text = when {
+            ItemStats.osrs(s, id) != null -> "Item $id is an OSRS item: the server also uses its OSRS wiki stats (the higher bonus wins; attack speed and requirements come from OSRS), so lowering a stat here may not change it in game."
+            ServerItems.has(s, id) -> "From ${ServerItems.definitionsFile(s).path}."
+            else -> "The server has no stats for item $id yet, so it can't be worn in game. Copy them from a similar item, change them, and Save stats."
+        }
         fillStats()
     }
 
@@ -342,8 +335,8 @@ class ItemsTab(
     /** Saves the stats into the server's data files (and the special energy into the exported cache). */
     fun saveStats(st: ServerItemStats): String {
         val s = server() ?: return "Pick the server folder first (Tools > NPCs or Shops)."
-        val d = defs() ?: return "${ServerItems.definitionsFile(s).path} isn't there; get it from the live server first."
-        d.put(st); d.write()
+        if (!ServerItems.definitionsFile(s).isFile) return "${ServerItems.definitionsFile(s).path} isn't there; get it from the live server first."
+        ServerItems.write(s, st)
         val specials = ServerItems.readSpecials(s)
         val built = specialNames().entries.firstOrNull { st.id in it.value }?.key
         val wanted = st.special
@@ -367,9 +360,10 @@ class ItemsTab(
     private fun copyStatsFrom() {
         val other = TextInputDialog("").apply { title = "Copy stats"; headerText = null; contentText = "Item id to copy bonuses, speed, animations and special from"; initOwner(stage) }
             .showAndWait().orElse(null)?.trim()?.toIntOrNull() ?: return
-        val d = defs() ?: return say("The server's ItemDefinitions.json isn't loaded.")
+        val s0 = server() ?: return say("Pick the server folder first.")
         val cur = stats ?: return
-        val src = d.read(other)
+        // what the other item really has in game (OSRS items included)
+        val src = ServerItems.read(s0, other)
         cur.weight = src.weight; cur.slot = src.slot; cur.equipmentType = src.equipmentType; cur.bonuses = src.bonuses.clone()
         cur.requirements.clear(); cur.requirements.putAll(src.requirements); cur.weapon = src.copy().weapon
         val s = server()
@@ -387,7 +381,6 @@ class ItemsTab(
             val ok = d.fetchServerData("items/ItemDefinitions.json", ServerItems.definitionsFile(s))
             d.fetchServerData("items/special-attacks.json", ServerItems.specialsFile(s))
             javafx.application.Platform.runLater {
-                serverDefs = null
                 work?.let { loadStats(it.id) }
                 say(if (ok) "Got the live ItemDefinitions.json." else "Couldn't get it (check Tools > Deploy > Test connection).")
             }
@@ -396,14 +389,14 @@ class ItemsTab(
 
     private fun sendStats() {
         val s = server() ?: return say("Pick the server folder first.")
-        val pending = ServerItems.pending()
+        val pending = ServerItems.pending() + ItemStats.pending().sorted().map { "stats of item $it" }
         val withCache = Alert(Alert.AlertType.CONFIRMATION, "Send ${if (pending.isEmpty()) "nothing from the server files" else pending.joinToString(", ")} to the live server and restart it?\n\n" +
                 "Yes: also send the exported cache (needed for new items, models and special energy).\nNo: only the server files.",
             ButtonType.YES, ButtonType.NO, ButtonType.CANCEL).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.CANCEL)
         if (withCache == ButtonType.CANCEL) return
         say("Sending...")
         Thread {
-            val ok = Deployer { m -> javafx.application.Platform.runLater { say(m) } }.deployServerData(s, withCache == ButtonType.YES)
+            val ok = Deployer { m -> javafx.application.Platform.runLater { say(m) } }.deployItemStats(s, withCache == ButtonType.YES)
             javafx.application.Platform.runLater { say(if (ok) "Item stats are live." else "Not sent; see the messages above (Tools > Deploy shows the full log).") }
         }.start()
     }
