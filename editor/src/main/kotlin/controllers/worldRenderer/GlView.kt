@@ -52,6 +52,8 @@ class GlView(private val listener: GlListener) {
         private set
     /** Frames per second to aim for. */
     @Volatile var targetFps = 60
+    /** While true nothing is drawn (the view is hidden, e.g. another tab is open): no CPU or GPU use. */
+    @Volatile var paused = false
 
     private class Frame(val w: Int, val h: Int) {
         val bytes: ByteBuffer = ByteBuffer.allocateDirect(w * h * 4).order(ByteOrder.nativeOrder())
@@ -143,6 +145,7 @@ class GlView(private val listener: GlListener) {
         var curW = -1; var curH = -1
         var fpsFrames = 0; var fpsStart = System.nanoTime()
         while (running) {
+            if (paused) { Thread.sleep(50); continue }
             val start = System.nanoTime()
             val w = wantW; val h = wantH
             if (w != curW || h != curH) {

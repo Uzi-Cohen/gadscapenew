@@ -161,6 +161,9 @@ class Renderer @Inject constructor(
 
     fun requestFocus() { if (::view.isInitialized) view.requestFocus() }
 
+    /** Stops drawing while the map isn't on screen (another tab is open); picks up where it was when shown again. */
+    fun setPaused(paused: Boolean) { if (::view.isInitialized) view.paused = paused }
+
     companion object {
         private val live = java.util.concurrent.CopyOnWriteArrayList<Renderer>()
 
