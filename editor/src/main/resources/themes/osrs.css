@@ -1,0 +1,80 @@
+/* OSRS stone: rocky interface panels, orange text with a black drop shadow, red for selected */
+.root {
+    -gs-bg: #2b2519; -gs-panel: #3e3529; -gs-raised: #4a4032; -gs-line: #14110c;
+    -gs-text: #ff981f; -gs-muted: #c8b28c; -gs-gold: #ffff00; -gs-gold-dark: #ff981f; -gs-red: #b0482c;
+    -fx-base: #4a4032; -fx-background: #3e3529;
+    -fx-control-inner-background: #2a241c; -fx-control-inner-background-alt: #2f281f;
+    -fx-accent: #8c3a22; -fx-selection-bar: #6e2c1a; -fx-focus-color: #ff981f;
+    -fx-font-family: "Verdana", "Segoe UI", sans-serif; -fx-font-size: 12px;
+    -fx-background-image: url("osrs-stone.png"); -fx-background-repeat: repeat;
+}
+.dock-pane, .dock-node, .split-pane, .tab-pane > .tab-content-area, .titled-pane > .content, .dialog-pane,
+.scroll-pane, .scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-image: url("osrs-stone.png"); -fx-background-repeat: repeat;
+}
+.menu-bar, .tool-bar, .dock-title-bar, .status-bar, .tab-pane > .tab-header-area > .tab-header-background,
+.context-menu, .dialog-pane > .header-panel {
+    -fx-background-color: #231e16;
+    -fx-background-image: url("osrs-stone-dark.png"); -fx-background-repeat: repeat;
+    -fx-border-color: #0c0a07;
+}
+.label, .check-box, .radio-button, .hyperlink, .menu-bar .label, .dock-title-bar .label {
+    -fx-text-fill: #ff981f;
+    -fx-effect: dropshadow(one-pass-box, #000000, 0, 0, 1, 1);
+}
+.subtle { -fx-text-fill: #c8b28c; }
+.section-header, .floor-label, .titled-pane > .title > .text { -fx-text-fill: #ffff00; -fx-fill: #ffff00; }
+
+/* stone buttons with a dark outer and light inner edge */
+.button, .toggle-button, .menu-button {
+    -fx-background-color: linear-gradient(to bottom, #62563f, #3b3226);
+    -fx-border-color: #14110c, #75664f; -fx-border-width: 1, 1; -fx-border-insets: 0, 1;
+    -fx-background-radius: 2; -fx-border-radius: 2, 1;
+    -fx-text-fill: #ff981f;
+    -fx-effect: dropshadow(one-pass-box, #000000, 0, 0, 1, 1);
+}
+.button:hover, .toggle-button:hover { -fx-background-color: linear-gradient(to bottom, #72644a, #463b2d); -fx-border-color: #14110c, #a38b64; }
+.button:pressed { -fx-background-color: linear-gradient(to bottom, #3b3226, #62563f); }
+.toggle-button:selected, .button.accent {
+    -fx-background-color: linear-gradient(to bottom, #7a2e1b, #4d1b10);
+    -fx-border-color: #14110c, #c0543a;
+    -fx-text-fill: #ffff00; -fx-font-weight: bold;
+}
+
+.text-field, .text-area, .combo-box, .choice-box, .list-view, .spinner {
+    -fx-background-color: #2a241c; -fx-border-color: #14110c, #5a4d3b; -fx-border-width: 1, 1; -fx-border-insets: 0, 1;
+    -fx-background-radius: 0; -fx-border-radius: 0;
+    -fx-text-fill: #ffff00; -fx-prompt-text-fill: #8f7c5c;
+}
+.text-area .content { -fx-background-color: #221d16; }
+.list-cell { -fx-text-fill: #ff981f; }
+.list-cell:odd { -fx-background-color: rgba(0,0,0,0.12); }
+.list-cell:hover { -fx-background-color: rgba(255,152,31,0.12); }
+.list-cell:filled:selected, .list-cell:filled:selected:hover {
+    -fx-background-color: rgba(176,72,44,0.55); -fx-text-fill: #ffff00;
+}
+
+.titled-pane > .title { -fx-background-color: #2f281f; -fx-border-color: #14110c; -fx-background-image: url("osrs-stone-dark.png"); }
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: linear-gradient(to bottom, #5a4e3a, #3a3125); -fx-border-color: #14110c; -fx-background-radius: 3 3 0 0;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: linear-gradient(to bottom, #7a2e1b, #4d1b10); -fx-border-color: #c0543a;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab .tab-label { -fx-text-fill: #ff981f; }
+.tab-pane > .tab-header-area > .headers-region > .tab:selected .tab-label { -fx-text-fill: #ffff00; }
+
+.slider .track { -fx-background-color: #1c1812; }
+.slider .thumb { -fx-background-color: linear-gradient(#ffcf6a, #ff981f); -fx-background-radius: 3; }
+.scroll-bar .thumb { -fx-background-color: #6b5a40; -fx-background-radius: 2; }
+.menu-item:focused { -fx-background-color: rgba(176,72,44,0.7); }
+.menu-item:focused .label { -fx-text-fill: #ffff00; }
+.check-box .box { -fx-background-color: #2a241c; -fx-border-color: #14110c, #5a4d3b; }
+.check-box:selected .box { -fx-background-color: #8c3a22; }
+
+/* menu bar entries are menus, not buttons */
+.menu-bar .menu-button, .menu-bar .menu {
+    -fx-background-color: transparent; -fx-background-image: null; -fx-border-color: transparent; -fx-effect: null; -fx-padding: 4 8 4 8;
+}
+.menu-bar .menu:hover, .menu-bar .menu:showing { -fx-background-color: rgba(255,255,255,0.08); -fx-background-radius: 4; }

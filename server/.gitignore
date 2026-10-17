@@ -72,7 +72,7 @@ logs/game/
 info/
 !**/src/**/info/
 
-# Game data, cache binaries and saves ship in the release zip, not in git.
+# Game data, packed cache and saves ship in the release zip, not in git.
+# cache/assets (the source the cache is packed from) is tracked.
 /data/
-/cache/assets/
 /cache/data/

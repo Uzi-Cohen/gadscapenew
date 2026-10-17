@@ -66,7 +66,7 @@ public class WorldBroadcasts {
             " our community made guides with the ::guides command.",
             "Did you know: You can start Slayer South-West of the Grand Exchange with Turael. Higher level slayer masters can also be found here.",
             "Did you know: You can purchase fully charged custom starter weapons from the " + GameConstants.SERVER_NAME + " guide for 200K each.",
-            "Did you know: You can link your Discord account with your in-game account by typing /link in tyhe OSNR Discord",
+            "Did you know: You can link your Discord account with your in-game account by typing /link in the " + GameConstants.SERVER_NAME + " Discord",
             "Did you know: " + GameConstants.SERVER_NAME + " accepts OSGP donations - " +
                     "contact a member of staff for more information.", "Did you know: Zahur at Home can add " +
             "herbs to vials of water and crush secondary ingredients for you.", "Did you know: You can apply to be " +

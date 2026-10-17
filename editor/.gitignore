@@ -1,0 +1,24 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+/out
+/cache-181
+/cache-188
+/cache-out
+config.properties
+/caches
+*.log
+# Uzi's Map Editor - local data, never commit
+/cache-out
+/region-backups
+/packages
+/prefabs
+/build
+main_file_cache.*
+xteas*.json
+gadscape-tools.json
+gadscape-bookmarks.json

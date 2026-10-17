@@ -110,7 +110,6 @@ import com.zenyte.game.world.region.dynamicregion.OutOfSpaceException;
 import com.zenyte.net.NetworkConstants;
 import com.zenyte.plugins.dialogue.CountDialogue;
 import com.zenyte.plugins.dialogue.OptionsMenuD;
-import com.zenyte.plugins.item.DiceItem;
 import com.zenyte.tools.AnimationExtractor;
 import com.zenyte.utils.StringUtilities;
 import com.zenyte.utils.TextUtils;
@@ -463,29 +462,21 @@ public final class GameCommands {
             if (p.isLocked()) {
                 return;
             }
-            p.getDialogueManager().start(new Dialogue(p) {
-                @Override
-                public void buildDialogue() {
-                    plain(DiceItem.GAMBLE_WARNING);
-                    options(TITLE, "Take me there", "Cancel").onOptionOne(() -> {
-                        final Teleport teleport = new Teleport() {
-                            @Override public TeleportType getType() {return TeleportType.GADSCAPE_PORTAL_TELEPORT;}
-                            @Override public Location getDestination() {return new Location(3366, 6939, 2);}
-                            @Override public int getLevel() {return 0;}
-                            @Override public double getExperience() {return 0;}
-                            @Override public int getRandomizationDistance() {return 0;}
-                            @Override public Item[] getRunes() {return new Item[0];}
-                            @Override public int getWildernessLevel() {return 0;}
-                            @Override public boolean isCombatRestricted() {return true;}
-                            @Override public void onUsage(Player player) {
-                                player.lock(3);
-                                new FadeScreen(player, () -> {}).fade(3);
-                            }
-                        };
-                        teleport.teleport(player);
-                    });
+            final Teleport teleport = new Teleport() {
+                @Override public TeleportType getType() {return TeleportType.GADSCAPE_PORTAL_TELEPORT;}
+                @Override public Location getDestination() {return new Location(3366, 6939, 2);}
+                @Override public int getLevel() {return 0;}
+                @Override public double getExperience() {return 0;}
+                @Override public int getRandomizationDistance() {return 0;}
+                @Override public Item[] getRunes() {return new Item[0];}
+                @Override public int getWildernessLevel() {return 0;}
+                @Override public boolean isCombatRestricted() {return true;}
+                @Override public void onUsage(Player player) {
+                    player.lock(3);
+                    new FadeScreen(player, () -> {}).fade(3);
                 }
-            });
+            };
+            teleport.teleport(p);
         });
 
         new Command(PlayerPrivilege.PLAYER, "skull", "Skulls your character without another player.",(p, args) -> {
@@ -1846,9 +1837,8 @@ public final class GameCommands {
             final String arguments = StringUtilities.compile(args, 0, args.length, '_');
             p.getPacketDispatcher().sendURL(page + arguments);
         });
-        new Command(PlayerPrivilege.PLAYER, "benefits", "Opens the OSNR Wiki Benefits Page.", (p, args) -> {
-            final String page = "https://docs.google.com/spreadsheets/d/12OU9VOdT5dFKDS1AXq1Nldl82LioMPtI6FkZ4LLbpis";
-            p.getPacketDispatcher().sendURL(page);
+        new Command(PlayerPrivilege.PLAYER, "benefits", "Opens the donator ranks page.", (p, args) -> {
+            p.getPacketDispatcher().sendURL(GameConstants.SERVER_STORE_URL);
         });
         new Command(PlayerPrivilege.DEVELOPER, "itemdef-p", (p, args) -> {
             final int id = parseInt(args[0]);
@@ -2452,10 +2442,10 @@ public final class GameCommands {
             p.sendMessage("DropRate: " + (int) ((gameMode + donor + pin + pet + compCape) * 100D) + "%. Mode: " + (int) (gameMode * 100D) + "%. Donor: " + (int) (donor * 100D) + "%. Pin: " + (int) (pin * 100D) + "%. Pet: " + (int) (pet * 100D) +"%");
         });
 
-        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank. Available to Administrators+ and Respected donators+.",
+        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank. Available to staff and donators.",
                 (p, args) -> {
-                    if (!p.getPrivilege().inherits(PlayerPrivilege.ADMINISTRATOR) && !p.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED)) {
-                        p.sendMessage("This command is only available to Administrators and Respected donators or higher.");
+                    if (!p.isStaff() && !p.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM)) {
+                        p.sendMessage("This command is only available to staff and donators.");
                         return;
                     }
                     GameInterface.BANK.open(p);
@@ -2567,24 +2557,22 @@ public final class GameCommands {
             GameNoticeboardInterface.showStaffOnline(p);
         });
         new Command(PlayerPrivilege.PLAYER, new String[]{"vote", "voting"}, (p, args) -> {
-            if (WebsiteService.isEnabled()) WebsiteService.commandVote(p);
-            else GameInterface.VOTE.open(p);
+            WebsiteService.commandVote(p);
         });
         new Command(PlayerPrivilege.PLAYER, new String[]{"store", "donate"}, (p, args) -> {
-            if (WebsiteService.isEnabled()) WebsiteService.commandDonate(p);
-            else GameInterface.CREDIT_STORE.open(p);
+            WebsiteService.commandDonate(p);
         });
         new Command(PlayerPrivilege.PLAYER, new String[]{"claim", "claimvote", "claimdonation", "redeem"},
                 "Collects your vote and donation rewards from the website.", (p, args) -> {
             if (!WebsiteService.isEnabled()) {
-                p.sendMessage("Claiming isn't available on this world.");
+                p.sendMessage("Claiming from the website isn't switched on yet.");
                 return;
             }
             WebsiteService.commandClaim(p);
         });
         new Command(PlayerPrivilege.PLAYER, "link", "Links your character to your forum account. Usage: ::link CODE", (p, args) -> {
             if (!WebsiteService.isEnabled()) {
-                p.sendMessage("Linking isn't available on this world.");
+                p.sendMessage("Linking to the website isn't switched on yet.");
                 return;
             }
             if (args.length == 0) {
@@ -2598,7 +2586,7 @@ public final class GameCommands {
         });
         new Command(PlayerPrivilege.ADMINISTRATOR, "websitesync", "Sends item definitions and drop tables to the website.", (p, args) -> {
             if (!WebsiteService.isEnabled()) {
-                p.sendMessage("The website link is disabled on this world.");
+                p.sendMessage("The website link isn't switched on yet (see website: in worlds.yml).");
                 return;
             }
             WebsiteService.syncGameData(p);
@@ -2619,7 +2607,7 @@ public final class GameCommands {
             p.getPacketDispatcher().sendURL("https://GadScape.com/account");
         });
         new Command(PlayerPrivilege.PLAYER, "youtube", (p, args) -> {
-            p.getPacketDispatcher().sendURL("https://www.youtube.com/user/NRPKOfficial");
+            p.getPacketDispatcher().sendURL(GameConstants.DISCORD_INVITE);
         });
         new Command(PlayerPrivilege.PLAYER, "yell", "Sends a global message across the game.", (p, args) -> {
             if (SanctionPlayerExtKt.isMuted(p)) {

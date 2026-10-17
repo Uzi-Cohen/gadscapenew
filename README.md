@@ -1,10 +1,13 @@
 # gadscape
 
-GadScape game server (`server/`, Near Reality / Zenyte based) and its link to
-the website (`Uzi-Cohen/siteforrsps`).
+| Folder | What |
+|---|---|
+| `server/` | Game server (Kotlin/Java, revision 211) |
+| `client/` | Game client (RuneLite/OpenOSRS-based fork) |
+| `editor/` | Uzi's Map Editor: maps, objects, NPCs, shops, items, models, animations |
 
-`server/data/`, the cache binaries and `worlds.yml` are not in git: take them
-from the latest release zip (`gadscape-full-*.zip`).
+`server/data/`, the packed cache, `worlds.yml` and the client installers are
+not in git: take them from the latest release zip (`gadscape-full-*.zip`).
 
 ## Website link
 
@@ -35,9 +38,23 @@ If `webhookPort` is set, open that port and set the website's
 | using a donator pin | adds its value to the website total; rank goes up automatically |
 | logging in | website bans, IP bans and VPN/proxy block are enforced; IP and location are logged |
 
-Donator ranks (by pins claimed): $10 Donator → Premium crown, $100 Super →
-Expansion, $200 Elite → Extreme, $500 Extreme → Respected, $1000 Respected →
-Legendary, $5000 Platinum → Uber.
+Donator ranks (by pins claimed) show in game under the website's names: $10
+Donator, $100 Super, $200 Elite, $500 Extreme, $1000 Respected, $5000 Platinum.
+They reuse the server's existing crowns and perks (Premium, Expansion, Extreme,
+Respected, Legendary and Uber in the code). Every donator and every staff member
+can use `::bank`.
 
-With `website.enabled: false` everything falls back to the old in-game vote
-and credit store interfaces.
+With `website.enabled: false`, `::vote` and `::donate` open the plain website
+pages and pins are added to a total kept on the character.
+
+## Editing the Universal Shop
+
+The shop with all the tabs (Melee, Ranged, Magic, ... Vote) is packed into the
+cache. Its items and prices are in
+`server/core-model/src/main/kotlin/com/gadscape/game/content/universalshop/UnivShopTable.kt`
+and the tabs are in `UnivShopCategory.kt` in the same folder. After editing, rebuild the cache
+(`./gradlew :app:runProductionUpdate` packs and starts; `generateCacheProd`
+only packs). Players get the new cache automatically. In game, `::usm` lets
+staff switch items on or off, change prices or close the shop without a rebuild.
+
+Item names and other cache content are in `server/cache/assets/`.

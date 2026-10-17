@@ -12,10 +12,10 @@ public enum HomeTeleport {
     MAGE_BANK(new Location(2539, 4716), "Mage's Bank", MemberRank.EXPANSION),
     FOREX_ENCLAVE(new Location(3150, 3636), "Forex Enclave", MemberRank.EXPANSION),
     DI(DonatorZoneTeleports.DI.getLocation(), "Donator Island", MemberRank.EXPANSION),
-    DIE(DonatorZoneTeleports.DIE.getLocation(), "Expansion Island", MemberRank.EXPANSION),
-    RDI(DonatorZoneTeleports.RDI.getLocation(), "Respected Island", MemberRank.RESPECTED),
-    LDI(DonatorZoneTeleports.LDI.getLocation(), "Legendary Island", MemberRank.LEGENDARY),
-    UDI(DonatorZoneTeleports.UDI.getLocation(), "Uber Island", MemberRank.UBER),
+    DIE(DonatorZoneTeleports.DIE.getLocation(), "Super Donator Island", MemberRank.EXPANSION),
+    RDI(DonatorZoneTeleports.RDI.getLocation(), "Extreme Donator Island", MemberRank.RESPECTED),
+    LDI(DonatorZoneTeleports.LDI.getLocation(), "Respected Donator Island", MemberRank.LEGENDARY),
+    UDI(DonatorZoneTeleports.UDI.getLocation(), "Platinum Donator Island", MemberRank.UBER),
     ;
 
     HomeTeleport(Location location, String name, MemberRank required) {

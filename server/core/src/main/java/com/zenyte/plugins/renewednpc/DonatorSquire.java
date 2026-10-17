@@ -6,7 +6,6 @@ import com.zenyte.game.world.entity.npc.actions.NPCPlugin;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.dialogue.Dialogue;
 import com.zenyte.game.world.entity.player.privilege.MemberRank;
-import com.zenyte.utils.StringUtilities;
 
 @SuppressWarnings("all")
 public class DonatorSquire extends NPCPlugin {
@@ -19,7 +18,7 @@ public class DonatorSquire extends NPCPlugin {
             public void buildDialogue() {
 
                 if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
-                    npc("You must be Expansion donator+ to change your home teleport.");
+                    npc("You must be a Super Donator or higher to change your home teleport.");
                     return;
                 }
 
@@ -37,7 +36,7 @@ public class DonatorSquire extends NPCPlugin {
                         .onOptionThree(() -> changeTeleport(player, 2))
                         .onOptionFour(() -> changeTeleport(player, 3))
                         .onOptionFive(() -> setKey(7));
-                options(7, "Choose a location", "Expansion Island",  "Respected Island", "Legendary Island", "Uber Island", "Previous")
+                options(7, "Choose a location", "Super Donator Island", "Extreme Donator Island", "Respected Donator Island", "Platinum Donator Island", "Previous")
                         .onOptionOne(() -> changeTeleport(player, 4))
                         .onOptionTwo(() -> changeTeleport(player, 5))
                         .onOptionThree(() -> changeTeleport(player, 6))
@@ -60,7 +59,7 @@ public class DonatorSquire extends NPCPlugin {
             public void buildDialogue() {
 
                 if(!player.getMemberRank().equalToOrGreaterThan(tp.getRequired())) {
-                   npc("You must be an "+ StringUtilities.formatEnum(tp.getRequired())+"+ Premium to choose your home teleport.");
+                   npc("You must be a " + tp.getRequired() + " or higher to choose this home teleport.");
                    return;
                 }
 

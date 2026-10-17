@@ -6,7 +6,7 @@ public class GethinNPC extends NPCPlugin {
 
 	@Override
 	public void handle() {
-		bind("Trade", (player, npc) -> player.openShop("Premium Supplies"));
+		bind("Trade", (player, npc) -> player.openShop("Donator Supplies"));
 	}
 
 	@Override

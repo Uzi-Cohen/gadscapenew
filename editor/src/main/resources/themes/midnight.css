@@ -1,0 +1,35 @@
+/* Midnight: pure black with icy blue accents */
+.root {
+    -gs-bg: #000000; -gs-panel: #080808; -gs-raised: #121212; -gs-line: #242424;
+    -gs-text: #e8e8e8; -gs-muted: #8c8c8c; -gs-gold: #4fc3f7; -gs-gold-dark: #0288d1; -gs-red: #ef5350;
+    -fx-base: #121212; -fx-background: #000000;
+    -fx-control-inner-background: #0a0a0a; -fx-control-inner-background-alt: #0f0f0f;
+    -fx-accent: #0288d1; -fx-selection-bar: #0277bd; -fx-focus-color: #4fc3f7;
+    -fx-background-color: #000000;
+}
+.dock-pane, .dock-node, .split-pane, .tab-pane > .tab-content-area, .titled-pane > .content, .dialog-pane { -fx-background-color: #050505; }
+.menu-bar, .tool-bar, .dock-title-bar, .status-bar, .tab-pane > .tab-header-area > .tab-header-background, .context-menu {
+    -fx-background-color: #000000; -fx-border-color: #1c1c1c;
+}
+.dock-title-bar .label { -fx-text-fill: #4fc3f7; }
+.text-field, .text-area, .combo-box, .choice-box, .list-view { -fx-background-color: #0a0a0a; -fx-border-color: #262626; }
+.text-area .content { -fx-background-color: #0a0a0a; }
+.button, .toggle-button { -fx-background-color: #121212; -fx-border-color: #2a2a2a; -fx-text-fill: #e8e8e8; }
+.button:hover, .toggle-button:hover { -fx-background-color: #1c1c1c; -fx-border-color: #4fc3f7; }
+.toggle-button:selected, .button.accent {
+    -fx-background-color: #03263a; -fx-border-color: #4fc3f7; -fx-text-fill: #4fc3f7;
+}
+.list-cell:hover { -fx-background-color: #141414; }
+.list-cell:filled:selected, .list-cell:filled:selected:hover { -fx-background-color: #03263a; -fx-text-fill: #4fc3f7; }
+.scroll-bar .thumb { -fx-background-color: #2a2a2a; }
+.scroll-bar .thumb:hover { -fx-background-color: #0288d1; }
+.slider .thumb { -fx-background-color: #4fc3f7; }
+.menu-item:focused { -fx-background-color: #0277bd; }
+.menu-item:focused .label { -fx-text-fill: #ffffff; }
+.check-box:selected .box { -fx-background-color: #0288d1; -fx-border-color: #4fc3f7; }
+
+/* menu bar entries are menus, not buttons */
+.menu-bar .menu-button, .menu-bar .menu {
+    -fx-background-color: transparent; -fx-background-image: null; -fx-border-color: transparent; -fx-effect: null; -fx-padding: 4 8 4 8;
+}
+.menu-bar .menu:hover, .menu-bar .menu:showing { -fx-background-color: rgba(255,255,255,0.08); -fx-background-radius: 4; }

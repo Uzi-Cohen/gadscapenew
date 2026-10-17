@@ -1,5 +1,6 @@
 package com.zenyte.game.model.ui.testinterfaces;
 
+import com.gadscape.website.WebsiteService;
 import com.gadscape.game.content.middleman.MiddleManPlayerPromptKt;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.consumables.Consumable;
@@ -210,7 +211,7 @@ public class OrbsInterface extends Interface {
                 player.getWorldMap().close();
             }
         });
-        bind("Open Store", GameInterface.CREDIT_STORE::open);
+        bind("Open Store", WebsiteService::commandDonate);
     }
 
     @Override

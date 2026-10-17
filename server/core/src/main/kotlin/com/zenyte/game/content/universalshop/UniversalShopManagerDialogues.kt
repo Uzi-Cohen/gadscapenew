@@ -71,12 +71,14 @@ private fun Player.runActiveDialogue() {
                 if(currentBlacklist) {
                     "Activate" {
                         UniversalShop.disabledItems.remove(itemId)
+                        UniversalShop.save()
                         player.sendMessage("The item has been activated.")
                         player.dialogueManager.start(MainMenu(player))
                     }
                 } else {
                     "Deactivate" {
                         UniversalShop.disabledItems.add(itemId)
+                        UniversalShop.save()
                         player.sendMessage("The item has been de-activated")
                         player.dialogueManager.start(MainMenu(player))
                     }
@@ -91,16 +93,20 @@ class PriceChangeMenu(
     private val optionsMenuVar: Array<String> = UniversalShop.Categories.map { it.tableName }.toTypedArray()
 ) : OptionsMenuD(player, "Pick Category", *optionsMenuVar) {
     override fun handleClick(slotId: Int) {
-        var itemId = 0
         val option = optionsMenuVar[slotId]
-        val category = UniversalShop.Categories.first{it.tableName == option }.uniqueIndex
-        player.sendInputInt("Please enter item id from category") { id ->
-            itemId = id
-        }
-        player.sendInputInt("What would you like to set price to? (curr: ${UniversalShop.determinePrice(UniversalShop.Categories.first{it.tableName == option}.uniqueIndex, itemId)})") { price ->
-            UniversalShop.priceOverrides[category to itemId] = price
-            player.sendMessage("Price was changed to $price")
-            player.dialogueManager.start(MainMenu(player))
+        val category = UniversalShop.Categories.first { it.tableName == option }
+        player.sendInputInt("Please enter item id from category") { itemId ->
+            val row = UniversalShop.rowOf(category, itemId)
+            if (row == null) {
+                player.sendMessage("That item isn't in this category.")
+                return@sendInputInt
+            }
+            player.sendInputInt("What would you like to set price to? (curr: ${UniversalShop.determinePrice(category.uniqueIndex, row)})") { price ->
+                UniversalShop.priceOverrides[category.uniqueIndex to row] = price
+                UniversalShop.save()
+                player.sendMessage("Price was changed to $price")
+                player.dialogueManager.start(MainMenu(player))
+            }
         }
     }
 
@@ -120,12 +126,14 @@ class DisableShopMenu(
                 if(disabled) {
                     "Enable" {
                         UniversalShop.disabledCategory.remove(category)
+                        UniversalShop.save()
                         player.sendMessage("The category has been enabled.")
                         player.dialogueManager.start(MainMenu(player))
                     }
                 } else {
                     "Disable" {
                         UniversalShop.disabledCategory.add(category)
+                        UniversalShop.save()
                         player.sendMessage("The category has been disabled.")
                         player.dialogueManager.start(MainMenu(player))
                     }

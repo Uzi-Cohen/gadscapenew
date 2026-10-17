@@ -6,14 +6,31 @@ import com.gadscape.game.content.universalshop.UnivShopTable
 import com.zenyte.game.item.Item
 import com.zenyte.game.model.shop.ShopCurrency
 import com.zenyte.game.world.entity.player.Player
+import com.google.gson.GsonBuilder
 import mgi.types.config.DBRowDefinition
 import mgi.types.config.items.ItemDefinitions
+import org.slf4j.LoggerFactory
+import java.nio.file.Files
+import java.nio.file.Path
 
 object UniversalShop {
     @JvmStatic val priceOverrides = mutableMapOf<Pair<Int, Int>, Int>()
     @JvmStatic val disabledItems = mutableListOf<Int>()
     @JvmStatic val disabledCategory = mutableListOf<UniversalShopCategory>()
     private var cachedMappings = mutableMapOf<Int, Pair<Int, Int>>()
+
+    private val logger = LoggerFactory.getLogger(UniversalShop::class.java)
+    /** Changes made in game with ::usm, kept across restarts. */
+    private val stateFile: Path = Path.of("data", "universal-shop.json")
+    private val gson = GsonBuilder().setPrettyPrinting().create()
+    private var loaded = false
+
+    private class PriceOverride(val category: Int, val row: Int, val price: Int)
+    private class SavedState(
+        val prices: List<PriceOverride> = emptyList(),
+        val disabledItems: List<Int> = emptyList(),
+        val disabledCategories: List<Int> = emptyList(),
+    )
 
 
     val Melee = UniversalShopCategory(1, "universal_shop_tbl", 1001, 5, table = UnivShopTable.Melee)
@@ -212,5 +229,38 @@ object UniversalShop {
 
     fun populateCategories() {
         Categories.forEach { tbl -> tbl.itemCount = DBRowDefinition.getRowCount(tbl.tableId) }
+        load()
+    }
+
+    /** Row of [itemId] in a category's table, or null when the category doesn't sell it. */
+    fun rowOf(category: UniversalShopCategory, itemId: Int): Int? =
+        if (DBRowDefinition.findItemOnTable(category.tableId, itemId)) DBRowDefinition.getRowIndex(category.tableId, itemId) else null
+
+    private fun load() {
+        if (loaded) return
+        loaded = true
+        if (!Files.exists(stateFile)) return
+        try {
+            val state = gson.fromJson(Files.readString(stateFile), SavedState::class.java) ?: return
+            state.prices.forEach { priceOverrides[it.category to it.row] = it.price }
+            disabledItems.addAll(state.disabledItems)
+            disabledCategory.addAll(state.disabledCategories.mapNotNull { categoriesToTable[it] })
+        } catch (e: Exception) {
+            logger.error("Couldn't read {}", stateFile, e)
+        }
+    }
+
+    fun save() {
+        val state = SavedState(
+            prices = priceOverrides.map { (key, price) -> PriceOverride(key.first, key.second, price) },
+            disabledItems = disabledItems.toList(),
+            disabledCategories = disabledCategory.map { it.uniqueIndex },
+        )
+        try {
+            Files.createDirectories(stateFile.parent)
+            Files.writeString(stateFile, gson.toJson(state))
+        } catch (e: Exception) {
+            logger.error("Couldn't save {}", stateFile, e)
+        }
     }
 }

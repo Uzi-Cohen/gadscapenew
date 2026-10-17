@@ -6,7 +6,7 @@ import com.zenyte.game.model.shop.ShopPolicy.STOCK_ONLY
 
 class DonatorIslandRespectedPremiumShop : ShopScript() {
     init {
-        "Respected Premium Supplies"(ShopCurrency.COINS, STOCK_ONLY) {
+        "Extreme Donator Supplies"(ShopCurrency.COINS, STOCK_ONLY) {
             454(250, 0, 100, ironmanRestricted = true) // coal
             2362(250, 0, 2500, ironmanRestricted = true) // adamant bars
             1514(250, 0, 1000, ironmanRestricted = true) // magic logs

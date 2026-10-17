@@ -6,7 +6,7 @@ public class SigmundNPC extends NPCPlugin {
 
 	@Override
 	public void handle() {
-		bind("Trade", (player, npc) -> player.openShop("Respected Premium Supplies"));
+		bind("Trade", (player, npc) -> player.openShop("Extreme Donator Supplies"));
 	}
 
 	@Override

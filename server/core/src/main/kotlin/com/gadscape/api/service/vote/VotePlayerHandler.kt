@@ -1,5 +1,6 @@
 package com.gadscape.api.service.vote
 
+import com.gadscape.website.WebsiteService
 import com.gadscape.api.APIClient
 import com.gadscape.api.model.User
 import com.gadscape.api.model.Vote
@@ -137,7 +138,7 @@ object VotePlayerHandler {
 
     private fun ifEnabled(player: Player, action: (User) -> Unit) {
         when {
-            !APIClient.enabled -> player.notify("You cannot vote on this world.", schedule = false)
+            !APIClient.enabled -> WebsiteService.commandVote(player)
             !VoteAPIService.enabled -> player.notify( "The voting service is currently unavailable.", schedule = false)
             World.isUpdating() -> player.notify("You cannot vote while the world is updating.", schedule = false)
             else -> {
