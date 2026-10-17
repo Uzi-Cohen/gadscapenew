@@ -1,4 +1,7 @@
 package controllers.worldRenderer
+
+import controllers.worldRenderer.helpers.GLC
+import controllers.worldRenderer.helpers.Gl
 /*
  * Copyright (c) 2018, Adam <Adam@sigterm.info>
  * All rights reserved.
@@ -27,9 +30,6 @@ import cache.definitions.TextureDefinition
 import cache.loaders.SpriteLoader
 import cache.loaders.TextureLoader
 import com.google.inject.Inject
-import com.jogamp.opengl.GL
-import com.jogamp.opengl.GL2ES3
-import com.jogamp.opengl.GL4
 import controllers.worldRenderer.helpers.GLUtil
 import java.nio.ByteBuffer
 
@@ -37,24 +37,24 @@ class TextureManager @Inject constructor(
     private val spriteLoader: SpriteLoader,
     private val textureLoader: TextureLoader
 ) {
-    fun initTextureArray(gl: GL4): Int {
+    fun initTextureArray(gl: Gl): Int {
         if (!allTexturesLoaded()) {
             return -1
         }
         val textures: Array<TextureDefinition?> = textureLoader.getAll()
         val textureArrayId: Int = GLUtil.glGenTexture(gl)
-        gl.glBindTexture(GL2ES3.GL_TEXTURE_2D_ARRAY, textureArrayId)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_ARRAY, textureArrayId)
         gl.glTexStorage3D(
-            GL2ES3.GL_TEXTURE_2D_ARRAY,
+            GLC.GL_TEXTURE_2D_ARRAY,
             1,
-            GL.GL_RGBA8,
+            GLC.GL_RGBA8,
             TEXTURE_SIZE,
             TEXTURE_SIZE,
             textures.size
         )
-        gl.glTexParameteri(GL2ES3.GL_TEXTURE_2D_ARRAY, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
-        gl.glTexParameteri(GL2ES3.GL_TEXTURE_2D_ARRAY, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
-        gl.glTexParameteri(GL2ES3.GL_TEXTURE_2D_ARRAY, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_MIN_FILTER, GLC.GL_NEAREST)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_MAG_FILTER, GLC.GL_NEAREST)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_WRAP_S, GLC.GL_CLAMP_TO_EDGE)
 
         // Set brightness to 1.0d to upload unmodified textures to GPU
 //		double save = textureProvider.getBrightness();
@@ -62,13 +62,13 @@ class TextureManager @Inject constructor(
         updateTextures(gl, textureArrayId)
 
 //		textureProvider.setBrightness(save);
-        gl.glActiveTexture(GL.GL_TEXTURE1)
-        gl.glBindTexture(GL2ES3.GL_TEXTURE_2D_ARRAY, textureArrayId)
-        gl.glActiveTexture(GL.GL_TEXTURE0)
+        gl.glActiveTexture(GLC.GL_TEXTURE1)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_ARRAY, textureArrayId)
+        gl.glActiveTexture(GLC.GL_TEXTURE0)
         return textureArrayId
     }
 
-    fun freeTextureArray(gl: GL4, textureArrayId: Int) {
+    fun freeTextureArray(gl: Gl, textureArrayId: Int) {
         GLUtil.glDeleteTexture(gl, textureArrayId)
     }
 
@@ -93,9 +93,9 @@ class TextureManager @Inject constructor(
         return true
     }
 
-    private fun updateTextures(gl: GL4, textureArrayId: Int) {
+    private fun updateTextures(gl: Gl, textureArrayId: Int) {
         val textures: Array<TextureDefinition?> = textureLoader.getAll()
-        gl.glBindTexture(GL2ES3.GL_TEXTURE_2D_ARRAY, textureArrayId)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_ARRAY, textureArrayId)
         var cnt = 0
         for (textureId in textures.indices) {
             val texture: TextureDefinition = textures[textureId]?: continue
@@ -115,7 +115,7 @@ class TextureManager @Inject constructor(
             )
             val pixelBuffer = ByteBuffer.wrap(pixels)
             gl.glTexSubImage3D(
-                GL2ES3.GL_TEXTURE_2D_ARRAY,
+                GLC.GL_TEXTURE_2D_ARRAY,
                 0,
                 0,
                 0,
@@ -123,8 +123,8 @@ class TextureManager @Inject constructor(
                 TEXTURE_SIZE,
                 TEXTURE_SIZE,
                 1,
-                GL.GL_RGBA,
-                GL.GL_UNSIGNED_BYTE,
+                GLC.GL_RGBA,
+                GLC.GL_UNSIGNED_BYTE,
                 pixelBuffer
             )
         }

@@ -9,6 +9,9 @@ plugins {
 group = "org.example"
 version = "0.1.1"
 
+val lwjglVersion = "3.3.4"
+val lwjglNatives = listOf("natives-windows", "natives-linux", "natives-macos", "natives-macos-arm64")
+
 repositories {
     mavenCentral()
 }
@@ -18,7 +21,12 @@ dependencies {
     implementation("com.displee:rs-cache-library:6.4")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.bitbucket.akornilov.kotlin:binary-streams:0.33")
-    implementation(files("lib/jogamp-fat.jar"))
+    // 3D view: LWJGL 3 (OpenGL 4.5 core, GLFW for the context), natives for every desktop OS in the one jar
+    implementation(platform("org.lwjgl:lwjgl-bom:$lwjglVersion"))
+    for (m in listOf("lwjgl", "lwjgl-glfw", "lwjgl-opengl")) {
+        implementation("org.lwjgl:$m")
+        for (n in lwjglNatives) runtimeOnly("org.lwjgl:$m::$n")
+    }
     implementation(files("lib/dockfx-0.4-SNAPSHOT.jar"))
     implementation("com.google.inject:guice:4.2.3")
     implementation("com.jfoenix:jfoenix:9.0.9")

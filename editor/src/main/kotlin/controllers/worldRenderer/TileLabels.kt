@@ -1,7 +1,7 @@
 package controllers.worldRenderer
 
-import com.jogamp.opengl.GL
-import com.jogamp.opengl.GL4
+import controllers.worldRenderer.helpers.GLC
+import controllers.worldRenderer.helpers.Gl
 import controllers.worldRenderer.helpers.GLUtil
 import models.scene.Scene
 import java.nio.ByteBuffer
@@ -71,21 +71,21 @@ class TileLabels(private val overlayLoader: cache.loaders.OverlayLoader) {
     private var data: FloatBuffer = ByteBuffer.allocateDirect(4 * 8 * 6 * 64).order(ByteOrder.nativeOrder()).asFloatBuffer()
     private var count = 0 // vertices
 
-    private fun compile(gl: GL4, type: Int, src: String): Int {
+    private fun compile(gl: Gl, type: Int, src: String): Int {
         val s = gl.glCreateShader(type)
-        gl.glShaderSource(s, 1, arrayOf(src), null)
+        gl.glShaderSource(s, src)
         gl.glCompileShader(s)
-        if (GLUtil.glGetShader(gl, s, GL4.GL_COMPILE_STATUS) != GL.GL_TRUE) throw IllegalStateException("tile number shader: " + GLUtil.glGetShaderInfoLog(gl, s))
+        if (GLUtil.glGetShader(gl, s, GLC.GL_COMPILE_STATUS) != GLC.GL_TRUE) throw IllegalStateException("tile number shader: " + GLUtil.glGetShaderInfoLog(gl, s))
         return s
     }
 
-    private fun init(gl: GL4) {
-        val vs = compile(gl, GL4.GL_VERTEX_SHADER, VERT)
-        val fs = compile(gl, GL4.GL_FRAGMENT_SHADER, FRAG)
+    private fun init(gl: Gl) {
+        val vs = compile(gl, GLC.GL_VERTEX_SHADER, VERT)
+        val fs = compile(gl, GLC.GL_FRAGMENT_SHADER, FRAG)
         program = gl.glCreateProgram()
         gl.glAttachShader(program, vs); gl.glAttachShader(program, fs)
         gl.glLinkProgram(program)
-        if (GLUtil.glGetProgram(gl, program, GL4.GL_LINK_STATUS) != GL.GL_TRUE) throw IllegalStateException("tile number program: " + GLUtil.glGetProgramInfoLog(gl, program))
+        if (GLUtil.glGetProgram(gl, program, GLC.GL_LINK_STATUS) != GLC.GL_TRUE) throw IllegalStateException("tile number program: " + GLUtil.glGetProgramInfoLog(gl, program))
         gl.glDeleteShader(vs); gl.glDeleteShader(fs)
         uniScreen = gl.glGetUniformLocation(program, "screen")
         uniAtlas = gl.glGetUniformLocation(program, "atlas")
@@ -97,27 +97,27 @@ class TileLabels(private val overlayLoader: cache.loaders.OverlayLoader) {
             if (GLYPHS[c][y][x] == '#') px.put(y * w + c * CELL + x, 255.toByte())
         val ids = IntArray(1)
         gl.glGenTextures(1, ids, 0); atlas = ids[0]
-        gl.glActiveTexture(GL.GL_TEXTURE2)
-        gl.glBindTexture(GL.GL_TEXTURE_2D, atlas)
-        gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 1)
-        gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL4.GL_R8, w, h, 0, GL4.GL_RED, GL.GL_UNSIGNED_BYTE, px)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
-        gl.glPixelStorei(GL.GL_UNPACK_ALIGNMENT, 4)
-        gl.glActiveTexture(GL.GL_TEXTURE0)
+        gl.glActiveTexture(GLC.GL_TEXTURE2)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D, atlas)
+        gl.glPixelStorei(GLC.GL_UNPACK_ALIGNMENT, 1)
+        gl.glTexImage2D(GLC.GL_TEXTURE_2D, 0, GLC.GL_R8, w, h, 0, GLC.GL_RED, GLC.GL_UNSIGNED_BYTE, px)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_MIN_FILTER, GLC.GL_NEAREST)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_MAG_FILTER, GLC.GL_NEAREST)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_WRAP_S, GLC.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_WRAP_T, GLC.GL_CLAMP_TO_EDGE)
+        gl.glPixelStorei(GLC.GL_UNPACK_ALIGNMENT, 4)
+        gl.glActiveTexture(GLC.GL_TEXTURE0)
 
         vao = GLUtil.glGenVertexArrays(gl)
         vbo = GLUtil.glGenBuffers(gl)
         gl.glBindVertexArray(vao)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vbo)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, vbo)
         val stride = 8 * 4
-        gl.glEnableVertexAttribArray(0); gl.glVertexAttribPointer(0, 2, GL.GL_FLOAT, false, stride, 0L)
-        gl.glEnableVertexAttribArray(1); gl.glVertexAttribPointer(1, 2, GL.GL_FLOAT, false, stride, 8L)
-        gl.glEnableVertexAttribArray(2); gl.glVertexAttribPointer(2, 4, GL.GL_FLOAT, false, stride, 16L)
+        gl.glEnableVertexAttribArray(0); gl.glVertexAttribPointer(0, 2, GLC.GL_FLOAT, false, stride, 0L)
+        gl.glEnableVertexAttribArray(1); gl.glVertexAttribPointer(1, 2, GLC.GL_FLOAT, false, stride, 8L)
+        gl.glEnableVertexAttribArray(2); gl.glVertexAttribPointer(2, 4, GLC.GL_FLOAT, false, stride, 16L)
         gl.glBindVertexArray(0)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
     }
 
     private fun ensure(vertices: Int) {
@@ -180,7 +180,7 @@ class TileLabels(private val overlayLoader: cache.loaders.OverlayLoader) {
     }
 
     /** [floors]: which floors to label. Call after the scene is on the default framebuffer. */
-    fun draw(gl: GL4, scene: Scene, camera: Camera, width: Int, height: Int, floors: IntRange?, extras: List<Extra> = emptyList()) {
+    fun draw(gl: Gl, scene: Scene, camera: Camera, width: Int, height: Int, floors: IntRange?, extras: List<Extra> = emptyList()) {
         if (failed || width <= 0 || height <= 0 || !scene.isLoaded()) return
         try {
             if (program == 0) init(gl)
@@ -228,26 +228,26 @@ class TileLabels(private val overlayLoader: cache.loaders.OverlayLoader) {
         if (count == 0) return
 
         data.flip()
-        val depth = gl.glIsEnabled(GL.GL_DEPTH_TEST)
-        val cull = gl.glIsEnabled(GL.GL_CULL_FACE)
-        gl.glDisable(GL.GL_DEPTH_TEST); gl.glDisable(GL.GL_CULL_FACE)
-        gl.glEnable(GL.GL_BLEND)
-        gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
+        val depth = gl.glIsEnabled(GLC.GL_DEPTH_TEST)
+        val cull = gl.glIsEnabled(GLC.GL_CULL_FACE)
+        gl.glDisable(GLC.GL_DEPTH_TEST); gl.glDisable(GLC.GL_CULL_FACE)
+        gl.glEnable(GLC.GL_BLEND)
+        gl.glBlendFunc(GLC.GL_SRC_ALPHA, GLC.GL_ONE_MINUS_SRC_ALPHA)
         gl.glUseProgram(program)
         gl.glUniform2f(uniScreen, width.toFloat(), height.toFloat())
-        gl.glActiveTexture(GL.GL_TEXTURE2)
-        gl.glBindTexture(GL.GL_TEXTURE_2D, atlas)
+        gl.glActiveTexture(GLC.GL_TEXTURE2)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D, atlas)
         gl.glUniform1i(uniAtlas, 2)
         gl.glBindVertexArray(vao)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vbo)
-        gl.glBufferData(GL.GL_ARRAY_BUFFER, count * 8 * 4L, data, GL4.GL_STREAM_DRAW)
-        gl.glDrawArrays(GL.GL_TRIANGLES, 0, count)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, vbo)
+        gl.glBufferData(GLC.GL_ARRAY_BUFFER, count * 8 * 4L, data, GLC.GL_STREAM_DRAW)
+        gl.glDrawArrays(GLC.GL_TRIANGLES, 0, count)
         gl.glBindVertexArray(0)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
         gl.glUseProgram(0)
-        gl.glActiveTexture(GL.GL_TEXTURE0)
-        gl.glDisable(GL.GL_BLEND)
-        if (depth) gl.glEnable(GL.GL_DEPTH_TEST)
-        if (cull) gl.glEnable(GL.GL_CULL_FACE)
+        gl.glActiveTexture(GLC.GL_TEXTURE0)
+        gl.glDisable(GLC.GL_BLEND)
+        if (depth) gl.glEnable(GLC.GL_DEPTH_TEST)
+        if (cull) gl.glEnable(GLC.GL_CULL_FACE)
     }
 }

@@ -1,19 +1,13 @@
 package controllers.worldRenderer
 
+import controllers.worldRenderer.helpers.GLC
+import controllers.worldRenderer.helpers.Gl
 import cache.LocationType
 import cache.definitions.Location
 import cache.definitions.ModelDefinition
 import cache.definitions.ObjectDefinition
 import cache.definitions.converters.ObjectToModelConverter
 import com.google.inject.Inject
-import com.jogamp.newt.NewtFactory
-import com.jogamp.newt.event.WindowAdapter
-import com.jogamp.newt.event.WindowEvent
-import com.jogamp.newt.javafx.NewtCanvasJFX
-import com.jogamp.newt.opengl.GLWindow
-import com.jogamp.opengl.*
-import com.jogamp.opengl.util.Animator
-import com.jogamp.opengl.util.GLBuffers
 import controllers.worldRenderer.components.Hoverable
 import controllers.worldRenderer.components.Selectable
 import controllers.worldRenderer.entities.Entity
@@ -83,10 +77,10 @@ class Renderer @Inject constructor(
     private val editorRegions: EditorRegions,
     private val objectLoader: cache.loaders.ObjectLoader,
     private val overlayLoader: cache.loaders.OverlayLoader
-) : GLEventListener {
+) : GlListener {
     private val MAX_TEMP_VERTICES: Int = 65535
 
-    private lateinit var gl: GL4
+    private val gl = Gl
     private var glProgram = 0
     private var glComputeProgram = 0
     private var glSmallComputeProgram = 0
@@ -128,6 +122,7 @@ class Renderer @Inject constructor(
 
     private var textureArrayId = 0
     private var uniformBufferId = 0
+    private val drawBuffers: IntBuffer = GpuIntBuffer.allocateDirect(2).apply { put(GLC.GL_COLOR_ATTACHMENT0).put(GLC.GL_COLOR_ATTACHMENT1); flip() }
     private val uniformBuffer: IntBuffer = GpuIntBuffer.allocateDirect(5 + 3 + 1)
     private val textureOffsets = FloatArray(128)
 
@@ -158,16 +153,14 @@ class Renderer @Inject constructor(
     private var lastStretchedCanvasHeight = 0
     private var lastAntiAliasingMode: AntiAliasingMode? = null
 
-    fun reposResize(x: Int, y: Int, width: Int, height: Int) {
-        window.setPosition(x, y)
-        window.setSize(width, height)
-    }
+    /** The 3D view (LWJGL 3, OpenGL 4.5): a JavaFX node, drawn on its own thread. */
+    lateinit var view: GlView
 
-    //-Dnewt.verbose=true
-    //-Dnewt.debug=true
-    lateinit var window: GLWindow
-    lateinit var animator: Animator
-    lateinit var glCanvas: NewtCanvasJFX
+    /** Sets the view's size in JavaFX units. */
+    fun resize(width: Double, height: Double) { if (::view.isInitialized) view.resize(width, height) }
+
+    fun requestFocus() { if (::view.isInitialized) view.requestFocus() }
+
     companion object {
         private val live = java.util.concurrent.CopyOnWriteArrayList<Renderer>()
 
@@ -176,8 +169,7 @@ class Renderer @Inject constructor(
     }
 
     fun shutdown() {
-        try { if (::animator.isInitialized && animator.isStarted) animator.stop() } catch (e: Exception) { println("Stopping render loop: ${e.message}") }
-        try { if (::window.isInitialized) window.destroy() } catch (e: Exception) { println("Closing 3D view: ${e.message}") }
+        try { if (::view.isInitialized) view.stop() } catch (e: Exception) { println("Closing 3D view: ${e.message}") }
         live.remove(this)
     }
 
@@ -199,43 +191,13 @@ class Renderer @Inject constructor(
         colorPickerBufferId = selectedIdsBufferId
         modelBuffers = ModelBuffers()
 
-        val jfxNewtDisplay = NewtFactory.createDisplay(null, false)
-        val screen = NewtFactory.createScreen(jfxNewtDisplay, 0)
-        val glProfile = GLProfile.get(GLProfile.GL4)
-        val glCaps = GLCapabilities(glProfile)
-        glCaps.alphaBits = 8
-
-        window = GLWindow.create(screen, glCaps)
-        window.addGLEventListener(this)
-        window.addKeyListener(inputHandler)
-        window.addMouseListener(inputHandler)
         inputHandler.renderer = this
-
-        glCanvas = NewtCanvasJFX(window)
-        glCanvas.width = canvasWidth.toDouble()
-        glCanvas.height = canvasHeight.toDouble()
-
-        animator = Animator(window)
-        animator.setUpdateFPSFrames(3, null)
-        animator.start()
+        view = GlView(this)
+        inputHandler.attach(view)
+        view.resize(canvasWidth.toDouble(), canvasHeight.toDouble())
+        group.children.add(view.node)
+        view.start()
         live.add(this)
-
-        // Begin bad hack to fix GLWindow not releasing focus properly //
-        window.addWindowListener(object : WindowAdapter() {
-            override fun windowGainedFocus(e: WindowEvent) {
-                // when heavyweight window gains focus, also tell javafx to give focus to glCanvas
-                glCanvas.requestFocus()
-            }
-        })
-        glCanvas.focusedProperty().addListener { _, _, newValue ->
-            if (!newValue) {
-                window.isVisible = false
-                window.isVisible = true
-            }
-        }
-        // End bad hack //
-
-        group.children.add(glCanvas)
 
         lastCanvasHeight = -1
         lastCanvasWidth = lastCanvasHeight
@@ -330,22 +292,22 @@ class Renderer @Inject constructor(
         val nextIndex = (pboIndex + 1) % 3
 
         // Read from pixel buffer object async to get pixels without blocking render
-        gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, fboMainRenderer)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, pboIds[pboIndex])
-        gl.glReadBuffer(GL2ES2.GL_COLOR_ATTACHMENT1)
-        gl.glReadPixels(mouseX, canvasHeight - mouseY, 1, 1, GL2ES3.GL_RED_INTEGER, GL2ES2.GL_INT, 0)
-        gl.glReadBuffer(GL.GL_COLOR_ATTACHMENT0)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, 0)
-        gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, 0)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, pboIds[nextIndex])
-        val srcBuf = gl.glMapBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, GL2ES3.GL_READ_ONLY)
+        gl.glBindFramebuffer(GLC.GL_READ_FRAMEBUFFER, fboMainRenderer)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, pboIds[pboIndex])
+        gl.glReadBuffer(GLC.GL_COLOR_ATTACHMENT1)
+        gl.glReadPixels(mouseX, canvasHeight - mouseY, 1, 1, GLC.GL_RED_INTEGER, GLC.GL_INT, 0)
+        gl.glReadBuffer(GLC.GL_COLOR_ATTACHMENT0)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, 0)
+        gl.glBindFramebuffer(GLC.GL_READ_FRAMEBUFFER, 0)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, pboIds[nextIndex])
+        val srcBuf = gl.glMapBuffer(GLC.GL_PIXEL_PACK_BUFFER, GLC.GL_READ_ONLY)
         val pboBytes = ByteArray(4)
         srcBuf[pboBytes]
         val pickerId: Int =
             pboBytes[3].toInt() and 0xFF shl 24 or (pboBytes[2].toInt() and 0xFF shl 16) or (pboBytes[1].toInt() and 0xFF shl 8) or (pboBytes[0].toInt() and 0xFF)
-        gl.glUnmapBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER)
+        gl.glUnmapBuffer(GLC.GL_PIXEL_PACK_BUFFER)
         // left bound, every later glReadPixels (the AI bridge's screenshots) would read into it and fail
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, 0)
         if (pickerId == 1058050193) { // clear sky coor
             return
         }
@@ -1019,8 +981,10 @@ class Renderer @Inject constructor(
 
         // object select / drag-move (tool 1, nothing held)
         val down = inputHandler.isLeftMouseDown
-        val pressed = down && !prevLeftDown
-        val released = !down && prevLeftDown
+        // a press and release between two frames still selects (the latch keeps the press)
+        val latched = inputHandler.takeLeftPress()
+        val pressed = (down && !prevLeftDown) || (latched && !prevLeftDown)
+        val released = !down && (prevLeftDown || latched)
         prevLeftDown = down
         if (gadToolsModel.tool.get() == TerrainTool.NPC) {
             handleNpcTool(pressed, released, down)
@@ -1238,11 +1202,10 @@ class Renderer @Inject constructor(
         }
     }
 
-    override fun init(drawable: GLAutoDrawable) {
+    override fun init() {
         try {
-            gl = drawable.gl.gL4
-            gl.glEnable(GL.GL_DEPTH_TEST)
-            gl.glDepthFunc(GL.GL_LEQUAL)
+            gl.glEnable(GLC.GL_DEPTH_TEST)
+            gl.glDepthFunc(GLC.GL_LEQUAL)
             gl.glDepthRangef(0f, 1f)
 
             initProgram()
@@ -1258,22 +1221,22 @@ class Renderer @Inject constructor(
         }
     }
 
-    override fun reshape(drawable: GLAutoDrawable, x: Int, y: Int, width: Int, height: Int) {
-        gl = drawable.gl.gL4
+    override fun reshape(width: Int, height: Int) {
         canvasWidth = width
         canvasHeight = height
+        shutdownPickerFbo()
         initPickerBuffer()
         camera.centerX = canvasWidth / 2
         camera.centerY = canvasHeight / 2
-        gl.glViewport(x, y, width, height)
+        gl.glViewport(0, 0, width, height)
     }
 
     @Volatile private var isSceneUploadRequired = true
     private val clientStart = System.currentTimeMillis()
     private var lastUpdate: Long = System.nanoTime()
     var deltaTime: Double = 0.0
-    override fun display(drawable: GLAutoDrawable?) {
-        debugModel.fps.set("%.0f".format(animator.lastFPS))
+    override fun display(): Int {
+        debugModel.fps.set("%.0f".format(view.fps))
         debugModel.deltaTime.set("%.2f".format(deltaTime))
         //
         deltaTime = (System.nanoTime().toDouble() - lastUpdate.toDouble()) / 1000 / 1000
@@ -1309,36 +1272,37 @@ class Renderer @Inject constructor(
         }
 
         // base FBO to enable picking
-        gl.glBindFramebuffer(GL.GL_DRAW_FRAMEBUFFER, fboMainRenderer)
+        gl.glBindFramebuffer(GLC.GL_DRAW_FRAMEBUFFER, fboMainRenderer)
 
         // Setup anti-aliasing
         val antiAliasingMode: AntiAliasingMode = AntiAliasingMode.MSAA_16
         val aaEnabled = antiAliasingMode !== AntiAliasingMode.DISABLED
         if (aaEnabled) {
-            gl.glEnable(GL.GL_MULTISAMPLE)
+            gl.glEnable(GLC.GL_MULTISAMPLE)
             val stretchedCanvasWidth = canvasWidth
             val stretchedCanvasHeight = canvasHeight
 
             // Re-create fbo
             if (lastStretchedCanvasWidth != stretchedCanvasWidth || lastStretchedCanvasHeight != stretchedCanvasHeight || lastAntiAliasingMode !== antiAliasingMode
             ) {
-                val maxSamples: Int = glGetInteger(gl, GL.GL_MAX_SAMPLES)
+                val maxSamples: Int = glGetInteger(gl, GLC.GL_MAX_SAMPLES)
                 val samples = min(antiAliasingMode.ordinal, maxSamples)
+                shutdownAAFbo()
                 initAAFbo(stretchedCanvasWidth, stretchedCanvasHeight, samples)
                 lastStretchedCanvasWidth = stretchedCanvasWidth
                 lastStretchedCanvasHeight = stretchedCanvasHeight
             }
-            gl.glBindFramebuffer(GL.GL_DRAW_FRAMEBUFFER, fboSceneHandle)
+            gl.glBindFramebuffer(GLC.GL_DRAW_FRAMEBUFFER, fboSceneHandle)
         }
         lastAntiAliasingMode = antiAliasingMode
         val i =
-            GLBuffers.newDirectIntBuffer(intArrayOf(GL.GL_COLOR_ATTACHMENT0, GL2ES2.GL_COLOR_ATTACHMENT1))
+            drawBuffers.clear() as IntBuffer
         gl.glDrawBuffers(2, i)
 
         // Clear scene
         val sky = 9493480
         gl.glClearColor((sky shr 16 and 0xFF) / 255f, (sky shr 8 and 0xFF) / 255f, (sky and 0xFF) / 255f, 1f)
-        gl.glClear(GL.GL_COLOR_BUFFER_BIT or GL.GL_DEPTH_BUFFER_BIT)
+        gl.glClear(GLC.GL_COLOR_BUFFER_BIT or GLC.GL_DEPTH_BUFFER_BIT)
 
         modelBuffers.flip()
         modelBuffers.flipVertUv()
@@ -1348,45 +1312,45 @@ class Renderer @Inject constructor(
         val modelBuffer: IntBuffer = modelBuffers.modelBuffer.buffer
         val modelBufferSmall: IntBuffer = modelBuffers.modelBufferSmall.buffer
         val modelBufferUnordered: IntBuffer = modelBuffers.modelBufferUnordered.buffer
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
+            GLC.GL_ARRAY_BUFFER,
             vertexBuffer.limit() * Integer.BYTES.toLong(),
             vertexBuffer,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpUvBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpUvBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
+            GLC.GL_ARRAY_BUFFER,
             uvBuffer.limit() * java.lang.Float.BYTES.toLong(),
             uvBuffer,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpModelBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpModelBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
+            GLC.GL_ARRAY_BUFFER,
             modelBuffer.limit() * Integer.BYTES.toLong(),
             modelBuffer,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpModelBufferSmallId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpModelBufferSmallId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
+            GLC.GL_ARRAY_BUFFER,
             modelBufferSmall.limit() * Integer.BYTES.toLong(),
             modelBufferSmall,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpModelBufferUnorderedId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpModelBufferUnorderedId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
+            GLC.GL_ARRAY_BUFFER,
             modelBufferUnordered.limit() * Integer.BYTES.toLong(),
             modelBufferUnordered,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
         val clientCycle = ((System.currentTimeMillis() - clientStart) / 20).toInt() // 50 fps
 
         // UBO
-        gl.glBindBuffer(GL2ES3.GL_UNIFORM_BUFFER, uniformBufferId)
+        gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, uniformBufferId)
         uniformBuffer.clear()
         uniformBuffer
             .put(camera.yaw)
@@ -1400,19 +1364,19 @@ class Renderer @Inject constructor(
             .put(clientCycle) // currFrame
         uniformBuffer.flip()
         gl.glBufferSubData(
-            GL2ES3.GL_UNIFORM_BUFFER,
+            GLC.GL_UNIFORM_BUFFER,
             0,
             uniformBuffer.limit() * Integer.BYTES.toLong(),
             uniformBuffer
         )
-        gl.glBindBuffer(GL2ES3.GL_UNIFORM_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, 0)
 
         val textureProvider = ""
         // Draw 3d scene
         if (textureProvider != null && bufferId != -1) {
             gl.glUniformBlockBinding(glSmallComputeProgram, uniBlockSmall, 0)
             gl.glUniformBlockBinding(glComputeProgram, uniBlockLarge, 0)
-            gl.glBindBufferBase(GL2ES3.GL_UNIFORM_BUFFER, 0, uniformBufferId)
+            gl.glBindBufferBase(GLC.GL_UNIFORM_BUFFER, 0, uniformBufferId)
 
             /*
          * Compute is split into two separate programs 'small' and 'large' to
@@ -1421,43 +1385,43 @@ class Renderer @Inject constructor(
 
             // unordered
             gl.glUseProgram(glUnorderedComputeProgram)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferUnorderedId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
-            //            gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferUnorderedId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
+            //            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
             gl.glDispatchCompute(modelBuffers.unorderedModelsCount, 1, 1)
 
             // small
             gl.glUseProgram(glSmallComputeProgram)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferSmallId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId) // vout[]
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId) //uvout[]
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
-            //            gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferSmallId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId) // vout[]
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId) //uvout[]
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
+            //            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
             gl.glDispatchCompute(modelBuffers.smallModelsCount, 1, 1)
 
             // large
             gl.glUseProgram(glComputeProgram)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
-            gl.glBindBufferBase(GL3ES3.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
-            //            gl.glBindBufferBase(gl.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
+            //            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
             gl.glDispatchCompute(modelBuffers.largeModelsCount, 1, 1)
-            gl.glMemoryBarrier(GL3ES3.GL_SHADER_STORAGE_BARRIER_BIT)
+            gl.glMemoryBarrier(GLC.GL_SHADER_STORAGE_BARRIER_BIT)
 
             if (textureArrayId == -1) {
                 // lazy init textures as they may not be loaded at plugin start.
@@ -1493,45 +1457,40 @@ class Renderer @Inject constructor(
 
             // We just allow the GL to do face culling. Note this requires the priority renderer
             // to have logic to disregard culled faces in the priority depth testing.
-            gl.glEnable(GL.GL_CULL_FACE)
+            gl.glEnable(GLC.GL_CULL_FACE)
 
             // Draw output of compute shaders
             gl.glBindVertexArray(vaoHandle)
-            gl.glDrawArrays(GL.GL_TRIANGLES, 0, modelBuffers.targetBufferOffset + modelBuffers.tempOffset)
-            gl.glDisable(GL.GL_CULL_FACE)
+            gl.glDrawArrays(GLC.GL_TRIANGLES, 0, modelBuffers.targetBufferOffset + modelBuffers.tempOffset)
+            gl.glDisable(GLC.GL_CULL_FACE)
             gl.glUseProgram(0)
         }
 
         if (aaEnabled) {
-            gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, fboSceneHandle)
-            gl.glBindFramebuffer(GL.GL_DRAW_FRAMEBUFFER, fboMainRenderer)
+            gl.glBindFramebuffer(GLC.GL_READ_FRAMEBUFFER, fboSceneHandle)
+            gl.glBindFramebuffer(GLC.GL_DRAW_FRAMEBUFFER, fboMainRenderer)
             gl.glBlitFramebuffer(
                 0, 0, lastStretchedCanvasWidth, lastStretchedCanvasHeight,
                 0, 0, lastStretchedCanvasWidth, lastStretchedCanvasHeight,
-                GL.GL_COLOR_BUFFER_BIT or GL.GL_DEPTH_BUFFER_BIT, GL.GL_NEAREST
+                GLC.GL_COLOR_BUFFER_BIT or GLC.GL_DEPTH_BUFFER_BIT, GLC.GL_NEAREST
             )
-            gl.glReadBuffer(GL2ES2.GL_COLOR_ATTACHMENT1)
-            gl.glDrawBuffer(GL2ES2.GL_COLOR_ATTACHMENT1)
+            gl.glReadBuffer(GLC.GL_COLOR_ATTACHMENT1)
+            gl.glDrawBuffer(GLC.GL_COLOR_ATTACHMENT1)
             gl.glBlitFramebuffer(
                 0, 0, lastStretchedCanvasWidth, lastStretchedCanvasHeight,
                 0, 0, lastStretchedCanvasWidth, lastStretchedCanvasHeight,
-                GL.GL_COLOR_BUFFER_BIT or GL.GL_DEPTH_BUFFER_BIT, GL.GL_NEAREST
+                GLC.GL_COLOR_BUFFER_BIT or GLC.GL_DEPTH_BUFFER_BIT, GLC.GL_NEAREST
             )
-            gl.glDisable(GL.GL_BLEND)
+            gl.glDisable(GLC.GL_BLEND)
 
             // Reset
-            gl.glReadBuffer(GL.GL_COLOR_ATTACHMENT0)
-            gl.glDrawBuffer(GL.GL_COLOR_ATTACHMENT0)
+            gl.glReadBuffer(GLC.GL_COLOR_ATTACHMENT0)
+            gl.glDrawBuffer(GLC.GL_COLOR_ATTACHMENT0)
         }
 
-        gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, fboMainRenderer)
-        gl.glBindFramebuffer(GL.GL_DRAW_FRAMEBUFFER, 0)
-        gl.glBlitFramebuffer(
-            0, 0, canvasWidth, canvasHeight,
-            0, 0, canvasWidth, canvasHeight,
-            GL.GL_COLOR_BUFFER_BIT or GL.GL_DEPTH_BUFFER_BIT, GL.GL_NEAREST
-        )
-        gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, 0)
+        // the finished picture stays in fboMainRenderer (GlView shows it); labels are drawn on top of its colour only
+        gl.glBindFramebuffer(GLC.GL_DRAW_FRAMEBUFFER, fboMainRenderer)
+        gl.glDrawBuffer(GLC.GL_COLOR_ATTACHMENT0)
 
         // tile numbers on top of the finished picture (View > Tile numbers on the map, Ctrl+T)
         val labelMode = gadToolsModel.tileLabelMode.get()
@@ -1550,17 +1509,18 @@ class Renderer @Inject constructor(
 
         modelBuffers.clearVertUv()
         modelBuffers.clear()
+        return fboMainRenderer
     }
 
     /** The finished frame (for the AI bridge's screenshots). */
     private fun grabFrame(): java.awt.image.BufferedImage {
         val w = canvasWidth; val h = canvasHeight
         val buf = java.nio.ByteBuffer.allocateDirect(w * h * 4).order(java.nio.ByteOrder.nativeOrder())
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, 0)
-        gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, fboMainRenderer)
-        gl.glReadBuffer(GL.GL_COLOR_ATTACHMENT0)
-        gl.glReadPixels(0, 0, w, h, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, buf)
-        gl.glBindFramebuffer(GL.GL_READ_FRAMEBUFFER, 0)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, 0)
+        gl.glBindFramebuffer(GLC.GL_READ_FRAMEBUFFER, fboMainRenderer)
+        gl.glReadBuffer(GLC.GL_COLOR_ATTACHMENT0)
+        gl.glReadPixels(0, 0, w, h, GLC.GL_RGBA, GLC.GL_UNSIGNED_BYTE, buf)
+        gl.glBindFramebuffer(GLC.GL_READ_FRAMEBUFFER, 0)
         val img = java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB)
         for (y in 0 until h) for (x in 0 until w) {
             val i = ((h - 1 - y) * w + x) * 4
@@ -1708,33 +1668,33 @@ class Renderer @Inject constructor(
         }
 
         // allocate enough size in the outputBuffer for the static verts + the dynamic verts -- each vertex is an ivec4, 4 ints
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpOutBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpOutBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * GLBuffers.SIZEOF_INT * 4).toLong(),
+            GLC.GL_ARRAY_BUFFER,
+            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * Integer.BYTES * 4).toLong(),
             null,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpOutUvBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpOutUvBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * GLBuffers.SIZEOF_FLOAT * 4).toLong(),
+            GLC.GL_ARRAY_BUFFER,
+            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * java.lang.Float.BYTES * 4).toLong(),
             null,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, colorPickerBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, colorPickerBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * GLBuffers.SIZEOF_INT).toLong(),
+            GLC.GL_ARRAY_BUFFER,
+            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * Integer.BYTES).toLong(),
             null,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, animFrameBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, animFrameBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * GLBuffers.SIZEOF_INT * 4).toLong(),
+            GLC.GL_ARRAY_BUFFER,
+            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * Integer.BYTES * 4).toLong(),
             null,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
     }
 
@@ -1793,27 +1753,27 @@ class Renderer @Inject constructor(
         val uvBuffer: FloatBuffer = modelBuffers.uvBuffer.buffer
 
         println("vertexBuffer size %d".format(vertexBuffer.limit()))
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, bufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, bufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
-            vertexBuffer.limit() * GLBuffers.SIZEOF_INT.toLong(),
+            GLC.GL_ARRAY_BUFFER,
+            vertexBuffer.limit() * Integer.BYTES.toLong(),
             vertexBuffer,
-            GL2ES3.GL_STATIC_COPY
+            GLC.GL_STATIC_COPY
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, uvBufferId)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, uvBufferId)
         gl.glBufferData(
-            GL.GL_ARRAY_BUFFER,
-            uvBuffer.limit() * GLBuffers.SIZEOF_FLOAT.toLong(),
+            GLC.GL_ARRAY_BUFFER,
+            uvBuffer.limit() * java.lang.Float.BYTES.toLong(),
             uvBuffer,
-            GL2ES3.GL_STATIC_COPY
+            GLC.GL_STATIC_COPY
         )
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
         modelBuffers.clearVertUv()
         drawTiles()
         isSceneUploadRequired = false
     }
 
-    override fun dispose(drawable: GLAutoDrawable?) {
+    override fun dispose() {
         shutdownBuffers()
         shutdownProgram()
         shutdownVao()
@@ -1850,136 +1810,136 @@ class Renderer @Inject constructor(
 
     private fun initUniformBuffer() {
         uniformBufferId = glGenBuffers(gl)
-        gl.glBindBuffer(GL2ES3.GL_UNIFORM_BUFFER, uniformBufferId)
+        gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, uniformBufferId)
         uniformBuffer.clear()
         uniformBuffer.put(IntArray(9))
         uniformBuffer.flip()
         gl.glBufferData(
-            GL2ES3.GL_UNIFORM_BUFFER,
+            GLC.GL_UNIFORM_BUFFER,
             uniformBuffer.limit() * Integer.BYTES.toLong(),
             uniformBuffer,
-            GL.GL_DYNAMIC_DRAW
+            GLC.GL_DYNAMIC_DRAW
         )
-        gl.glBindBuffer(GL2ES3.GL_UNIFORM_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, 0)
     }
 
     private fun initPickerBuffer() {
         fboMainRenderer = GLUtil.glGenFrameBuffer(gl)
-        gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, fboMainRenderer)
+        gl.glBindFramebuffer(GLC.GL_FRAMEBUFFER, fboMainRenderer)
 
         // create depth buffer
         rboDepthMain = GLUtil.glGenRenderbuffer(gl)
-        gl.glBindRenderbuffer(GL.GL_RENDERBUFFER, rboDepthMain)
-        gl.glRenderbufferStorage(GL.GL_RENDERBUFFER, GL2ES2.GL_DEPTH_COMPONENT, canvasWidth, canvasHeight)
-        gl.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_DEPTH_ATTACHMENT, GL.GL_RENDERBUFFER, rboDepthMain)
+        gl.glBindRenderbuffer(GLC.GL_RENDERBUFFER, rboDepthMain)
+        gl.glRenderbufferStorage(GLC.GL_RENDERBUFFER, GLC.GL_DEPTH_COMPONENT, canvasWidth, canvasHeight)
+        gl.glFramebufferRenderbuffer(GLC.GL_FRAMEBUFFER, GLC.GL_DEPTH_ATTACHMENT, GLC.GL_RENDERBUFFER, rboDepthMain)
 
         // Create color texture
         texColorMain = GLUtil.glGenTexture(gl)
-        gl.glBindTexture(GL.GL_TEXTURE_2D, texColorMain)
-        gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, canvasWidth, canvasHeight, 0, GL.GL_RGBA, GL.GL_FLOAT, null)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
-        gl.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_TEXTURE_2D, texColorMain, 0)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D, texColorMain)
+        gl.glTexImage2D(GLC.GL_TEXTURE_2D, 0, GLC.GL_RGBA, canvasWidth, canvasHeight, 0, GLC.GL_RGBA, GLC.GL_FLOAT, null)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_MIN_FILTER, GLC.GL_NEAREST)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_MAG_FILTER, GLC.GL_NEAREST)
+        gl.glFramebufferTexture2D(GLC.GL_FRAMEBUFFER, GLC.GL_COLOR_ATTACHMENT0, GLC.GL_TEXTURE_2D, texColorMain, 0)
         texPickerMain = GLUtil.glGenTexture(gl)
-        gl.glBindTexture(GL.GL_TEXTURE_2D, texPickerMain)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D, texPickerMain)
         gl.glTexImage2D(
-            GL.GL_TEXTURE_2D,
+            GLC.GL_TEXTURE_2D,
             0,
-            GL2ES3.GL_R32I,
+            GLC.GL_R32I,
             canvasWidth,
             canvasHeight,
             0,
-            GL2GL3.GL_BGRA_INTEGER,
-            GL2ES2.GL_INT,
+            GLC.GL_BGRA_INTEGER,
+            GLC.GL_INT,
             null
         )
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
-        gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
-        gl.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL2ES2.GL_COLOR_ATTACHMENT1, GL.GL_TEXTURE_2D, texPickerMain, 0)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_MIN_FILTER, GLC.GL_NEAREST)
+        gl.glTexParameteri(GLC.GL_TEXTURE_2D, GLC.GL_TEXTURE_MAG_FILTER, GLC.GL_NEAREST)
+        gl.glFramebufferTexture2D(GLC.GL_FRAMEBUFFER, GLC.GL_COLOR_ATTACHMENT1, GLC.GL_TEXTURE_2D, texPickerMain, 0)
 
         // init pbo
         gl.glGenBuffers(3, pboIds, 0)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, pboIds[0])
-        gl.glBufferData(GL2ES3.GL_PIXEL_PACK_BUFFER, GLBuffers.SIZEOF_INT.toLong(), null, GL2ES3.GL_STREAM_READ)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, pboIds[1])
-        gl.glBufferData(GL2ES3.GL_PIXEL_PACK_BUFFER, GLBuffers.SIZEOF_INT.toLong(), null, GL2ES3.GL_STREAM_READ)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, pboIds[2])
-        gl.glBufferData(GL2ES3.GL_PIXEL_PACK_BUFFER, GLBuffers.SIZEOF_INT.toLong(), null, GL2ES3.GL_STREAM_READ)
-        gl.glBindBuffer(GL2ES3.GL_PIXEL_PACK_BUFFER, 0)
-        val status = gl.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER)
-        if (status != GL.GL_FRAMEBUFFER_COMPLETE) {
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, pboIds[0])
+        gl.glBufferData(GLC.GL_PIXEL_PACK_BUFFER, Integer.BYTES.toLong(), null, GLC.GL_STREAM_READ)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, pboIds[1])
+        gl.glBufferData(GLC.GL_PIXEL_PACK_BUFFER, Integer.BYTES.toLong(), null, GLC.GL_STREAM_READ)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, pboIds[2])
+        gl.glBufferData(GLC.GL_PIXEL_PACK_BUFFER, Integer.BYTES.toLong(), null, GLC.GL_STREAM_READ)
+        gl.glBindBuffer(GLC.GL_PIXEL_PACK_BUFFER, 0)
+        val status = gl.glCheckFramebufferStatus(GLC.GL_FRAMEBUFFER)
+        if (status != GLC.GL_FRAMEBUFFER_COMPLETE) {
             println("bad picker fbo")
         }
-        gl.glBindTexture(GL.GL_TEXTURE_2D, 0)
-        gl.glBindRenderbuffer(GL.GL_RENDERBUFFER, 0)
-        gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D, 0)
+        gl.glBindRenderbuffer(GLC.GL_RENDERBUFFER, 0)
+        gl.glBindFramebuffer(GLC.GL_FRAMEBUFFER, 0)
     }
 
     private fun initAAFbo(width: Int, height: Int, aaSamples: Int) {
         // Create and bind the FBO
         fboSceneHandle = GLUtil.glGenFrameBuffer(gl)
-        gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, fboSceneHandle)
+        gl.glBindFramebuffer(GLC.GL_FRAMEBUFFER, fboSceneHandle)
 
         // Create color render buffer
         rboSceneHandle = GLUtil.glGenRenderbuffer(gl)
-        gl.glBindRenderbuffer(GL.GL_RENDERBUFFER, rboSceneHandle)
-        gl.glRenderbufferStorageMultisample(GL.GL_RENDERBUFFER, aaSamples, GL.GL_RGBA, width, height)
-        gl.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_RENDERBUFFER, rboSceneHandle)
+        gl.glBindRenderbuffer(GLC.GL_RENDERBUFFER, rboSceneHandle)
+        gl.glRenderbufferStorageMultisample(GLC.GL_RENDERBUFFER, aaSamples, GLC.GL_RGBA, width, height)
+        gl.glFramebufferRenderbuffer(GLC.GL_FRAMEBUFFER, GLC.GL_COLOR_ATTACHMENT0, GLC.GL_RENDERBUFFER, rboSceneHandle)
 
         // Create color texture
         colorTexSceneHandle = GLUtil.glGenTexture(gl)
-        gl.glBindTexture(GL2ES2.GL_TEXTURE_2D_MULTISAMPLE, colorTexSceneHandle)
-        gl.glTexImage2DMultisample(GL2ES2.GL_TEXTURE_2D_MULTISAMPLE, aaSamples, GL.GL_RGBA, width, height, true)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_MULTISAMPLE, colorTexSceneHandle)
+        gl.glTexImage2DMultisample(GLC.GL_TEXTURE_2D_MULTISAMPLE, aaSamples, GLC.GL_RGBA, width, height, true)
         // Bind color tex
         gl.glFramebufferTexture2D(
-            GL.GL_FRAMEBUFFER,
-            GL.GL_COLOR_ATTACHMENT0,
-            GL2ES2.GL_TEXTURE_2D_MULTISAMPLE,
+            GLC.GL_FRAMEBUFFER,
+            GLC.GL_COLOR_ATTACHMENT0,
+            GLC.GL_TEXTURE_2D_MULTISAMPLE,
             colorTexSceneHandle,
             0
         )
 
         // Create depth texture
         depthTexSceneHandle = GLUtil.glGenTexture(gl)
-        gl.glBindTexture(GL2ES2.GL_TEXTURE_2D_MULTISAMPLE, depthTexSceneHandle)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_MULTISAMPLE, depthTexSceneHandle)
         gl.glTexImage2DMultisample(
-            GL2ES2.GL_TEXTURE_2D_MULTISAMPLE,
+            GLC.GL_TEXTURE_2D_MULTISAMPLE,
             aaSamples,
-            GL2ES2.GL_DEPTH_COMPONENT,
+            GLC.GL_DEPTH_COMPONENT,
             width,
             height,
             true
         )
         // bind depth tex
         gl.glFramebufferTexture2D(
-            GL.GL_FRAMEBUFFER,
-            GL.GL_DEPTH_ATTACHMENT,
-            GL2ES2.GL_TEXTURE_2D_MULTISAMPLE,
+            GLC.GL_FRAMEBUFFER,
+            GLC.GL_DEPTH_ATTACHMENT,
+            GLC.GL_TEXTURE_2D_MULTISAMPLE,
             depthTexSceneHandle,
             0
         )
 
         // Create picker texture
         val texPickerHandle = GLUtil.glGenTexture(gl)
-        gl.glBindTexture(GL2ES2.GL_TEXTURE_2D_MULTISAMPLE, texPickerHandle)
-        gl.glTexImage2DMultisample(GL2ES2.GL_TEXTURE_2D_MULTISAMPLE, aaSamples, GL2ES3.GL_R32I, width, height, true)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_MULTISAMPLE, texPickerHandle)
+        gl.glTexImage2DMultisample(GLC.GL_TEXTURE_2D_MULTISAMPLE, aaSamples, GLC.GL_R32I, width, height, true)
         // Bind color tex
         gl.glFramebufferTexture2D(
-            GL.GL_FRAMEBUFFER,
-            GL2ES2.GL_COLOR_ATTACHMENT1,
-            GL2ES2.GL_TEXTURE_2D_MULTISAMPLE,
+            GLC.GL_FRAMEBUFFER,
+            GLC.GL_COLOR_ATTACHMENT1,
+            GLC.GL_TEXTURE_2D_MULTISAMPLE,
             texPickerHandle,
             0
         )
-        val status = gl.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER)
-        if (status != GL.GL_FRAMEBUFFER_COMPLETE) {
+        val status = gl.glCheckFramebufferStatus(GLC.GL_FRAMEBUFFER)
+        if (status != GLC.GL_FRAMEBUFFER_COMPLETE) {
             println("bad aaPicker fbo")
         }
 
         // Reset
-        gl.glBindTexture(GL2ES2.GL_TEXTURE_2D_MULTISAMPLE, 0)
-        gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0)
-        gl.glBindRenderbuffer(GL.GL_RENDERBUFFER, 0)
+        gl.glBindTexture(GLC.GL_TEXTURE_2D_MULTISAMPLE, 0)
+        gl.glBindFramebuffer(GLC.GL_FRAMEBUFFER, 0)
+        gl.glBindRenderbuffer(GLC.GL_RENDERBUFFER, 0)
     }
 
     private fun initBuffers() {
@@ -2002,21 +1962,21 @@ class Renderer @Inject constructor(
         vaoHandle = glGenVertexArrays(gl)
         gl.glBindVertexArray(vaoHandle)
         gl.glEnableVertexAttribArray(0)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpOutBufferId)
-        gl.glVertexAttribIPointer(0, 4, GL2ES2.GL_INT, 0, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpOutBufferId)
+        gl.glVertexAttribIPointer(0, 4, GLC.GL_INT, 0, 0)
         gl.glEnableVertexAttribArray(1)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, tmpOutUvBufferId)
-        gl.glVertexAttribPointer(1, 4, GL.GL_FLOAT, false, 0, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpOutUvBufferId)
+        gl.glVertexAttribPointer(1, 4, GLC.GL_FLOAT, false, 0, 0)
         gl.glEnableVertexAttribArray(2)
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, colorPickerBufferId)
-        gl.glVertexAttribIPointer(2, 1, GL2ES2.GL_INT, 0, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, colorPickerBufferId)
+        gl.glVertexAttribIPointer(2, 1, GLC.GL_INT, 0, 0)
 
 //        gl.glEnableVertexAttribArray(3);
-//        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, animFrameBufferId);
-//        gl.glVertexAttribIPointer(3, 4, gl.GL_INT, 0, 0);
+//        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, animFrameBufferId);
+//        gl.glVertexAttribIPointer(3, 4, GLC.GL_INT, 0, 0);
 
         // unbind VBO
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
+        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
         gl.glBindVertexArray(0)
     }
 

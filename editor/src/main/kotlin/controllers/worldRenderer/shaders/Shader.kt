@@ -1,8 +1,7 @@
 package controllers.worldRenderer.shaders
 
-import com.jogamp.opengl.GL
-import com.jogamp.opengl.GL2ES2
-import com.jogamp.opengl.GL4
+import controllers.worldRenderer.helpers.GLC
+import controllers.worldRenderer.helpers.Gl
 import controllers.worldRenderer.helpers.GLUtil
 import controllers.worldRenderer.helpers.GLUtil.glGetProgramInfoLog
 import java.util.*
@@ -19,7 +18,7 @@ class Shader {
     }
 
     @Throws(ShaderException::class)
-    fun compile(gl: GL4, template: Template): Int {
+    fun compile(gl: Gl, template: Template): Int {
         val program = gl.glCreateProgram()
         val shaders = IntArray(units.size)
         var i = 0
@@ -29,9 +28,9 @@ class Shader {
                 val unit = units[i]
                 val shader = gl.glCreateShader(unit.type)
                 val source: String = template.load(unit.filename)
-                gl.glShaderSource(shader, 1, arrayOf(source), null)
+                gl.glShaderSource(shader, source)
                 gl.glCompileShader(shader)
-                if (GLUtil.glGetShader(gl, shader, GL2ES2.GL_COMPILE_STATUS) != GL.GL_TRUE) {
+                if (GLUtil.glGetShader(gl, shader, GLC.GL_COMPILE_STATUS) != GLC.GL_TRUE) {
                     val err: String = GLUtil.glGetShaderInfoLog(gl, shader)
                     gl.glDeleteShader(shader)
                     throw ShaderException(err)
@@ -40,14 +39,15 @@ class Shader {
                 shaders[i++] = shader
             }
             gl.glLinkProgram(program)
-            if (GLUtil.glGetProgram(gl, program, GL2ES2.GL_LINK_STATUS) == GL.GL_FALSE) {
+            if (GLUtil.glGetProgram(gl, program, GLC.GL_LINK_STATUS) == GLC.GL_FALSE) {
                 val err: String = glGetProgramInfoLog(gl, program)
                 throw ShaderException(err)
             }
+            // validation checks the program against the current GL state (in a core context that includes "is a
+            // vertex array bound", which it isn't yet here), so a failure is only reported, not fatal
             gl.glValidateProgram(program)
-            if (GLUtil.glGetProgram(gl, program, GL2ES2.GL_VALIDATE_STATUS) == GL.GL_FALSE) {
-                val err: String = glGetProgramInfoLog(gl, program)
-                throw ShaderException(err)
+            if (GLUtil.glGetProgram(gl, program, GLC.GL_VALIDATE_STATUS) == GLC.GL_FALSE) {
+                println("Shader check (not fatal): " + glGetProgramInfoLog(gl, program).trim())
             }
             ok = true
         } finally {
@@ -70,14 +70,14 @@ class Shader {
                 "#extension GL_ARB_explicit_attrib_location : require\n"
         const val WINDOWS_VERSION_HEADER = "#version 430\n"
         val PROGRAM = Shader()
-            .add(GL4.GL_VERTEX_SHADER, "/gpu/vert.glsl")
-            .add(GL4.GL_GEOMETRY_SHADER, "/gpu/geom.glsl")
-            .add(GL4.GL_FRAGMENT_SHADER, "/gpu/frag.glsl")
+            .add(GLC.GL_VERTEX_SHADER, "/gpu/vert.glsl")
+            .add(GLC.GL_GEOMETRY_SHADER, "/gpu/geom.glsl")
+            .add(GLC.GL_FRAGMENT_SHADER, "/gpu/frag.glsl")
         val COMPUTE_PROGRAM = Shader()
-            .add(GL4.GL_COMPUTE_SHADER, "/gpu/comp.glsl")
+            .add(GLC.GL_COMPUTE_SHADER, "/gpu/comp.glsl")
         val SMALL_COMPUTE_PROGRAM = Shader()
-            .add(GL4.GL_COMPUTE_SHADER, "/gpu/comp_small.glsl")
+            .add(GLC.GL_COMPUTE_SHADER, "/gpu/comp_small.glsl")
         val UNORDERED_COMPUTE_PROGRAM = Shader()
-            .add(GL4.GL_COMPUTE_SHADER, "/gpu/comp_unordered.glsl")
+            .add(GLC.GL_COMPUTE_SHADER, "/gpu/comp_unordered.glsl")
     }
 }

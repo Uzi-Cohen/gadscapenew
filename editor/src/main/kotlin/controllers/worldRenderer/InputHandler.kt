@@ -1,12 +1,11 @@
 package controllers.worldRenderer
 
-import com.jogamp.newt.event.KeyEvent
-import com.jogamp.newt.event.KeyListener
-import com.jogamp.newt.event.MouseEvent
-import com.jogamp.newt.event.MouseListener
 import javafx.animation.AnimationTimer
 import javafx.scene.input.KeyCode
-import jogamp.newt.driver.DriverClearFocus
+import javafx.scene.input.KeyEvent
+import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
+import javafx.scene.input.ScrollEvent
 import models.DebugModel
 import models.GadToolsModel
 import models.HoverModel
@@ -31,64 +30,84 @@ class InputHandler @Inject internal constructor(
     private val objectLoader: cache.loaders.ObjectLoader,
     private val underlayLoader: cache.loaders.UnderlayLoader,
     private val overlayLoader: cache.loaders.OverlayLoader
-) : KeyListener, MouseListener {
+) {
 
     private val tileOps = TileOps(editorRegions)
 
     var renderer: Renderer? = null
 
-    var isLeftMouseDown = false
+    @Volatile var isLeftMouseDown = false
+    /** Set by every left press, cleared by the renderer: a click quicker than one frame still counts. */
+    private val leftPressLatch = java.util.concurrent.atomic.AtomicBoolean(false)
+    fun takeLeftPress() = leftPressLatch.getAndSet(false)
     var leftMousePressed = false
     var isRightMouseDown = false
-    private val keys = BooleanArray(250)
+    private val keys = object {
+        // JavaFX key codes (KeyCode.code); anything past the end is simply never "down"
+        private val down = BooleanArray(1024)
+        operator fun get(i: Int) = i in down.indices && down[i]
+        operator fun set(i: Int, v: Boolean) { if (i in down.indices) down[i] = v }
+        fun clear() = java.util.Arrays.fill(down, false)
+    }
     var mouseClicked = false
     private var previousMouseX = 0
     private var previousMouseY = 0
     var mouseX = 0
     var mouseY = 0
 
+    /** Keys pressed since the last tick, and releases held back until that tick has seen them. */
+    private val fresh = HashSet<Int>()
+    private val late = HashSet<Int>()
+
     private fun handleKeys(dt: Double) {
-        if (dt > 1000) { // big lag spike, don't send the user flying
-            return
+        try { readKeys(dt) } finally {
+            fresh.clear()
+            for (c in late) keys[c] = false
+            late.clear()
         }
+    }
+
+    private fun readKeys(elapsed: Double) {
+        // big lag spike: don't send the user flying (shortcuts below still run)
+        val dt = if (elapsed > 1000) 0.0 else elapsed
         val xVec = (-camera.yawSin).toDouble() / 65535
         val yVec = camera.yawCos.toDouble() / 65535
         val zVec = camera.pitchSin.toDouble() / 65535
         var speed = 1
-        if (keys[KeyEvent.VK_SHIFT.toInt()]) {
+        if (keys[KeyCode.SHIFT.code]) {
             speed = 4
         }
-        if (keys[KeyEvent.VK_W.toInt()]) {
+        if (keys[KeyCode.W.code]) {
             camera.addX((dt * xVec * speed).toInt())
             camera.addY((dt * yVec * speed).toInt())
             camera.addZ((dt * zVec * speed).toInt())
         }
-        if (keys[KeyEvent.VK_S.toInt()]) {
+        if (keys[KeyCode.S.code]) {
             camera.addX((-(dt * xVec * speed)).toInt())
             camera.addY((-(dt * yVec * speed)).toInt())
             camera.addZ((-(dt * zVec * speed)).toInt())
         }
-        if (keys[KeyEvent.VK_A.toInt()]) {
+        if (keys[KeyCode.A.code]) {
             // X uses yVec because we want to move perpendicular
             camera.addX((-(dt * yVec * speed)).toInt())
             camera.addY((dt * xVec * speed).toInt())
         }
-        if (keys[KeyEvent.VK_D.toInt()]) {
+        if (keys[KeyCode.D.code]) {
             camera.addX((dt * yVec * speed).toInt())
             camera.addY((-(dt * xVec * speed)).toInt())
         }
-        if (keys[KeyEvent.VK_SPACE.toInt()]) {
+        if (keys[KeyCode.SPACE.code]) {
             camera.addZ((-dt).toInt() * speed)
         }
-        if (keys[KeyEvent.VK_X.toInt()]) {
+        if (keys[KeyCode.X.code]) {
             camera.addZ(dt.toInt() * speed)
         }
         // floors: Ctrl + Page Up / Page Down changes the floor you see and edit
-        val ctrlDown = keys[KeyEvent.VK_CONTROL.toInt()]
-        if (ctrlDown && (keys[KeyEvent.VK_PAGE_UP.toInt()] || keys[KeyEvent.VK_PAGE_DOWN.toInt()])) {
-            val dir = if (keys[KeyEvent.VK_PAGE_UP.toInt()]) 1 else -1
-            keys[KeyEvent.VK_PAGE_UP.toInt()] = false
-            keys[KeyEvent.VK_PAGE_DOWN.toInt()] = false
+        val ctrlDown = keys[KeyCode.CONTROL.code]
+        if (ctrlDown && (keys[KeyCode.PAGE_UP.code] || keys[KeyCode.PAGE_DOWN.code])) {
+            val dir = if (keys[KeyCode.PAGE_UP.code]) 1 else -1
+            keys[KeyCode.PAGE_UP.code] = false
+            keys[KeyCode.PAGE_DOWN.code] = false
             val p = (gadToolsModel.paintPlane.get() + dir).coerceIn(0, 3)
             if (p != gadToolsModel.paintPlane.get()) {
                 gadToolsModel.paintPlane.set(p)
@@ -96,26 +115,26 @@ class InputHandler @Inject internal constructor(
             }
         }
         // camera up / down: Page Up/Down or E/Q (Shift = faster)
-        if (!ctrlDown && (keys[KeyEvent.VK_PAGE_UP.toInt()] || keys[KeyEvent.VK_E.toInt()])) {
+        if (!ctrlDown && (keys[KeyCode.PAGE_UP.code] || keys[KeyCode.E.code])) {
             camera.addZ((-dt * speed).toInt())
         }
-        if (!ctrlDown && (keys[KeyEvent.VK_PAGE_DOWN.toInt()] || keys[KeyEvent.VK_Q.toInt()])) {
+        if (!ctrlDown && (keys[KeyCode.PAGE_DOWN.code] || keys[KeyCode.Q.code])) {
             camera.addZ((dt * speed).toInt())
         }
         // Arrow keys: pan flat across the map. Shift = faster. Ctrl + arrow = load the next region over.
-        val ctrl = keys[KeyEvent.VK_CONTROL.toInt()]
-        val pan = if (keys[KeyEvent.VK_SHIFT.toInt()]) 8 else 2
-        val up = keys[KeyEvent.VK_UP.toInt()]
-        val down = keys[KeyEvent.VK_DOWN.toInt()]
-        val left = keys[KeyEvent.VK_LEFT.toInt()]
-        val right = keys[KeyEvent.VK_RIGHT.toInt()]
+        val ctrl = keys[KeyCode.CONTROL.code]
+        val pan = if (keys[KeyCode.SHIFT.code]) 8 else 2
+        val up = keys[KeyCode.UP.code]
+        val down = keys[KeyCode.DOWN.code]
+        val left = keys[KeyCode.LEFT.code]
+        val right = keys[KeyCode.RIGHT.code]
         if (ctrl) {
             var dx = 0
             var dy = 0
-            if (up) { dy = 1; keys[KeyEvent.VK_UP.toInt()] = false }
-            if (down) { dy = -1; keys[KeyEvent.VK_DOWN.toInt()] = false }
-            if (left) { dx = -1; keys[KeyEvent.VK_LEFT.toInt()] = false }
-            if (right) { dx = 1; keys[KeyEvent.VK_RIGHT.toInt()] = false }
+            if (up) { dy = 1; keys[KeyCode.UP.code] = false }
+            if (down) { dy = -1; keys[KeyCode.DOWN.code] = false }
+            if (left) { dx = -1; keys[KeyCode.LEFT.code] = false }
+            if (right) { dx = 1; keys[KeyCode.RIGHT.code] = false }
             if (dx != 0 || dy != 0) GadTools.shiftRegions(scene, camera, dx, dy)
         } else {
             if (up) {
@@ -137,31 +156,31 @@ class InputHandler @Inject internal constructor(
         }
         // Tools: 1-9, 0, -, = pick tool, [ ] brush size, Ctrl+Z undo, Ctrl+Y redo
         TOOL_KEYS.forEachIndexed { i, k ->
-            if (keys[k.toInt()] && i < TerrainTool.values().size) {
-                keys[k.toInt()] = false
+            if (keys[k] && i < TerrainTool.values().size) {
+                keys[k] = false
                 gadToolsModel.tool.set(TerrainTool.values()[i])
             }
         }
-        if (keys[KeyEvent.VK_OPEN_BRACKET.toInt()]) {
-            keys[KeyEvent.VK_OPEN_BRACKET.toInt()] = false
+        if (keys[KeyCode.OPEN_BRACKET.code]) {
+            keys[KeyCode.OPEN_BRACKET.code] = false
             gadToolsModel.brushSize.set((gadToolsModel.brushSize.get() - 1).coerceAtLeast(0))
         }
-        if (keys[KeyEvent.VK_CLOSE_BRACKET.toInt()]) {
-            keys[KeyEvent.VK_CLOSE_BRACKET.toInt()] = false
+        if (keys[KeyCode.CLOSE_BRACKET.code]) {
+            keys[KeyCode.CLOSE_BRACKET.code] = false
             gadToolsModel.brushSize.set((gadToolsModel.brushSize.get() + 1).coerceAtMost(15))
         }
-        if (ctrl && keys[KeyEvent.VK_Z.toInt()]) {
-            keys[KeyEvent.VK_Z.toInt()] = false
-            if (keys[KeyEvent.VK_SHIFT.toInt()]) gadToolsModel.redoRequested.set(true)
+        if (ctrl && keys[KeyCode.Z.code]) {
+            keys[KeyCode.Z.code] = false
+            if (keys[KeyCode.SHIFT.code]) gadToolsModel.redoRequested.set(true)
             else gadToolsModel.undoRequested.set(true)
         }
-        if (ctrl && keys[KeyEvent.VK_Y.toInt()]) {
-            keys[KeyEvent.VK_Y.toInt()] = false
+        if (ctrl && keys[KeyCode.Y.code]) {
+            keys[KeyCode.Y.code] = false
             gadToolsModel.redoRequested.set(true)
         }
         // F = star / unstar the held, selected or copied object
-        if (!ctrl && keys[KeyEvent.VK_F.toInt()]) {
-            keys[KeyEvent.VK_F.toInt()] = false
+        if (!ctrl && keys[KeyCode.F.code]) {
+            keys[KeyCode.F.code] = false
             val id = objectsModel.heldObject.get()?.objectDefinition?.id
                 ?: gadToolsModel.selectedObject?.loc?.objId
                 ?: gadToolsModel.objectClipboard?.objId
@@ -172,56 +191,56 @@ class InputHandler @Inject internal constructor(
             }
         }
         // M = pick up the selected object
-        if (!ctrl && keys[KeyEvent.VK_M.toInt()]) {
-            keys[KeyEvent.VK_M.toInt()] = false
+        if (!ctrl && keys[KeyCode.M.code]) {
+            keys[KeyCode.M.code] = false
             gadToolsModel.moveObjectRequested.set(true)
         }
         // Ctrl+C / Ctrl+V: the selected object if there is one, otherwise the selected area
-        if (ctrl && keys[KeyEvent.VK_C.toInt()]) {
-            keys[KeyEvent.VK_C.toInt()] = false
+        if (ctrl && keys[KeyCode.C.code]) {
+            keys[KeyCode.C.code] = false
             // with the Select area tool and a box selected, Ctrl+C is always the area (a leftover selected object used to win)
             val areaFirst = gadToolsModel.tool.get() == models.TerrainTool.SELECT && gadToolsModel.selection != null
             if (!areaFirst && gadToolsModel.selectedObject != null) gadToolsModel.copyObjectRequested.set(true) else copySelection()
         }
-        if (ctrl && keys[KeyEvent.VK_V.toInt()]) {
-            keys[KeyEvent.VK_V.toInt()] = false
+        if (ctrl && keys[KeyCode.V.code]) {
+            keys[KeyCode.V.code] = false
             val areaPaste = gadToolsModel.tool.get() == models.TerrainTool.SELECT && gadToolsModel.clipboard != null
             if (!areaPaste && gadToolsModel.lastCopyWasObject && gadToolsModel.objectClipboard != null) gadToolsModel.pasteObjectRequested.set(true)
             else pasteAtHover()
         }
         // Ctrl+T: tile numbers window on / off
-        if (ctrl && keys[KeyEvent.VK_T.toInt()]) {
-            keys[KeyEvent.VK_T.toInt()] = false
+        if (ctrl && keys[KeyCode.T.code]) {
+            keys[KeyCode.T.code] = false
             gadToolsModel.tileNumbersRequested.set(true)
         }
         // Ctrl+S: save the map (export to cache-out), not sent anywhere
-        if (ctrl && keys[KeyEvent.VK_S.toInt()]) {
-            keys[KeyEvent.VK_S.toInt()] = false
-            keys[KeyEvent.VK_W.toInt()] = false
+        if (ctrl && keys[KeyCode.S.code]) {
+            keys[KeyCode.S.code] = false
+            keys[KeyCode.W.code] = false
             gadToolsModel.saveRequested.set(true)
         }
         // Ctrl+X: copy the selected area and take its objects away (paste it somewhere else to move a building)
-        if (ctrl && keys[KeyEvent.VK_X.toInt()]) {
-            keys[KeyEvent.VK_X.toInt()] = false
+        if (ctrl && keys[KeyCode.X.code]) {
+            keys[KeyCode.X.code] = false
             cutSelection()
         }
         // Ctrl+R: turn what you copied 90 degrees before pasting
-        if (ctrl && keys[KeyEvent.VK_R.toInt()]) {
-            keys[KeyEvent.VK_R.toInt()] = false
-            keys[KeyEvent.VK_R.toInt()] = false
+        if (ctrl && keys[KeyCode.R.code]) {
+            keys[KeyCode.R.code] = false
+            keys[KeyCode.R.code] = false
             rotateClipboard()
         }
-        if (keys[KeyEvent.VK_I.toInt()]) {
-            keys[KeyEvent.VK_I.toInt()] = false
+        if (keys[KeyCode.I.code]) {
+            keys[KeyCode.I.code] = false
             pickFromHover()
         }
-        if (keys[KeyEvent.VK_DELETE.toInt()] || keys[KeyEvent.VK_BACK_SPACE.toInt()]) {
-            keys[KeyEvent.VK_DELETE.toInt()] = false
-            keys[KeyEvent.VK_BACK_SPACE.toInt()] = false
+        if (keys[KeyCode.DELETE.code] || keys[KeyCode.BACK_SPACE.code]) {
+            keys[KeyCode.DELETE.code] = false
+            keys[KeyCode.BACK_SPACE.code] = false
             gadToolsModel.deleteRequested.set(true)
         }
-        if (keys[KeyEvent.VK_P.toInt()]) {
-            keys[KeyEvent.VK_P.toInt()] = false // debounce
+        if (keys[KeyCode.P.code]) {
+            keys[KeyCode.P.code] = false // debounce
             val h = hoverModel.hovered.get()
             if (h != null) {
                 val w = GadTools.sceneToWorld(scene, h.x, h.y)
@@ -230,8 +249,8 @@ class InputHandler @Inject internal constructor(
                 }
             }
         }
-        if (!ctrl && keys[KeyEvent.VK_R.toInt()]) {
-            keys[KeyEvent.VK_R.toInt()] = false // debounce
+        if (!ctrl && keys[KeyCode.R.code]) {
+            keys[KeyCode.R.code] = false // debounce
             val heldObject = objectsModel.heldObject.get()
             if (heldObject != null) {
                 objectsModel.heldObject.set(SceneObject(heldObject.objectDefinition, heldObject.type, (heldObject.orientation + 1) and 3))
@@ -243,8 +262,8 @@ class InputHandler @Inject internal constructor(
                 gadToolsModel.rotateRequested.set(true) // rotate the placed object under the mouse
             }
         }
-        if (keys[KeyEvent.VK_ESCAPE.toInt()]) {
-            keys[KeyEvent.VK_ESCAPE.toInt()] = false
+        if (keys[KeyCode.ESCAPE.code]) {
+            keys[KeyCode.ESCAPE.code] = false
             if (objectsModel.heldObject.get() != null) objectsModel.heldObject.set(null)
             else if (gadToolsModel.selectedObject != null) {
                 gadToolsModel.selectedObject = null
@@ -378,99 +397,118 @@ class InputHandler @Inject internal constructor(
     }
 
     companion object {
-        val TOOL_KEYS = listOf(KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3, KeyEvent.VK_4, KeyEvent.VK_5, KeyEvent.VK_6,
-            KeyEvent.VK_7, KeyEvent.VK_8, KeyEvent.VK_9, KeyEvent.VK_0, KeyEvent.VK_MINUS, KeyEvent.VK_EQUALS)
+        val TOOL_KEYS = listOf(KeyCode.DIGIT1.code, KeyCode.DIGIT2.code, KeyCode.DIGIT3.code, KeyCode.DIGIT4.code, KeyCode.DIGIT5.code, KeyCode.DIGIT6.code,
+            KeyCode.DIGIT7.code, KeyCode.DIGIT8.code, KeyCode.DIGIT9.code, KeyCode.DIGIT0.code, KeyCode.MINUS.code, KeyCode.EQUALS.code)
         val TOOL_KEY_NAMES = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=")
     }
 
-    fun isKeyDown(keyCode: KeyCode): Boolean {
-        return keys[keyCode.code-1]
-    }
+    fun isKeyDown(keyCode: KeyCode): Boolean = keys[keyCode.code]
 
-    override fun keyPressed(e: KeyEvent) {
-        keys[e.keyCode.toInt()] = true
-    }
+    private var view: GlView? = null
+    /** Mouse position in the view's pixels (the view draws at the screen's real resolution). */
+    private fun px(v: Double) = (v * (view?.pixelScale ?: 1.0)).toInt()
 
-    override fun keyReleased(e: KeyEvent) {
-        if (e.isAutoRepeat) {
-            return
+    /** Takes keyboard and mouse input from the 3D view. */
+    fun attach(v: GlView) {
+        view = v
+        val n = v.node
+        // keys go to the map while it has focus (as before, when it was its own window): consumed, so arrows and
+        // Tab don't move focus to the panels and shortcuts aren't run twice
+        n.addEventFilter(KeyEvent.KEY_PRESSED) { val c = it.code.code; if (!keys[c]) fresh.add(c); keys[c] = true; it.consume() }
+        n.addEventFilter(KeyEvent.KEY_RELEASED) {
+            val c = it.code.code
+            // a tap shorter than one tick is still seen once: the release waits until the keys have been read
+            if (c in fresh) late.add(c) else keys[c] = false
+            it.consume()
         }
-        keys[e.keyCode.toInt()] = false
+        n.addEventFilter(KeyEvent.KEY_TYPED) { it.consume() }
+        n.focusedProperty().addListener { _, _, has -> if (!has) keys.clear() }
+        n.setOnMousePressed { v.requestFocus(); mousePressed(it) }
+        n.setOnMouseReleased { mouseReleased(it) }
+        n.setOnMouseClicked { mouseClicked(it) }
+        n.setOnMouseMoved { mouseMoved(it) }
+        n.setOnMouseDragged { mouseDragged(it) }
+        n.setOnMouseEntered { mouseEntered(it) }
+        n.setOnMouseExited { mouseExited(it) }
+        n.setOnScroll { mouseWheelMoved(it) }
     }
 
-    private fun handleCameraDrag(e: MouseEvent) {
-        val dx = previousMouseX - e.x
+    private fun handleCameraDrag(x: Int, y: Int) {
+        val dx = previousMouseX - x
         camera.addYaw(dx)
 
-        val dy = previousMouseY - e.y
+        val dy = previousMouseY - y
         camera.addPitch(-dy)
     }
 
-    override fun mouseClicked(e: MouseEvent) {
-        if (e.button == MouseEvent.BUTTON1) {
+    private fun mouseClicked(e: MouseEvent) {
+        if (e.button == MouseButton.PRIMARY && e.isStillSincePress) {
             mouseClicked = true
         }
-
     }
 
-    override fun mouseEntered(e: MouseEvent) {
+    private fun mouseEntered(e: MouseEvent) {
         // a button released outside the 3D view never reaches us: trust the real button state
-        if (!e.isButtonDown(MouseEvent.BUTTON1.toInt())) isLeftMouseDown = false
-        if (!e.isButtonDown(MouseEvent.BUTTON3.toInt())) isRightMouseDown = false
+        if (!e.isPrimaryButtonDown) isLeftMouseDown = false
+        if (!e.isSecondaryButtonDown) isRightMouseDown = false
     }
 
-    override fun mouseExited(e: MouseEvent) {
-        // leaving the 3D view ends any stroke, so nothing keeps painting while you use the panels
+    private fun mouseExited(e: MouseEvent) {
+        // a drag that leaves the view keeps going (JavaFX keeps sending it to us); a plain move out ends the stroke
+        if (e.isPrimaryButtonDown || e.isSecondaryButtonDown) return
         isLeftMouseDown = false
         isRightMouseDown = false
         mouseClicked = false
-        java.util.Arrays.fill(keys, false)
+        keys.clear()
     }
-    override fun mousePressed(e: MouseEvent) {
-        if (e.button == MouseEvent.BUTTON3) {
+
+    private fun mousePressed(e: MouseEvent) {
+        if (e.button == MouseButton.SECONDARY) {
             isRightMouseDown = true
-            previousMouseX = e.x
-            previousMouseY = e.y
+            previousMouseX = px(e.x)
+            previousMouseY = px(e.y)
         }
-        if (e.button == MouseEvent.BUTTON1) {
+        if (e.button == MouseButton.PRIMARY) {
             leftMousePressed = true
             isLeftMouseDown = true
+            leftPressLatch.set(true)
         }
     }
 
-    override fun mouseReleased(e: MouseEvent) {
-        if (e.button == MouseEvent.BUTTON3) {
+    private fun mouseReleased(e: MouseEvent) {
+        if (e.button == MouseButton.SECONDARY) {
             isRightMouseDown = false
         }
-        if (e.button == MouseEvent.BUTTON1) {
+        if (e.button == MouseButton.PRIMARY) {
             isLeftMouseDown = false
         }
     }
 
-    override fun mouseMoved(e: MouseEvent) {
+    private fun mouseMoved(e: MouseEvent) {
         // moved (not dragged) means no button is held: clear anything left stuck down
         isLeftMouseDown = false
         isRightMouseDown = false
-        mouseX = e.x
-        mouseY = e.y
+        mouseX = px(e.x)
+        mouseY = px(e.y)
     }
 
-    override fun mouseDragged(e: MouseEvent) {
+    private fun mouseDragged(e: MouseEvent) {
+        val x = px(e.x); val y = px(e.y)
         if (isRightMouseDown) {
-            handleCameraDrag(e)
+            handleCameraDrag(x, y)
         }
-        mouseX = e.x
-        mouseY = e.y
-        previousMouseX = e.x
-        previousMouseY = e.y
+        mouseX = x
+        mouseY = y
+        previousMouseX = x
+        previousMouseY = y
     }
 
     /** Mouse wheel zooms toward / away from where the camera looks. */
-    override fun mouseWheelMoved(e: MouseEvent) {
-        val r = e.rotation
-        val notches = if (r.size > 1 && r[1] != 0f) r[1] else if (r.isNotEmpty()) r[0] else 0f
+    private fun mouseWheelMoved(e: ScrollEvent) {
+        // one wheel notch is 40 units of deltaY on every platform JavaFX runs on
+        val notches = (e.deltaY / 40.0).toFloat()
         if (notches == 0f) return
-        val step = notches * (if (keys[KeyEvent.VK_SHIFT.toInt()]) 1200 else 400)
+        val step = notches * (if (keys[KeyCode.SHIFT.code]) 1200 else 400)
         val xVec = (-camera.yawSin).toDouble() / 65535
         val yVec = camera.yawCos.toDouble() / 65535
         val zVec = camera.pitchSin.toDouble() / 65535

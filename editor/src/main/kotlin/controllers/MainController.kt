@@ -98,6 +98,7 @@ class MainController @Inject constructor(
         worldRendererNode.setPrefSize(1000.0, 700.0)
         worldRendererNode.dock(dockPane, DockPos.LEFT)
         worldRendererNode.dockTitleBar.isVisible = false
+        worldRendererNode.dockTitleBar.isManaged = false // no gap above the 3D view
 
 
         val gadTools = injector.getInstance(GadToolsController::class.java)

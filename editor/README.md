@@ -50,6 +50,9 @@ How Claude uses it is in AI-BRIDGE.md. Claude doesn't save or deploy; you do tha
 
 ## Run
 Requires Java 21 (built with Gradle 8.10, Kotlin 1.9 and JavaFX 21; the first run downloads Gradle once).
+The 3D view uses LWJGL 3 with OpenGL 4.5 (4.3 at least: any graphics card from the last ten years with a current
+driver). It draws on its own thread into an offscreen picture shown inside the window, so menus and panels sit over
+it normally. Not on macOS (Apple stops at OpenGL 4.1).
 
     .\gradlew.bat run
 

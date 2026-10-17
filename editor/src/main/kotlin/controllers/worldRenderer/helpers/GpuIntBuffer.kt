@@ -1,6 +1,5 @@
 package controllers.worldRenderer.helpers
 
-import com.jogamp.opengl.util.GLBuffers
 import java.nio.BufferOverflowException
 import java.nio.IntBuffer
 
@@ -45,7 +44,7 @@ class GpuIntBuffer {
 
     companion object {
         fun allocateDirect(size: Int): IntBuffer {
-            return GLBuffers.newDirectIntBuffer(size * GLBuffers.SIZEOF_INT)
+            return java.nio.ByteBuffer.allocateDirect(size * Integer.BYTES).order(java.nio.ByteOrder.nativeOrder()).asIntBuffer()
         }
     }
 }
