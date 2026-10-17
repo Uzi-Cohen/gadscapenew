@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox minWidth="300.0" prefWidth="360.0" spacing="4.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controllers.ObjectPickerController">
+    <padding><Insets top="6.0" right="6.0" bottom="6.0" left="6.0" /></padding>
+    <children>
+        <HBox spacing="6.0">
+            <children>
+                <ComboBox fx:id="typeFilter" prefWidth="170.0" />
+                <CheckBox fx:id="showUnnamed" text="Only named">
+                    <HBox.margin><Insets top="4.0" /></HBox.margin>
+                </CheckBox>
+            </children>
+        </HBox>
+        <TextField fx:id="searchBox" promptText="Search name or id (e.g. tree, 1276)" />
+        <ListView fx:id="listView" VBox.vgrow="ALWAYS" />
+        <Label fx:id="lblCount" styleClass="subtle" />
+        <Label text="Place as:" styleClass="subtle" />
+        <HBox spacing="6.0" prefHeight="190.0" minHeight="150.0">
+            <children>
+                <VBox fx:id="paneTypeList" prefWidth="130.0" minWidth="110.0" spacing="4.0" />
+                <StackPane fx:id="stackPane" minHeight="140.0" minWidth="140.0" prefHeight="190.0" HBox.hgrow="ALWAYS"
+                           style="-fx-background-color: #15110e; -fx-background-radius: 6; -fx-border-color: #3a302a; -fx-border-radius: 6;" />
+            </children>
+        </HBox>
+    </children>
+</VBox>

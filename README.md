@@ -1,10 +1,13 @@
 # gadscape
 
-GadScape game server (`server/`, Near Reality / Zenyte based) and its link to
-the website (`Uzi-Cohen/siteforrsps`).
+| Folder | What |
+|---|---|
+| `server/` | Game server (Kotlin/Java, revision 211) |
+| `client/` | Game client (RuneLite/OpenOSRS-based fork) |
+| `editor/` | Uzi's Map Editor: maps, objects, NPCs, shops, items, models, animations |
 
-`server/data/`, the cache binaries and `worlds.yml` are not in git: take them
-from the latest release zip (`gadscape-full-*.zip`).
+`server/data/`, the packed cache, `worlds.yml` and the client installers are
+not in git: take them from the latest release zip (`gadscape-full-*.zip`).
 
 ## Website link
 
