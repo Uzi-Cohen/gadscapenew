@@ -1,0 +1,58 @@
+name: Publish editor
+
+# Every editor change that lands on main goes out as an update: the Windows editor jar is built and released in the
+# public downloads repo, where Uzis Map Editor.exe looks for a newer editor each time it starts.
+#
+# Repository secret (Settings > Secrets and variables > Actions > Secrets):
+#   RELEASES_TOKEN  a GitHub token that can write to the downloads repo (fine-grained token, that one repo,
+#                   permission "Contents: Read and write")
+# Optional repository variable: RELEASES_REPO (default <owner>/uzis-map-editor-releases)
+on:
+  push:
+    branches: [main]
+    paths: ["editor/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-editor
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASES_REPO: ${{ vars.RELEASES_REPO || format('{0}/uzis-map-editor-releases', github.repository_owner) }}
+    steps:
+      - name: Check the token is set
+        env:
+          TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "::error::Add the RELEASES_TOKEN repository secret (a token that can write to $RELEASES_REPO)"; exit 1; fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the Windows editor jar
+        working-directory: editor
+        run: |
+          BUILD=$((111 + ${{ github.run_number }}))
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          ./gradlew --no-daemon fatJar -PjavafxPlatform=win -PbuildNumber=$BUILD
+          cp build/libs/uzis-map-editor-1.0-build-$BUILD.jar "$RUNNER_TEMP/editor.jar"
+          unzip -l "$RUNNER_TEMP/editor.jar" AppKt.class glass.dll
+
+      - name: Release it
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          date +%s%3N > "$RUNNER_TEMP/editor-version.txt"
+          gh release create "v$STAMP-b$BUILD" "$RUNNER_TEMP/editor.jar" "$RUNNER_TEMP/editor-version.txt" \
+            --repo "$RELEASES_REPO" --latest \
+            --title "Uzi's Map Editor 1.0 build $BUILD" \
+            --notes "Build $BUILD from ${{ github.sha }}. Uzis Map Editor.exe picks it up the next time it's opened."
+          echo "Published build $BUILD to $RELEASES_REPO"
