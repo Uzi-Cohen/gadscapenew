@@ -772,7 +772,9 @@ class Renderer @Inject constructor(
         val groundHeight = if (onFloor) baseHeight else baseHeight - 240 * plane
         val loc = Location(objectDefinition.id, held.type, held.orientation and 3, x % REGION_SIZE, y % REGION_SIZE, plane)
         region.locationsDefinition.locations.add(loc)
-        if (plane > 0) objStrokeRegions.add(region.regionDefinition.regionId) // exact rebuild when the drag ends
+        // rebuilt properly when the mouse is let go: until then it's only drawn from the scratch buffer, which the next
+        // placed object reuses (walls placed before a door turned into the door) and a rebuild of another region drops
+        objStrokeRegions.add(region.regionDefinition.regionId)
 
         val model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)
         model.xOff = objectDefinition.sizeX * REGION_SIZE
