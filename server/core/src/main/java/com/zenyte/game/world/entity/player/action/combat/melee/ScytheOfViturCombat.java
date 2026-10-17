@@ -53,7 +53,9 @@ public final class ScytheOfViturCombat extends MeleeCombat {
 		final Item weapon = player.getWeapon();
 		final boolean christmasScythe = player.getEquipment().getId(EquipmentSlot.WEAPON) == ChristmasConstants.CHRISTMAS_SCYTHE;
 		boolean hasBoon = player.hasBoon(FourSure.class);
-		if (hasBoon || (weapon != null && weapon.getCharges() > 0 || christmasScythe)) {
+		// the Scythe of Gad (custom) has no charges: it always swings like a charged scythe
+		final boolean scytheOfGad = weapon != null && "scythe of gad".equalsIgnoreCase(weapon.getName());
+		if (hasBoon || scytheOfGad || (weapon != null && weapon.getCharges() > 0 || christmasScythe)) {
 			specialAttack();
 		} else {
 			final Hit hit = getHit(player, target, 1, 1, 1, false);
@@ -62,7 +64,7 @@ public final class ScytheOfViturCombat extends MeleeCombat {
 			delayHit(0, hit);
 		}
 		animate();
-		if (!christmasScythe) {
+		if (!christmasScythe && !scytheOfGad) {
 			if(!hasBoon)
 				player.getChargesManager().removeCharges(DegradeType.OUTGOING_HIT);
 		}
