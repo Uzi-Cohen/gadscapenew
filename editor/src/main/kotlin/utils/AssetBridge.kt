@@ -53,6 +53,7 @@ class AssetBridge(private val log: (String) -> Unit) {
         "GET /api/models" -> Reply.Json(modelList(q))
         "GET /api/model" -> Reply.Json(modelInfo(q.int("id")))
         "GET /api/model/render" -> Reply.Png(modelRender(q))
+        "GET /api/model/on-player" -> Reply.Png(modelOnPlayer(q))
         "POST /api/model/edit" -> Reply.Json(modelEdit(body()))
         "GET /api/anims" -> Reply.Json(animList(q))
         "GET /api/anim" -> Reply.Json(animInfo(q.int("id")))
@@ -316,6 +317,32 @@ class AssetBridge(private val log: (String) -> Unit) {
         renderWithAnim(md, q, anims, try { TextureLoader(lib) } catch (e: Exception) { null })
     }
 
+    private val PLACE_WORDS = listOf("replace", "weapon", "shield", "head", "helm", "body", "platebody", "legs", "hands", "feet", "cape", "neck")
+
+    /**
+     * Model [model] worn by a plain player (in place of [item]'s worn model, or in a slot), optionally playing an
+     * animation: the same as "Try a model on the player" in the Items tab. Nothing is written.
+     */
+    private fun modelOnPlayer(q: Map<String, String>): ByteArray = withCache { lib, models, anims ->
+        val id = q.int("model")
+        if (id !in 0..65535) fail("model ids go from 0 to 65535")
+        val md0 = try { models.get(id) } catch (e: Exception) { null } ?: fail("There's no model $id.")
+        if (md0.faceCount == 0) fail("Model $id has no faces.")
+        val item = q["item"]?.let { s -> s.trim().toIntOrNull()?.let { ItemStore.read(lib, it) } ?: fail("There's no item $s.") }
+        val placeArg = (q["place"] ?: "replace").trim().lowercase()
+        val pi = placeArg.toIntOrNull() ?: PLACE_WORDS.indexOf(placeArg)
+        val place = controllers.ItemOnPlayer.PLACES.getOrNull(pi) ?: fail("place is one of ${PLACE_WORDS.joinToString("|")} (or 0-${controllers.ItemOnPlayer.PLACES.size - 1})")
+        val female = q["female"] == "1" || q["female"] == "true"
+        val (main, also) = controllers.ItemOnPlayer.dress(item, id, place)
+        val anim = q["anim"]?.toIntOrNull()
+        val md = if (anim == null) ItemPreview.onPlayer(main, female, lib, models, also)
+            else controllers.ItemOnPlayer.build(main, female, anim, lib, models, anims, also).let { (m, clip, msg) ->
+                // a clip that can't move the player (skeletal animation, no weights) would just be a still picture
+                if (m == null || clip == null || !clip.moves) fail(msg); m }
+        md ?: fail("Couldn't build the player model.")
+        renderWithAnim(md, q, anims, try { TextureLoader(lib) } catch (e: Exception) { null })
+    }
+
     private fun renderWithAnim(md: ModelDefinition, q: Map<String, String>, anims: AnimCache, tex: TextureLoader?): ByteArray {
         val size = (q["size"]?.toIntOrNull() ?: 512).coerceIn(64, 1600)
         val yaw = q["yaw"]?.toIntOrNull() ?: 0; val pitch = q["pitch"]?.toIntOrNull() ?: 64
@@ -522,6 +549,8 @@ class AssetBridge(private val log: (String) -> Unit) {
             - POST /api/item/noted {"id": ...} - makes the noted version.
             - GET /api/item/icon?id=4151&scale=4 - the inventory picture as the game draws it (PNG).
             - GET /api/item/render?id=4151&mode=inventory|worn|player&female=0&yaw=0&pitch=64&size=512 - a 3D picture (PNG).
+            - GET /api/model/on-player?model=5409&item=4151&place=replace|weapon|shield|head|helm|body|platebody|legs|hands|feet|cape|neck&female=0&anim=1658&frames=6
+              - any model worn by a plain player (in place of the item's worn model, or in a slot), optionally playing an animation (PNG; frames=N for a strip). Writes nothing.
               With &anim=1658 it plays an animation on a player holding it: &frame=N, or &frames=4 for a strip of 4 frames.
             - GET /api/specials - the server's special attacks, their animation and the weapons that already have them.
 

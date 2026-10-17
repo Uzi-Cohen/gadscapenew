@@ -78,6 +78,42 @@ class ItemsTab(
     private val statsInfo = Label("").apply { isWrapText = true }
     private val statsFields = ServerStatsForm({ specialNames() }) { playOnPlayer(it) }
 
+    /** "Try a model on the player", under the 3D view. */
+    private val tryModel = TryModelPanel({ stage }, lib, models, anims, view, playback, { work },
+        { key -> statsFields.anim(key) }, { specialAnimation() }, modelsTabId,
+        { id, target, place -> useTriedModel(id, target, place) }, { lastViewKey = "playing" }, { say(it) })
+
+    /** The special attack's animation, or why there's no single one. */
+    private fun specialAnimation(): Pair<Int?, String> {
+        val name = statsFields.specialName ?: return null to "This item has no special attack."
+        val anim = server()?.let { ServerItems.specialAnimations(it)[name] }
+            ?: return null to "The $name special sets its animation in code (it changes with the situation), so there's no single one to play."
+        return anim to ""
+    }
+
+    /** Puts a model tried on the player into the item's fields (saved with the item; Reset takes it back). */
+    private fun useTriedModel(id: Int, target: TryModelPanel.Target, place: ItemOnPlayer.Place): String {
+        work ?: return "Pick an item first."
+        val s = id.toString()
+        when (target) {
+            TryModelPanel.Target.WORN -> { fM0.text = s; fM1.text = ""; fM2.text = ""; fF0.text = s; fF1.text = ""; fF2.text = "" }
+            TryModelPanel.Target.MALE -> { fM0.text = s; fM1.text = ""; fM2.text = "" }
+            TryModelPanel.Target.FEMALE -> { fF0.text = s; fF1.text = ""; fF2.text = "" }
+            TryModelPanel.Target.INVENTORY -> fModel.text = s
+        }
+        var moved = ""
+        val slot = place.slot
+        if (target != TryModelPanel.Target.INVENTORY && slot != null) {
+            fSlot.selectionModel.select(ItemFull.SLOTS.keys.indexOf(slot).coerceAtLeast(0))
+            fHide1.selectionModel.select(ItemFull.HIDES.keys.indexOf(place.hides).coerceAtLeast(0))
+            fHide2.selectionModel.select(ItemFull.HIDES.keys.indexOf(place.hides2).coerceAtLeast(0))
+            moved = " It's now worn ${place.label.lowercase()}."
+        }
+        apply(); fillRecolours()
+        val pending = if (PendingModels.isPending(id)) " The model goes into the cache when you Save." else ""
+        return "Model $id is now ${target.label.removePrefix("As ").lowercase()}.$moved Save to keep it; Reset takes it back.$pending"
+    }
+
     private fun int(t: TextField, def: Int) = t.text.trim().toIntOrNull() ?: def
     private fun idOrNone(t: TextField) = t.text.trim().toIntOrNull()?.takeIf { it >= 0 } ?: -1
     private fun showId(v: Int) = if (v < 0) "" else v.toString()
@@ -183,7 +219,7 @@ class ItemsTab(
         val counts = HashMap<Int, Int>()
         for (id in listOf(d.inventoryModel, d.maleModel0, d.maleModel1, d.maleModel2, d.femaleModel0, d.femaleModel1, d.femaleModel2)) {
             if (id < 0) continue
-            val md = try { m.get(id) } catch (e: Exception) { null } ?: continue
+            val md = PendingModels.model(m, id) ?: continue
             val fc = md.faceColors ?: continue
             for (i in fc.indices) { val c = fc[i].toInt() and 0xFFFF; if (c != 65535 && (md.faceTextures?.get(i)?.toInt() ?: -1) == -1) counts[c] = (counts[c] ?: 0) + 1 }
         }
@@ -448,7 +484,7 @@ class ItemsTab(
         val l = lib() ?: return say("Open a cache first.")
         val m = models() ?: return say("Open a cache first.")
         try {
-            NewItemWizard(stage, l, m, anims(), textures, all.toList(), server(), { specialNames() }, original) { plan -> createItem(plan) }.open()
+            NewItemWizard(stage, l, m, anims(), textures, all.toList(), server(), { specialNames() }, original, modelsTabId) { plan -> createItem(plan) }.open()
         } catch (e: Exception) { say("Couldn't open the item maker: ${e.message}") }
     }
 
@@ -654,10 +690,8 @@ class ItemsTab(
                 Button("Play stand").apply { setOnAction { playOnPlayer(statsFields.anim("stand")) } },
                 Button("Play attack").apply { setOnAction { playOnPlayer(statsFields.anim("accurate")) } },
                 Button("Play special").apply { setOnAction {
-                    val name = statsFields.specialName ?: return@setOnAction say("This item has no special attack.")
-                    val anim = server()?.let { ServerItems.specialAnimations(it)[name] }
-                        ?: return@setOnAction say("The $name special sets its animation in code (it changes with the situation), so there's no single one to play.")
-                    playOnPlayer(anim)
+                    val (anim, why) = specialAnimation()
+                    if (anim == null) say(why) else playOnPlayer(anim)
                 } },
                 Button("Stop").apply { setOnAction { playback.stop(); refresh(true) } },
                 Button("Pause").apply { setOnAction { playback.playing = !playback.playing; text = if (playback.playing) "Pause" else "Resume" } },
@@ -665,9 +699,11 @@ class ItemsTab(
                 Button(">").apply { setOnAction { playback.playing = false; playback.show(playback.frame + 1) } },
                 MenuButton("Save pose").apply { items.addAll(
                     MenuItem("As OBJ...").apply { setOnAction { exportPose() } },
-                    MenuItem("As a new model").apply { setOnAction { savePoseAsModel() } }) }),
-            playInfo.apply { isWrapText = true }, view).apply {
-            padding = Insets(8.0); VBox.setVgrow(view, Priority.ALWAYS)
+                    MenuItem("As a new model").apply { setOnAction { savePoseAsModel() } }) }).apply {
+                    // a FlowPane otherwise claims a minimum of one button per row, which pushed the try-on panel off the window
+                    minHeight = Region.USE_PREF_SIZE },
+            playInfo.apply { isWrapText = true }, tryModel.under(view)).apply {
+            padding = Insets(8.0); VBox.setVgrow(children.last(), Priority.ALWAYS)
         }
         return Tab("Items", BorderPane(center, null, right, null, left)).apply { isClosable = false }
     }

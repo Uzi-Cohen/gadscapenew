@@ -111,6 +111,11 @@ files) aren't part of that undo: to take them back, send the old values again. N
 - POST /api/item/noted {"id": ...} - makes the noted version.
 - GET /api/item/icon?id=4151&scale=4 - the inventory picture as the game draws it (PNG).
 - GET /api/item/render?id=4151&mode=inventory|worn|player&female=0&yaw=0&pitch=64&size=512 - a 3D picture (PNG).
+- GET /api/model/on-player?model=5409&item=4151&place=replace&female=0&anim=1658&frames=6 - any model worn by a plain
+  player, playing an animation (PNG; `frames=N` gives a strip, `frame=F` one frame). `place` is where it goes: `replace`
+  (instead of the item's own worn model, keeping the item's colour changes; the default), or a slot: `weapon`, `shield`,
+  `head`, `helm` (hides hair and beard), `body`, `platebody` (hides the arms), `legs`, `hands`, `feet`, `cape`, `neck`.
+  `item` is optional. The same as "Try a model on the player" in the Items tab and the item maker. Nothing is written.
   With &anim=1658 it plays an animation on a player holding it: &frame=N, or &frames=4 for a strip of 4 frames.
 - GET /api/specials - the server's special attacks, their animation and the weapons that already have them.
 
