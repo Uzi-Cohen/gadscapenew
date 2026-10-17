@@ -8,9 +8,9 @@ public class TarikNPC extends NPCPlugin {
 	public void handle() {
 		bind("Trade", (player, npc) -> {
 			if(npc.getId() == 16059)
-				player.openShop("Legendary Premium Supplies");
+				player.openShop("Respected Donator Supplies");
 			else
-				player.openShop("Uber Premium Supplies");
+				player.openShop("Platinum Donator Supplies");
 		});
 	}
 

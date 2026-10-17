@@ -1,5 +1,6 @@
 package com.gadscape.api.service.store
 
+import com.gadscape.website.WebsiteService
 import com.gadscape.api.APIClient
 import com.gadscape.api.model.CreditPackageOrder
 import com.gadscape.api.model.CreditStoreCartItem
@@ -82,7 +83,7 @@ object StorePlayerHandler {
         paymentMethod: CreditPackageOrder.PaymentMethod,
     ) : Channel<StoreOrderUpdate>? {
         when {
-            !APIClient.enabled -> player.notify("You cannot purchase items on this world.", schedule = false)
+            !APIClient.enabled -> WebsiteService.commandDonate(player)
             !StoreAPIService.enabled -> player.notify( "The store is currently unavailable.", schedule = false)
             World.isUpdating() -> player.notify("You cannot purchase items while the world is updating.", schedule = false)
             else -> {

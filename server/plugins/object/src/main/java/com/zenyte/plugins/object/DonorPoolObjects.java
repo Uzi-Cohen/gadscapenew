@@ -24,7 +24,7 @@ public class DonorPoolObjects implements ObjectAction {
 
         if(object.getId() == 50099 && option.equalsIgnoreCase("Drink")) {
             if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER)) {
-                player.sendMessage("Only Uber donators can use this.");
+                player.sendMessage("Only Platinum Donators can use this.");
                 return;
             }
             if(player.getVariables().getTime(TickVariable.OVERLOAD) > 0) {
@@ -40,7 +40,7 @@ public class DonorPoolObjects implements ObjectAction {
 
         if(object.getId() == 50100 && option.equalsIgnoreCase("Drink")) {
             if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
-                player.sendMessage("Only Legendary donators+ can use this.");
+                player.sendMessage("Only Respected Donators or higher can use this.");
                 return;
             }
 

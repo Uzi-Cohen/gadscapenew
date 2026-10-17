@@ -89,6 +89,16 @@ object WebsiteService {
         "PLATINUM" to MemberRank.UBER,
     )
 
+    /** Same thresholds as the website's donator tiers, used when the website link is off. */
+    private val LOCAL_TIERS = listOf(
+        500_000 to "PLATINUM",
+        100_000 to "RESPECTED",
+        50_000 to "EXTREME",
+        20_000 to "ELITE",
+        10_000 to "SUPER",
+        1_000 to "REGULAR",
+    )
+
     @JvmStatic
     val isEnabled: Boolean get() = GameConstants.WORLD_PROFILE.isWebsiteEnabled()
 
@@ -169,12 +179,20 @@ object WebsiteService {
     // ---- commands -------------------------------------------------------------------------------
 
     @JvmStatic
-    fun commandVote(player: Player) = openLink(player, "/api/game/vote-link", "Opening the vote page...")
+    fun commandVote(player: Player) =
+        openLink(player, "/api/game/vote-link", GameConstants.SERVER_VOTE_URL, "Opening the vote page...")
 
     @JvmStatic
-    fun commandDonate(player: Player) = openLink(player, "/api/game/donate-link", "Opening the donation store...")
+    fun commandDonate(player: Player) =
+        openLink(player, "/api/game/donate-link", GameConstants.SERVER_STORE_URL, "Opening the donation store...")
 
-    private fun openLink(player: Player, path: String, message: String) {
+    /** Opens the signed-in page, or the plain page when the website link isn't configured. */
+    private fun openLink(player: Player, path: String, fallbackUrl: String, message: String) {
+        if (!isEnabled) {
+            player.sendMessage(message)
+            player.packetDispatcher.sendURL(fallbackUrl)
+            return
+        }
         val name = player.name
         pool.execute {
             val url = try {
@@ -328,6 +346,10 @@ object WebsiteService {
     fun redeemPin(player: Player, bond: Bond) {
         val pin = Item(bond.id, 1)
         if (player.inventory.deleteItem(pin).result != RequestResult.SUCCESS) return
+        if (!isEnabled) {
+            redeemPinLocally(player, pin, bond)
+            return
+        }
         player.lock()
         player.dialogue { loading("Claiming your donator pin...") }
         val redeemId = UUID.randomUUID().toString()
@@ -362,6 +384,19 @@ object WebsiteService {
                             (tier?.str("name")?.let { "<br>Rank: ${Colour.RS_GREEN.wrap(it)}" } ?: ""))
                 }
             }
+        }
+    }
+
+    /** Keeps the donator total on the character when the website link isn't configured. */
+    private fun redeemPinLocally(player: Player, pin: Item, bond: Bond) {
+        val total = player.claimedPinCents + bond.amount * 100
+        player.claimedPinCents = total
+        val tierKey = LOCAL_TIERS.firstOrNull { total >= it.first }?.second
+        applyTier(player, tierKey, announce = true)
+        player.dialogue {
+            item(pin, "${Colour.DARK_BLUE.wrap("$${bond.amount}")} has been added to your donator total, " +
+                    "making ${Colour.DARK_BLUE.wrap("$" + "%.2f".format(total / 100.0))}." +
+                    (TIER_RANKS[tierKey]?.let { "<br>Rank: ${Colour.RS_GREEN.wrap(it.toString())}" } ?: ""))
         }
     }
 

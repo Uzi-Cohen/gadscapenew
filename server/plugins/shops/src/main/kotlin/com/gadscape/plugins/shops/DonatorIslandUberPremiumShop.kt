@@ -6,7 +6,7 @@ import com.zenyte.game.model.shop.ShopPolicy.STOCK_ONLY
 
 class DonatorIslandUberPremiumShop : ShopScript() {
     init {
-        "Uber Premium Supplies"(ShopCurrency.COINS, STOCK_ONLY) {
+        "Platinum Donator Supplies"(ShopCurrency.COINS, STOCK_ONLY) {
             2364(250, 0, 15000, ironmanRestricted = true) // rune bar
             19670(250, 0, 750, ironmanRestricted = true) // redwood logs
             13442(250, 0, 2500, ironmanRestricted = true) // anglerfish

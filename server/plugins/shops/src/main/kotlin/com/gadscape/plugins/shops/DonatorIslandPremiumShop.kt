@@ -6,7 +6,7 @@ import com.zenyte.game.model.shop.ShopPolicy.STOCK_ONLY
 
 class DonatorIslandPremiumShop : ShopScript() {
     init {
-        "Premium Supplies"(ShopCurrency.COINS, STOCK_ONLY) {
+        "Donator Supplies"(ShopCurrency.COINS, STOCK_ONLY) {
             2360(250, 0, 1000, ironmanRestricted = true) // mithril bars
             1516(250, 0, 500, ironmanRestricted = true) // yew logs
             386(250, 0, 1000, ironmanRestricted = true) // sharks

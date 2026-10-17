@@ -1229,7 +1229,7 @@ invmodel=60065
 [[item]]
 id=32080
 inherit=6199
-name="OSNR Mystery Box"
+name="GadScape Mystery Box"
 placeholderid=33080
 invmodel=60067
 stackable=0
@@ -1246,7 +1246,7 @@ op2="Quick-Open"
 [[item]]
 id=32081
 inherit=6200
-name="OSNR Mystery Box"
+name="GadScape Mystery Box"
 notedid=32080
 op1=""
 op2=""
@@ -3481,7 +3481,7 @@ invmodel=60065
 [[item]]
 id=33080
 inherit=6199
-name="OSNR Mystery Box"
+name="GadScape Mystery Box"
 placeholderid=32080
 placeholdertemplate=14401
 invmodel=60067

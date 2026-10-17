@@ -36,10 +36,10 @@ public class GameConstants {
 	public static final String SERVER_WEBSITE_URL = "https://GadScape.com";
 	public static final String SERVER_ACCOUNT_URL = SERVER_WEBSITE_URL + "/account";
 	public static final String SERVER_FORUMS_URL = SERVER_WEBSITE_URL + "/forums";
-	public static final String SERVER_STORE_URL = SERVER_WEBSITE_URL + "/store";
+	public static final String SERVER_STORE_URL = SERVER_WEBSITE_URL + "/donate";
 	public static final String SERVER_VOTE_URL = SERVER_WEBSITE_URL + "/vote";
 	public static final String SERVER_RULES_URL = SERVER_WEBSITE_URL + "/rules";
-	public static final String DISCORD_INVITE = "https://discord.gg/nrpk";
+	public static final String DISCORD_INVITE = "https://discord.gg/9phpruzpC";
 
 	/**
 	 * The instance world profile.
@@ -108,7 +108,7 @@ public class GameConstants {
 
 	public static final String UPDATE_LOG_BROADCAST = "Quality of Life & Bug Fixes! Click here to join the Discord.";
 
-	public static final String UPDATE_LOG_URL = "discord.gg/nr";
+	public static final String UPDATE_LOG_URL = "discord.gg/9phpruzpC";
 
 	/**
 	 * Item ids added to this list are restricted from trade, selling to shops, and posting on the GE. It is primarily used as an economy control measure
