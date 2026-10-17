@@ -28,6 +28,9 @@ class AppImage(private val log: (String) -> Unit) {
         private val UNUSED_JFX = listOf("javafx-web", "javafx-media", "javafx.web", "javafx.media")
         private fun jfxModules() = ModuleLayer.boot().modules().map { it.name }
             .filter { it.startsWith("javafx.") && it != "javafx.web" && it != "javafx.media" }.sorted()
+        /** What the editor needs opened on Java 21 (Guice); the jar's manifest has them, but an app's main jar doesn't. */
+        private val REQUIRED_FLAGS = listOf("--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.desktop/sun.awt=ALL-UNNAMED", "--add-exports=java.desktop/sun.java2d=ALL-UNNAMED")
         private val RUNTIME_MODULES = listOf(
             "java.se", "jdk.unsupported", "jdk.unsupported.desktop", "jdk.crypto.ec", "jdk.crypto.mscapi",
             "jdk.zipfs", "jdk.charsets", "jdk.jsobject", "jdk.xml.dom", "jdk.localedata"
@@ -35,8 +38,43 @@ class AppImage(private val log: (String) -> Unit) {
     }
 
     private fun tool(name: String): File? {
-        val home = File(System.getProperty("java.home"))
-        return listOf(File(home, "bin/$name.exe"), File(home, "bin/$name")).firstOrNull { it.isFile }
+        fun inJdk(home: File) = listOf(File(home, "bin/$name.exe"), File(home, "bin/$name")).firstOrNull { it.isFile }
+        inJdk(File(System.getProperty("java.home")))?.let { return it }
+        // the one-file editor runs on a Java without jpackage/jlink: use a full JDK 21, downloaded once
+        val jdk = downloadedJdk() ?: return null
+        return inJdk(jdk)
+    }
+
+    /** A full Temurin JDK 21 in the user folder (downloaded the first time it's needed), or null if that failed. */
+    private fun downloadedJdk(): File? {
+        val dir = File(System.getProperty("user.home"), ".uzis-map-editor/jdk-21")
+        fun home() = dir.listFiles()?.firstOrNull { File(it, "bin").isDirectory && File(it, "jmods").isDirectory }
+        home()?.let { return it }
+        val windows = System.getProperty("os.name").lowercase().contains("win")
+        val os = if (windows) "windows" else if (System.getProperty("os.name").lowercase().contains("mac")) "mac" else "linux"
+        val arch = if (System.getProperty("os.arch").contains("aarch64")) "aarch64" else "x64"
+        val url = "https://api.adoptium.net/v3/binary/latest/21/ga/$os/$arch/jdk/hotspot/normal/eclipse?project=jdk"
+        return try {
+            log("This Java can't build the app; downloading a full Java 21 (once, about 200 MB)...")
+            dir.deleteRecursively(); dir.mkdirs()
+            val archive = File(dir, if (windows) "jdk.zip" else "jdk.tar.gz")
+            java.net.URI(url).toURL().openStream().use { input -> archive.outputStream().use { input.copyTo(it) } }
+            log("Unpacking Java...")
+            if (windows) {
+                java.util.zip.ZipFile(archive).use { z ->
+                    for (e in z.entries()) {
+                        val f = File(dir, e.name)
+                        if (!f.canonicalPath.startsWith(dir.canonicalPath)) continue
+                        if (e.isDirectory) f.mkdirs() else { f.parentFile.mkdirs(); z.getInputStream(e).use { i -> f.outputStream().use { i.copyTo(it) } } }
+                    }
+                }
+            } else if (!run(listOf("tar", "-xzf", archive.path, "-C", dir.path))) return null
+            archive.delete()
+            home()?.also { log("Java 21 ready: ${it.path}") } ?: run { log("The Java download didn't unpack right."); null }
+        } catch (e: Exception) {
+            log("Couldn't download Java 21: ${e.message}")
+            null
+        }
     }
 
     private fun run(cmd: List<String>): Boolean {
@@ -97,9 +135,9 @@ class AppImage(private val log: (String) -> Unit) {
      */
     private fun writeLegacyLauncher(input: File) {
         val jfxModules = jfxModules()
-        val flags = ManagementFactory.getRuntimeMXBean().inputArguments
+        val flags = (REQUIRED_FLAGS + ManagementFactory.getRuntimeMXBean().inputArguments
             .filter { it.startsWith("--add-opens") || it.startsWith("--add-exports") }
-            .map { it.replace(" ", "=") }.distinct()
+            .map { it.replace(" ", "=") }).distinct()
         val cmd = buildString {
             appendln("@echo off")
             appendln("cd /d \"%~dp0..\"")
@@ -109,7 +147,8 @@ class AppImage(private val log: (String) -> Unit) {
             appendln("echo Starting Uzi's Map Editor...")
             append("start \"\" \"%JAVA%w\"".replace("%JAVA%w", "%JAVA:java.exe=javaw.exe%"))
             append(" -Dume.appdir=\"%CD%\\app\" -Dume.noupdate=true -Dume.autolaunch=true")
-            append(" --module-path app\\modules --add-modules ${jfxModules.joinToString(",")}")
+            // run from the 1.0 jar, JavaFX is inside it (on the classpath), not separate modules
+            if (jfxModules.isNotEmpty()) append(" --module-path app\\modules --add-modules ${jfxModules.joinToString(",")}")
             flags.forEach { append(" $it") }
             appendln(" -cp app\\uzis-map-editor.jar AppKt")
         }
@@ -167,15 +206,14 @@ class AppImage(private val log: (String) -> Unit) {
 
         // ---- the exe ----
         val jfxModules = jfxModules()
-        val flags = ManagementFactory.getRuntimeMXBean().inputArguments
+        val flags = (REQUIRED_FLAGS + ManagementFactory.getRuntimeMXBean().inputArguments
             .filter { it.startsWith("--add-opens") || it.startsWith("--add-exports") || it.startsWith("-Xmx") }
-            .map { it.replace(" ", "=") }.distinct()
-        val javaOptions = listOf(
-            "-Dume.appdir=\$APPDIR",
-            "-Dume.autolaunch=true",
-            "--module-path=\$APPDIR/modules",
-            "--add-modules=" + jfxModules.joinToString(",")
-        ) + flags
+            .map { it.replace(" ", "=") }).distinct()
+        // an empty --add-modules= stops Java from starting at all ("Failed to launch JVM"): run from the 1.0 jar,
+        // JavaFX is inside the jar (on the classpath) and there are no separate JavaFX modules
+        val javaOptions = listOf("-Dume.appdir=\$APPDIR", "-Dume.autolaunch=true") +
+            (if (jfxModules.isEmpty()) emptyList() else listOf("--module-path=\$APPDIR/modules", "--add-modules=" + jfxModules.joinToString(","))) +
+            flags
         val out = File(work, "out").apply { mkdirs() }
         val cmd = mutableListOf(jpackage.path, "--type", "app-image", "--name", APP_NAME,
             "--input", input.path, "--main-jar", "uzis-map-editor.jar", "--main-class", "AppKt",

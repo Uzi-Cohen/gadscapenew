@@ -104,6 +104,8 @@ application {
 javafx {
     version = "21.0.5"
     modules = listOf("javafx.controls", "javafx.fxml", "javafx.graphics", "javafx.web")
+    // -PjavafxPlatform=win builds the Windows jar on another system (JavaFX's natives are per system)
+    findProperty("javafxPlatform")?.let { setPlatform(it.toString()) }
 }
 
 tasks.processResources {
@@ -120,6 +122,9 @@ val fatJar = tasks.register<Jar>("fatJar") {
     manifest {
         attributes["Implementation-Version"] = "${project.version} (build $buildNumber)"
         attributes["Main-Class"] = "AppKt"
+        // Guice's class generation needs java.lang open on Java 17+ (without it: "Unable to construct Application instance")
+        attributes["Add-Opens"] = "java.base/java.lang java.desktop/sun.awt"
+        attributes["Add-Exports"] = "java.desktop/sun.java2d"
     }
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
