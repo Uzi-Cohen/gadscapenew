@@ -35,13 +35,16 @@ object ItemStats {
 
     fun file(server: File) = File(server, "data/items/ItemDefinitions.json")
 
+    /** [key] as an object, or null when it's missing or null (the OSRS data has "equipment": null for most items). */
+    fun obj(o: JsonObject?, key: String): JsonObject? = o?.get(key)?.takeIf { it.isJsonObject }?.asJsonObject
+
     private fun ensure(server: File): LinkedHashMap<Int, JsonObject> {
         val f = file(server)
         require(f.isFile) { "${f.path} isn't there (pick the server folder)" }
         if (loadedFrom != f || loadedAt != f.lastModified()) {
             val arr = f.reader(Charsets.UTF_8).use { JsonParser.parseReader(it) }.asJsonArray
             val m = LinkedHashMap<Int, JsonObject>()
-            for (e in arr) if (e.isJsonObject && e.asJsonObject.has("id")) m[e.asJsonObject["id"].asInt] = e.asJsonObject
+            for (e in arr) if (e.isJsonObject && e.asJsonObject["id"]?.isJsonPrimitive == true) m[e.asJsonObject["id"].asInt] = e.asJsonObject
             array = arr; entries = m; loadedFrom = f; loadedAt = f.lastModified()
         }
         return entries
@@ -91,28 +94,28 @@ object ItemStats {
 
     // ---------- the entry, field by field ----------
 
-    fun equip(e: JsonObject): JsonObject = e.getAsJsonObject("equipmentDefinition") ?: JsonObject().also { e.add("equipmentDefinition", it) }
-    fun weapon(e: JsonObject): JsonObject = equip(e).getAsJsonObject("weaponDefinition") ?: JsonObject().also { equip(e).add("weaponDefinition", it) }
+    fun equip(e: JsonObject): JsonObject = obj(e, "equipmentDefinition") ?: JsonObject().also { e.add("equipmentDefinition", it) }
+    fun weapon(e: JsonObject): JsonObject = obj(equip(e), "weaponDefinition") ?: JsonObject().also { equip(e).add("weaponDefinition", it) }
 
     fun bonuses(e: JsonObject): IntArray {
-        val s = e.getAsJsonObject("equipmentDefinition")?.get("bonuses")?.asString ?: return IntArray(14)
+        val s = obj(e, "equipmentDefinition")?.get("bonuses")?.takeIf { it.isJsonPrimitive }?.asString ?: return IntArray(14)
         val p = s.split(',').map { it.trim().toIntOrNull() ?: 0 }
         return IntArray(14) { p.getOrElse(it) { 0 } }
     }
     fun setBonuses(e: JsonObject, b: IntArray) { equip(e).addProperty("bonuses", b.joinToString(", ")) }
 
     fun requirements(e: JsonObject): Map<Int, Int> =
-        e.getAsJsonObject("equipmentDefinition")?.getAsJsonObject("requirements")?.entrySet()
-            ?.mapNotNull { (k, v) -> k.toIntOrNull()?.let { it to v.asInt } }?.toMap() ?: emptyMap()
+        obj(obj(e, "equipmentDefinition"), "requirements")?.entrySet()
+            ?.mapNotNull { (k, v) -> if (!v.isJsonPrimitive) null else k.toIntOrNull()?.let { it to v.asInt } }?.toMap() ?: emptyMap()
     fun setRequirements(e: JsonObject, r: Map<Int, Int>) {
-        if (r.isEmpty()) { e.getAsJsonObject("equipmentDefinition")?.remove("requirements"); return }
+        if (r.isEmpty()) { obj(e, "equipmentDefinition")?.remove("requirements"); return }
         val o = JsonObject(); r.toSortedMap().forEach { (k, v) -> o.addProperty(k.toString(), v) }
         equip(e).add("requirements", o)
     }
 
     fun int(o: JsonObject?, key: String, def: Int = 0) = o?.get(key)?.takeIf { it.isJsonPrimitive }?.asInt ?: def
     fun bool(o: JsonObject?, key: String) = o?.get(key)?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false
-    fun weight(e: JsonObject) = e.get("weight")?.asDouble ?: 0.0
+    fun weight(e: JsonObject) = e.get("weight")?.takeIf { it.isJsonPrimitive }?.asDouble ?: 0.0
     /** Whole numbers stay whole in the file (0, not 0.0), like the server writes them. */
     fun setWeight(e: JsonObject, kg: Double) { e.add("weight", if (kg == Math.floor(kg)) JsonPrimitive(kg.toLong()) else JsonPrimitive(kg)) }
 
@@ -149,18 +152,18 @@ object ItemStats {
     fun effective(server: File, id: Int): JsonObject? {
         val e = get(server, id)
         val o = osrs(server, id) ?: return e
-        val eq = o.getAsJsonObject("equipment") ?: return e
+        val eq = obj(o, "equipment") ?: return e
         val out = e ?: JsonObject().apply { addProperty("id", id); addProperty("equipmentType", "DEFAULT"); addProperty("slot", 0) }
-        val b = bonuses(out); val hadBonuses = out.getAsJsonObject("equipmentDefinition")?.has("bonuses") == true
+        val b = bonuses(out); val hadBonuses = obj(out, "equipmentDefinition")?.get("bonuses")?.isJsonPrimitive == true
         val ob = IntArray(14) { eq[OSRS_BONUS[it]]?.takeIf { v -> v.isJsonPrimitive }?.asInt ?: 0 }
         // the server compares magic attack but then takes crush (its own bug); copy what it really ends up with
         val merged = if (!hadBonuses) ob else IntArray(14) { i -> if (ob[i] > b[i]) (if (i == 3) ob[2] else ob[i]) else b[i] }
         setBonuses(out, merged)
-        o.getAsJsonObject("weapon")?.get("attack_speed")?.takeIf { it.isJsonPrimitive }?.asInt?.let { weapon(out).addProperty("attackSpeed", 10 - it) }
-        if (eq["slot"]?.asString == "2h") weapon(out).addProperty("twoHanded", true)
-        eq.getAsJsonObject("requirements")?.let { r ->
+        obj(o, "weapon")?.get("attack_speed")?.takeIf { it.isJsonPrimitive }?.asInt?.let { weapon(out).addProperty("attackSpeed", 10 - it) }
+        if (eq["slot"]?.takeIf { it.isJsonPrimitive }?.asString == "2h") weapon(out).addProperty("twoHanded", true)
+        obj(eq, "requirements")?.let { r ->
             val req = requirements(out).toMutableMap()
-            for ((name, lvl) in r.entrySet()) { val k = SKILLS.indexOfFirst { it.equals(name, true) }; if (k >= 0 && k !in req) req[k] = lvl.asInt }
+            for ((name, lvl) in r.entrySet()) { val k = SKILLS.indexOfFirst { it.equals(name, true) }; if (k >= 0 && k !in req && lvl.isJsonPrimitive) req[k] = lvl.asInt }
             setRequirements(out, req)
         }
         return out
