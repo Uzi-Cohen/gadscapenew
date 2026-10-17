@@ -275,7 +275,12 @@ class Packager(private val log: (String) -> Unit) {
         log("Zipping the update...")
         zipDir(File(image, "app"), appZip)
         val version = File(workDir, "version.txt").apply { writeText(stamp) }
-        val assets = mutableListOf(appZip.path, version.path)
+        // the Java it runs on: an older copy's updater fetches runtime.zip when its own Java is older than this
+        val javaVersion = File(workDir, "java-version.txt").apply { writeText(Runtime.version().feature().toString()) }
+        val runtimeZip = File(workDir, "runtime.zip")
+        log("Zipping Java (for copies that still have an older one)...")
+        zipDir(File(image, "runtime"), runtimeZip)
+        val assets = mutableListOf(appZip.path, version.path, javaVersion.path, runtimeZip.path)
         if (includeFull) {
             val full = File(workDir, "UzisMapEditor-full.zip")
             log("Zipping the full download...")

@@ -155,12 +155,26 @@ object Updater {
             println("Update download failed, starting $local")
             return false
         }
+        // a build that needs a newer Java than the one in runtime\ would fail to start ("Failed to launch JVM"):
+        // bring the Java it was built with too
+        val needJava = fetchText("$base/latest/download/java-version.txt")?.trim()?.toIntOrNull()
+        val haveJava = Runtime.version().feature()
+        var runtimeZip: File? = null
+        if (needJava != null && needJava > haveJava) {
+            val rz = File.createTempFile("ume-runtime", ".zip")
+            if (!download("$base/latest/download/runtime.zip", rz, "Downloading Java $needJava for update $remote...")) {
+                println("Update $remote needs Java $needJava (this has $haveJava) and its Java couldn't be downloaded, starting $local")
+                zip.delete(); rz.delete()
+                return false
+            }
+            runtimeZip = rz
+        }
         println("Downloaded ${zip.length()} bytes, restarting into $remote")
         splashText("Installing update $remote...")
         // the running app holds its own files, so a small script swaps them after we exit
         val script = File.createTempFile("ume-update", ".ps1")
         script.writeText("""
-            param([int]${'$'}ProcId, [string]${'$'}Zip, [string]${'$'}AppDir, [string]${'$'}Exe, [string]${'$'}Log)
+            param([int]${'$'}ProcId, [string]${'$'}Zip, [string]${'$'}AppDir, [string]${'$'}Exe, [string]${'$'}Log, [string]${'$'}RuntimeZip = '')
             Start-Transcript -Path ${'$'}Log -Force | Out-Null
             ${'$'}ProgressPreference = 'SilentlyContinue'
             try {
@@ -172,6 +186,19 @@ object Updater {
                 Expand-Archive ${'$'}Zip ${'$'}tmp -Force
                 ${'$'}src = Join-Path ${'$'}tmp 'app'
                 if (Test-Path (Join-Path ${'$'}src 'uzis-map-editor.jar')) {
+                    if (${'$'}RuntimeZip -ne '') {
+                        "Replacing Java"
+                        ${'$'}rt = Join-Path (Split-Path ${'$'}AppDir -Parent) 'runtime'
+                        ${'$'}rtmp = Join-Path ${'$'}env:TEMP ('ume-rt-' + [guid]::NewGuid())
+                        Expand-Archive ${'$'}RuntimeZip ${'$'}rtmp -Force
+                        ${'$'}rsrc = Join-Path ${'$'}rtmp 'runtime'
+                        if (-not (Test-Path (Join-Path ${'$'}rsrc 'bin'))) { throw "the Java download is incomplete" }
+                        if (Test-Path (${'$'}rt + '.old')) { Remove-Item (${'$'}rt + '.old') -Recurse -Force }
+                        Rename-Item ${'$'}rt (${'$'}rt + '.old')
+                        Copy-Item ${'$'}rsrc ${'$'}rt -Recurse -Force
+                        Remove-Item (${'$'}rt + '.old') -Recurse -Force -ErrorAction SilentlyContinue
+                        Remove-Item ${'$'}rtmp -Recurse -Force -ErrorAction SilentlyContinue
+                    }
                     "Replacing ${'$'}AppDir"
                     ${'$'}backup = ${'$'}AppDir + '.old'
                     if (Test-Path ${'$'}backup) { Remove-Item ${'$'}backup -Recurse -Force }
@@ -184,6 +211,12 @@ object Updater {
                 Remove-Item ${'$'}tmp -Recurse -Force -ErrorAction SilentlyContinue
             } catch {
                 "Update failed: ${'$'}(${'$'}_.Exception.Message)"
+                ${'$'}rt = Join-Path (Split-Path ${'$'}AppDir -Parent) 'runtime'
+                if ((Test-Path (${'$'}rt + '.old')) -and -not (Test-Path (Join-Path ${'$'}rt 'bin'))) {
+                    "Putting the previous Java back"
+                    if (Test-Path ${'$'}rt) { Remove-Item ${'$'}rt -Recurse -Force -ErrorAction SilentlyContinue }
+                    Rename-Item (${'$'}rt + '.old') ${'$'}rt
+                }
                 ${'$'}backup = ${'$'}AppDir + '.old'
                 if ((Test-Path ${'$'}backup) -and -not (Test-Path (Join-Path ${'$'}AppDir 'uzis-map-editor.jar'))) {
                     "Putting the previous version back"
@@ -192,6 +225,7 @@ object Updater {
                 }
             } finally {
                 Remove-Item ${'$'}Zip -Force -ErrorAction SilentlyContinue
+                if (${'$'}RuntimeZip -ne '') { Remove-Item ${'$'}RuntimeZip -Force -ErrorAction SilentlyContinue }
                 "Starting ${'$'}Exe"
                 Start-Process ${'$'}Exe
                 Stop-Transcript | Out-Null
@@ -199,7 +233,7 @@ object Updater {
         """.trimIndent())
         ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
             "-File", script.path, "-ProcId", ProcessHandle.current().pid().toString(),
-            "-Zip", zip.path, "-AppDir", dir.path, "-Exe", exe.path, "-Log", File(logDir, "update.log").path).start()
+            "-Zip", zip.path, "-AppDir", dir.path, "-Exe", exe.path, "-Log", File(logDir, "update.log").path, "-RuntimeZip", runtimeZip?.path ?: "").start()
         return true
     }
 }
