@@ -54,6 +54,25 @@ data class ApiProfile(
     val callbackPort: Int = 6969
 )
 
+/**
+ * Link to the website (gadscape.com): voting, donations, ::claim, donator
+ * ranks, bans and VPN checks. Independent of [ApiProfile] - see
+ * com.gadscape.website.WebsiteService.
+ */
+@Serializable
+data class WebsiteProfile(
+    val enabled: Boolean = false,
+    /** e.g. https://gadscape.com - no trailing slash. */
+    val siteUrl: String = "",
+    /** Same value as GAME_API_KEY on the website. */
+    val apiKey: String = "",
+    /** Port for the website's instant push (GAME_SERVER_WEBHOOK_URL = http://<host>:<port>/gadscape/events). 0 = poll only. */
+    val webhookPort: Int = 0,
+    val pollSeconds: Int = 15,
+    /** If the website can't be reached at login: true lets players in (cached bans still apply), false refuses. */
+    val allowLoginWhenSiteDown: Boolean = true
+)
+
 @Serializable
 data class WorldProfile(
 
@@ -78,6 +97,8 @@ data class WorldProfile(
     val mainDatabase: DatabaseProfile? = null,
 
     val discordToken: String? = null,
+
+    val website: WebsiteProfile? = null,
 
     // Login RSA keypair (server holds the private exponent + modulus; the matching
     // public exponent + modulus is compiled into the client). Generate with a fresh
@@ -105,6 +126,8 @@ data class WorldProfile(
     fun isLogsDatabaseEnabled(): Boolean = logsDatabase?.enabled == true
 
     fun isDiscordEnabled(): Boolean = !discordToken.isNullOrBlank()
+
+    fun isWebsiteEnabled(): Boolean = website?.enabled == true && !website.siteUrl.isBlank() && !website.apiKey.isBlank()
 }
 
 @Serializable

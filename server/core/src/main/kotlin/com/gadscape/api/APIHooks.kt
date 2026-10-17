@@ -2,6 +2,7 @@
 
 package com.gadscape.api
 
+import com.gadscape.website.WebsiteService
 import com.google.common.eventbus.Subscribe
 import com.zenyte.plugins.events.ServerLaunchEvent
 
@@ -19,5 +20,6 @@ object APIHooks {
     @JvmStatic
     fun onServerLaunched(event: ServerLaunchEvent) {
         APICallbackServer.start()
+        WebsiteService.start()
     }
 }

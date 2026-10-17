@@ -6,6 +6,7 @@ import com.gadscape.api.service.user.UserPlayerHandler
 import com.gadscape.api.service.user.twoFactorEnabled
 import com.gadscape.game.world.entity.player.onLogin
 import com.gadscape.network.MasterHandler
+import com.gadscape.website.WebsiteService
 import com.gadscape.network.NetworkPipelineConstants.DECODER
 import com.gadscape.network.NetworkPipelineConstants.ENCODER
 import com.gadscape.network.NetworkPipelineConstants.HANDLER
@@ -117,6 +118,8 @@ class LoginRequest(
             }
         }
         if (World.containsPlayer(username)) return ClientResponse.ALREADY_ONLINE
+        // Website bans, VPN/proxy block and IP logging (no-op unless website.enabled).
+        WebsiteService.checkLogin(info.displayname, ctx.ipv4Address().hostAddress)?.let { return it }
         return ClientResponse.LOGIN_OK
     }
 

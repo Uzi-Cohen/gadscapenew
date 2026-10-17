@@ -15,6 +15,18 @@ worlds:
     # a keypair that has ever been committed to source control.
     rsaPrivateExponent: "REPLACE_WITH_RSA_PRIVATE_EXPONENT_BASE36"
     rsaModulus: "REPLACE_WITH_RSA_MODULUS_BASE36"
+    # Link to the website: ::vote, ::donate, ::claim, ::link, donator pins ->
+    # donator rank, website bans + VPN block at login, player count / hiscores.
+    # apiKey = GAME_API_KEY on the website. With webhookPort set, point the
+    # website's GAME_SERVER_WEBHOOK_URL at http://<this host>:<port>/gadscape/events
+    # (open that port in the firewall); 0 = the server polls every pollSeconds.
+    website:
+      enabled: false
+      siteUrl: "https://gadscape.com"
+      apiKey: "REPLACE_WITH_GAME_API_KEY"
+      webhookPort: 0
+      pollSeconds: 15
+      allowLoginWhenSiteDown: true
     api:
       enabled: false
       scheme: "http"
@@ -52,6 +64,18 @@ worlds:
     # client is compiled with one public modulus and can connect to any of them.
     rsaPrivateExponent: "REPLACE_WITH_RSA_PRIVATE_EXPONENT_BASE36"
     rsaModulus: "REPLACE_WITH_RSA_MODULUS_BASE36"
+    # Link to the website: ::vote, ::donate, ::claim, ::link, donator pins ->
+    # donator rank, website bans + VPN block at login, player count / hiscores.
+    # apiKey = GAME_API_KEY on the website. With webhookPort set, point the
+    # website's GAME_SERVER_WEBHOOK_URL at http://<this host>:<port>/gadscape/events
+    # (open that port in the firewall); 0 = the server polls every pollSeconds.
+    website:
+      enabled: false
+      siteUrl: "https://gadscape.com"
+      apiKey: "REPLACE_WITH_GAME_API_KEY"
+      webhookPort: 0
+      pollSeconds: 15
+      allowLoginWhenSiteDown: true
     api:
       enabled: false
       scheme: "http"

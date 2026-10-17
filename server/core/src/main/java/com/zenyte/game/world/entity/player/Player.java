@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player;
 
+import com.gadscape.website.WebsiteService;
 import com.google.gson.annotations.Expose;
 import com.gadscape.api.model.User;
 import com.gadscape.api.service.sanction.SanctionPlayerExtKt;
@@ -2009,6 +2010,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
             interfaceHandler.closeInterfaces();
             MethodicPluginHandler.invokePlugins(ListenerType.LOGOUT, this);
             PluginManager.post(new LogoutEvent(this));
+            WebsiteService.onLogout(this);
             MiddleManManager.INSTANCE.onLogout(this);
             CoresManager.getServiceProvider().submit(logger::shutdown);
             /*appender.getManager().flush();
@@ -4041,6 +4043,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
         sendPlayerOptions();
         MethodicPluginHandler.invokePlugins(ListenerType.LOGIN, this);
         PluginManager.post(new LoginEvent(this));
+        WebsiteService.onLogin(this);
         MiddleManManager.INSTANCE.onLogin(this);
         WorldBroadcasts.onLogin(this);
         controllerManager.login();

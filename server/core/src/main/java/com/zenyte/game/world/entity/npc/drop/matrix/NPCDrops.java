@@ -227,6 +227,11 @@ public class NPCDrops {
 		return table.drops;
 	}
 
+	/** Every loaded drop table, by NPC id (read-only use, e.g. exporting to the website). */
+	public static Int2ObjectMap<DropTable> getAllTables() {
+		return Int2ObjectMaps.unmodifiable(drops);
+	}
+
 	public static DropTable getTable(final int npcId) {
 		return drops.get(npcId);
 	}

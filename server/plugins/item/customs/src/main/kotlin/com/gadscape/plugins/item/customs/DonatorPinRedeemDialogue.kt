@@ -3,6 +3,7 @@ package com.gadscape.plugins.item.customs
 import com.gadscape.api.model.Bond
 import com.gadscape.api.service.user.UserPlayerHandler
 import com.gadscape.game.content.commands.DeveloperCommands
+import com.gadscape.website.WebsiteService
 import com.zenyte.game.GameConstants
 import com.zenyte.game.item.Item
 import com.zenyte.game.util.Colour
@@ -48,6 +49,18 @@ class DonatorPinRedeemDialogue(player: Player, private val item: Item) : Dialogu
         val bond = Bond[item.id] ?: error("Invalid dialogue initialised for non donator-pin item (item=$item)")
         val shade = bond.getShade()
         val shadedName = "$shade${item.name}</shad>"
+        if (WebsiteService.isEnabled) {
+            // Website link: the pin counts toward the donator rank tracked on gadscape.com.
+            item(item, "Would you like to redeem this $shadedName and add " +
+                    "${Colour.DARK_BLUE.wrap("$${bond.amount}")} to your donator total?<br>" +
+                    "Your donator rank goes up as your total grows.")
+            options("Redeem the $shadedName?") {
+                "Yes." { WebsiteService.redeemPin(player, bond) }
+                "No." {}
+            }
+            return
+        }
+
         item(item, "Would you like to redeem this $shadedName " +
                 "for ${Colour.RS_GREEN.wrap("${bond.credits} store credits")} " +
                 "and ${Colour.DARK_BLUE.wrap("$${bond.amount}")} added to your total spent?")

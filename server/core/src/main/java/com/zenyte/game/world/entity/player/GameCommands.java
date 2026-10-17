@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player;
 
+import com.gadscape.website.WebsiteService;
 import com.google.common.collect.ObjectArrays;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -2566,10 +2567,41 @@ public final class GameCommands {
             GameNoticeboardInterface.showStaffOnline(p);
         });
         new Command(PlayerPrivilege.PLAYER, new String[]{"vote", "voting"}, (p, args) -> {
-            GameInterface.VOTE.open(p);
+            if (WebsiteService.isEnabled()) WebsiteService.commandVote(p);
+            else GameInterface.VOTE.open(p);
         });
         new Command(PlayerPrivilege.PLAYER, new String[]{"store", "donate"}, (p, args) -> {
-            GameInterface.CREDIT_STORE.open(p);
+            if (WebsiteService.isEnabled()) WebsiteService.commandDonate(p);
+            else GameInterface.CREDIT_STORE.open(p);
+        });
+        new Command(PlayerPrivilege.PLAYER, new String[]{"claim", "claimvote", "claimdonation", "redeem"},
+                "Collects your vote and donation rewards from the website.", (p, args) -> {
+            if (!WebsiteService.isEnabled()) {
+                p.sendMessage("Claiming isn't available on this world.");
+                return;
+            }
+            WebsiteService.commandClaim(p);
+        });
+        new Command(PlayerPrivilege.PLAYER, "link", "Links your character to your forum account. Usage: ::link CODE", (p, args) -> {
+            if (!WebsiteService.isEnabled()) {
+                p.sendMessage("Linking isn't available on this world.");
+                return;
+            }
+            if (args.length == 0) {
+                p.sendMessage("Get a code on your account page at gadscape.com, then type ::link CODE");
+                return;
+            }
+            WebsiteService.commandLink(p, args[0]);
+        });
+        new Command(PlayerPrivilege.PLAYER, new String[]{"dpoints", "donatorpoints"}, "Shows your donator points.", (p, args) -> {
+            WebsiteService.commandPoints(p);
+        });
+        new Command(PlayerPrivilege.ADMINISTRATOR, "websitesync", "Sends item definitions and drop tables to the website.", (p, args) -> {
+            if (!WebsiteService.isEnabled()) {
+                p.sendMessage("The website link is disabled on this world.");
+                return;
+            }
+            WebsiteService.syncGameData(p);
         });
         new Command(PlayerPrivilege.PLAYER, new String[]{"rules"}, (p, args) -> {
             p.getPacketDispatcher().sendURL(GameConstants.SERVER_RULES_URL);
