@@ -1,0 +1,63 @@
+name: Build editor exe
+
+# Every editor change on main gets built into Uzis Map Editor.exe (Java 21 and the editor packed in one file) and
+# attached to a release in this repo, for you to try. Friends don't get it until you run "Deploy editor".
+on:
+  push:
+    branches: [main]
+    paths: ["editor/**", "launcher/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-editor-exe
+  cancel-in-progress: false
+
+jobs:
+  exe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build the Windows editor jar
+        working-directory: editor
+        run: |
+          BUILD=$((111 + ${{ github.run_number }}))
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          ./gradlew --no-daemon fatJar -PjavafxPlatform=win -PbuildNumber=$BUILD
+          mkdir -p ../launcher/payload
+          cp build/libs/uzis-map-editor-1.0-build-$BUILD.jar ../launcher/payload/editor.jar
+          unzip -l ../launcher/payload/editor.jar AppKt.class glass.dll
+
+      - name: Java 21 for Windows
+        run: |
+          curl -sSfL -o launcher/payload/jre.zip "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk"
+          unzip -l launcher/payload/jre.zip | tail -1
+
+      - name: Build Uzis Map Editor.exe
+        working-directory: launcher
+        run: |
+          STAMP=$(date +%s%3N)
+          echo "$STAMP" > "$RUNNER_TEMP/editor-version.txt"
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -H windowsgui -X main.build=1.0-build-$BUILD -X main.stamp=$STAMP" -o "$RUNNER_TEMP/Uzis Map Editor.exe" .
+          cp payload/editor.jar "$RUNNER_TEMP/editor.jar"
+          ls -la "$RUNNER_TEMP"
+
+      - name: Release it here (not to friends)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "editor-exe-build-$BUILD" "$RUNNER_TEMP/Uzis Map Editor.exe" "$RUNNER_TEMP/editor.jar" "$RUNNER_TEMP/editor-version.txt" \
+            --repo "${{ github.repository }}" --latest=false \
+            --title "Editor exe build $BUILD" \
+            --notes "Uzis Map Editor.exe build $BUILD from ${{ github.sha }}. To send it to friends: Actions > Deploy editor > Run workflow."
