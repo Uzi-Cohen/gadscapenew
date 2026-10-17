@@ -1,6 +1,7 @@
 // Uzi's Map Editor, one file: Java 21 and the editor are packed inside this exe. The first run (and the first run
-// of a newer exe) unpacks them to %LOCALAPPDATA%\Programs\Uzis Map Editor and puts a shortcut on the desktop;
+// of a newer exe) unpacks them and puts a shortcut on the desktop;
 // every run starts the editor. Nothing else needs to be installed.
+// Installs to %LOCALAPPDATA%\UzisMapEditor.
 package main
 
 import (
@@ -34,14 +35,16 @@ const (
 )
 
 func main() {
-	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", appName)
+	// its own folder: the old installer's folder (Programs\Uzis Map Editor) has an auto-updater that puts the old
+	// launcher back
+	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "UzisMapEditor")
 	if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
 		if err := install(dest); err != nil {
 			fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
 		}
 	}
 	javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
-	cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-jar", filepath.Join(dest, "editor.jar"))
+	cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
 	cmd.Dir = dest
 	if err := cmd.Start(); err != nil {
 		fail("Couldn't start Uzi's Map Editor:\n" + err.Error())
@@ -52,6 +55,7 @@ func install(dest string) error {
 	// close a running copy so its files can be replaced
 	exec.Command("taskkill", "/F", "/FI", "IMAGENAME eq javaw.exe", "/FI", "WINDOWTITLE eq Uzi*").Run()
 	os.RemoveAll(filepath.Join(dest, "java"))
+	os.RemoveAll(filepath.Join(dest, "app"))
 	if err := os.MkdirAll(filepath.Join(dest, "app"), 0o755); err != nil {
 		return err
 	}
@@ -66,8 +70,12 @@ func install(dest string) error {
 	self, _ := os.Executable()
 	exe := filepath.Join(dest, appName+".exe")
 	if self != "" && !strings.EqualFold(filepath.Clean(self), filepath.Clean(exe)) {
-		if b, err := os.ReadFile(self); err == nil {
-			os.WriteFile(exe, b, 0o755)
+		b, err := os.ReadFile(self)
+		if err == nil {
+			err = os.WriteFile(exe, b, 0o755)
+		}
+		if err != nil {
+			exe = self // the shortcut then points at this exe where it is
 		}
 	}
 	getMap(dest)
