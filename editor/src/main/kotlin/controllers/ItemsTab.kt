@@ -538,8 +538,7 @@ class ItemsTab(
         val l = lib() ?: return
         val safe = d.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').toLowerCase()
         val f = javafx.stage.FileChooser().apply { initialFileName = "item_${d.id}_$safe.zip"; extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("Item bundle", "*.zip")) }.showSaveDialog(stage) ?: return
-        val stats = server()?.let { srv -> try { ItemStats.get(srv, d.id) } catch (e: Exception) { null } }?.let { mapOf(d.id to it) } ?: emptyMap()
-        say(ItemCopy.exportBundle(l, listOf(d.id), f, stats) + " Saved ${f.name}.")
+        say(ItemCopy.exportBundle(l, listOf(d.id), f) + " Saved ${f.name}.")
     }
 
     private fun importBundle() {
@@ -548,16 +547,8 @@ class ItemsTab(
             ButtonType.YES, ButtonType.NO).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.NO) == ButtonType.YES
         try {
             val r = ItemCopy.importBundle(f, keep)
-            // server stats that came with it go into the server's ItemDefinitions.json (Deploy sends them)
-            val srv = server()
-            val statsMsg = when {
-                r.stats.isEmpty() -> ""
-                srv == null -> " It has server stats, but no server folder is set, so they weren't added."
-                else -> try { r.stats.values.forEach { ItemStats.put(srv, it) }; " Server stats added for ${r.stats.keys.joinToString(", ")}." }
-                    catch (e: Exception) { " Couldn't add its server stats: ${e.message}" }
-            }
             afterWrite(r.newIds.firstOrNull())
-            say(r.message + statsMsg + " Undo last change puts the cache back.")
+            say(r.message + " Undo last change puts the cache back.")
         } catch (e: Exception) { say("Couldn't import: ${e.message}") }
     }
 

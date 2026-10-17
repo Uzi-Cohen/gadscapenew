@@ -290,22 +290,23 @@ object ItemStore {
 
 /** Copying items, with their models, from another cache. */
 object ItemCopy {
-    /** [stats]: server stats (ItemDefinitions.json entries) that came with a bundle, by the item's new id. */
-    class Result(val message: String, val newIds: List<Int>, val stats: Map<Int, com.google.gson.JsonObject> = emptyMap(),
-                 /** copied item id -> its id here */ val idMap: Map<Int, Int> = emptyMap())
+    class Result(val message: String, val newIds: List<Int>)
 
     /** Where copied items come from: another cache, or an item bundle zip. */
-    interface Source { fun item(id: Int): ItemFull?; fun model(id: Int): ByteArray? }
+    interface Source {
+        fun item(id: Int): ItemFull?; fun model(id: Int): ByteArray?
+        /** What the item does in game (its server stats entry, JSON), if the source has it. */
+        fun stats(id: Int): String? = null
+    }
 
     class CacheSource(private val other: CacheLibrary) : Source {
         override fun item(id: Int) = ItemStore.read(other, id)
         override fun model(id: Int) = other.data(7, id, 0)
     }
 
-    /** An item bundle: items/<id>.dat, models/<id>.dat and server stats stats/<id>.json in a zip, made by [exportBundle]. */
+    /** An item bundle: items/<id>.dat, models/<id>.dat and stats/<id>.json (server stats) in a zip, made by [exportBundle]. */
     class BundleSource(zip: java.io.File) : Source {
-        val items = java.util.TreeMap<Int, ByteArray>(); private val models = HashMap<Int, ByteArray>()
-        val stats = HashMap<Int, com.google.gson.JsonObject>()
+        val items = java.util.TreeMap<Int, ByteArray>(); private val models = HashMap<Int, ByteArray>(); private val statsJson = HashMap<Int, String>()
         init {
             java.util.zip.ZipInputStream(zip.inputStream()).use { z ->
                 while (true) {
@@ -313,23 +314,21 @@ object ItemCopy {
                     val b = z.readBytes()
                     val parts = e.name.trim('/').split('/')
                     if (parts.size != 2) continue
-                    val id = parts[1].removeSuffix(".dat").removeSuffix(".json").toIntOrNull() ?: continue
-                    when (parts[0]) {
-                        "items" -> items[id] = b; "models" -> models[id] = b
-                        "stats" -> try { stats[id] = com.google.gson.JsonParser.parseString(String(b, Charsets.UTF_8)).asJsonObject } catch (e: Exception) {}
-                    }
+                    val id = parts[1].substringBefore('.').toIntOrNull() ?: continue
+                    when (parts[0]) { "items" -> items[id] = b; "models" -> models[id] = b; "stats" -> statsJson[id] = String(b, Charsets.UTF_8) }
                 }
             }
             require(items.isNotEmpty()) { "That zip has no items in it (it should have an items folder)." }
         }
         override fun item(id: Int) = items[id]?.let { ItemFull.decode(id, it) }
         override fun model(id: Int) = models[id]
+        override fun stats(id: Int) = statsJson[id]
         /** The real items (not the noted ones), which are what gets imported. */
         fun mainIds() = items.keys.filter { item(it)?.isNoted == false }
     }
 
     /** Saves [ids] (and their noted versions) with every model they use, to move them to another cache. */
-    fun exportBundle(lib: CacheLibrary, ids: List<Int>, out: java.io.File, stats: Map<Int, com.google.gson.JsonObject> = emptyMap()): String {
+    fun exportBundle(lib: CacheLibrary, ids: List<Int>, out: java.io.File): String {
         val done = HashSet<Int>(); val modelIds = HashSet<Int>()
         java.util.zip.ZipOutputStream(out.outputStream()).use { z ->
             fun put(name: String, b: ByteArray) { z.putNextEntry(java.util.zip.ZipEntry(name)); z.write(b); z.closeEntry() }
@@ -342,26 +341,22 @@ object ItemCopy {
                     d.maleHead, d.maleHead2, d.femaleHead, d.femaleHead2).filter { it >= 0 })
             }
             for (m in modelIds) lib.data(7, m, 0)?.let { put("models/$m.dat", it) }
-            for ((id, st) in stats) if (id in done) put("stats/$id.json", st.toString().toByteArray(Charsets.UTF_8))
+            // what each item does in game, from the server folder (bonuses, speed, animations, requirements)
+            ServerSource.guess()?.let { srv -> for (id in done) try { ItemStats.effective(srv, id)?.let { put("stats/$id.json", it.toString().toByteArray()) } } catch (e: Exception) {} }
             put("bundle.txt", "# Uzi's Map Editor item bundle\n${done.joinToString("\n") { "item $it" }}\n".toByteArray())
         }
-        return "Saved ${done.size} item(s) with ${modelIds.size} model(s)" + (if (stats.keys.any { it in done }) " and their server stats." else ".")
+        return "Saved ${done.size} item(s) with ${modelIds.size} model(s)."
     }
 
     fun fromOtherCache(other: CacheLibrary, ids: List<Int>, keepIds: Boolean): Result = copy(CacheSource(other), ids, keepIds)
 
-    fun importBundle(zip: java.io.File, keepIds: Boolean): Result {
-        val b = BundleSource(zip)
-        val r = copy(b, b.mainIds(), keepIds)
-        // the stats go with the item to its new id
-        val st = r.idMap.mapNotNull { (from, to) -> b.stats[from]?.deepCopy()?.let { o -> o.addProperty("id", to); to to o } }.toMap()
-        return Result(r.message, r.newIds, st)
-    }
+    fun importBundle(zip: java.io.File, keepIds: Boolean): Result { val b = BundleSource(zip); return copy(b, b.mainIds(), keepIds) }
 
     fun copy(other: Source, ids: List<Int>, keepIds: Boolean): Result {
         CacheEdits.backup("items")
         return CacheEdits.withExportCache { lib ->
             val notes = ArrayList<String>()
+            val statsFor = LinkedHashMap<Int, String>()
             val modelIds = CacheEdits.ModelIds(lib)
             var nextItem = ItemStore.nextFreeId(lib)
             val template = ItemStore.noteTemplate(lib)
@@ -383,7 +378,6 @@ object ItemCopy {
                 return to
             }
             val added = ArrayList<Int>()
-            val idMap = LinkedHashMap<Int, Int>()
             for (id in ids.distinct()) {
                 val src = other.item(id) ?: run { notes.add("item $id isn't in the other cache"); null } ?: continue
                 if (!src.readOk) { notes.add("item $id can't be read (${src.problem})"); continue }
@@ -405,11 +399,21 @@ object ItemCopy {
                 }
                 if (it.countObj != null) notes.add("${it.name} has stack pictures (other item ids) that weren't copied")
                 lib.put(2, 10, it.id, it.encode())
-                added.add(it.id); idMap[id] = it.id
+                added.add(it.id)
+                other.stats(id)?.let { json -> statsFor[it.id] = json }
             }
             lib.index(7).update(); lib.index(2).update()
+            // the bundle's server stats go into the server folder's ItemDefinitions.json under the new ids
+            if (statsFor.isNotEmpty()) {
+                val srv = ServerSource.guess()
+                if (srv == null || !ItemStats.file(srv).isFile) notes.add("the bundle has server stats, but the server folder wasn't found: pick it in the item's In game section and import again")
+                else try {
+                    for ((newId, json) in statsFor) ItemStats.put(srv, com.google.gson.JsonParser.parseString(json).asJsonObject.also { o -> o.addProperty("id", newId) })
+                    notes.add("its server stats (bonuses, requirements) were saved too; send them to the server to put them live")
+                } catch (e: Exception) { notes.add("couldn't save its server stats: ${e.message}") }
+            }
             Result("Copied ${added.size} item(s) as id ${added.joinToString(", ")}, with $newModels new model(s)." +
-                    (if (notes.isEmpty()) "" else " " + notes.distinct().take(6).joinToString("; ") + "."), added, idMap = idMap)
+                    (if (notes.isEmpty()) "" else " " + notes.distinct().take(6).joinToString("; ") + "."), added)
         }
     }
 }
