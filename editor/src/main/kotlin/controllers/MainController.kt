@@ -15,6 +15,7 @@ import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.control.Menu
 import javafx.scene.control.MenuItem
+import javafx.application.Platform
 import javafx.stage.Stage
 import javafx.util.Callback
 import models.DebugModel
@@ -62,6 +63,12 @@ class MainController @Inject constructor(
 
     @FXML
     lateinit var dockPane: DockPane
+
+    @FXML
+    lateinit var mainTabs: javafx.scene.control.TabPane
+
+    @FXML
+    lateinit var mapTab: javafx.scene.control.Tab
 
     @FXML
     lateinit var lblFps: Label
@@ -195,9 +202,69 @@ class MainController @Inject constructor(
 
         object : AnimationTimer() {
             override fun handle(now: Long) {
-                lblFps.text = "FPS: ${debugModel.fps.get()} - DT: ${debugModel.deltaTime.get()}"
+                val onMap = mainTabs.selectionModel.selectedItem === mapTab
+                if (onMap) lblFps.text = "FPS: ${debugModel.fps.get()} - DT: ${debugModel.deltaTime.get()}"
+                // the AI bridge asked for a picture of the map while another tab is open: draw until it has one
+                else worldRendererControllerController.renderer.setPaused(toolsModel.screenshotRequest == null)
             }
         }.start()
+
+        initEditorTabs(gadTools)
+    }
+
+    // ---------- Models / Animations / Items tabs next to Map ----------
+
+    private val editorTabs = listOf("Models", "Animations", "Items").map { name ->
+        javafx.scene.control.Tab(name).apply { isClosable = false; content = javafx.scene.control.Label("Opening the cache...").apply { padding = javafx.geometry.Insets(16.0) } }
+    }
+    private var editors: ModelAnimWindow? = null
+
+    private fun initEditorTabs(gadTools: GadToolsController) {
+        mainTabs.tabs.addAll(editorTabs)
+        ModelAnimWindow.host = { i -> mainTabs.selectionModel.select(editorTabs[i.coerceIn(0, 2)]) }
+        mainTabs.selectionModel.selectedItemProperty().addListener { _, _, tab -> onTab(tab, gadTools) }
+        // Ctrl+1..4 pick a tab, and the menu shortcuts with Shift (Ctrl+Shift+M / I / O / N) work everywhere. Taken
+        // before the 3D view sees them: while the map has focus it keeps every key for itself (1-9 pick tools there).
+        menuBar.sceneProperty().addListener { _, _, sc ->
+            sc?.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED) { e ->
+                if (e.isShortcutDown && !e.isShiftDown && !e.isAltDown) {
+                    val i = listOf(javafx.scene.input.KeyCode.DIGIT1, javafx.scene.input.KeyCode.DIGIT2, javafx.scene.input.KeyCode.DIGIT3,
+                        javafx.scene.input.KeyCode.DIGIT4).indexOf(e.code)
+                    if (i >= 0) { mainTabs.selectionModel.select(i); e.consume(); return@addEventFilter }
+                }
+                if (e.isShortcutDown && e.isShiftDown) {
+                    val item = allItems(menuBar.menus).firstOrNull { it.accelerator?.match(e) == true && !it.isDisable }
+                    if (item != null) { item.fire(); e.consume() }
+                }
+            }
+        }
+    }
+
+    private fun allItems(items: List<MenuItem>): List<MenuItem> = items.flatMap { if (it is Menu) allItems(it.items) else listOf(it) }
+
+    private fun onTab(tab: javafx.scene.control.Tab?, gadTools: GadToolsController) {
+        val renderer = worldRendererControllerController.renderer
+        if (tab === mapTab) {
+            editors?.shown(-1, null)
+            renderer.setPaused(false)
+            Platform.runLater { renderer.requestFocus() }
+            return
+        }
+        renderer.setPaused(true)
+        val i = editorTabs.indexOf(tab).takeIf { it >= 0 } ?: return
+        val first = editors == null
+        val ed = editors ?: ModelAnimWindow({ gadTools.logLine(it) }, menuBar.scene.window as Stage).also { editors = it; ModelAnimWindow.open = it }
+        if (!first || ed.built) { show(ed, i); return }
+        // first time: let the tab paint its "Opening the cache..." before the work starts
+        Platform.runLater { Platform.runLater { if (mainTabs.selectionModel.selectedItem === tab) show(ed, i) } }
+    }
+
+    private fun show(ed: ModelAnimWindow, i: Int) {
+        val t = editorTabs[i]
+        val holder = (t.content as? javafx.scene.layout.BorderPane) ?: try { ed.content(i).also { t.content = it } }
+            catch (e: Exception) { e.printStackTrace(); t.content = javafx.scene.control.Label("Couldn't open the cache: ${e.message}"); return }
+        // the editor tabs that already exist get the undo bar only while shown
+        ed.shown(i, holder)
     }
 
     fun forceRefresh() {

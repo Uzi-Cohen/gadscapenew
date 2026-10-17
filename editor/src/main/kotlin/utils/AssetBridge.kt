@@ -238,7 +238,8 @@ class AssetBridge(private val log: (String) -> Unit) {
             for (m in b.modelIds()) if (m > 65535 || lib.index(7).archive(m) == null) fail("model $m isn't in the cache")
             val energy = ServerItems.specialEnergy(lib, b.id)
             // a copy starts from the stats of the item it copies (what it really has in game)
-            val from = if (o.has("copyOf") && srv != null && ItemStats.get(srv, b.id) == null) o.int("copyOf") else b.id
+            // (only looked at when server stats were sent: without them the server's files may not even be there)
+            val from = if (statsIn != null && o.has("copyOf") && srv != null && ItemStats.get(srv, b.id) == null) o.int("copyOf") else b.id
             val stats = if (statsIn != null) ServerItems.read(srv!!, from).let { r -> ServerItemStats(b.id).also { x ->
                 x.weight = r.weight; x.slot = r.slot; x.equipmentType = r.equipmentType; x.bonuses = r.bonuses.clone()
                 x.requirements.putAll(r.requirements); x.weapon = r.copy().weapon } }.also { x ->

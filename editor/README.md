@@ -16,10 +16,13 @@ OSRS/RSPS map editor built for Rsps'.
 - Direct Editor to server editing, make sure to connect to your dns! 
 
 ## Models and animations
-Tools > Models and animations (Ctrl+Shift+M):
+The tabs at the top of the window: **Map**, **Models**, **Animations**, **Items** (Ctrl+1 to Ctrl+4 from anywhere;
+Tools > Models and animations is Ctrl+Shift+M, Tools > Items is Ctrl+Shift+I). The cache is opened the first time
+one of the last three is shown, and the 3D map stops drawing while it isn't on screen.
 - **Models**: every model in the cache with a 3D view. Export OBJ (with colours) or the model file, import OBJ (+MTL)
   or model files as new models or over an old one, change colours and size, save as new or over it.
-- **Animations**: every animation, played on the NPC that uses it (or any NPC / model you type). Change frame timing,
+- **Animations**: every animation, played on the NPC that uses it, any NPC / model you type, or a male or female
+  player (holding an item if you type its id; animations that put something in the hand show it). Change frame timing,
   copy / remove / reorder frames, save. Export an animation as a bundle (with its frames and skeleton) and import it
   into another cache, or copy animations straight from another 211-style cache.
 - **Items** (also Tools > Items, Ctrl+Shift+I): every item with its inventory picture drawn like the game does.

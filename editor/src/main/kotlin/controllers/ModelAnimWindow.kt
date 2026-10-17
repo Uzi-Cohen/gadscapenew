@@ -9,7 +9,6 @@ import javafx.collections.FXCollections
 import javafx.collections.transformation.FilteredList
 import javafx.geometry.Insets
 import javafx.geometry.Pos
-import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.layout.*
 import javafx.stage.FileChooser
@@ -23,17 +22,21 @@ import models.Configuration as EditorConfiguration
  * look at every model, export OBJ / model files, import OBJ or model files as new models or over old ones,
  * recolour and resize; play every animation on a model or an NPC, change its timing, and copy animations
  * between caches as bundles; make and edit items (Items tab). Everything is written to the exported cache, which Deploy
- * sends to the server.
+ * sends to the server. Shown as the Models / Animations / Items tabs of the main window (see MainController).
  */
-class ModelAnimWindow(private val log: (String) -> Unit) {
+class ModelAnimWindow(private val log: (String) -> Unit, owner: Stage) {
     companion object {
-        private var open: ModelAnimWindow? = null
-        fun show(log: (String) -> Unit, tab: Int = 0) { (open ?: ModelAnimWindow(log).also { open = it }).show(tab) }
-        /** The cache was changed by something else (the AI bridge): read it again if the window is open. */
-        fun cacheChangedElsewhere() { open?.takeIf { it.stage.scene != null }?.reloadAll() }
+        /** The editors, once the main window has made them (they live in its Models / Animations / Items tabs). */
+        var open: ModelAnimWindow? = null
+        /** Shows tab [tab] (0 Models, 1 Animations, 2 Items) in the main window; set by the main window. */
+        var host: ((Int) -> Unit)? = null
+        fun show(log: (String) -> Unit, tab: Int = 0) { host?.invoke(tab) ?: log("The models / items tabs aren't ready yet.") }
+        /** The cache was changed by something else (the AI bridge): read it again if the editors are built. */
+        fun cacheChangedElsewhere() { open?.takeIf { it.built }?.reloadAll() }
     }
 
-    internal val stage = Stage()
+    /** The main window: owner of this editor's dialogs. */
+    internal val stage = owner
     internal val status = Label("").apply { isWrapText = true }
     private var lib: CacheLibrary? = null
     private var models: ModelLoader? = null
@@ -69,8 +72,9 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
 
     internal fun loadModel(id: Int) {
         val md = try { models?.get(id) } catch (e: Exception) { null }
-        current = md; currentId = id; edited = null
-        if (md == null) { modelView.show(null); modelInfo.text = "Model $id couldn't be read."; colourBox.children.clear(); return }
+        // a model that isn't there (never was, or an undo took it away) isn't "the model open in Models" for the Items tab
+        current = md; currentId = if (md == null) -1 else id; edited = null
+        if (md == null) { modelView.show(null); modelInfo.text = "Model $id isn't in the cache (or couldn't be read)."; colourBox.children.clear(); return }
         modelView.show(md)
         val animated = md.vertexSkins != null
         modelInfo.text = "Model $id: ${md.vertexCount} vertices, ${md.faceCount} faces" +
@@ -227,6 +231,9 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     private val animInfo = Label("Pick an animation on the left.").apply { isWrapText = true }
     private val onNpc = TextField().apply { prefColumnCount = 6; promptText = "NPC id" }
     private val onModel = TextField().apply { prefColumnCount = 6; promptText = "model id" }
+    /** What the animation plays on: an NPC / model (the fields above, or one found automatically) or a plain player. */
+    private val onWhat = ComboBox(FXCollections.observableArrayList("An NPC or model", "A male player", "A female player")).apply { selectionModel.select(0); minWidth = Region.USE_PREF_SIZE }
+    private val onItem = TextField().apply { prefColumnCount = 8; promptText = "item id (player)" }
     private val frameSlider = Slider(0.0, 0.0, 0.0).apply { blockIncrement = 1.0; majorTickUnit = 1.0; isSnapToTicks = true }
     private val frameLabel = Label("")
     private val speed = ComboBox(FXCollections.observableArrayList("0.25x", "0.5x", "1x", "2x")).apply { selectionModel.select(2) }
@@ -282,6 +289,7 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
 
     /** The model an animation plays on: the typed NPC or model, else an NPC that uses this animation. */
     private fun previewModel(s: SeqDef): Pair<ModelDefinition?, String> {
+        if (onWhat.selectionModel.selectedIndex > 0) return playerModel(s, onWhat.selectionModel.selectedIndex == 2)
         onNpc.text.trim().toIntOrNull()?.let { return npcModel(it) to "NPC $it" }
         onModel.text.trim().toIntOrNull()?.let { return (try { models?.get(it) } catch (e: Exception) { null }) to "model $it" }
         val user = npcs.values.firstOrNull { (it.standAnim == s.id || it.walkAnim == s.id) && it.models.isNotEmpty() }
@@ -312,6 +320,30 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         return null to "nothing (type an NPC or model id)"
     }
 
+    /**
+     * A plain player (wearing the item typed in "holding item", if any) for [s]. Animations that put another item in
+     * the hand / on the shield arm, or empty the hand, show that, like the game does.
+     */
+    private fun playerModel(s: SeqDef, female: Boolean): Pair<ModelDefinition?, String> {
+        val l = lib ?: return null to "nothing (the cache isn't open)"
+        val m = models ?: return null to "nothing (the cache isn't open)"
+        val who = if (female) "a female player" else "a male player"
+        val itemText = onItem.text.trim()
+        val item = if (itemText.isEmpty()) null else (itemText.toIntOrNull()?.let { try { ItemStore.read(l, it) } catch (e: Exception) { null } }
+            ?: return null to "nothing: there's no item $itemText")
+        val held = s.weapon.takeIf { it >= 512 }?.let { try { ItemStore.read(l, it - 512) } catch (e: Exception) { null } }
+        val shield = s.shield.takeIf { it >= 512 }?.let { try { ItemStore.read(l, it - 512) } catch (e: Exception) { null } }
+        var main = item ?: ItemFull(-1)
+        if (held != null && (item == null || item.wearPos1 == 3)) main = held
+        if (s.weapon in 0..511 && item?.wearPos1 == 3) main = ItemFull(-1)
+        if (s.shield in 0..511 && item?.wearPos1 == 5) main = ItemFull(-1)
+        val extra = listOfNotNull(held?.takeIf { it !== main }, shield?.takeIf { it !== main })
+        val md = try { ItemPreview.onPlayer(main, female, l, m, extra) } catch (e: Exception) { null }
+            ?: return null to "nothing (couldn't build the player)"
+        return md to who + (item?.let { " with ${it.name}" } ?: "") + (held?.let { " (the animation puts ${it.name} in the hand)" } ?: "") +
+                (shield?.let { " (and ${it.name} on the shield arm)" } ?: "")
+    }
+
     private fun npcModel(id: Int): ModelDefinition? {
         val n = npcs[id] ?: return null
         val loader = models
@@ -329,16 +361,20 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         timing.clear()
         skelClip = null
         if (s == null) { animInfo.text = "Animation $id couldn't be read."; return }
-        val named = AnimCatalog.entry(id)?.let { e -> "${e.name}  [${e.category}]" + (if (e.uses.size > 1) "\nAlso: " + e.uses.drop(1).take(4).joinToString("; ") else "") + "\n" } ?: ""
+        // name first, then what's shown, then the other uses (the long part, last so nothing important gets cut)
+        val entry = AnimCatalog.entry(id)
+        val named = entry?.let { e -> "${e.name}  [${e.category}]\n" } ?: ""
+        val also = entry?.takeIf { it.uses.size > 1 }?.let { e -> "\nAlso: " + e.uses.drop(1).take(3).joinToString("; ") } ?: ""
         if (s.skeletalModel != -1) {
             val (md, onWhat) = previewModel(s)
             animView.show(md)
-            if (md == null) { animInfo.text = named + "Animation $id is skeletal (2021+). Type an NPC or model id to show it on."; return }
+            if (md == null) { animInfo.text = named + "Animation $id is skeletal (2021+). Showing it on $onWhat." +
+                (if (onWhat.startsWith("nothing (")) "" else " Pick an NPC, a model or a player under Show on.") + also; return }
             val (clip, note) = AnimPlayback.clipFor(md, s.id, anims ?: return)
             skelClip = clip
             frameSlider.max = ((clip?.frameCount ?: 1) - 1).coerceAtLeast(0).toDouble()
             animInfo.text = named + "Animation $id: skeletal (2021+), ${clip?.frameCount ?: 0} cycles (${(clip?.frameCount ?: 0) * 20} ms). Showing it on $onWhat. " +
-                    (if (note.isNotEmpty()) "$note " else "") + "Its timing is in its keyframes, so there's no frame list to edit."
+                    (if (note.isNotEmpty()) "$note " else "") + "Its timing is in its keyframes, so there's no frame list to edit." + also
             frameIndex = 0; frameTime = 0.0
             showFrame(0)
             return
@@ -351,7 +387,7 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         animInfo.text = named + "Animation $id: ${s.frameCount} frames, ${s.lengthCycles * 20} ms" +
                 (if (s.loopOffset >= 0) ", loops from frame ${s.loopOffset}" else "") +
                 (if (s.weapon >= 0 || s.shield >= 0) ", holds items" else "") + ". Showing it on $onWhat." +
-                (if (animator?.animatable == false) " That model can't move (no animation labels)." else "")
+                (if (animator?.animatable == false) " That model can't move (no animation labels)." else "") + also
         frameIndex = 0; frameTime = 0.0
         showFrame(0)
     }
@@ -411,6 +447,14 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
             }
         }
         seqSearch.setOnAction { seqSearch.text.trim().toIntOrNull()?.let { loadSeq(it) } }
+        // NPC / model ids only mean something for "NPC or model"; the item only for a player
+        onWhat.valueProperty().addListener { _, _, _ ->
+            val player = onWhat.selectionModel.selectedIndex > 0
+            onNpc.isDisable = player; onModel.isDisable = player; onItem.isDisable = !player
+            seq?.let { loadSeq(it.id) }
+        }
+        onItem.isDisable = true
+        onItem.setOnAction { seq?.let { loadSeq(it.id) } }
         seqList.selectionModel.selectedItemProperty().addListener { _, _, id -> if (id != null) loadSeq(id) }
         frameSlider.valueProperty().addListener { _, _, v -> if (v.toInt() != frameIndex) showFrame(v.toInt()) }
         timingList.setCellFactory {
@@ -426,7 +470,8 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         fun sel() = timingList.selectionModel.selectedIndex
         val controls = VBox(8.0,
             animInfo,
-            HBox(6.0, Label("Show on"), onNpc, onModel, Button("Show").apply { setOnAction { seq?.let { loadSeq(it.id) } } }).apply { alignment = Pos.CENTER_LEFT },
+            HBox(6.0, Label("Show on").apply { minWidth = Region.USE_PREF_SIZE }, onWhat).apply { alignment = Pos.CENTER_LEFT },
+            HBox(6.0, onNpc, onModel, onItem, Button("Show").apply { minWidth = Region.USE_PREF_SIZE; setOnAction { seq?.let { loadSeq(it.id) } } }).apply { alignment = Pos.CENTER_LEFT },
             HBox(6.0, Button("Play / pause").apply { setOnAction { playing = !playing } }, speed,
                 Button("<").apply { setOnAction { playing = false; showFrame(frameIndex - 1) } },
                 Button(">").apply { setOnAction { playing = false; showFrame(frameIndex + 1) } }).apply { alignment = Pos.CENTER_LEFT },
@@ -450,12 +495,15 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
                 Button("Import...").apply { setOnAction { importBundle() } },
                 Button("Copy from another cache...").apply { setOnAction { fromOtherCache() } })
         ).apply { padding = Insets(8.0); prefWidth = 440.0; minWidth = 440.0 }
+        animInfo.minHeight = Region.USE_PREF_SIZE
+        // a short window scrolls the side panel instead of squashing it
+        val side = ScrollPane(controls).apply { isFitToWidth = true; hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER; minWidth = 460.0; prefWidth = 460.0 }
         val left = VBox(6.0, seqSearch, seqCategory, seqList,
             HBox(6.0, Button("Rename...").apply { setOnAction { renameSeq() } },
                 Button("Rebuild names").apply { tooltip = Tooltip("Work the names out again from this cache and your server folder"); setOnAction { rebuildNames() } },
                 seqCount).apply { alignment = Pos.CENTER_LEFT }
         ).apply { padding = Insets(8.0); VBox.setVgrow(seqList, Priority.ALWAYS) }
-        return Tab("Animations", BorderPane(animView, null, controls, null, left)).apply { isClosable = false }
+        return Tab("Animations", BorderPane(animView, null, side, null, left)).apply { isClosable = false }
     }
 
     private fun exportBundle() {
@@ -504,40 +552,61 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     private fun askNumber(q: String, def: String): Double? = askText(q, def)?.trim()?.toDoubleOrNull()
 
     private val itemsTab = ItemsTab(stage, { lib }, { models }, { anims }, { currentId }, { say(it) }, { reopen(); refreshModelIds() })
-    private var tabs: TabPane? = null
+    /** True once the tabs' contents exist (they're made the first time one is opened). */
+    var built = false
+        private set
+    private lateinit var panes: List<javafx.scene.Node>
+    private lateinit var bottom: HBox
 
     private fun reloadAll() {
         try { lib?.close() } catch (e: Exception) {}
         lib = null
         reopen(); refreshModelIds(); refreshSeqIds()
         if (currentId >= 0) loadModel(currentId)
+        seq?.let { s ->
+            if (seqIds.contains(s.id)) loadSeq(s.id)
+            else { seq = null; timing.clear(); skelClip = null; animator = null; animView.show(null); animInfo.text = "Animation ${s.id} isn't in the cache any more." }
+        }
         itemsTab.reloaded()
     }
 
-    fun show(tab: Int = 0) {
-        if (stage.scene != null) { tabs?.selectionModel?.select(tab); stage.show(); stage.toFront(); return }
+    /** Opens the cache and makes the three editors (Models, Animations, Items). */
+    private fun build() {
+        if (built) return
+        val t0 = System.nanoTime()
         reopen()
+        val t1 = System.nanoTime()
         refreshModelIds(); refreshSeqIds()
+        val t2 = System.nanoTime()
         itemsTab.refreshList()
-        val tabs = TabPane(modelsTab(), animationsTab(), itemsTab.tab())
-        this.tabs = tabs
-        tabs.selectionModel.select(tab)
+        println("Editor tabs: cache %d ms, model/animation lists %d ms, items %d ms".format((t1 - t0) / 1000000, (t2 - t1) / 1000000, (System.nanoTime() - t2) / 1000000))
+        panes = listOf(modelsTab().content, animationsTab().content, itemsTab.tab().content)
         val undo = Button("Undo last change").apply { setOnAction {
             try { lib?.close() } catch (e: Exception) {}
             lib = null
             say(try { CacheEdits.undoLast() } catch (e: Exception) { "Couldn't undo: ${e.message}" })
-            reopen(); refreshModelIds(); refreshSeqIds()
-            if (currentId >= 0) loadModel(currentId)
-            itemsTab.reloaded()
+            // everything open is read again: an undo can take away the model, animation or item on screen
+            reloadAll()
         } }
-        val bottom = HBox(10.0, undo, status).apply { padding = Insets(6.0, 8.0, 8.0, 8.0); alignment = Pos.CENTER_LEFT; HBox.setHgrow(status, Priority.ALWAYS) }
-        stage.title = "Uzi's Map Editor - models, animations and items"
-        stage.scene = Scene(BorderPane(tabs, null, null, bottom, null), 1200.0, 760.0)
-        stage.setOnHidden { timer.stop() }
-        stage.setOnShown { timer.start() }
-        timer.start()
+        bottom =HBox(10.0, undo, status).apply { padding = Insets(6.0, 8.0, 8.0, 8.0); alignment = Pos.CENTER_LEFT; HBox.setHgrow(status, Priority.ALWAYS) }
+        built = true
         say("Reading ${cacheDir().path}. Changes go into the exported cache; Deploy sends them to the server.")
-        stage.show()
-        Platform.runLater { modelSearch.requestFocus() }
+    }
+
+    /** What goes in main-window tab [i] (0 Models, 1 Animations, 2 Items), made on first use. */
+    fun content(i: Int): BorderPane {
+        build()
+        return BorderPane(panes[i])
+    }
+
+    /**
+     * Called when the main window shows tab [i] in [holder] (or -1: none of these is showing). The undo bar follows
+     * the open tab, and animations only play while the Animations tab is open.
+     */
+    fun shown(i: Int, holder: BorderPane?) {
+        if (!built) return
+        if (i == 1) { lastNanos = 0L; timer.start() } else timer.stop()
+        if (holder != null) holder.bottom = bottom
+        if (i == 0) Platform.runLater { modelSearch.requestFocus() }
     }
 }

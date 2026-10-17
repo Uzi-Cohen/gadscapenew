@@ -1532,6 +1532,8 @@ class GadToolsController @Inject constructor(
     private val deployButtons = ArrayList<Button>()
 
     private fun log(line: String) = Platform.runLater { txtLog.appendText(line + "\n") }
+    /** Adds a line to the Tools log (for the editor tabs). */
+    fun logLine(line: String) = log(line)
 
     private fun runJob(name: String, job: () -> Unit) {
         deployButtons.forEach { it.isDisable = true }
