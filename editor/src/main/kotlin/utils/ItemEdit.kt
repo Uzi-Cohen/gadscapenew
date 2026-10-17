@@ -371,7 +371,7 @@ object ItemCopy {
                 val here = lib.data(7, m, 0)
                 val to = when {
                     here != null && here.contentEquals(data) -> m
-                    here == null && keepIds -> { lib.put(7, m, 0, data); newModels++; m }
+                    here == null && keepIds && m <= 65535 -> { lib.put(7, m, 0, data); newModels++; m }
                     else -> { val n = modelIds.next(); lib.put(7, n, 0, data); newModels++; n }
                 }
                 modelMap[m] = to
@@ -384,10 +384,11 @@ object ItemCopy {
                 if (src.isNoted) continue // the noted version is made with the real item
                 val it = src.copy(if (keepIds && free(id)) id else { while (!free(nextItem)) nextItem++; nextItem++ })
                 taken.add(it.id)
-                it.inventoryModel = model(it.inventoryModel)
-                it.maleModel0 = model(it.maleModel0); it.maleModel1 = model(it.maleModel1); it.maleModel2 = model(it.maleModel2)
-                it.femaleModel0 = model(it.femaleModel0); it.femaleModel1 = model(it.femaleModel1); it.femaleModel2 = model(it.femaleModel2)
-                it.maleHead = model(it.maleHead); it.maleHead2 = model(it.maleHead2); it.femaleHead = model(it.femaleHead); it.femaleHead2 = model(it.femaleHead2)
+                // from src: an item from a newer cache can have model ids over 65535, which copy() (as 211) can't keep
+                it.inventoryModel = model(src.inventoryModel)
+                it.maleModel0 = model(src.maleModel0); it.maleModel1 = model(src.maleModel1); it.maleModel2 = model(src.maleModel2)
+                it.femaleModel0 = model(src.femaleModel0); it.femaleModel1 = model(src.femaleModel1); it.femaleModel2 = model(src.femaleModel2)
+                it.maleHead = model(src.maleHead); it.maleHead2 = model(src.maleHead2); it.femaleHead = model(src.femaleHead); it.femaleHead2 = model(src.femaleHead2)
                 it.placeholderLink = -1; it.placeholderTemplate = -1; it.boughtLink = -1; it.boughtTemplate = -1
                 val hadNote = src.noteLinked
                 it.noteLinked = -1

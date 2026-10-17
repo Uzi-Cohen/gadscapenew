@@ -552,6 +552,92 @@ class ItemsTab(
         } catch (e: Exception) { say("Couldn't import: ${e.message}") }
     }
 
+    /**
+     * Search the newest Old School cache and copy items from it into this cache: models, noted version and server
+     * stats included (see [LiveOsrs]).
+     */
+    private fun importFromLiveOsrs() {
+        val win = Stage().apply { initOwner(this@ItemsTab.stage); title = "Import from live OSRS" }
+        val status = Label("Loading the newest Old School item list...").apply { isWrapText = true }
+        val query = TextField().apply { promptText = "item name or id (e.g. avernic treads, soulreaper)"; isDisable = true }
+        val results = ListView<LiveOsrs.Entry>().apply { prefHeight = 360.0; selectionModel.selectionMode = SelectionMode.MULTIPLE }
+        val keepIds = CheckBox("Keep the OSRS item ids where they're free here").apply { isSelected = true }
+        val go = Button("Import").apply { isDisable = true; isDefaultButton = true }
+        var cat: LiveOsrs.Catalog? = null
+        fun mark(e: LiveOsrs.Entry): String {
+            val here = try { lib()?.let { ItemStore.read(it, e.id) } } catch (x: Exception) { null }
+            return if (here != null && here.name == e.name) "$e  - already here" else e.toString()
+        }
+        results.setCellFactory { object : ListCell<LiveOsrs.Entry>() {
+            override fun updateItem(item: LiveOsrs.Entry?, empty: Boolean) { super.updateItem(item, empty); text = if (empty || item == null) null else mark(item) }
+        } }
+        query.textProperty().addListener { _, _, q ->
+            val c = cat ?: return@addListener
+            val found = c.search(q)
+            results.items.setAll(found.take(200))
+            status.text = if (q.isBlank()) "Build ${c.build}: ${c.entries.size} items. Type a name." else "${found.size} match(es)" + (if (found.size > 200) ", showing 200" else "") + ". Pick one or more, then Import."
+        }
+        results.selectionModel.selectedItems.addListener(javafx.collections.ListChangeListener { go.isDisable = results.selectionModel.selectedItems.isEmpty() })
+        go.setOnAction {
+            val c = cat ?: return@setOnAction
+            val picked = results.selectionModel.selectedItems.toList()
+            if (picked.isEmpty()) return@setOnAction
+            go.isDisable = true
+            status.text = "Getting ${picked.size} item(s) and their models..."
+            val server = server()
+            val keep = keepIds.isSelected
+            Thread {
+                val src = LiveOsrs.Source(c, server)
+                // models are downloaded here (not on the window's thread); textures this cache doesn't have are named
+                val missingTex = sortedSetOf<Int>()
+                val problems = ArrayList<String>()
+                try {
+                    val l = lib()
+                    val haveTex = l?.index(9)?.archive(0)?.fileIds()?.toSet() ?: emptySet()
+                    for (e in picked) {
+                        val it = try { src.item(e.id) } catch (x: Exception) { problems.add("${e.name}: ${x.message}"); null } ?: continue
+                        for (m in listOf(it.inventoryModel, it.maleModel0, it.maleModel1, it.maleModel2, it.femaleModel0, it.femaleModel1, it.femaleModel2,
+                                it.maleHead, it.maleHead2, it.femaleHead, it.femaleHead2).filter { m -> m >= 0 }) {
+                            val b = src.model(m) ?: continue
+                            if (l != null) try {
+                                ModelLoader(l).decode(b, m).faceTextures?.forEach { t -> if (t >= 0 && t.toInt() !in haveTex) missingTex.add(t.toInt()) }
+                            } catch (x: Exception) {}
+                        }
+                    }
+                } catch (x: Exception) { problems.add(x.message ?: x.toString()) }
+                javafx.application.Platform.runLater {
+                    try {
+                        val ok = picked.filter { e -> problems.none { it.startsWith(e.name + ":") } }
+                        if (ok.isEmpty()) { status.text = "Couldn't import: " + problems.joinToString("; "); go.isDisable = false; return@runLater }
+                        val r = ItemCopy.copy(src, ok.map { it.id }, keep)
+                        afterWrite(r.newIds.firstOrNull())
+                        val warn = (if (missingTex.isNotEmpty()) " Its models use texture(s) ${missingTex.joinToString(", ")}, which this cache doesn't have: those parts may look wrong in game." else "") +
+                                (if (problems.isNotEmpty()) " Not imported: " + problems.joinToString("; ") + "." else "")
+                        status.text = r.message + warn
+                        say(r.message + warn + " Undo last change puts the cache back.")
+                        results.refresh()
+                    } catch (x: Exception) { status.text = "Couldn't import: ${x.message}" }
+                    go.isDisable = false
+                }
+            }.apply { isDaemon = true; name = "live-osrs-import" }.start()
+        }
+        win.scene = javafx.scene.Scene(VBox(8.0, query, results, keepIds, HBox(8.0, go), status).apply { padding = Insets(12.0); prefWidth = 520.0 })
+        stage.scene?.stylesheets?.let { win.scene.stylesheets.setAll(it) }
+        win.show()
+        Thread {
+            try {
+                val c = LiveOsrs.catalog { m -> javafx.application.Platform.runLater { status.text = m } }
+                javafx.application.Platform.runLater {
+                    cat = c
+                    query.isDisable = false; query.requestFocus()
+                    status.text = "Build ${c.build}: ${c.entries.size} items. Type a name."
+                }
+            } catch (x: Exception) {
+                javafx.application.Platform.runLater { status.text = "Couldn't get the OSRS item list: ${x.message}" }
+            }
+        }.apply { isDaemon = true; name = "live-osrs-list" }.start()
+    }
+
     private fun afterWrite(select: Int?) {
         reopen()
         textures = try { lib()?.let { TextureLoader(it) } } catch (e: Exception) { null }
@@ -682,7 +768,8 @@ class ItemsTab(
             Button("Blank item (no guide)").apply { maxWidth = Double.MAX_VALUE; setOnAction { newBlank() } },
             Button("Copy from another cache...").apply { maxWidth = Double.MAX_VALUE; setOnAction { copyFromOther() } },
             HBox(4.0, Button("Export bundle...").apply { maxWidth = Double.MAX_VALUE; HBox.setHgrow(this, Priority.ALWAYS); setOnAction { exportBundle() } },
-                Button("Import bundle...").apply { maxWidth = Double.MAX_VALUE; HBox.setHgrow(this, Priority.ALWAYS); setOnAction { importBundle() } })
+                Button("Import bundle...").apply { maxWidth = Double.MAX_VALUE; HBox.setHgrow(this, Priority.ALWAYS); setOnAction { importBundle() } }),
+            Button("Import from live OSRS...").apply { maxWidth = Double.MAX_VALUE; setOnAction { importFromLiveOsrs() } }
         ).apply { padding = Insets(8.0); VBox.setVgrow(list, Priority.ALWAYS) }
         val iconBox = StackPane(bigIcon).apply { style = "-fx-background-color: #3e3529; -fx-border-color: #5a4d3b;"; prefWidth = 160.0; prefHeight = 140.0; maxWidth = 160.0; maxHeight = 140.0 }
         val center = VBox(8.0, HBox(12.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view"), viewMode)),

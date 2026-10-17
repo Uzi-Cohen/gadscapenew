@@ -36,6 +36,7 @@ public final class SoulreaperAxeCombat extends MeleeCombat {
         }
         beheaded = true;
         final int stacks = SoulreaperAxe.takeStacks(player);
+        player.sendFilteredMessage("Behead: " + stacks + " soul stack" + (stacks == 1 ? "" : "s") + " (+" + (stacks * 12) + "% accuracy, +" + (stacks * 6) + "% damage).");
         sendSoundEffect();
         final double accuracy = 1 + 0.12 * stacks;
         final int maxHit = getMaxHit(player, 1, 1 + 0.06 * stacks, false);
