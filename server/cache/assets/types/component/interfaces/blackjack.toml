@@ -1,0 +1,382 @@
+id = 5103
+name = "blackjack"
+
+# 0 universe
+[[component]]
+name = "universe"
+type = "layer"
+xmode = 1
+ymode = 1
+width = 480
+height = 300
+
+# 1 background
+[[component]]
+type = "graphic"
+layer = "universe"
+sprite = 897
+spritetiling = true
+xmode = 1
+ymode = 1
+widthmode = 1
+heightmode = 1
+
+# 2 title_bar
+[[component]]
+name = "title_bar"
+type = "layer"
+layer = "universe"
+widthmode = 1
+height = 20
+
+# 3 seed_button
+[[component]]
+name = "seed_button"
+type = "layer"
+layer = "title_bar"
+clickmask = 2
+op1 = "Edit seed"
+x = 4
+y = 2
+width = 70
+height = 16
+
+# 4 seed_button text
+[[component]]
+type = "text"
+layer = "seed_button"
+font = 645
+text = "Seed"
+xallignment = 1
+yallignment = 1
+widthmode = 1
+heightmode = 1
+
+# 5 title_text
+[[component]]
+name = "title_text"
+type = "text"
+layer = "title_bar"
+font = 496
+text = "Roat Pkz Blackjack"
+xallignment = 1
+yallignment = 1
+widthmode = 1
+heightmode = 1
+
+# 6 close_button
+[[component]]
+name = "close_button"
+type = "layer"
+layer = "title_bar"
+clickmask = 2
+op1 = "Close"
+xmode = 2
+x = 4
+y = 2
+width = 16
+height = 16
+
+# 7 close_button text
+[[component]]
+type = "text"
+layer = "close_button"
+font = 645
+text = "X"
+xallignment = 1
+yallignment = 1
+widthmode = 1
+heightmode = 1
+
+# 8 stats_text
+[[component]]
+name = "stats_text"
+type = "text"
+layer = "universe"
+font = 645
+text = "Wins: 0   Losses: 0   Profit: 0"
+y = 22
+widthmode = 1
+height = 14
+
+# 9 seed_text
+[[component]]
+name = "seed_text"
+type = "text"
+layer = "universe"
+font = 645
+text = "Client seed: -"
+y = 38
+widthmode = 1
+height = 14
+
+# 10 table_text
+[[component]]
+name = "table_text"
+type = "text"
+layer = "universe"
+font = 645
+text = "DEALER MUST DRAW TO 16 AND STAND ON ALL 17'S<br>INSURANCE PAYS 2-1  |  BJ PAYS 3-2<br><br>Set your bet and press Bet to deal in."
+xallignment = 1
+y = 54
+widthmode = 1
+height = 136
+wrap = true
+
+# 11 bet_row
+[[component]]
+name = "bet_row"
+type = "layer"
+layer = "universe"
+y = 192
+widthmode = 1
+height = 22
+
+# 12 half_button
+[[component]]
+name = "half_button"
+type = "graphic"
+layer = "bet_row"
+sprite = 195
+clickmask = 2
+op1 = "Halve bet"
+x = 2
+width = 50
+height = 20
+
+# 13 half_button text
+[[component]]
+type = "text"
+layer = "bet_row"
+font = 645
+text = "1/2"
+x = 2
+y = 2
+width = 50
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 14 double_bet_button
+[[component]]
+name = "double_bet_button"
+type = "graphic"
+layer = "bet_row"
+sprite = 195
+clickmask = 2
+op1 = "Double bet"
+x = 56
+width = 50
+height = 20
+
+# 15 double_bet_button text
+[[component]]
+type = "text"
+layer = "bet_row"
+font = 645
+text = "2x"
+x = 56
+y = 2
+width = 50
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 16 bet_text
+[[component]]
+name = "bet_text"
+type = "text"
+layer = "bet_row"
+font = 645
+text = "Bet: 1,000"
+x = 112
+y = 2
+width = 150
+height = 16
+
+# 17 bet_button
+[[component]]
+name = "bet_button"
+type = "graphic"
+layer = "bet_row"
+sprite = 195
+clickmask = 2
+op1 = "Place Bet"
+xmode = 2
+x = 2
+width = 70
+height = 20
+
+# 18 bet_button text
+[[component]]
+type = "text"
+layer = "bet_row"
+font = 645
+text = "Bet"
+xmode = 2
+x = 2
+y = 2
+width = 70
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 19 action_row
+[[component]]
+name = "action_row"
+type = "layer"
+layer = "universe"
+y = 192
+widthmode = 1
+height = 22
+
+# 20 hit_button
+[[component]]
+name = "hit_button"
+type = "graphic"
+layer = "action_row"
+sprite = 195
+clickmask = 2
+op1 = "Hit"
+x = 2
+width = 45
+height = 20
+
+# 21 hit_button text
+[[component]]
+type = "text"
+layer = "action_row"
+font = 645
+text = "Hit"
+x = 2
+y = 2
+width = 45
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 22 stand_button
+[[component]]
+name = "stand_button"
+type = "graphic"
+layer = "action_row"
+sprite = 195
+clickmask = 2
+op1 = "Stand"
+x = 49
+width = 45
+height = 20
+
+# 23 stand_button text
+[[component]]
+type = "text"
+layer = "action_row"
+font = 645
+text = "Stand"
+x = 49
+y = 2
+width = 45
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 24 double_action_button
+[[component]]
+name = "double_action_button"
+type = "graphic"
+layer = "action_row"
+sprite = 195
+clickmask = 2
+op1 = "Double"
+x = 96
+width = 55
+height = 20
+
+# 25 double_action_button text
+[[component]]
+type = "text"
+layer = "action_row"
+font = 645
+text = "Double"
+x = 96
+y = 2
+width = 55
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 26 split_button
+[[component]]
+name = "split_button"
+type = "graphic"
+layer = "action_row"
+sprite = 195
+clickmask = 2
+op1 = "Split"
+x = 153
+width = 45
+height = 20
+
+# 27 split_button text
+[[component]]
+type = "text"
+layer = "action_row"
+font = 645
+text = "Split"
+x = 153
+y = 2
+width = 45
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 28 forfeit_button
+[[component]]
+name = "forfeit_button"
+type = "graphic"
+layer = "action_row"
+sprite = 195
+clickmask = 2
+op1 = "Forfeit"
+xmode = 2
+x = 2
+width = 60
+height = 20
+
+# 29 forfeit_button text
+[[component]]
+type = "text"
+layer = "action_row"
+font = 645
+text = "Forfeit"
+xmode = 2
+x = 2
+y = 2
+width = 60
+height = 16
+xallignment = 1
+yallignment = 1
+
+# 30 rules_button
+[[component]]
+name = "rules_button"
+type = "layer"
+layer = "universe"
+clickmask = 2
+op1 = "Rules"
+x = 4
+ymode = 2
+y = 2
+width = 40
+height = 14
+
+# 31 rules_button text
+[[component]]
+type = "text"
+layer = "rules_button"
+font = 645
+text = "Rules"
+xallignment = 1
+yallignment = 1
+widthmode = 1
+heightmode = 1
