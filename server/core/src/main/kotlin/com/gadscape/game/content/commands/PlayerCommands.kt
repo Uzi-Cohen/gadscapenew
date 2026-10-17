@@ -19,6 +19,7 @@ import com.zenyte.game.world.entity.Location
 import com.zenyte.game.world.entity.player.GameCommands.Command
 import com.zenyte.game.world.entity.player.dialogue.dialogue
 import com.zenyte.game.world.entity.player.dialogue.options
+import com.zenyte.game.world.entity.player.privilege.MemberRank
 import com.zenyte.game.world.entity.player.privilege.PlayerPrivilege
 import com.zenyte.utils.TimeUnit
 import java.util.*
@@ -91,6 +92,19 @@ object PlayerCommands {
             val teleport = RegularTeleport(Location(3081, 3494, 0))
             p.sendMessage("You teleport to the Tournament Area.")
             teleport.teleport(p)
+        }
+
+        // Super skill island, in the sea south-east of Karamja (region 12334): Super Donator and above.
+        // Nothing else leads there (it's surrounded by sea), so the teleport is the only way in.
+        Command(PlayerPrivilege.PLAYER, arrayOf("ssi", "skillisland"), "Teleport to the Super skill island (Super Donator+).") { p, _ ->
+            if (p.isLocked)
+                return@Command
+            if (!p.memberRank.equalToOrGreaterThan(MemberRank.EXPANSION) && !p.isStaff) {
+                p.sendMessage("The Super skill island is for Super Donators and above.")
+                return@Command
+            }
+            p.sendMessage("You teleport to the Super skill island.")
+            RegularTeleport(Location(3104, 2972, 0)).teleport(p)
         }
 
         Command(PlayerPrivilege.PLAYER, "kdr") { p, _ ->
