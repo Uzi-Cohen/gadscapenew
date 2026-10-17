@@ -32,6 +32,8 @@ class ServerItemStats(val id: Int) {
     var special: String? = null
     /** Special energy in percent (cache enum 906), or null for none. */
     var specialEnergy: Int? = null
+    /** The examine text the server shows (its "examine" field), or null to leave it as it is. */
+    var examine: String? = null
 
     class Weapon {
         var twoHanded = false
@@ -52,7 +54,7 @@ class ServerItemStats(val id: Int) {
 
     fun copy(): ServerItemStats = ServerItemStats(id).also { c ->
         c.weight = weight; c.slot = slot; c.equipmentType = equipmentType; c.bonuses = bonuses.clone()
-        c.requirements.putAll(requirements); c.special = special; c.specialEnergy = specialEnergy
+        c.requirements.putAll(requirements); c.special = special; c.specialEnergy = specialEnergy; c.examine = examine
         weapon?.let { w -> c.weapon = Weapon().also { n ->
             n.twoHanded = w.twoHanded; n.attackSpeed = w.attackSpeed; n.category = w.category
             n.stand = w.stand; n.walk = w.walk; n.run = w.run; n.standTurn = w.standTurn; n.turn90 = w.turn90; n.turn180 = w.turn180; n.turn270 = w.turn270
@@ -96,6 +98,7 @@ object ServerItems {
         o["weight"]?.takeIf { !it.isJsonNull }?.let { s.weight = it.asDouble }
         o["slot"]?.takeIf { !it.isJsonNull }?.let { s.slot = it.asInt }
         o["equipmentType"]?.takeIf { !it.isJsonNull }?.let { s.equipmentType = it.asString }
+        o["examine"]?.takeIf { it.isJsonPrimitive }?.let { s.examine = it.asString }
         val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
         eq["bonuses"]?.takeIf { !it.isJsonNull }?.asString?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.let { list ->
             for (i in 0 until minOf(14, list.size)) s.bonuses[i] = list[i]
@@ -126,6 +129,7 @@ object ServerItems {
         ItemStats.setWeight(o, s.weight)
         o.addProperty("slot", s.slot)
         o.addProperty("equipmentType", s.equipmentType)
+        s.examine?.let { if (it.isBlank()) o.remove("examine") else o.addProperty("examine", it.trim()) }
         val wearable = s.slot >= 0 || s.bonuses.any { it != 0 } || s.requirements.isNotEmpty() || s.weapon != null
         if (!wearable) { o.remove("equipmentDefinition"); return o }
         val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject().also { o.add("equipmentDefinition", it) }
