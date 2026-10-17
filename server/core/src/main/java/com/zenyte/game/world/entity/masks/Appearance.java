@@ -248,7 +248,8 @@ public final class Appearance {
 		} else {
 			tempData.writeShort(shield + 512);
 		}
-		if (chest == -1 || ItemDefinitions.get(chest).getEquipmentType() != EquipmentType.FULL_BODY) {
+		// arms, hair and jaw are hidden when the server's item stats say so or when the cache item hides them (as in OSRS)
+		if (chest == -1 || !(ItemDefinitions.get(chest).getEquipmentType() == EquipmentType.FULL_BODY || ItemDefinitions.get(chest).hidesInCache(6))) {
 			tempData.writeShort(256 + appearance[3]);
 		} else {
 			tempData.writeByte(0);
@@ -256,7 +257,7 @@ public final class Appearance {
 		final int legs = getId(EquipmentSlot.LEGS.getSlot());
 		tempData.writeShort(legs == -1 ? (256 + appearance[5]) : (legs + 512));
 		final int helm = getId(EquipmentSlot.HELMET.getSlot());
-		if (helm == -1 || ItemDefinitions.get(helm).getEquipmentType() == EquipmentType.DEFAULT) {
+		if (helm == -1 || ItemDefinitions.get(helm).getEquipmentType() == EquipmentType.DEFAULT && !ItemDefinitions.get(helm).hidesInCache(8)) {
 			tempData.writeShort(256 + appearance[0]);
 		} else {
 			tempData.writeByte(0);
@@ -270,7 +271,7 @@ public final class Appearance {
 			tempData.writeByte(0);
 		}
 		int beardIcon = PlayerAttributesKt.getPvmArenaAppearanceBeardOffset(player);
-		if (helm == -1 || ItemDefinitions.get(helm).getEquipmentType() != EquipmentType.FULL_MASK) {
+		if (helm == -1 || !(ItemDefinitions.get(helm).getEquipmentType() == EquipmentType.FULL_MASK || ItemDefinitions.get(helm).hidesInCache(11))) {
 			if (beardIcon > 0)
 				tempData.writeShort(512 + getIconWithBeardAppearanceOffset(beardIcon));
 			else

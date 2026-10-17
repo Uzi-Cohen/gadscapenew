@@ -144,6 +144,11 @@ public final class ItemDefinitions implements Definitions, Cloneable {
     int wearPos1;
     int wearPos2;
     int wearPos3;
+
+    /** True when the cache says wearing this hides body part [part] (6 arms, 8 hair, 11 jaw), like OSRS decides it. */
+    public boolean hidesInCache(final int part) {
+        return wearPos2 == part || wearPos3 == part;
+    }
     int cacheWeight;
     int category;
     Int2ObjectMap<Object> parameters;
