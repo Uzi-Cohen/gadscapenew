@@ -40,7 +40,12 @@ public final class SoulreaperAxe {
     }
 
     public static void addStack(final Player player) {
-        player.getTemporaryAttributes().put(STACKS, Math.min(MAX_STACKS, stacks(player) + 1));
+        final int before = stacks(player);
+        final int now = Math.min(MAX_STACKS, before + 1);
+        player.getTemporaryAttributes().put(STACKS, now);
+        if (now != before) {
+            player.sendFilteredMessage("Soul stacks: " + now + "/" + MAX_STACKS + " (+" + (now * 6) + "% Strength).");
+        }
         player.getTemporaryAttributes().put(LAST_ATTACK, WorldThread.getCurrentCycle());
         startDecay(player);
     }
@@ -72,6 +77,7 @@ public final class SoulreaperAxe {
                     player.getTemporaryAttributes().put(STACKS, stacks - 1);
                     player.getTemporaryAttributes().put(LAST_ATTACK, now);
                     player.heal(DECAY_HEAL);
+                    player.sendFilteredMessage("A soul stack fades (" + (stacks - 1) + " left) and heals you.");
                 }
             }
         };
