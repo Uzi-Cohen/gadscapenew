@@ -28,6 +28,8 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     companion object {
         private var open: ModelAnimWindow? = null
         fun show(log: (String) -> Unit, tab: Int = 0) { (open ?: ModelAnimWindow(log).also { open = it }).show(tab) }
+        /** The cache was changed by something else (the AI bridge): read it again if the window is open. */
+        fun cacheChangedElsewhere() { open?.takeIf { it.stage.scene != null }?.reloadAll() }
     }
 
     internal val stage = Stage()
@@ -454,6 +456,14 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
 
     private val itemsTab = ItemsTab(stage, { lib }, { models }, { anims }, { currentId }, { say(it) }, { reopen(); refreshModelIds() })
     private var tabs: TabPane? = null
+
+    private fun reloadAll() {
+        try { lib?.close() } catch (e: Exception) {}
+        lib = null
+        reopen(); refreshModelIds(); refreshSeqIds()
+        if (currentId >= 0) loadModel(currentId)
+        itemsTab.reloaded()
+    }
 
     fun show(tab: Int = 0) {
         if (stage.scene != null) { tabs?.selectionModel?.select(tab); stage.show(); stage.toFront(); return }

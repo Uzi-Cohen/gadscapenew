@@ -54,6 +54,7 @@ class AiBridge(
 
     private val gson = GsonBuilder().disableHtmlEscaping().create()
     private val ops = TileOps(regions)
+    private val assets = AssetBridge(log)
     private var server: ServerSocket? = null
     @Volatile var running = false; private set
     var port = DEFAULT_PORT; private set
@@ -127,6 +128,8 @@ class AiBridge(
             route(req, out)
         } catch (e: BridgeError) {
             json(out, 400, mapOf("error" to e.message))
+        } catch (e: AssetBridge.AssetError) {
+            json(out, 400, mapOf("error" to e.message))
         } catch (e: Exception) {
             json(out, 500, mapOf("error" to (e.message ?: e.toString())))
         }
@@ -171,7 +174,12 @@ class AiBridge(
             "POST /api/view" -> json(out, 200, view(JsonParser().parse(r.body.ifBlank { "{}" }).asJsonObject))
             "POST /api/select" -> json(out, 200, select(JsonParser().parse(r.body.ifBlank { "{}" }).asJsonObject))
             "POST /api/message" -> { val o = JsonParser().parse(r.body).asJsonObject; model.message = o["text"]?.asString ?: ""; json(out, 200, mapOf("ok" to true)) }
-            else -> json(out, 404, mapOf("error" to "No such call: ${r.method} ${r.path}. GET /api/help lists them."))
+            else -> when (val a = assets.route(r.method, r.path, r.query) { JsonParser().parse(r.body.ifBlank { "{}" }).asJsonObject }) {
+                is AssetBridge.Reply.Json -> json(out, 200, a.value)
+                is AssetBridge.Reply.Png -> respond(out, 200, "image/png", a.bytes)
+                is AssetBridge.Reply.Text -> respond(out, 200, "text/markdown; charset=utf-8", a.text.toByteArray())
+                null -> json(out, 404, mapOf("error" to "No such call: ${r.method} ${r.path}. GET /api/help lists them."))
+            }
         }
     }
 
@@ -621,7 +629,7 @@ class AiBridge(
     /** Which of a tile's object slots a type uses (walls, wall decorations, ground decorations, the rest). */
     private fun slot(type: Int) = when (type) { in 0..3 -> 0; in 4..8 -> 4; 22 -> 22; else -> 10 }
 
-    private fun help(): String = try {
+    private fun help(): String = (try {
         javaClass.getResourceAsStream("/AI-BRIDGE.md")?.readBytes()?.toString(Charsets.UTF_8) ?: "See AI-BRIDGE.md next to the editor."
-    } catch (e: Exception) { "See AI-BRIDGE.md next to the editor." }
+    } catch (e: Exception) { "See AI-BRIDGE.md next to the editor." })
 }

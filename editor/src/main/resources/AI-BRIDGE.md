@@ -1,6 +1,7 @@
 # Uzi's Map Editor - AI bridge
 
-The editor is open on the user's PC with its AI bridge on. Through it you can read the loaded map and change it.
+The editor is open on the user's PC with its AI bridge on. Through it you can read the loaded map and change it,
+and look at and change items, models and animations (see the end of this file).
 Every change you send goes through the editor's undo, so the user can take it back with Ctrl+Z.
 
 ## Connecting
@@ -90,3 +91,38 @@ Every change you send goes through the editor's undo, so the user can take it ba
 5. Tell the user what you did and that Ctrl+Z (or asking you) undoes each pass. Saving and deploying is theirs to do (Ctrl+S, then Deploy).
 
 Don't save or deploy, and don't change anything outside the selection, unless the user asks.
+
+# Items, models and animations
+All of these read the cache the editor works on (the exported cache once it exists). Changes go into the
+exported cache, with a backup first: POST /api/cache/undo takes back the last one. Server stats (in the server's data
+files) aren't part of that undo: to take them back, send the old values again. Nothing is deployed.
+
+## Items
+- GET /api/items?q=whip&limit=50 - search by name or id.
+- GET /api/item?id=4151 - every cache field, plus "server": bonuses, attack speed, weapon animations, requirements, special.
+- POST /api/item {"id": 4151, "name": "...", ...} - change fields (only the ones given). {"copyOf": 4151, ...} or {"new": true, ...}
+  makes a new item. Cache fields: name, cost, weight (kg), stackable, members, tradeable, inventoryOptions[5], groundOptions[5],
+  inventoryModel, zoom2d, xan2d, yan2d, zan2d, offsetX2d, offsetY2d, resize[3], ambient, contrast, slot, hides[2],
+  maleModels[3], femaleModels[3], maleOffset, femaleOffset, maleHeads[2], femaleHeads[2], recolours [[from, to]], params {key: value}.
+  "server": {"bonuses": {"Slash att": 82, "Strength": 82} or [14 numbers], "requirements": {"Attack": 70},
+  "weapon": {"attackSpeed": 4, "category": 20, "twoHanded": false, "animations": {"stand": 808, "accurate": 1658, ...}} (null = not a weapon),
+  "special": "PUNCTURE" or null, "specialEnergy": 25, "slot": 3, "equipmentType": "DEFAULT"}. "dryRun": true only checks.
+- POST /api/item/noted {"id": ...} - makes the noted version.
+- GET /api/item/icon?id=4151&scale=4 - the inventory picture as the game draws it (PNG).
+- GET /api/item/render?id=4151&mode=inventory|worn|player&female=0&yaw=0&pitch=64&size=512 - a 3D picture (PNG).
+  With &anim=1658 it plays an animation on a player holding it: &frame=N, or &frames=4 for a strip of 4 frames.
+- GET /api/specials - the server's special attacks, their animation and the weapons that already have them.
+
+## Models
+- GET /api/models?from=0&limit=200, GET /api/model?id=... (size, colours with face counts, animation support).
+- GET /api/model/render?id=...&yaw=&pitch=&size=&anim=&frame=|frames= (PNG).
+- POST /api/model/edit {"id": ..., "recolour": [[hsl, hsl or "#rrggbb"]], "scale": [x%, y%, z%], "lift": units, "saveAs": "new"|"over"}.
+
+## Animations
+- GET /api/anims?from=&limit=&skeletal=1, GET /api/anim?id=... (frames and delays, which NPCs and items use it).
+- GET /api/anim/render?id=...&on=npc:ID|model:ID|item:ID&frame=N|frames=4 (PNG).
+- POST /api/anim/timing {"id": ..., "delays": [...]} or {"allDelays": 4}; "frames": ["group:file", ...] reorders/copies frames.
+  Skeletal (2021+) animations keep their timing in their keyframes and can't be changed this way.
+- GET /api/npc?id=... - an NPC's models and animations.
+
+Yaw is 0-2047 like the game (0 = facing you, 512 = a quarter turn). One client cycle is 20 ms; a game tick is 30 cycles.

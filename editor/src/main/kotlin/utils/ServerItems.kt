@@ -228,8 +228,8 @@ object ServerItems {
     fun specialEnergy(lib: CacheLibrary, item: Int): Int? = EnumDef.read(lib, SPECIAL_ENUM)?.ints?.get(item)?.let { it / 10 }
 
     /** Sets (or with null, removes) a weapon's special energy in enum 906 of the exported cache. */
-    fun setSpecialEnergy(item: Int, percent: Int?) {
-        CacheEdits.backup("special-energy-$item")
+    fun setSpecialEnergy(item: Int, percent: Int?, backup: Boolean = true) {
+        if (backup) CacheEdits.backup("special-energy-$item")
         CacheEdits.withExportCache { lib ->
             val e = EnumDef.read(lib, SPECIAL_ENUM) ?: EnumDef(SPECIAL_ENUM).apply { keyType = 'o'; valueType = 'i' }
             if (percent == null) e.ints.remove(item) else e.ints[item] = percent.coerceIn(0, 100) * 10
