@@ -23,7 +23,12 @@ Tools > Models and animations (Ctrl+Shift+M):
   copy / remove / reorder frames, save. Export an animation as a bundle (with its frames and skeleton) and import it
   into another cache, or copy animations straight from another 211-style cache.
 - **Items** (also Tools > Items, Ctrl+Shift+I): every item with its inventory picture drawn like the game does.
-  Make a new item (blank or "Save as new item" from any item), change name, price, weight, stackable / members /
+  **Make a new item...** walks through it step by step: start from an item (a whip, say) or nothing; name, examine
+  text and right-click options; its look (each colour or the whole item one colour, textures, models, the inventory
+  picture) with a live picture; the item on a male or female player playing its stand / walk / attack / special
+  animations; what it does in game (bonuses, attack speed, animations, special attack); then a summary and Create.
+  Nothing is written before Create, and one "Undo last change" takes it back.
+  You can also make a new item by hand (blank or "Save as new item" from any item), change name, price, weight, stackable / members /
   tradeable, inventory and ground options, the inventory picture (model, zoom, angles, offsets, size), the equip slot
   and what it hides, worn models (male / female, shown alone or on a plain player), recolours and params (skill
   requirements, extra option texts). "Make noted version" adds the noted item. "Copy from another cache" copies items
