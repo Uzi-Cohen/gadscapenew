@@ -6,6 +6,12 @@ OSRS/RSPS map editor built for Rsps'.
 - Terrain tools: raise, lower, flatten, smooth, set exact height, roughen (noise), with brush size, strength, undo and redo
 - Paint underlays and overlays (all 12 overlay shapes, 4 rotations) on any plane, with an eyedropper (I)
 - Paint tile flags (blocked, bridge, remove roof, render on plane below, hide on minimap) and show flagged tiles in red
+- Bridges: the map shows floors the way the game does, so a bridge deck (built on floor 1 over a bridge-flagged tile)
+  shows at ground level. Make one with Area > "Make it a bridge" (or the Bridge flag): the flag always goes on floor 1,
+  where the game reads it. Build the deck on floor 1; floor 0 is what's underneath
+- View > Map size: 3 x 3, 5 x 5 (default) or 7 x 7 regions around you. Maps load in the background; each region has its
+  own data on the graphics card, so an edit only re-uploads its own region and regions behind the camera aren't drawn
+- Models, Animations and Items are tabs next to the Map tab (Ctrl+1-4)
 - Select an area: copy/paste it (heights, underlays, overlays, flags, objects, all planes), clear it, or fill it
 - Save selections as prefab files and paste them anywhere
 - Find & replace object, underlay or overlay ids across the loaded regions or a selection

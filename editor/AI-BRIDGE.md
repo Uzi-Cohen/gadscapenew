@@ -20,7 +20,7 @@ Every change you send goes through the editor's undo, so the user can take it ba
 
 ## Coordinates
 - World tiles: `x` grows east, `y` grows north. `z` is the floor (0 = ground, 1-3 upstairs).
-- Only the loaded map can be read or changed (`loadedArea` in `/api/state`). `/api/goto` loads somewhere else.
+- Only the loaded map can be read or changed (`loadedArea` in `/api/state`). `POST /api/goto` with `{"x":3210,"y":3424}` loads somewhere else (optional `"radius"`: regions across, default the user's map size). It waits until the new map is loaded.
 - When the user says "this area" or "the selected area", use `selection` from `/api/state`. Changes stay inside it unless the user says otherwise.
 
 ## Reading
