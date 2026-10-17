@@ -1,0 +1,27 @@
+[Unit]
+Description=GadScape RSPS server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gadscape
+Group=gadscape
+WorkingDirectory=/opt/gadscape
+ExecStart=/opt/gadscape/start.sh main
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+# Port 443 is a privileged (<1024) port. The server binds it loopback-only for an
+# unused internal listener (see Main.kt) - this grants just enough to bind it
+# without running the whole process as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# Hardening - safe to remove any of these if a future feature needs broader access.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
