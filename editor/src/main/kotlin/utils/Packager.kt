@@ -253,8 +253,6 @@ class Packager(private val log: (String) -> Unit) {
         val sendMap = includeMap || includeFull
         val mapSrc = if (sendMap) GadTools.ensureExportCache() else null
 
-        val image = AppImage(log).build(File(workDir, "image"), stamp, base, if (includeFull) mapSrc else null) ?: return false
-
         // ---- map: its own "map" release, replaced in place, so everyone can always find the newest one ----
         if (mapSrc != null) {
             log("Packing your saved map...")
@@ -273,7 +271,27 @@ class Packager(private val log: (String) -> Unit) {
             log("Map uploaded (%.0f MB).".format(mapZip.length() / 1048576.0))
         }
 
-        // ---- editor ----
+        // ---- the editor itself: the one-file editor (Uzis Map Editor.exe) downloads editor.jar when
+        // editor-version.txt is newer than what it has. Goes up first, so it's out even if the app below can't be built.
+        val notesText = notes.ifBlank { "Update $stamp" }
+        val jar = runningJar()
+        var released = false
+        if (jar != null) {
+            val editorJar = File(workDir, "editor.jar").also { jar.copyTo(it, true) }
+            val editorVersion = File(workDir, "editor-version.txt").apply { writeText(System.currentTimeMillis().toString()) }
+            log("Uploading the editor (%.0f MB)...".format(editorJar.length() / 1048576.0))
+            released = run(listOf("gh", "release", "create", "v$stamp", editorJar.path, editorVersion.path,
+                "--repo", repo, "--latest", "--title", "Uzi's Map Editor $stamp", "--notes", notesText)).first == 0
+            if (!released) return false
+            log("Published v$stamp: everyone with Uzis Map Editor.exe gets it the next time they open it.")
+        }
+
+        // ---- the packaged app (exe + Java + map folder) and its update for older copies ----
+        val image = AppImage(log).build(File(workDir, "image"), stamp, base, if (includeFull) mapSrc else null)
+        if (image == null) {
+            if (released) log("(The older packaged app couldn't be built this time; the one-file editor's update is out.)")
+            return released
+        }
         val appZip = File(workDir, "app.zip")
         log("Zipping the update...")
         zipDir(File(image, "app"), appZip)
@@ -293,8 +311,9 @@ class Packager(private val log: (String) -> Unit) {
             val installer = File(workDir, INSTALLER_NAME).apply { writeText(installer(base).replace("\n", "\r\n")) }
             assets.add(installer.path)
         }
-        val ok = run(listOf("gh", "release", "create", "v$stamp") + assets + listOf(
-            "--repo", repo, "--latest", "--title", "Uzi's Map Editor $stamp", "--notes", notes.ifBlank { "Update $stamp" })).first == 0
+        val ok = if (released) run(listOf("gh", "release", "upload", "v$stamp") + assets + listOf("--clobber", "--repo", repo)).first == 0
+            else run(listOf("gh", "release", "create", "v$stamp") + assets + listOf(
+                "--repo", repo, "--latest", "--title", "Uzi's Map Editor $stamp", "--notes", notesText)).first == 0
         if (ok) {
             log("Published v$stamp. Everyone gets it the next time they open the editor.")
             log("Link for friends (download, double-click, done): $base/latest/download/$INSTALLER_NAME")
@@ -343,6 +362,11 @@ class Packager(private val log: (String) -> Unit) {
             Start-Process ${'$'}exe
         } catch { ''; 'Install failed: ' + ${'$'}_.Exception.Message; exit 1 }
     """.trimIndent()
+
+    /** The jar this editor runs from (the one-file editor and the 1.0 jar), or null when run from class folders. */
+    private fun runningJar(): File? = try {
+        File(Packager::class.java.protectionDomain.codeSource.location.toURI()).takeIf { it.isFile && it.name.endsWith(".jar") }
+    } catch (e: Exception) { null }
 
     private fun zipDir(dir: File, zip: File) {
         ZipOutputStream(zip.outputStream().buffered()).use { out ->
