@@ -1,11 +1,11 @@
 name: Build editor exe
 
-# Every editor change on main gets built into Uzis Map Editor.exe (Java 21 and the editor packed in one file) and
-# attached to a release in this repo, for you to try. Friends don't get it until you run "Deploy editor".
+# Every editor change gets built into Uzis Map Editor.exe (Java 21 and the editor packed in one file) and attached to
+# a release in this repo: on main as "Editor exe build N", on other branches as a test build (pre-release) before it's
+# merged. Friends don't get anything until you run "Deploy editor" (it only sends main builds).
 on:
   push:
-    branches: [main]
-    paths: ["editor/**", "launcher/**"]
+    paths: ["editor/**", "launcher/**", ".github/workflows/build-editor-exe.yml"]
   workflow_dispatch:
 
 permissions:
@@ -56,8 +56,15 @@ jobs:
       - name: Release it here (not to friends)
         env:
           GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          gh release create "editor-exe-build-$BUILD" "$RUNNER_TEMP/Uzis Map Editor.exe" "$RUNNER_TEMP/editor.jar" "$RUNNER_TEMP/editor-version.txt" \
-            --repo "${{ github.repository }}" --latest=false \
-            --title "Editor exe build $BUILD" \
-            --notes "Uzis Map Editor.exe build $BUILD from ${{ github.sha }}. To send it to friends: Actions > Deploy editor > Run workflow."
+          if [ "$BRANCH" = "main" ]; then
+            TAG="editor-exe-build-$BUILD"; TITLE="Editor exe build $BUILD"; EXTRA=""
+            NOTES="Uzis Map Editor.exe build $BUILD from ${{ github.sha }}. To send it to friends: Actions > Deploy editor > Run workflow."
+          else
+            TAG="editor-exe-test-$BUILD"; TITLE="Editor exe test build $BUILD ($BRANCH)"; EXTRA="--prerelease"
+            NOTES="Test build of $BRANCH (${{ github.sha }}), not merged yet. Friends can't get test builds; merge it to make a build you can deploy."
+          fi
+          gh release create "$TAG" "$RUNNER_TEMP/Uzis Map Editor.exe" "$RUNNER_TEMP/editor.jar" "$RUNNER_TEMP/editor-version.txt" \
+            --repo "${{ github.repository }}" --latest=false $EXTRA --target "${{ github.sha }}" \
+            --title "$TITLE" --notes "$NOTES"
