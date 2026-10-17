@@ -85,6 +85,46 @@ object GadTools {
         camera.cameraY = (ty - fy * back).toInt()
     }
 
+    private val mapLoader = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "map-loader").apply { isDaemon = true } }
+
+    /** True while a map is loading in the background (the old one stays on screen; map edits wait). */
+    val mapLoading: Boolean get() = queuedLoads.get() > 0
+    private val queuedLoads = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
+     * Loads [radius] x [radius] regions around [centerRegion] in the background, so the window stays usable (a 7 x 7
+     * map takes a while). [done] runs on the JavaFX thread afterwards, with the error if it failed.
+     */
+    /** "Loading ..." while a map loads (shown over the 3D view), else empty. JavaFX thread only. */
+    val loadingText = javafx.beans.property.SimpleStringProperty("")
+    private var pendingLoads = 0
+
+    private val newestLoad = java.util.concurrent.atomic.AtomicLong()
+
+    fun loadAsync(scene: Scene, centerRegion: Int, radius: Int, done: (Throwable?) -> Unit = {}) {
+        queuedLoads.incrementAndGet()
+        val ticket = newestLoad.incrementAndGet()
+        javafx.application.Platform.runLater { pendingLoads++; loadingText.set("Loading $radius x $radius regions around region $centerRegion...") }
+        mapLoader.execute {
+            var err: Throwable? = null
+            // a newer request (another map size or place picked meanwhile) wins: this one is skipped
+            if (ticket != newestLoad.get()) err = java.util.concurrent.CancellationException("a newer map load replaced it")
+            else try { scene.load(centerRegion, radius) } catch (e: Throwable) { err = e; e.printStackTrace() }
+            queuedLoads.decrementAndGet()
+            javafx.application.Platform.runLater {
+                if (--pendingLoads <= 0) { pendingLoads = 0; loadingText.set("") }
+                done(err)
+            }
+        }
+    }
+
+    /** [goTo] in the background. */
+    fun goToAsync(scene: Scene, camera: Camera, x: Int, y: Int, radius: Int, done: (Throwable?) -> Unit = {}) =
+        loadAsync(scene, regionOf(x, y), radius) { e ->
+            if (e == null) worldToScene(scene, x, y)?.let { aimCamera(camera, it.first, it.second) }
+            done(e)
+        }
+
     /** Load the area around a world tile and point the camera at it. */
     fun goTo(scene: Scene, camera: Camera, x: Int, y: Int, radius: Int) {
         scene.load(regionOf(x, y), radius)
@@ -98,10 +138,12 @@ object GadTools {
         val oldX = camera.cameraX
         val oldY = camera.cameraY
         val oldZ = camera.cameraZ
-        scene.load(scene.centerRegionId + dx * 256 + dy, scene.radius)
-        camera.cameraX = oldX - dx * REGION_SIZE * Constants.LOCAL_TILE_SIZE
-        camera.cameraY = oldY - dy * REGION_SIZE * Constants.LOCAL_TILE_SIZE
-        camera.cameraZ = oldZ
+        loadAsync(scene, scene.centerRegionId + dx * 256 + dy, scene.radius) { e ->
+            if (e != null) return@loadAsync
+            camera.cameraX = oldX - dx * REGION_SIZE * Constants.LOCAL_TILE_SIZE
+            camera.cameraY = oldY - dy * REGION_SIZE * Constants.LOCAL_TILE_SIZE
+            camera.cameraZ = oldZ
+        }
     }
 
     // ---------- templates ----------

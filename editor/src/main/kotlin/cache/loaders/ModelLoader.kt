@@ -13,7 +13,7 @@ class ModelLoader @Inject constructor(
     private val cacheLibrary: CacheLibrary,
     private val modelDefinitionCache: HashMap<Int, ModelDefinition> = HashMap()
 ) {
-    fun get(modelId: Int): ModelDefinition? {
+    @Synchronized fun get(modelId: Int): ModelDefinition? {
         var modelDefinition = modelDefinitionCache[modelId]
         if (modelDefinition != null) {
             return modelDefinition

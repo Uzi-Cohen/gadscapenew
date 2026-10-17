@@ -1,0 +1,78 @@
+name: Build
+
+on:
+  # main pushes and pull requests (one run each: a branch with a pull request isn't built twice)
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editor:
+    name: Editor (${{ matrix.os }})
+    # JavaFX's native parts in the jar are for the system it's built on: one jar per system
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runner: windows-latest
+          - os: linux
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build number
+        # 1.0 is build 100: the first CI build is 100, then 101, 102...
+        run: echo "BUILD=$((99 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+      - name: Build the editor
+        working-directory: editor
+        run: ./gradlew --no-daemon build -PbuildNumber=$BUILD
+      - name: Name the jar for its system
+        working-directory: editor/build/libs
+        run: |
+          mv "uzis-map-editor-1.0-build-$BUILD.jar" "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar"
+          unzip -p "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" version.properties
+          unzip -l "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" AppKt.class
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uzis-map-editor-1.0-build-${{ env.BUILD }}-${{ matrix.os }}
+          path: editor/build/libs/uzis-map-editor-*-build-*-${{ matrix.os }}.jar
+          if-no-files-found: error
+      - name: Release (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: editor-1.0-build-${{ env.BUILD }}
+          name: Editor 1.0 (build ${{ env.BUILD }})
+          files: editor/build/libs/uzis-map-editor-*-build-*-${{ matrix.os }}.jar
+          body: "Uzi's Map Editor 1.0, build ${{ env.BUILD }} (commit ${{ github.sha }}). Take the -windows jar on Windows. Needs Java 21 and a graphics card with OpenGL 4.3 or newer."
+
+  server:
+    name: Server compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compile the server
+        working-directory: server
+        run: ./gradlew --no-daemon classes

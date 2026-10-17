@@ -37,7 +37,7 @@ class UnderlayLoader @Inject constructor(
     cacheLibrary: CacheLibrary,
     private val underlayDefinitionCache: HashMap<Int, UnderlayDefinition> = HashMap()
 ) {
-    fun get(id: Int): UnderlayDefinition? {
+    @Synchronized fun get(id: Int): UnderlayDefinition? {
         return underlayDefinitionCache[id]
     }
 

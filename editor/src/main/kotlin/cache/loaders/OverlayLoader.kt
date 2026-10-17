@@ -13,13 +13,13 @@ class OverlayLoader @Inject constructor(
     cacheLibrary: CacheLibrary,
     private val overlayDefinitionCache: HashMap<Int, OverlayDefinition> = HashMap()
 ) {
-    fun get(id: Int): OverlayDefinition? {
+    @Synchronized fun get(id: Int): OverlayDefinition? {
         return overlayDefinitionCache[id]
     }
 
     fun ids(): List<Int> = overlayDefinitionCache.keys.sorted()
 
-    fun load(id: Int, b: ByteArray?): OverlayDefinition {
+    @Synchronized fun load(id: Int, b: ByteArray?): OverlayDefinition {
         val def = OverlayDefinition(id)
         val inputStream = ByteBuffer.wrap(b)
         while (true) {

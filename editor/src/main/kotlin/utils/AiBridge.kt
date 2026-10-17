@@ -168,8 +168,8 @@ class AiBridge(
             "GET /api/floors" -> json(out, 200, floors(r.query))
             "GET /api/screenshot" -> respond(out, 200, "image/png", screenshot(r.query))
             "POST /api/apply" -> json(out, 200, apply(JsonParser().parse(r.body).asJsonObject))
-            "POST /api/undo" -> { model.undoRequested.set(true); Thread.sleep(300); json(out, 200, mapOf("ok" to true, "message" to model.message)) }
-            "POST /api/redo" -> { model.redoRequested.set(true); Thread.sleep(300); json(out, 200, mapOf("ok" to true, "message" to model.message)) }
+            "POST /api/undo" -> { awaitUndoRedo { model.undoRequested.set(true) }; json(out, 200, mapOf("ok" to true, "message" to model.message)) }
+            "POST /api/redo" -> { awaitUndoRedo { model.redoRequested.set(true) }; json(out, 200, mapOf("ok" to true, "message" to model.message)) }
             "POST /api/goto" -> json(out, 200, goTo(JsonParser().parse(r.body.ifBlank { "{}" }).asJsonObject))
             "POST /api/view" -> json(out, 200, view(JsonParser().parse(r.body.ifBlank { "{}" }).asJsonObject))
             "POST /api/select" -> json(out, 200, select(JsonParser().parse(r.body.ifBlank { "{}" }).asJsonObject))
@@ -379,10 +379,10 @@ class AiBridge(
 
     private fun goTo(o: JsonObject): Map<String, Any?> {
         val x = o["x"]?.asInt ?: fail("x needed"); val y = o["y"]?.asInt ?: fail("y needed")
-        val radius = (o["radius"]?.asInt ?: 3).coerceIn(1, 8)
+        val radius = (o["radius"]?.asInt ?: controllers.worldRenderer.Renderer.mapSize()).coerceIn(1, 8)
         val f = CompletableFuture<Unit>()
-        javafx.application.Platform.runLater { try { GadTools.goTo(scene, camera, x, y, radius); f.complete(Unit) } catch (e: Exception) { f.completeExceptionally(e) } }
-        f.get(60, TimeUnit.SECONDS)
+        javafx.application.Platform.runLater { GadTools.goToAsync(scene, camera, x, y, radius) { e -> if (e == null) f.complete(Unit) else f.completeExceptionally(e) } }
+        f.get(180, TimeUnit.SECONDS)
         Thread.sleep(1500)
         return state()
     }
@@ -409,11 +409,12 @@ class AiBridge(
             addProperty("x", q["x"]!!.toInt()); addProperty("y", q["y"]!!.toInt())
             q["pitch"]?.let { addProperty("pitch", it.toInt()) }; q["yaw"]?.let { addProperty("yaw", it.toInt()) }; q["distance"]?.let { addProperty("distance", it.toInt()) }
         })
-        Thread.sleep(250) // a couple of frames so the new view is drawn
+        // the frame being drawn now may have started before the camera moved: take a later one
+        model.screenshotAfterFrame = model.framesStarted
         val f = CompletableFuture<java.awt.image.BufferedImage>()
         model.screenshotRequest = f
-        val img = try { f.get(10, TimeUnit.SECONDS) }
-            catch (e: java.util.concurrent.TimeoutException) { model.screenshotRequest = null; fail("The editor didn't draw a frame in 10 seconds (is its window open and not minimised?).") }
+        val img = try { f.get(20, TimeUnit.SECONDS) }
+            catch (e: java.util.concurrent.TimeoutException) { model.screenshotRequest = null; fail("The editor didn't draw a frame in 20 seconds (is its window open and not minimised?).") }
             catch (e: java.util.concurrent.ExecutionException) { fail("The editor couldn't read its frame: ${e.cause ?: e}") }
         val max = (q["max"]?.toIntOrNull() ?: 1280).coerceIn(200, 4000)
         val scaled = if (img.width <= max) img else {
@@ -614,7 +615,24 @@ class AiBridge(
         "flags" -> {
             val addM = a.intOr("add", 0) and 0xFF; val remM = a.intOr("remove", 0) and 0xFF
             if (addM == 0 && remM == 0) fail("flags needs add or remove (1 blocked, 2 bridge, 4 remove roof, 8 render below, 16 hide on minimap)")
-            tileChange(a, false) { t, _, _ -> t.settings = (((t.settings.toInt() and 0xFF) or addM) and remM.inv()).toByte() }
+            val tiles = tilesOf(a)
+            val z = a.intOr("z", model.paintPlane.get()).also { if (it !in 0..3) fail("z must be 0-3") }
+            // the bridge flag (2) goes on floor 1 whatever z is: that's where the game reads it
+            ({
+                val rec = TileRecorder()
+                for ((x, y) in tiles) {
+                    val id = regionIdOf(x, y)
+                    val def = regions.region(id) ?: continue
+                    for (zz in models.flagPlanes(z, addM or remM)) {
+                        val t = def.tiles[zz][x and 63][y and 63] ?: continue
+                        rec.touch(id, zz, x and 63, y and 63, t)
+                        models.applyFlags(t, zz, z, addM, true)
+                        models.applyFlags(t, zz, z, remM, false)
+                        def.syncTile(zz, x and 63, y and 63)
+                    }
+                }
+                rec.finish(false)
+            })
         }
         "clear" -> {
             val r = TileRect.of(a.int("x1"), a.int("y1"), a.int("x2"), a.int("y2"))
@@ -630,6 +648,14 @@ class AiBridge(
 
     /** Which of a tile's object slots a type uses (walls, wall decorations, ground decorations, the rest). */
     private fun slot(type: Int) = when (type) { in 0..3 -> 0; in 4..8 -> 4; 22 -> 22; else -> 10 }
+
+    /** Asks for an undo/redo and waits (up to 20 s) until the 3D view has done it. */
+    private fun awaitUndoRedo(ask: () -> Unit) {
+        val before = model.undoRedoDone.get()
+        ask()
+        val until = System.currentTimeMillis() + 20000
+        while (model.undoRedoDone.get() == before && System.currentTimeMillis() < until) Thread.sleep(20)
+    }
 
     private fun help(): String = (try {
         javaClass.getResourceAsStream("/AI-BRIDGE.md")?.readBytes()?.toString(Charsets.UTF_8) ?: "See AI-BRIDGE.md next to the editor."

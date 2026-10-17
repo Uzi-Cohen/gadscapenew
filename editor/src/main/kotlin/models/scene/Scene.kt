@@ -31,18 +31,34 @@ class Scene @Inject constructor(
     private val overlayLoader: OverlayLoader,
     private val textureLoader: TextureLoader
 ) {
-    var radius: Int = 1
+    @Volatile var radius: Int = 1
+    /** Goes up with every whole new load (not with region rebuilds after edits). */
+    @Volatile var loads = 0
+        private set
     var centerRegionId: Int = -1
         private set
 
     /** Region id sitting in grid cell (0,0) of the loaded scene. */
     val startRegionId: Int
-        get() = if (radius > 1) centerRegionId - 256 * (radius - 2) - (radius - 2) else centerRegionId
+        get() = centerRegionId - 257 * ((radius - 1) / 2)
 
     fun isLoaded(): Boolean = this::regions.isInitialized
 
+    /** Grid cells (gx * 256 + gy) rebuilt since the renderer last asked; [allChanged] after a whole new load. */
+    private val changedCells = HashSet<Int>()
+    private var allChanged = true
+
+    /** What changed since the last call: null = everything (a new load), else the rebuilt grid cells. */
+    @Synchronized fun takeChanged(): Set<Int>? {
+        val r: Set<Int>? = if (allChanged) null else HashSet(changedCells)
+        allChanged = false; changedCells.clear()
+        return r
+    }
+    @Synchronized private fun markChanged(gx: Int, gy: Int) { changedCells.add(gx * 256 + gy) }
+    @Synchronized private fun markAll() { allChanged = true; changedCells.clear() }
+
     // NxM grid of regions to display
-    private lateinit var regions: Array<Array<SceneRegion?>>
+    @Volatile private lateinit var regions: Array<Array<SceneRegion?>>
     val sceneChangeListeners: ArrayList<ActionListener> = ArrayList()
 
     private fun reload() {
@@ -54,21 +70,21 @@ class Scene @Inject constructor(
     }
 
     fun load(centerRegionId: Int, radius: Int) {
-        this.radius = radius
-        this.centerRegionId = centerRegionId
-        regions = Array(radius) { arrayOfNulls<SceneRegion>(radius) }
-        var regionId = centerRegionId
-        if (radius > 1) {
-            regionId = centerRegionId - 256 * (radius - 2) - (radius - 2)
+        // build the new grid first and swap it in at once: the 3D view reads the scene from its own thread
+        val start = centerRegionId - 257 * ((radius - 1) / 2) // the centre region in the middle of the grid
+        val grid = Array(radius) { arrayOfNulls<SceneRegion>(radius) }
+        for (x in 0 until radius) for (y in 0 until radius) {
+            val id = start + x * 256 + y
+            System.out.printf("Loading region %d\n", id)
+            grid[x][y] = sceneRegionBuilder.loadRegion(id, true)
         }
-        for (x in 0 until radius) {
-            for (y in 0 until radius) {
-                System.out.printf("Loading region %d\n", regionId)
-                regions[x][y] = sceneRegionBuilder.loadRegion(regionId, true)
-                regionId++
-            }
-            regionId += 256 - radius // move 1 region to the right, reset to lowest y
+        synchronized(this) {
+            regions = grid
+            this.radius = radius
+            this.centerRegionId = centerRegionId
         }
+        markAll()
+        loads++
         reload()
     }
 
@@ -77,6 +93,7 @@ class Scene @Inject constructor(
         if (!isLoaded() || gridX !in 0 until radius || gridY !in 0 until radius) return
         val id = startRegionId + gridX * 256 + gridY
         regions[gridX][gridY] = sceneRegionBuilder.loadRegion(id, true)
+        markChanged(gridX, gridY)
         reload()
     }
 
@@ -89,6 +106,7 @@ class Scene @Inject constructor(
             val gy = (id and 0xFF) - (startRegionId and 0xFF)
             if (gx !in 0 until radius || gy !in 0 until radius) continue
             regions[gx][gy] = sceneRegionBuilder.loadRegion(id, true)
+            markChanged(gx, gy)
             any = true
         }
         if (any) reload()
@@ -137,9 +155,10 @@ class Scene @Inject constructor(
     }
 
     fun getRegion(gridX: Int, gridY: Int): SceneRegion? {
-        return if (gridX >= radius || gridY >= radius) {
-            null
-        } else regions[gridX][gridY]
+        // checked against the grid itself: a load swaps grid and size from another thread
+        if (!isLoaded()) return null
+        val grid = regions
+        return if (gridX < 0 || gridY < 0 || gridX >= grid.size || gridY >= grid[gridX].size) null else grid[gridX][gridY]
     }
 
     fun getRegionFromSceneCoord(x: Int, y: Int): SceneRegion? {

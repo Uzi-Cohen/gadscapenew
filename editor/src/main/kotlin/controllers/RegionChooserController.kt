@@ -51,7 +51,7 @@ class RegionChooserController @Inject constructor(
                 return@setOnAction
             }
             (btnLoad.scene.window as Stage).close()
-            scene.load(regionId, radius)
+            utils.GadTools.loadAsync(scene, regionId, radius)
         }
 
         linkExplv.setOnAction {

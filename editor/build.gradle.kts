@@ -7,7 +7,9 @@ plugins {
 }
 
 group = "org.example"
-version = "0.1.1"
+// 1.0 is build 100 (after 93+ test builds); CI passes -PbuildNumber (100 + its run count)
+val buildNumber = (findProperty("buildNumber") ?: System.getenv("BUILD_NUMBER") ?: "100").toString()
+version = "1.0"
 
 val lwjglVersion = "3.3.4"
 val lwjglNatives = listOf("natives-windows", "natives-linux", "natives-macos", "natives-macos-arm64")
@@ -104,12 +106,19 @@ javafx {
     modules = listOf("javafx.controls", "javafx.fxml", "javafx.graphics", "javafx.web")
 }
 
+tasks.processResources {
+    inputs.property("buildNumber", buildNumber)
+    filesMatching("version.properties") { expand("version" to project.version, "build" to buildNumber) }
+}
+
 val fatJar = tasks.register<Jar>("fatJar") {
-    archiveBaseName.set("${project.name}-fat")
+    archiveBaseName.set("uzis-map-editor")
+    archiveVersion.set("${project.version}-build-$buildNumber")
+    archiveClassifier.set("")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     dependsOn(configurations.runtimeClasspath)
     manifest {
-        attributes["Implementation-Version"] = version
+        attributes["Implementation-Version"] = "${project.version} (build $buildNumber)"
         attributes["Main-Class"] = "AppKt"
     }
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })

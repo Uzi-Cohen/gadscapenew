@@ -20,7 +20,7 @@ Every change you send goes through the editor's undo, so the user can take it ba
 
 ## Coordinates
 - World tiles: `x` grows east, `y` grows north. `z` is the floor (0 = ground, 1-3 upstairs).
-- Only the loaded map can be read or changed (`loadedArea` in `/api/state`). `/api/goto` loads somewhere else.
+- Only the loaded map can be read or changed (`loadedArea` in `/api/state`). `POST /api/goto` with `{"x":3210,"y":3424}` loads somewhere else (optional `"radius"`: regions across, default the user's map size). It waits until the new map is loaded.
 - When the user says "this area" or "the selected area", use `selection` from `/api/state`. Changes stay inside it unless the user says otherwise.
 
 ## Reading
@@ -56,6 +56,7 @@ Every change you send goes through the editor's undo, so the user can take it ba
   { "op": "clear", "x1": 3190, "y1": 3190, "x2": 3199, "y2": 3199, "objects": true }
 ] }
 ```
+- **Bridges:** flag `2` makes floor 1 the ground people walk on over that tile (a bridge deck); floor 0 is what's underneath (water, a road). The game reads it on floor 1, so `"op": "flags", "add": 2` always sets it there, whatever `z` is. Build the deck on floor 1 (`z: 1`): paint it and place the bridge objects there.
 - **Tiles:** an action covers one tile (`x`, `y`), a box (`x1`, `y1`, `x2`, `y2`), or a list (`tiles`). `z` defaults to the floor the user is on.
 - **All or nothing:** every action is checked first. If any is wrong, nothing changes and you get the errors. Otherwise the whole request is one undo step.
 - **`dryRun: true`** only checks the actions.

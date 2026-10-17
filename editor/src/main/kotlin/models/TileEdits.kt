@@ -5,6 +5,26 @@ import cache.definitions.LocationsDefinition
 import cache.definitions.RegionDefinition
 import java.util.IdentityHashMap
 
+
+/**
+ * Flags live on the floor being painted, except the bridge flag (2): the game reads that one on floor 1 for the whole
+ * column (floor 1 there is drawn and walked on as the ground, floor 0 becomes what's under the bridge).
+ */
+fun flagPlanes(plane: Int, mask: Int): IntRange = if (mask and 2 != 0) minOf(plane, 1)..maxOf(plane, 1) else plane..plane
+
+/** Adds (or removes) the [mask] flags on [t], which is on floor [z], for a paint on floor [plane]. */
+fun applyFlags(t: RegionDefinition.Tile, z: Int, plane: Int, mask: Int, add: Boolean) {
+    var m = 0
+    if (z == plane) m = m or (mask and 2.inv())
+    if (z == 1) m = m or (mask and 2)
+    if (m == 0) return
+    val s = t.settings.toInt() and 0xFF
+    t.settings = (if (add) s or m else s and m.inv()).toByte()
+}
+
+/** True when the game treats floor 1 of this column as the ground (the bridge flag on floor 1). */
+fun RegionDefinition.isBridge(lx: Int, ly: Int): Boolean = ((tiles[1][lx][ly]?.settings?.toInt() ?: 0) and 2) != 0
+
 /** World-tile rectangle, inclusive on both ends. */
 data class TileRect(val x1: Int, val y1: Int, val x2: Int, val y2: Int) {
     val width: Int get() = x2 - x1 + 1
@@ -414,17 +434,18 @@ class TileOps(private val access: RegionAccess) {
                 if (hasFlags) ground.settings = (ground.settings.toInt() or (t.settings.toInt() and 0x15)).toByte()
                 if (z != 0) t.underlayId = 0
                 t.overlayId = 0; t.attrOpcode = 0; t.overlayPath = 0; t.overlayRotation = 0
-                t.settings = (t.settings.toInt() and if (z == 0) 0x0A else 0).toByte() // ground keeps bridge/render-below
+                // the bridge flag belongs to floor 1 (see flagPlanes): it stays unless asked to clear it
+                t.settings = (t.settings.toInt() and when { z == 0 -> 0x0A; z == 1 && !clearBridgeFlags -> 2; else -> 0 }).toByte()
                 def.syncTile(z, lx, ly)
                 tilesMoved++
             }
             // the bridge flag makes the floor above count as ground; clear it when asked
-            val base = def.tiles[0][lx][ly]
+            val base = def.tiles[1][lx][ly]
             if (clearBridgeFlags && base != null && (base.settings.toInt() and 2) != 0) {
-                if (base === ground) { if (!touchedGround) { rec.touch(id, 0, lx, ly, ground); touchedGround = true } }
-                else rec.touch(id, 0, lx, ly, base)
+                if (base === ground) { if (!touchedGround) { rec.touch(id, to, lx, ly, ground); touchedGround = true } }
+                else rec.touch(id, 1, lx, ly, base)
                 base.settings = (base.settings.toInt() and 2.inv()).toByte()
-                def.syncTile(0, lx, ly)
+                def.syncTile(1, lx, ly)
             }
             if (touchedGround) def.syncTile(to, lx, ly)
         }
