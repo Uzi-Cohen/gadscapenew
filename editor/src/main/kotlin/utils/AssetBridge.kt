@@ -56,6 +56,8 @@ class AssetBridge(private val log: (String) -> Unit) {
         "POST /api/model/edit" -> Reply.Json(modelEdit(body()))
         "GET /api/anims" -> Reply.Json(animList(q))
         "GET /api/anim" -> Reply.Json(animInfo(q.int("id")))
+        "POST /api/anim/name" -> Reply.Json(animRename(body()))
+        "POST /api/anims/rebuild-names" -> Reply.Json(animRebuildNames())
         "GET /api/anim/render" -> Reply.Png(animRender(q))
         "POST /api/anim/timing" -> Reply.Json(animTiming(body()))
         "GET /api/npc" -> Reply.Json(npcInfo(q.int("id")))
@@ -403,6 +405,8 @@ class AssetBridge(private val log: (String) -> Unit) {
 
     private fun animList(q: Map<String, String>): Map<String, Any?> = withCache { _, _, anims ->
         val skeletalOnly = q["skeletal"] == "1"
+        val category = q["category"]?.let { c -> AnimCatalog.CATEGORIES.firstOrNull { it.equals(c, true) } ?: fail("category is one of ${AnimCatalog.CATEGORIES}") }
+        val text = q["q"] ?: ""
         val from = q["from"]?.toIntOrNull() ?: 0
         val limit = (q["limit"]?.toIntOrNull() ?: 200).coerceIn(1, 3000)
         val out = ArrayList<Map<String, Any?>>()
@@ -410,11 +414,27 @@ class AssetBridge(private val log: (String) -> Unit) {
             if (id < from) continue
             val s = anims.seq(id) ?: continue
             if (skeletalOnly && s.skeletalModel == -1) continue
-            out.add(mapOf("id" to id, "skeletal" to (s.skeletalModel != -1), "length" to if (s.skeletalModel != -1) s.skeletalEnd - s.skeletalStart else s.lengthCycles,
+            if (!AnimCatalog.matches(id, category, text)) continue
+            out.add(mapOf("id" to id, "name" to AnimCatalog.name(id), "category" to AnimCatalog.category(id), "skeletal" to (s.skeletalModel != -1), "length" to if (s.skeletalModel != -1) s.skeletalEnd - s.skeletalStart else s.lengthCycles,
                 "frames" to if (s.skeletalModel != -1) null else s.frameCount))
             if (out.size >= limit) break
         }
-        mapOf("count" to anims.seqIds().size, "animations" to out, "note" to "length is in client cycles (20 ms)")
+        mapOf("count" to anims.seqIds().size, "categories" to AnimCatalog.counts(anims.seqIds()), "animations" to out, "note" to "length is in client cycles (20 ms)")
+    }
+
+    /** {"id": 1658, "name": "My whip swing"} names an animation; "name": null or "" puts the worked-out name back. */
+    private fun animRename(o: JsonObject): Map<String, Any?> {
+        val id = o.int("id")
+        val n = o["name"]?.takeIf { !it.isJsonNull }?.asString
+        AnimCatalog.rename(id, n)
+        return mapOf("ok" to true, "id" to id, "name" to AnimCatalog.name(id), "category" to AnimCatalog.category(id))
+    }
+
+    /** Works every animation's name out again from the cache in use and the server folder. Takes about half a minute. */
+    private fun animRebuildNames(): Map<String, Any?> {
+        val counts = withCache { lib, _, _ -> AnimCatalog.rebuild(lib, server()) }
+        changed("animation names rebuilt")
+        return mapOf("ok" to true, "categories" to counts, "savedIn" to AnimCatalog.userCatalogFile().path)
     }
 
     private fun animInfo(id: Int): Map<String, Any?> = withCache { _, _, anims ->
@@ -429,7 +449,9 @@ class AssetBridge(private val log: (String) -> Unit) {
                 if (uses.isEmpty()) null else mapOf("item" to e.asJsonObject["id"].asInt, "as" to uses)
             }.take(30)
         } catch (e: Exception) { null } }
-        linkedMapOf("id" to id, "skeletal" to (s.skeletalModel != -1),
+        val named = AnimCatalog.entry(id)
+        linkedMapOf("id" to id, "name" to named?.name, "category" to (named?.category ?: "Unknown"), "renamed" to AnimCatalog.renamed(id),
+            "uses" to (named?.uses ?: emptyList<String>()), "skeletal" to (s.skeletalModel != -1),
             "length" to if (s.skeletalModel != -1) s.skeletalEnd - s.skeletalStart else s.lengthCycles,
             "frames" to s.frameIds.indices.map { mapOf("frame" to "${s.frameIds[it] ushr 16}:${s.frameIds[it] and 0xFFFF}", "delay" to s.delays[it]) },
             "loopFrom" to s.loopOffset.takeIf { it >= 0 }, "maxLoops" to s.maxLoops, "priority" to s.priority,
@@ -508,7 +530,11 @@ class AssetBridge(private val log: (String) -> Unit) {
             - POST /api/model/edit {"id": ..., "recolour": [[hsl, hsl or "#rrggbb"]], "scale": [x%, y%, z%], "lift": units, "saveAs": "new"|"over"}.
 
             ## Animations
-            - GET /api/anims?from=&limit=&skeletal=1, GET /api/anim?id=... (frames and delays, which NPCs and items use it).
+            - GET /api/anims?from=&limit=&skeletal=1&category=&q= lists animations with a name and a category (Weapons, Player,
+              Emotes, Skilling, NPCs, Pets, Objects, Graphics, Unknown). q searches names ("whip", "graardor attack") or ids.
+              GET /api/anim?id=... (name, category, everything that uses it, frames and delays, which NPCs and items use it).
+            - POST /api/anim/name {"id": 1658, "name": "..."} renames one ("name": null puts the worked-out name back).
+            - POST /api/anims/rebuild-names works every name out again from the cache and the server folder (about 30 s).
             - GET /api/anim/render?id=...&on=npc:ID|model:ID|item:ID&frame=N|frames=4 (PNG).
             - POST /api/anim/timing {"id": ..., "delays": [...]} or {"allDelays": 4}; "frames": ["group:file", ...] reorders/copies frames.
               Skeletal (2021+) animations keep their timing in their keyframes and can't be changed this way.

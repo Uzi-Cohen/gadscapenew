@@ -16,6 +16,7 @@ import javafx.stage.FileChooser
 import javafx.stage.Stage
 import utils.*
 import java.io.File
+import models.Configuration as EditorConfiguration
 
 /**
  * Models and animations, like Mallyyy's rsps-cache-viewer but on this editor's cache (rev 211):
@@ -218,8 +219,10 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     // ======================= animations =======================
     private val seqIds = FXCollections.observableArrayList<Int>()
     private val seqFiltered = FilteredList(seqIds)
-    private val seqList = ListView(seqFiltered).apply { prefWidth = 150.0 }
-    private val seqSearch = TextField().apply { promptText = "animation id" }
+    private val seqList = ListView(seqFiltered).apply { prefWidth = 300.0 }
+    private val seqSearch = TextField().apply { promptText = "id or name (whip, graardor...)" }
+    private val seqCategory = ComboBox(FXCollections.observableArrayList(listOf("All") + AnimCatalog.CATEGORIES)).apply { selectionModel.select(0); maxWidth = Double.MAX_VALUE }
+    private val seqCount = Label("")
     private val animView = ModelView3D(640.0, 520.0)
     private val animInfo = Label("Pick an animation on the left.").apply { isWrapText = true }
     private val onNpc = TextField().apply { prefColumnCount = 6; promptText = "NPC id" }
@@ -326,14 +329,15 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         timing.clear()
         skelClip = null
         if (s == null) { animInfo.text = "Animation $id couldn't be read."; return }
+        val named = AnimCatalog.entry(id)?.let { e -> "${e.name}  [${e.category}]" + (if (e.uses.size > 1) "\nAlso: " + e.uses.drop(1).take(4).joinToString("; ") else "") + "\n" } ?: ""
         if (s.skeletalModel != -1) {
             val (md, onWhat) = previewModel(s)
             animView.show(md)
-            if (md == null) { animInfo.text = "Animation $id is skeletal (2021+). Type an NPC or model id to show it on."; return }
+            if (md == null) { animInfo.text = named + "Animation $id is skeletal (2021+). Type an NPC or model id to show it on."; return }
             val (clip, note) = AnimPlayback.clipFor(md, s.id, anims ?: return)
             skelClip = clip
             frameSlider.max = ((clip?.frameCount ?: 1) - 1).coerceAtLeast(0).toDouble()
-            animInfo.text = "Animation $id: skeletal (2021+), ${clip?.frameCount ?: 0} cycles (${(clip?.frameCount ?: 0) * 20} ms). Showing it on $onWhat. " +
+            animInfo.text = named + "Animation $id: skeletal (2021+), ${clip?.frameCount ?: 0} cycles (${(clip?.frameCount ?: 0) * 20} ms). Showing it on $onWhat. " +
                     (if (note.isNotEmpty()) "$note " else "") + "Its timing is in its keyframes, so there's no frame list to edit."
             frameIndex = 0; frameTime = 0.0
             showFrame(0)
@@ -344,7 +348,7 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         animator = md?.let { Animator(it.vertexPositionsX.clone(), it.vertexPositionsY.clone(), it.vertexPositionsZ.clone(), it.vertexSkins) }
         animView.show(md)
         frameSlider.max = (timing.size - 1).coerceAtLeast(0).toDouble()
-        animInfo.text = "Animation $id: ${s.frameCount} frames, ${s.lengthCycles * 20} ms" +
+        animInfo.text = named + "Animation $id: ${s.frameCount} frames, ${s.lengthCycles * 20} ms" +
                 (if (s.loopOffset >= 0) ", loops from frame ${s.loopOffset}" else "") +
                 (if (s.weapon >= 0 || s.shield >= 0) ", holds items" else "") + ". Showing it on $onWhat." +
                 (if (animator?.animatable == false) " That model can't move (no animation labels)." else "")
@@ -352,7 +356,38 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
         showFrame(0)
     }
 
-    private fun refreshSeqIds() { seqIds.setAll(try { anims?.seqIds() ?: emptyList() } catch (e: Exception) { emptyList<Int>() }) }
+    private fun refreshSeqIds() { seqIds.setAll(try { anims?.seqIds() ?: emptyList() } catch (e: Exception) { emptyList<Int>() }); filterSeqs() }
+
+    private fun filterSeqs() {
+        val q = seqSearch.text ?: ""; val cat = seqCategory.value
+        seqFiltered.setPredicate { AnimCatalog.matches(it, cat, q) }
+        seqCount.text = "${seqFiltered.size} of ${seqIds.size}"
+    }
+
+    private fun renameSeq() {
+        val id = seq?.id ?: seqList.selectionModel.selectedItem ?: return say("Pick an animation first.")
+        val n = askText("Name for animation $id (empty = back to the worked-out name)", AnimCatalog.name(id) ?: "") ?: return
+        AnimCatalog.rename(id, n)
+        seqList.refresh(); loadSeq(id)
+        say("Animation $id is now called ${AnimCatalog.name(id) ?: "nothing"}. Your names are kept in ${AnimCatalog.namesFile().path}.")
+    }
+
+    /** Works the names out again from this cache and the server folder (its code and item file). */
+    private fun rebuildNames() {
+        val server = ServerSource.dir(EditorConfiguration())
+        say("Working out animation names from ${cacheDir().path}" + (server?.let { " and the server in ${it.path}" } ?: " (no server folder set: weapons, specials, emotes and pets need it)") + "...")
+        Thread({
+            // its own copy of the cache, so the window can keep using its own meanwhile
+            val result = try {
+                val l = CacheLibrary(cacheDir().path)
+                try { AnimCatalog.rebuild(l, server) { m -> Platform.runLater { status.text = m } } } finally { l.close() }
+            } catch (e: Exception) { e.printStackTrace(); null }
+            Platform.runLater {
+                seqList.refresh(); filterSeqs()
+                say(if (result == null) "Couldn't work the names out (see the console)." else "Animation names rebuilt: " + result.entries.sortedByDescending { it.value }.joinToString(", ") { "${it.key} ${it.value}" } + ".")
+            }
+        }, "anim-names").apply { isDaemon = true }.start()
+    }
 
     private fun saveTiming() {
         val s = seq ?: return say("Pick an animation first.")
@@ -364,7 +399,17 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
     }
 
     private fun animationsTab(): Tab {
-        seqSearch.textProperty().addListener { _, _, q -> val t = q.trim(); seqFiltered.setPredicate { t.isEmpty() || it.toString().startsWith(t) } }
+        seqSearch.textProperty().addListener { _, _, _ -> filterSeqs() }
+        seqCategory.valueProperty().addListener { _, _, _ -> filterSeqs() }
+        seqList.setCellFactory {
+            object : ListCell<Int>() {
+                override fun updateItem(item: Int?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) null else AnimCatalog.label(item)
+                    tooltip = if (empty || item == null) null else AnimCatalog.entry(item)?.let { e -> Tooltip("${e.category}\n" + e.uses.joinToString("\n")) }
+                }
+            }
+        }
         seqSearch.setOnAction { seqSearch.text.trim().toIntOrNull()?.let { loadSeq(it) } }
         seqList.selectionModel.selectedItemProperty().addListener { _, _, id -> if (id != null) loadSeq(id) }
         frameSlider.valueProperty().addListener { _, _, v -> if (v.toInt() != frameIndex) showFrame(v.toInt()) }
@@ -405,7 +450,11 @@ class ModelAnimWindow(private val log: (String) -> Unit) {
                 Button("Import...").apply { setOnAction { importBundle() } },
                 Button("Copy from another cache...").apply { setOnAction { fromOtherCache() } })
         ).apply { padding = Insets(8.0); prefWidth = 440.0; minWidth = 440.0 }
-        val left = VBox(6.0, seqSearch, seqList).apply { padding = Insets(8.0); VBox.setVgrow(seqList, Priority.ALWAYS) }
+        val left = VBox(6.0, seqSearch, seqCategory, seqList,
+            HBox(6.0, Button("Rename...").apply { setOnAction { renameSeq() } },
+                Button("Rebuild names").apply { tooltip = Tooltip("Work the names out again from this cache and your server folder"); setOnAction { rebuildNames() } },
+                seqCount).apply { alignment = Pos.CENTER_LEFT }
+        ).apply { padding = Insets(8.0); VBox.setVgrow(seqList, Priority.ALWAYS) }
         return Tab("Animations", BorderPane(animView, null, controls, null, left)).apply { isClosable = false }
     }
 
