@@ -22,7 +22,7 @@ object ItemPreview {
 
     /** The item's inventory model with its recolours, retextures and size applied (a copy). */
     fun inventoryModel(item: ItemFull, models: ModelLoader): ModelDefinition? {
-        val base = try { models.get(item.inventoryModel) } catch (e: Exception) { null } ?: return null
+        val base = PendingModels.model(models, item.inventoryModel) ?: return null
         val md = copy(base)
         recolour(md, item)
         if (item.resizeX != 128 || item.resizeY != 128 || item.resizeZ != 128) for (v in 0 until md.vertexCount) {
@@ -155,7 +155,7 @@ object ItemPreview {
     /** The models the item shows when worn, merged and moved by the worn offset (a copy), or null. */
     fun wornModel(item: ItemFull, female: Boolean, models: ModelLoader): ModelDefinition? {
         val ids = if (female) listOf(item.femaleModel0, item.femaleModel1, item.femaleModel2) else listOf(item.maleModel0, item.maleModel1, item.maleModel2)
-        val parts = ids.filter { it >= 0 }.mapNotNull { try { models.get(it) } catch (e: Exception) { null } }
+        val parts = ids.filter { it >= 0 }.mapNotNull { PendingModels.model(models, it) }
         if (parts.isEmpty()) return null
         val md = ModelDefinition.merge(parts)
         recolour(md, item)
