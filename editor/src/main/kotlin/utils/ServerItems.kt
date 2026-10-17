@@ -95,22 +95,22 @@ object ServerItems {
     fun fromJson(id: Int, o: JsonObject?): ServerItemStats {
         val s = ServerItemStats(id)
         o ?: return s
-        o["weight"]?.takeIf { !it.isJsonNull }?.let { s.weight = it.asDouble }
-        o["slot"]?.takeIf { !it.isJsonNull }?.let { s.slot = it.asInt }
-        o["equipmentType"]?.takeIf { !it.isJsonNull }?.let { s.equipmentType = it.asString }
+        o["weight"]?.takeIf { it.isJsonPrimitive }?.let { s.weight = it.asDouble }
+        o["slot"]?.takeIf { it.isJsonPrimitive }?.let { s.slot = it.asInt }
+        o["equipmentType"]?.takeIf { it.isJsonPrimitive }?.let { s.equipmentType = it.asString }
         o["examine"]?.takeIf { it.isJsonPrimitive }?.let { s.examine = it.asString }
         val eq = o["equipmentDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
-        eq["bonuses"]?.takeIf { !it.isJsonNull }?.asString?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.let { list ->
+        eq["bonuses"]?.takeIf { it.isJsonPrimitive }?.asString?.split(',')?.mapNotNull { it.trim().toIntOrNull() }?.let { list ->
             for (i in 0 until minOf(14, list.size)) s.bonuses[i] = list[i]
         }
         eq["requirements"]?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet()?.forEach { (k, v) ->
-            val skill = k.toIntOrNull(); if (skill != null && !v.isJsonNull) s.requirements[skill] = v.asInt
+            val skill = k.toIntOrNull(); if (skill != null && v.isJsonPrimitive) s.requirements[skill] = v.asInt
         }
         val w = eq["weaponDefinition"]?.takeIf { it.isJsonObject }?.asJsonObject ?: return s
-        fun int(k: String, d: Int) = w[k]?.takeIf { !it.isJsonNull }?.asInt ?: d
+        fun int(k: String, d: Int) = w[k]?.takeIf { it.isJsonPrimitive }?.asInt ?: d
         s.weapon = ServerItemStats.Weapon().apply {
-            twoHanded = w["twoHanded"]?.takeIf { !it.isJsonNull }?.asBoolean ?: false
-            attackSpeed = w["attackSpeed"]?.takeIf { !it.isJsonNull }?.let { ItemStats.ticks(it.asInt) } ?: attackSpeed
+            twoHanded = w["twoHanded"]?.takeIf { it.isJsonPrimitive }?.asBoolean ?: false
+            attackSpeed = w["attackSpeed"]?.takeIf { it.isJsonPrimitive }?.let { ItemStats.ticks(it.asInt) } ?: attackSpeed
             category = int("interfaceVarbit", category)
             stand = int("standAnimation", stand); walk = int("walkAnimation", walk); run = int("runAnimation", run)
             standTurn = int("standTurnAnimation", standTurn); turn90 = int("rotate90Animation", turn90)
@@ -166,7 +166,7 @@ object ServerItems {
         val f = specialsFile(server)
         if (!f.isFile) return out
         val o = JsonParser().parse(f.readText(Charsets.UTF_8)).asJsonObject
-        for ((k, v) in o.entrySet()) { val id = k.trim().toIntOrNull() ?: continue; if (!v.isJsonNull) out[id] = v.asString }
+        for ((k, v) in o.entrySet()) { val id = k.trim().toIntOrNull() ?: continue; if (v.isJsonPrimitive) out[id] = v.asString }
         return out
     }
 
