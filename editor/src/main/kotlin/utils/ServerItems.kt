@@ -208,6 +208,22 @@ object ServerItems {
         return out
     }
 
+    /** The animation each special attack plays (its `new Animation(id)` in SpecialAttack.java), where it has one. */
+    fun specialAnimations(server: File): Map<String, Int> {
+        val src = server.walkTopDown().onEnter { !it.name.startsWith(".") && it.name != "build" }
+            .firstOrNull { it.isFile && it.name == "SpecialAttack.java" } ?: return emptyMap()
+        val body = src.readText().substringAfter("implements ISpecialAttack {").substringBefore("public static final Map")
+        val out = HashMap<String, Int>()
+        val starts = Regex("""(?m)^ {4}([A-Z][A-Z0-9_]*)\(\s*AttackType\.""").findAll(body).toList()
+        for ((i, m) in starts.withIndex()) {
+            val end = starts.getOrNull(i + 1)?.range?.first ?: body.length
+            // the header is everything up to the attack script's lambda
+            val header = body.substring(m.range.first, end).substringBefore("->")
+            Regex("""new Animation\((\d+)""").find(header)?.let { out[m.groupValues[1]] = it.groupValues[1].toInt() }
+        }
+        return out
+    }
+
     /** Special energy per weapon in the cache (enum 906, stored as percent x 10). */
     fun specialEnergy(lib: CacheLibrary, item: Int): Int? = EnumDef.read(lib, SPECIAL_ENUM)?.ints?.get(item)?.let { it / 10 }
 

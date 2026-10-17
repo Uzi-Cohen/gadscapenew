@@ -197,16 +197,18 @@ object ItemPreview {
      * A plain player (the first kit of each body part) wearing [item]: the parts the item covers or hides are left
      * out, like the game does.
      */
-    fun onPlayer(item: ItemFull, female: Boolean, lib: CacheLibrary, models: ModelLoader): ModelDefinition? {
+    fun onPlayer(item: ItemFull, female: Boolean, lib: CacheLibrary, models: ModelLoader, also: List<ItemFull> = emptyList()): ModelDefinition? {
         val kits = kits(lib)
         val base = if (female) 7 else 0
         val skip = HashSet<Int>()
-        val hides = setOf(item.wearPos1, item.wearPos2, item.wearPos3)
-        // equipment slot -> the body part it replaces
-        when (item.wearPos1) { 4 -> skip.add(2); 7 -> skip.add(5); 9 -> skip.add(4); 10 -> skip.add(6) }
-        if (6 in hides) skip.add(3)
-        if (8 in hides) skip.add(0)
-        if (11 in hides) skip.add(1)
+        for (it in listOf(item) + also) {
+            val hides = setOf(it.wearPos1, it.wearPos2, it.wearPos3)
+            // equipment slot -> the body part it replaces
+            when (it.wearPos1) { 4 -> skip.add(2); 7 -> skip.add(5); 9 -> skip.add(4); 10 -> skip.add(6) }
+            if (6 in hides) skip.add(3)
+            if (8 in hides) skip.add(0)
+            if (11 in hides) skip.add(1)
+        }
         val parts = ArrayList<ModelDefinition>()
         for (bp in 0..6) {
             if (bp in skip) continue
@@ -219,7 +221,7 @@ object ItemPreview {
                 parts.add(cp)
             }
         }
-        wornModel(item, female, models)?.let { parts.add(it) }
+        for (it in listOf(item) + also) wornModel(it, female, models)?.let { parts.add(it) }
         if (parts.isEmpty()) return null
         return ModelDefinition.merge(parts)
     }

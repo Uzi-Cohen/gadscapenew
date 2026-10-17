@@ -414,16 +414,60 @@ class ItemsTab(
         val d = work ?: return "Pick an item first.".also { say(it) }
         val l = lib() ?: return ""; val m = models() ?: return ""; val a = anims() ?: return ""
         val female = viewMode.selectionModel.selectedIndex == 2 || viewMode.selectionModel.selectedIndex == 4
-        val md = try { ItemPreview.onPlayer(d, female, l, m) } catch (e: Exception) { null } ?: return "Couldn't build the player model.".also { say(it) }
+        // some animations show another item in the hand or on the shield arm while they play, like the game does
+        val sd = try { a.seq(seq) } catch (e: Exception) { null }
+        // the game's equipment values: item id + 512, 0 = nothing in that slot
+        val held = sd?.weapon?.takeIf { it >= 512 }?.let { ItemStore.read(l, it - 512) }
+        val shield = sd?.shield?.takeIf { it >= 512 }?.let { ItemStore.read(l, it - 512) }
+        val emptyHand = sd != null && sd.weapon in 0..511 && d.wearPos1 == 3
+        val emptyShield = sd != null && sd.shield in 0..511 && d.wearPos1 == 5
+        val main = when { held != null && d.wearPos1 == 3 -> held; shield != null && d.wearPos1 == 5 -> shield; else -> d }
+        val extra = listOfNotNull(held?.takeIf { main !== it }, shield?.takeIf { main !== it })
+        val md = try {
+            if (emptyHand || emptyShield) ItemPreview.onPlayer(ItemFull(-1), female, l, m, extra) else ItemPreview.onPlayer(main, female, l, m, extra)
+        } catch (e: Exception) { null } ?: return "Couldn't build the player model.".also { say(it) }
         lastViewKey = "playing"
         view.show(md)
+        posed = md
         val (clip, note) = AnimPlayback.clipFor(md, seq, a)
         playback.play(clip)
         val msg = if (clip == null) note else "Playing animation $seq (${clip.frameCount} frames) on a ${if (female) "female" else "male"} player holding ${d.name}." +
+                (if (held != null) " The animation shows ${held.name} in the hand." else "") + (if (emptyHand || emptyShield) " The animation hides the item while it plays." else "") + (if (shield != null) " It shows ${shield.name} on the shield arm." else "") +
                 (if (note.isNotEmpty()) " $note" else "")
         playInfo.text = msg
         say(msg)
         return msg
+    }
+
+    /** The player model being animated, for saving a pose. */
+    private var posed: cache.definitions.ModelDefinition? = null
+
+    /** The pose on screen as a model (a copy with the animated vertex positions). */
+    private fun currentPose(): cache.definitions.ModelDefinition? {
+        val md = posed ?: return null
+        val c = playback.current ?: return null
+        val (x, y, z) = c.pose(playback.frame)
+        return cache.definitions.ModelDefinition.merge(listOf(md)).also { cp ->
+            for (v in 0 until cp.vertexCount) { cp.vertexPositionsX[v] = x[v]; cp.vertexPositionsY[v] = y[v]; cp.vertexPositionsZ[v] = z[v] }
+            cp.priority = md.priority
+        }
+    }
+
+    private fun exportPose() {
+        val md = currentPose() ?: return say("Play an animation first (the pose on screen is what gets saved).")
+        val f = javafx.stage.FileChooser().apply { initialFileName = "pose_${work?.id ?: 0}_${playback.frame}.obj"; extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("OBJ", "*.obj")) }.showSaveDialog(stage) ?: return
+        f.writeText(ModelCodec.toObj(md, "pose frame ${playback.frame}"))
+        say("Saved the pose (frame ${playback.frame + 1}) as ${f.name}.")
+    }
+
+    private fun savePoseAsModel() {
+        val md = currentPose() ?: return say("Play an animation first (the pose on screen is what gets saved).")
+        try {
+            val enc = ModelCodec.encodeOld(md)
+            val id = CacheEdits.putModel(enc.data, null)
+            reopen()
+            say("Saved the pose as new model $id in the exported cache. " + enc.warnings.joinToString(" "))
+        } catch (e: Exception) { say("Couldn't save the pose: ${e.message}") }
     }
 
     private fun statsForm(): VBox {
@@ -670,7 +714,19 @@ class ItemsTab(
         val center = VBox(8.0, HBox(12.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view"), viewMode,
             HBox(6.0, Button("Play stand").apply { setOnAction { playOnPlayer(sAnim[0].text.trim().toIntOrNull()) } },
                 Button("Play attack").apply { setOnAction { playOnPlayer(sAnim[8].text.trim().toIntOrNull()) } },
+                Button("Play special").apply { setOnAction {
+                    val name = sSpecial.value?.takeIf { it != "(none)" } ?: return@setOnAction say("This item has no special attack.")
+                    val anim = server()?.let { ServerItems.specialAnimations(it)[name] }
+                        ?: return@setOnAction say("The $name special sets its animation in code (it changes with the situation), so there's no single one to play.")
+                    playOnPlayer(anim)
+                } },
                 Button("Stop").apply { setOnAction { playback.stop(); refresh(true) } }),
+            HBox(6.0, Button("Pause").apply { setOnAction { playback.playing = !playback.playing; text = if (playback.playing) "Pause" else "Resume" } },
+                Button("<").apply { setOnAction { playback.playing = false; playback.show(playback.frame - 1) } },
+                Button(">").apply { setOnAction { playback.playing = false; playback.show(playback.frame + 1) } },
+                MenuButton("Save pose").apply { items.addAll(
+                    MenuItem("As OBJ...").apply { setOnAction { exportPose() } },
+                    MenuItem("As a new model").apply { setOnAction { savePoseAsModel() } }) }),
             playInfo.apply { isWrapText = true; maxWidth = 320.0 })), view).apply {
             padding = Insets(8.0); VBox.setVgrow(view, Priority.ALWAYS)
         }
