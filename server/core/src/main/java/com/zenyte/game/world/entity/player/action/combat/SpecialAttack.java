@@ -1279,6 +1279,7 @@ public enum SpecialAttack implements ISpecialAttack {
   ;
 
     public static final Map<Integer, ISpecialAttack> SPECIAL_ATTACKS = new HashMap<>();
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SpecialAttack.class);
 
     static {
         for (final SpecialAttack att : values())
@@ -1288,6 +1289,36 @@ public enum SpecialAttack implements ISpecialAttack {
         register(GodBow.Zamorak.INSTANCE);
         register(GodBow.Armadyl.INSTANCE);
         register(PolyporeStaff.Special.INSTANCE);
+        loadAssignments();
+    }
+
+    /**
+     * Extra weapons given an existing special attack, from data/items/special-attacks.json
+     * ({"itemId": "SPECIAL_ATTACK_NAME"}), written by the map editor. The energy each weapon
+     * uses comes from cache enum 906 like every other special.
+     */
+    private static void loadAssignments() {
+        final java.nio.file.Path file = java.nio.file.Path.of("data", "items", "special-attacks.json");
+        if (!java.nio.file.Files.exists(file)) {
+            return;
+        }
+        final Map<String, ISpecialAttack> byName = new HashMap<>();
+        for (final ISpecialAttack special : SPECIAL_ATTACKS.values()) {
+            byName.put(special.getClass().isEnum() ? ((Enum<?>) special).name() : special.getSpecialAttackName().toUpperCase().replace(' ', '_'), special);
+        }
+        try {
+            final com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(file)).getAsJsonObject();
+            for (final Map.Entry<String, com.google.gson.JsonElement> entry : json.entrySet()) {
+                final ISpecialAttack special = byName.get(entry.getValue().getAsString());
+                if (special == null) {
+                    log.warn("special-attacks.json: no special attack called {} (item {})", entry.getValue().getAsString(), entry.getKey());
+                    continue;
+                }
+                SPECIAL_ATTACKS.put(Integer.parseInt(entry.getKey().trim()), special);
+            }
+        } catch (final Exception e) {
+            log.error("Couldn't read {}", file, e);
+        }
     }
 
     private static void register(ISpecialAttack specialAttack) {
