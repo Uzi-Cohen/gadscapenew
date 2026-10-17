@@ -320,7 +320,7 @@ class Packager(private val log: (String) -> Unit) {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         try {
             ${'$'}name = '${AppImage.APP_NAME}'
-            ${'$'}dest = Join-Path ${'$'}env:LOCALAPPDATA ('Programs' + ${'$'}name)
+            ${'$'}dest = Join-Path ${'$'}env:LOCALAPPDATA (Join-Path 'Programs' ${'$'}name)
             ${'$'}tmp = Join-Path ${'$'}env:TEMP ('ume-install-' + [guid]::NewGuid())
             New-Item -ItemType Directory ${'$'}tmp | Out-Null
             ${'$'}zip = Join-Path ${'$'}tmp 'full.zip'
