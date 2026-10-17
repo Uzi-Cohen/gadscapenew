@@ -104,6 +104,8 @@ application {
 javafx {
     version = "21.0.5"
     modules = listOf("javafx.controls", "javafx.fxml", "javafx.graphics", "javafx.web")
+    // -PjavafxPlatform=win builds the Windows jar on another system (JavaFX's natives are per system)
+    findProperty("javafxPlatform")?.let { setPlatform(it.toString()) }
 }
 
 tasks.processResources {
