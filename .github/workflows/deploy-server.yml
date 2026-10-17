@@ -1,0 +1,96 @@
+name: Deploy server
+
+# Every server change that lands on main goes live: build server.jar, copy it to the VPS, restart the service.
+# If the server doesn't come back up, the previous jar is put back and started again.
+#
+# Repository secrets (Settings > Secrets and variables > Actions > Secrets):
+#   VPS_HOST     the server's address
+#   VPS_USER     the SSH user (root, or a user that can sudo without a password)
+#   VPS_SSH_KEY  that user's private SSH key (the whole file, -----BEGIN ... END-----)
+# Optional, as repository variables (same page, Variables tab):
+#   VPS_PORT (default 22), SERVER_DIR (default /opt/gadscape), SERVER_SERVICE (default gadscape)
+on:
+  push:
+    branches: [main]
+    paths: ["server/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PORT: ${{ vars.VPS_PORT || '22' }}
+      DIR: ${{ vars.SERVER_DIR || '/opt/gadscape' }}
+      SERVICE: ${{ vars.SERVER_SERVICE || 'gadscape' }}
+    steps:
+      - name: Check the secrets are set
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          missing=""
+          [ -n "$HOST" ] || missing="$missing VPS_HOST"
+          [ -n "$USER" ] || missing="$missing VPS_USER"
+          [ -n "$KEY" ] || missing="$missing VPS_SSH_KEY"
+          if [ -n "$missing" ]; then echo "::error::Add these repository secrets:$missing"; exit 1; fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build server.jar
+        working-directory: server
+        run: |
+          ./gradlew --no-daemon :app:shadowJar
+          ls -la app/build/libs/shadow.jar
+
+      - name: SSH key
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload, swap and restart
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -p $PORT -o BatchMode=yes $USER@$HOST"
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          scp -i ~/.ssh/deploy_key -P "$PORT" -o BatchMode=yes server/app/build/libs/shadow.jar "$USER@$HOST:/tmp/server.jar.$STAMP"
+          $SSH "DIR='$DIR' SERVICE='$SERVICE' STAMP='$STAMP' bash -s" <<'EOF'
+          set -e
+          S=""; [ "$(id -u)" -eq 0 ] || S="sudo -n"
+          NEW=/tmp/server.jar.$STAMP
+          $S test -f "$DIR/server.jar" || { echo "No $DIR/server.jar on the server: set SERVER_DIR"; exit 1; }
+          OWNER=$(stat -c %U:%G "$DIR/server.jar")
+          $S mkdir -p "$DIR/jar-backups"
+          $S cp -p "$DIR/server.jar" "$DIR/jar-backups/server.jar.$STAMP"
+          $S install -o "${OWNER%%:*}" -g "${OWNER##*:}" -m 644 "$NEW" "$DIR/server.jar"
+          rm -f "$NEW"
+          $S systemctl restart "$SERVICE"
+          # up and still running 40 s later, or the old jar goes back
+          sleep 40
+          if $S systemctl is-active --quiet "$SERVICE"; then
+            echo "Server is running the new jar."
+            ls -1t "$DIR/jar-backups"/server.jar.* 2>/dev/null | tail -n +6 | xargs -r $S rm -f
+          else
+            echo "The server didn't stay up with the new jar; putting the old one back."
+            $S journalctl -u "$SERVICE" -n 40 --no-pager || true
+            $S cp -p "$DIR/jar-backups/server.jar.$STAMP" "$DIR/server.jar"
+            $S systemctl restart "$SERVICE"
+            exit 1
+          fi
+          EOF
