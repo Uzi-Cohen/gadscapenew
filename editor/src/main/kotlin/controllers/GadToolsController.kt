@@ -221,7 +221,8 @@ class GadToolsController @Inject constructor(
                             if (scene.isLoaded() && scene.radius != n) {
                                 status("Loading $n x $n regions...")
                                 GadTools.loadAsync(scene, scene.centerRegionId, n) { e ->
-                                    status(if (e == null) "Showing $n x $n regions around region ${scene.centerRegionId}." else "Couldn't load the map: ${e.message}")
+                                    if (e !is java.util.concurrent.CancellationException)
+                                        status(if (e == null) "Showing $n x $n regions around region ${scene.centerRegionId}." else "Couldn't load the map: ${e.message}")
                                 }
                             }
                         }
@@ -1439,7 +1440,8 @@ class GadToolsController @Inject constructor(
         txtX.text = x.toString(); txtY.text = y.toString(); txtZ.text = z.toString()
         status("Loading region $region around $x, $y...")
         GadTools.goToAsync(scene, camera, x, y, radius) { e ->
-            status(if (e == null) "Loaded region $region around $x, $y." else "Couldn't load region $region: ${e.message}")
+            if (e !is java.util.concurrent.CancellationException)
+                status(if (e == null) "Loaded region $region around $x, $y." else "Couldn't load region $region: ${e.message}")
         }
     }
 

@@ -142,6 +142,8 @@ class Renderer @Inject constructor(
         var capacity = 0
         /** Vertices to draw (the dynamic chunk sets this each frame). */
         var count = 0
+        /** Goes up with every upload: redraws asked for by tiles and objects of an older upload are dropped. */
+        var generation = 0
 
         fun create() {
             vb = glGenBuffers(gl); uvb = glGenBuffers(gl)
@@ -276,12 +278,13 @@ class Renderer @Inject constructor(
         textureArrayId = -1
 
         gadToolsModel.paintPlane.addListener { _, old, new ->
+            requeueAll = true
             camera.cameraZ -= 240 * (new.toInt() - old.toInt())
             isSceneUploadRequired = true
             highlightDirty = true
             lastHovered = null
         }
-        gadToolsModel.showAllFloors.addListener { _, _, _ -> isSceneUploadRequired = true }
+        gadToolsModel.showAllFloors.addListener { _, _, _ -> requeueAll = true; isSceneUploadRequired = true }
 
         var loadsSeen = -1
         scene.sceneChangeListeners.add(ActionListener {
@@ -304,8 +307,10 @@ class Renderer @Inject constructor(
 
 
     // filled from the JavaFX thread (edits), read on the render thread
-    private val redrawList: MutableSet<SceneTile> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-    private val modelRedrawList: MutableSet<Pair<Entity, Chunk>> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    // (with the upload they belong to: a rebuilt region's old tiles still fire when they're deselected, and their
+    // stale colours would land in the new tiles' places)
+    private val redrawList: MutableSet<Pair<SceneTile, Int>> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val modelRedrawList: MutableSet<Triple<Entity, Chunk, Int>> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private var injectedObject: SceneObject? = null
     private var heldBound = false
     private fun bindModels() {
@@ -322,28 +327,32 @@ class Renderer @Inject constructor(
             if (cells != null && (gx * 256 + gy) !in cells) continue
             val region = scene.getRegion(gx, gy) ?: continue
             val chunk = chunks.getOrNull(gx)?.getOrNull(gy) ?: continue
+            val gen = chunk.generation
             for (z in region.tiles.indices) for (lx in 0 until REGION_SIZE) for (ly in 0 until REGION_SIZE) {
                 val tile = region.tiles[z][lx][ly] ?: continue
                 tile.x = gx * REGION_SIZE + lx; tile.y = gy * REGION_SIZE + ly
-                tile.floorDecoration?.entity?.addListener { (entity, _) -> modelRedrawList.add(entity to chunk) }
-                tile.gameObjects.forEach { it.entity?.addListener { (entity, _) -> modelRedrawList.add(entity to chunk) } }
-                tile.wall?.entity?.addListener { (entity, _) -> modelRedrawList.add(entity to chunk) }
-                tile.addListener { (t, _) -> redrawList.add(t) }
+                tile.floorDecoration?.entity?.addListener { (entity, _) -> modelRedrawList.add(Triple(entity, chunk, gen)) }
+                tile.gameObjects.forEach { it.entity?.addListener { (entity, _) -> modelRedrawList.add(Triple(entity, chunk, gen)) } }
+                tile.wall?.entity?.addListener { (entity, _) -> modelRedrawList.add(Triple(entity, chunk, gen)) }
+                tile.addListener { (t, _) -> redrawList.add(t to gen) }
             }
         }
     }
 
     private fun redrawTiles() {
         val tiles = redrawList.toList(); redrawList.removeAll(tiles.toSet())
-        for (tile in tiles) {
-            val mb = chunkAt(tile.x, tile.y)?.mb ?: continue
+        for ((tile, gen) in tiles) {
+            val chunk = chunkAt(tile.x, tile.y) ?: continue
+            if (chunk.generation != gen) continue
+            val mb = chunk.mb
             sceneUploader.upload(tile, mb.vertexBuffer, mb.uvBuffer)
             tile.tilePaint?.recompute(mb)
             tile.tileModel?.recompute(mb)
         }
 
         val models = modelRedrawList.toList(); modelRedrawList.removeAll(models.toSet())
-        for ((e, chunk) in models) {
+        for ((e, chunk, gen) in models) {
+            if (chunk.generation != gen) continue
             e.getModel().recompute(chunk.mb, e.height)
         }
     }
@@ -1318,6 +1327,8 @@ class Renderer @Inject constructor(
     }
 
     @Volatile private var isSceneUploadRequired = true
+    /** Which floors are shown changed: every region is uploaded and queued again (from the tiles as they are now). */
+    @Volatile private var requeueAll = true
     private val clientStart = System.currentTimeMillis()
     private var lastUpdate: Long = System.nanoTime()
     var deltaTime: Double = 0.0
@@ -1789,8 +1800,14 @@ class Renderer @Inject constructor(
         if (!scene.isLoaded()) return
         isSceneUploadRequired = false
         val changed = scene.takeChanged()
-        val n = scene.radius
+        // size from the grid itself: a load in the background swaps the grid and the size one after the other
+        val grid = scene.getRegions()
+        val n = grid.size
         val all = changed == null || chunks.size != n
+        // a region not uploaded now must not be queued again either: its data on the card is from its last upload,
+        // and per-tile updates since (selection, flag tint, height brush) would be painted over with old colours
+        val everything = all || requeueAll
+        requeueAll = false
         if (all) {
             chunks.forEach { row -> row.forEach { it.delete() } }
             chunks = Array(n) { gx -> Array(n) { gy -> Chunk(gx, gy).also { it.create() } } }
@@ -1798,10 +1815,13 @@ class Renderer @Inject constructor(
         var bytes = 0L
         for (gx in 0 until n) for (gy in 0 until n) {
             val c = chunks[gx][gy]
-            if (all || (gx * 256 + gy) in changed!!) {
+            if (!everything && (gx * 256 + gy) !in changed!!) continue
+            run {
+                // new tile objects only when the region was rebuilt (a floor change re-uploads the same ones)
+                if (all || (gx * 256 + gy) in changed!!) c.generation++
                 val mb = c.mb
                 mb.clearVertUv()
-                scene.getRegion(gx, gy)?.let { sceneUploader.upload(it, mb.vertexBuffer, mb.uvBuffer) }
+                grid[gx].getOrNull(gy)?.let { sceneUploader.upload(it, mb.vertexBuffer, mb.uvBuffer) }
                 mb.flipVertUv()
                 for ((id, b) in listOf(c.vb to mb.vertexBuffer.buffer as java.nio.Buffer, c.uvb to mb.uvBuffer.buffer)) {
                     gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, id)
@@ -1815,11 +1835,10 @@ class Renderer @Inject constructor(
                 mb.vertexBuffer.shrink()
                 mb.uvBuffer.shrink()
             }
-            // every region queues its models again: the floors shown may have changed
             drawTiles(c)
         }
         bindTiles(changed.takeUnless { all })
-        if (bytes > 0) println("3D view: uploaded ${if (all) "$n x $n regions" else "${changed!!.size} region(s)"}, %.1f MB".format(bytes / 1048576.0))
+        if (bytes > 0) println("3D view: uploaded ${if (everything) "$n x $n regions" else "${changed!!.size} region(s)"}, %.1f MB".format(bytes / 1048576.0))
     }
 
     override fun dispose() {
