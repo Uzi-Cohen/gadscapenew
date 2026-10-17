@@ -195,7 +195,7 @@ class WorldMapWindow(
             if (e.button != MouseButton.PRIMARY || !e.isStillSincePress) return@setOnMouseClicked
             val w = toWorld((e.x - tx) / z, (e.y - ty) / z) ?: return@setOnMouseClicked
             gadToolsModel.paintPlane.set(0)
-            GadTools.goTo(scene, camera, w.first, w.second, 3)
+            GadTools.goToAsync(scene, camera, w.first, w.second, scene.radius.coerceAtLeast(3))
             gadToolsModel.message = "Jumped to ${w.first}, ${w.second} from the world map."
             updateViewBox()
         }

@@ -23,7 +23,7 @@ class SpriteLoader(
         cacheLibrary.index(IndexType.SPRITES.id).unCache() // free memory
     }
 
-    fun get(id: Int): SpriteDefinition? {
+    @Synchronized fun get(id: Int): SpriteDefinition? {
         return spriteDefinitionCache[id]
     }
 

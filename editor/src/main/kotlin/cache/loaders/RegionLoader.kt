@@ -18,7 +18,7 @@ class RegionLoader(
     // Detected per map file; remembered so exports are written back in the same format.
     private var wideFormat = true
 
-    fun get(regionId: Int): RegionDefinition? {
+    @Synchronized fun get(regionId: Int): RegionDefinition? {
         if (regionDefinitionCache[regionId] != null) {
             return regionDefinitionCache[regionId]
         }

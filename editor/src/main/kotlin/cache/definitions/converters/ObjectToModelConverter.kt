@@ -23,7 +23,7 @@ class ObjectToModelConverter @Inject constructor(
         return modelDefMap
     }
 
-    fun toModel(objectDefinition: ObjectDefinition, type: Int, orientation: Int): ModelDefinition? {
+    @Synchronized fun toModel(objectDefinition: ObjectDefinition, type: Int, orientation: Int): ModelDefinition? {
         val modelTag: Long = if (objectDefinition.modelTypes == null) {
             orientation + (10 shl 3) + (objectDefinition.id shl 10).toLong()
         } else {

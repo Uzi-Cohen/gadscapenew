@@ -50,6 +50,7 @@ import models.refreshSets
 import models.restackHeights
 import models.setGroundHeight
 import models.syncTile
+import models.isBridge
 import cache.definitions.RegionDefinition
 import utils.EditorRegions
 import utils.GadTools
@@ -126,7 +127,66 @@ class Renderer @Inject constructor(
     private val uniformBuffer: IntBuffer = GpuIntBuffer.allocateDirect(5 + 3 + 1)
     private val textureOffsets = FloatArray(128)
 
+    /** Per-frame work for things not in the scene: NPCs, the object held for placing (the dynamic chunk's queue). */
     private lateinit var modelBuffers: ModelBuffers
+
+    /**
+     * One region's part of the scene on the graphics card: its own vertex data and computed output. No buffer comes
+     * near the card's per-buffer limit (128 MB on some cards: one buffer for a 5 x 5 map was over twice that), an
+     * edit re-uploads only its region, and regions behind the camera aren't drawn.
+     */
+    private inner class Chunk(val gx: Int, val gy: Int) {
+        val mb = ModelBuffers()
+        var vb = 0; var uvb = 0; var out = 0; var outUv = 0; var picker = 0; var anim = 0; var vao = 0
+        /** Vertices the output buffers hold. */
+        var capacity = 0
+        /** Vertices to draw (the dynamic chunk sets this each frame). */
+        var count = 0
+
+        fun create() {
+            vb = glGenBuffers(gl); uvb = glGenBuffers(gl)
+            out = glGenBuffers(gl); outUv = glGenBuffers(gl); picker = glGenBuffers(gl); anim = glGenBuffers(gl)
+            for (b in intArrayOf(vb, uvb)) { gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, b); gl.glBufferData(GLC.GL_ARRAY_BUFFER, 16L, null, GLC.GL_STATIC_COPY) }
+            reserve(1)
+            vao = glGenVertexArrays(gl)
+            gl.glBindVertexArray(vao)
+            gl.glEnableVertexAttribArray(0)
+            gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, out)
+            gl.glVertexAttribIPointer(0, 4, GLC.GL_INT, 0, 0)
+            gl.glEnableVertexAttribArray(1)
+            gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, outUv)
+            gl.glVertexAttribPointer(1, 4, GLC.GL_FLOAT, false, 0, 0)
+            gl.glEnableVertexAttribArray(2)
+            gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, picker)
+            gl.glVertexAttribIPointer(2, 1, GLC.GL_INT, 0, 0)
+            gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
+            gl.glBindVertexArray(0)
+        }
+
+        /** Makes room for [verts] output vertices (plus room for objects placed during a drag). Old output is lost. */
+        fun reserve(verts: Int) {
+            if (verts <= capacity && capacity > 0) return
+            val n = verts + MAX_TEMP_VERTICES
+            for ((b, bytes) in listOf(out to 16L, outUv to 16L, picker to 4L, anim to 16L)) {
+                gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, b)
+                gl.glBufferData(GLC.GL_ARRAY_BUFFER, n * bytes, null, GLC.GL_DYNAMIC_DRAW)
+            }
+            gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
+            capacity = n
+        }
+
+        fun delete() {
+            for (b in intArrayOf(vb, uvb, out, outUv, picker, anim)) if (b > 0) glDeleteBuffer(gl, b)
+            if (vao > 0) glDeleteVertexArrays(gl, vao)
+            vb = 0; uvb = 0; out = 0; outUv = 0; picker = 0; anim = 0; vao = 0; capacity = 0
+        }
+    }
+
+    private var chunks: Array<Array<Chunk>> = emptyArray()
+    private var dynamicChunk: Chunk? = null
+
+    private fun chunkAt(sceneX: Int, sceneY: Int): Chunk? =
+        if (sceneX < 0 || sceneY < 0) null else chunks.getOrNull(sceneX / REGION_SIZE)?.getOrNull(sceneY / REGION_SIZE)
 
     // Uniforms
     private var uniDrawDistance = 0
@@ -165,6 +225,10 @@ class Renderer @Inject constructor(
     fun setPaused(paused: Boolean) { if (::view.isInitialized) view.paused = paused }
 
     companion object {
+        /** Map sizes offered (regions across; a region is 64 x 64 tiles). */
+        val SIZES = listOf(3, 5, 7)
+        fun mapSize(): Int = models.Configuration().getProp("map-size").toIntOrNull()?.takeIf { it in SIZES } ?: 5
+
         private val live = java.util.concurrent.CopyOnWriteArrayList<Renderer>()
 
         /** Stop every 3D render loop (call before the window closes / the app exits). */
@@ -219,69 +283,69 @@ class Renderer @Inject constructor(
         }
         gadToolsModel.showAllFloors.addListener { _, _, _ -> isSceneUploadRequired = true }
 
+        var loadsSeen = -1
         scene.sceneChangeListeners.add(ActionListener {
             isSceneUploadRequired = true
-            camera.cameraX = Constants.LOCAL_HALF_TILE_SIZE * scene.radius * REGION_SIZE
-            camera.cameraY = Constants.LOCAL_HALF_TILE_SIZE * scene.radius * REGION_SIZE
-            camera.cameraZ = -2500
+            // a new map starts with the camera over its middle; a rebuilt region (after an edit) leaves it alone
+            if (scene.loads != loadsSeen) {
+                loadsSeen = scene.loads
+                camera.cameraX = Constants.LOCAL_HALF_TILE_SIZE * scene.radius * REGION_SIZE
+                camera.cameraY = Constants.LOCAL_HALF_TILE_SIZE * scene.radius * REGION_SIZE
+                camera.cameraZ = -2500
+            }
             highlightDirty = true
-
-            bindModels()
         })
+        bindModels()
     }
 
     fun loadScene() {
-//        scene.load(10038, 1)
-//        scene.load(6967, 1)
-        scene.load(12850, 3)
-//        scene.load(11828, 6)
-//        scene.load(13623, 6)
+        GadTools.loadAsync(scene, 12850, mapSize())
     }
 
-    private val redrawList: HashSet<SceneTile> = HashSet()
-    private val modelRedrawList: HashSet<Entity> = HashSet()
+
+    // filled from the JavaFX thread (edits), read on the render thread
+    private val redrawList: MutableSet<SceneTile> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val modelRedrawList: MutableSet<Pair<Entity, Chunk>> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private var injectedObject: SceneObject? = null
+    private var heldBound = false
     private fun bindModels() {
+        if (heldBound) return
+        heldBound = true
         objectsModel.heldObject.addListener { _, _, newValue ->
             injectedObject = newValue
         }
+    }
 
-        for (x in scene.getRegions()) {
-            x.forEach {
-                it?.tiles?.forEach { z ->
-                    z.forEach { x ->
-                        x.forEach { tile ->
-                            tile?.floorDecoration?.entity?.addListener { (entity, _) -> modelRedrawList.add(entity) }
-                            tile?.gameObjects?.forEach {
-                                it.entity?.addListener { (entity, _) ->
-                                    modelRedrawList.add(
-                                        entity
-                                    )
-                                }
-                            }
-                            tile?.wall?.entity?.addListener { (entity, _) -> modelRedrawList.add(entity) }
-                            tile?.addListener { (tile, _) ->
-                                redrawList.add(tile)
-                            }
-                        }
-                    }
-                }
+    /** Listens for changes on the tiles and objects of the given grid cells (all when null), so they're redrawn. */
+    private fun bindTiles(cells: Set<Int>?) {
+        for (gx in 0 until scene.radius) for (gy in 0 until scene.radius) {
+            if (cells != null && (gx * 256 + gy) !in cells) continue
+            val region = scene.getRegion(gx, gy) ?: continue
+            val chunk = chunks.getOrNull(gx)?.getOrNull(gy) ?: continue
+            for (z in region.tiles.indices) for (lx in 0 until REGION_SIZE) for (ly in 0 until REGION_SIZE) {
+                val tile = region.tiles[z][lx][ly] ?: continue
+                tile.x = gx * REGION_SIZE + lx; tile.y = gy * REGION_SIZE + ly
+                tile.floorDecoration?.entity?.addListener { (entity, _) -> modelRedrawList.add(entity to chunk) }
+                tile.gameObjects.forEach { it.entity?.addListener { (entity, _) -> modelRedrawList.add(entity to chunk) } }
+                tile.wall?.entity?.addListener { (entity, _) -> modelRedrawList.add(entity to chunk) }
+                tile.addListener { (t, _) -> redrawList.add(t) }
             }
         }
     }
 
     private fun redrawTiles() {
-        for (tile in redrawList) {
-            sceneUploader.upload(tile, modelBuffers.vertexBuffer, modelBuffers.uvBuffer)
-            tile.tilePaint?.recompute(modelBuffers)
-            tile.tileModel?.recompute(modelBuffers)
+        val tiles = redrawList.toList(); redrawList.removeAll(tiles.toSet())
+        for (tile in tiles) {
+            val mb = chunkAt(tile.x, tile.y)?.mb ?: continue
+            sceneUploader.upload(tile, mb.vertexBuffer, mb.uvBuffer)
+            tile.tilePaint?.recompute(mb)
+            tile.tileModel?.recompute(mb)
         }
-        redrawList.clear()
 
-        for (e in modelRedrawList) {
-            e.getModel().recompute(modelBuffers, e.height)
+        val models = modelRedrawList.toList(); modelRedrawList.removeAll(models.toSet())
+        for ((e, chunk) in models) {
+            e.getModel().recompute(chunk.mb, e.height)
         }
-        modelRedrawList.clear()
     }
 
     private fun handleHover() {
@@ -449,9 +513,7 @@ class Renderer @Inject constructor(
         if (!scene.isLoaded()) return
         for (id in heights) sceneRegionById(id)?.let { scene.recalculateRegion(it) }
         if (rebuild.isEmpty()) return
-        val cx = camera.cameraX; val cy = camera.cameraY; val cz = camera.cameraZ
         scene.reloadRegions(rebuild)
-        camera.cameraX = cx; camera.cameraY = cy; camera.cameraZ = cz
         lastHovered = null
         hoverList = LinkedList()
         highlightDirty = true
@@ -496,11 +558,12 @@ class Renderer @Inject constructor(
     /** Hide a tile's models right away; the proper rebuild happens when the drag ends. */
     private fun hideTileModels(x: Int, y: Int, group: Int) {
         val tile = planeTile(x, y) ?: return
+        val mb = chunkAt(x, y)?.mb ?: return
         when (group) {
-            0 -> { tile.wall?.entity?.getModel()?.clearDraw(modelBuffers); tile.wall?.entity2?.getModel()?.clearDraw(modelBuffers) }
-            4 -> { tile.wallDecoration?.entity?.getModel()?.clearDraw(modelBuffers); tile.wallDecoration?.entity2?.getModel()?.clearDraw(modelBuffers) }
-            22 -> tile.floorDecoration?.entity?.getModel()?.clearDraw(modelBuffers)
-            else -> tile.gameObjects.forEach { it.entity?.getModel()?.clearDraw(modelBuffers) }
+            0 -> { tile.wall?.entity?.getModel()?.clearDraw(mb); tile.wall?.entity2?.getModel()?.clearDraw(mb) }
+            4 -> { tile.wallDecoration?.entity?.getModel()?.clearDraw(mb); tile.wallDecoration?.entity2?.getModel()?.clearDraw(mb) }
+            22 -> tile.floorDecoration?.entity?.getModel()?.clearDraw(mb)
+            else -> tile.gameObjects.forEach { it.entity?.getModel()?.clearDraw(mb) }
         }
     }
 
@@ -705,12 +768,16 @@ class Renderer @Inject constructor(
         val model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)
         model.xOff = objectDefinition.sizeX * REGION_SIZE
         model.yOff = objectDefinition.sizeY * REGION_SIZE
-        sceneUploader.uploadModel(
-            StaticObject(objectDefinition, model, groundHeight, held.type, held.orientation),
-            modelBuffers.vertexBuffer,
-            modelBuffers.uvBuffer
-        )
-        model.drawPersistent(modelBuffers, x, y, groundHeight, held.type)
+        // shown right away in its region's output (room is kept for this); the region is rebuilt when the drag ends
+        val chunk = chunkAt(x, y)
+        if (chunk != null && chunk.mb.targetBufferOffset + modelDefinition.faceCount * 3 <= chunk.capacity) {
+            sceneUploader.uploadModel(
+                StaticObject(objectDefinition, model, groundHeight, held.type, held.orientation),
+                chunk.mb.vertexBuffer,
+                chunk.mb.uvBuffer
+            )
+            model.drawPersistent(chunk.mb, x, y, groundHeight, held.type)
+        }
         gadToolsModel.message = "Placed ${objectDefinition.name} (${objectDefinition.id})."
         return ObjectEdit(region.regionDefinition.regionId, loc, true)
     }
@@ -798,8 +865,17 @@ class Renderer @Inject constructor(
             }
             TerrainTool.FLAGS -> {
                 val m = gadToolsModel.flagMask.get()
-                val s = ct.settings.toInt() and 0xFF
-                ct.settings = (if (erase) s and m.inv() else s or m).toByte()
+                models.applyFlags(ct, plane, plane, m, !erase)
+                // the bridge flag goes on floor 1 whatever floor is being painted (where the game reads it)
+                if (m and 2 != 0 && plane != 1) {
+                    val up = def.tiles[1][local.first][local.second]
+                    if (up != null) {
+                        val was = up.settings
+                        recorder?.touch(def.regionId, 1, local.first, local.second, up)
+                        models.applyFlags(up, 1, plane, m, !erase)
+                        if (up.settings != was) { def.syncTile(1, local.first, local.second); strokeRebuild.add(def.regionId); highlightDirty = true }
+                    }
+                }
             }
             else -> return
         }
@@ -847,6 +923,10 @@ class Renderer @Inject constructor(
         val undo = gadToolsModel.undoRequested.getAndSet(false)
         val redo = gadToolsModel.redoRequested.getAndSet(false)
         if (!undo && !redo) return
+        try { undoRedo(undo) } finally { gadToolsModel.undoRedoDone.incrementAndGet() }
+    }
+
+    private fun undoRedo(undo: Boolean) {
         finishStroke()
         gadToolsModel.unsaved.set(true)
         val from = if (undo) undoStack else redoStack
@@ -968,7 +1048,8 @@ class Renderer @Inject constructor(
                 val def = region.regionDefinition
                 for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
                     val ct = def.tiles[plane][x][y] ?: continue
-                    if ((ct.settings.toInt() and mask) == 0) continue
+                    val bits = (ct.settings.toInt() and mask and 2.inv()) or (if (mask and 2 != 0 && def.isBridge(x, y)) 2 else 0)
+                    if (bits == 0) continue
                     val t = region.tiles[0][x][y] ?: continue
                     t.tilePaint?.markColor = Constants.FLAG_HSL
                     t.tileModel?.markColor = Constants.FLAG_HSL
@@ -1216,6 +1297,8 @@ class Renderer @Inject constructor(
             initBuffers()
             initPickerBuffer()
             initVao()
+            dynamicChunk = Chunk(-1, -1).also { it.create() }
+            modelBuffers = dynamicChunk!!.mb
 
             // disable vsync
 //            gl.swapInterval = 0
@@ -1239,6 +1322,7 @@ class Renderer @Inject constructor(
     private var lastUpdate: Long = System.nanoTime()
     var deltaTime: Double = 0.0
     override fun display(): Int {
+        val thisFrame = ++gadToolsModel.framesStarted
         debugModel.fps.set("%.0f".format(view.fps))
         debugModel.deltaTime.set("%.2f".format(deltaTime))
         //
@@ -1249,11 +1333,10 @@ class Renderer @Inject constructor(
             uploadScene()
         }
 
-        sceneUploader.resetOffsets() // to reuse uploadModel function
-
         redrawTiles()
         try {
-            handleClick(deltaTime)
+            // while another map loads in the background, the one on screen isn't edited
+            if (!GadTools.mapLoading) handleClick(deltaTime)
         } catch (e: Exception) {
             println("Click handling error (editor keeps running): $e")
             e.printStackTrace()
@@ -1307,49 +1390,6 @@ class Renderer @Inject constructor(
         gl.glClearColor((sky shr 16 and 0xFF) / 255f, (sky shr 8 and 0xFF) / 255f, (sky and 0xFF) / 255f, 1f)
         gl.glClear(GLC.GL_COLOR_BUFFER_BIT or GLC.GL_DEPTH_BUFFER_BIT)
 
-        modelBuffers.flip()
-        modelBuffers.flipVertUv()
-
-        val vertexBuffer: IntBuffer = modelBuffers.vertexBuffer.buffer
-        val uvBuffer: FloatBuffer = modelBuffers.uvBuffer.buffer
-        val modelBuffer: IntBuffer = modelBuffers.modelBuffer.buffer
-        val modelBufferSmall: IntBuffer = modelBuffers.modelBufferSmall.buffer
-        val modelBufferUnordered: IntBuffer = modelBuffers.modelBufferUnordered.buffer
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            vertexBuffer.limit() * Integer.BYTES.toLong(),
-            vertexBuffer,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpUvBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            uvBuffer.limit() * java.lang.Float.BYTES.toLong(),
-            uvBuffer,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpModelBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            modelBuffer.limit() * Integer.BYTES.toLong(),
-            modelBuffer,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpModelBufferSmallId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            modelBufferSmall.limit() * Integer.BYTES.toLong(),
-            modelBufferSmall,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpModelBufferUnorderedId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            modelBufferUnordered.limit() * Integer.BYTES.toLong(),
-            modelBufferUnordered,
-            GLC.GL_DYNAMIC_DRAW
-        )
         val clientCycle = ((System.currentTimeMillis() - clientStart) / 20).toInt() // 50 fps
 
         // UBO
@@ -1374,57 +1414,17 @@ class Renderer @Inject constructor(
         )
         gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, 0)
 
-        val textureProvider = ""
+        val dyn = dynamicChunk
         // Draw 3d scene
-        if (textureProvider != null && bufferId != -1) {
+        if (dyn != null) {
             gl.glUniformBlockBinding(glSmallComputeProgram, uniBlockSmall, 0)
             gl.glUniformBlockBinding(glComputeProgram, uniBlockLarge, 0)
             gl.glBindBufferBase(GLC.GL_UNIFORM_BUFFER, 0, uniformBufferId)
 
-            /*
-         * Compute is split into two separate programs 'small' and 'large' to
-         * save on GPU resources. Small will sort <= 512 faces, large will do <= 4096.
-         */
-
-            // unordered
-            gl.glUseProgram(glUnorderedComputeProgram)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferUnorderedId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
-            //            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
-            gl.glDispatchCompute(modelBuffers.unorderedModelsCount, 1, 1)
-
-            // small
-            gl.glUseProgram(glSmallComputeProgram)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferSmallId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId) // vout[]
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId) //uvout[]
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
-            //            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
-            gl.glDispatchCompute(modelBuffers.smallModelsCount, 1, 1)
-
-            // large
-            gl.glUseProgram(glComputeProgram)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, tmpModelBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, bufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, tmpOutBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, tmpOutUvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, uvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
-            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, colorPickerBufferId)
-            //            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 8, animFrameBufferId);
-            gl.glDispatchCompute(modelBuffers.largeModelsCount, 1, 1)
-            gl.glMemoryBarrier(GLC.GL_SHADER_STORAGE_BARRIER_BIT)
+            // each region computes what it has queued into its own output; then NPCs and the held object
+            for (row in chunks) for (c in row) computePass(c, false)
+            computePass(dyn, true)
+            gl.glMemoryBarrier(GLC.GL_SHADER_STORAGE_BARRIER_BIT or GLC.GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT)
 
             if (textureArrayId == -1) {
                 // lazy init textures as they may not be loaded at plugin start.
@@ -1463,8 +1463,22 @@ class Renderer @Inject constructor(
             gl.glEnable(GLC.GL_CULL_FACE)
 
             // Draw output of compute shaders
-            gl.glBindVertexArray(vaoHandle)
-            gl.glDrawArrays(GLC.GL_TRIANGLES, 0, modelBuffers.targetBufferOffset + modelBuffers.tempOffset)
+            // regions far to near (see-through faces blend over what's behind them), skipping ones behind the camera
+            val visible = ArrayList<Pair<Chunk, Double>>()
+            for (row in chunks) for (c in row) {
+                if (c.mb.targetBufferOffset <= 0) continue
+                val d = chunkDepth(c) ?: continue
+                visible.add(c to d)
+            }
+            visible.sortByDescending { it.second }
+            for ((c, _) in visible) {
+                gl.glBindVertexArray(c.vao)
+                gl.glDrawArrays(GLC.GL_TRIANGLES, 0, c.mb.targetBufferOffset)
+            }
+            if (dyn.count > 0) {
+                gl.glBindVertexArray(dyn.vao)
+                gl.glDrawArrays(GLC.GL_TRIANGLES, 0, dyn.count)
+            }
             gl.glDisable(GLC.GL_CULL_FACE)
             gl.glUseProgram(0)
         }
@@ -1505,13 +1519,12 @@ class Renderer @Inject constructor(
             try { tileLabels.draw(gl, scene, camera, canvasWidth, canvasHeight, null, npcLabels) } catch (e: Exception) { println("NPC labels: $e") }
         }
 
-        gadToolsModel.screenshotRequest?.let { req ->
+        // only a frame begun after the request (and any camera move with it) answers it
+        gadToolsModel.screenshotRequest?.takeIf { thisFrame > gadToolsModel.screenshotAfterFrame }?.let { req ->
             gadToolsModel.screenshotRequest = null
             try { req.complete(grabFrame()) } catch (e: Exception) { req.completeExceptionally(e) }
         }
 
-        modelBuffers.clearVertUv()
-        modelBuffers.clear()
         return fboMainRenderer
     }
 
@@ -1651,57 +1664,30 @@ class Renderer @Inject constructor(
         }
     }
 
-    private fun drawTiles() {
-        modelBuffers.clear()
-        modelBuffers.targetBufferOffset = 0
-        for (x in 0 until scene.radius * REGION_SIZE) {
-            for (y in 0 until scene.radius * REGION_SIZE) {
-                var tile: SceneTile? = scene.getTile(0, x, y)
-
-                // check each height level 1-4
-                if (tile != null) {
-                    drawTile(tile)
-                }
-                val top = if (gadToolsModel.showAllFloors.get()) 3 else currentPlane
-                for (z in 1..top) {
-                    tile = scene.getTile(z, x, y)
-                    if (tile != null) drawTile(tile)
-                }
+    /** Queues every model of region [c] (the floors shown now) for its next compute pass, from the start of its output. */
+    private fun drawTiles(c: Chunk) {
+        val mb = c.mb
+        mb.clear()
+        mb.targetBufferOffset = 0
+        val top = if (gadToolsModel.showAllFloors.get()) 3 else currentPlane
+        val def = scene.getRegion(c.gx, c.gy)?.regionDefinition
+        for (lx in 0 until REGION_SIZE) for (ly in 0 until REGION_SIZE) {
+            val x = c.gx * REGION_SIZE + lx; val y = c.gy * REGION_SIZE + ly
+            scene.getTile(0, x, y)?.let { drawTile(it, mb) }
+            // floors above show up to the floor being edited, by the level the game draws them on: a bridge
+            // (flag 2 on floor 1) lowers the floors above it by one, flag 8 draws a tile with the ground
+            val bridge = def != null && def.isBridge(lx, ly)
+            for (z in 1..3) {
+                val tile = scene.getTile(z, x, y) ?: continue
+                val low = def != null && ((def.tiles[z][lx][ly]?.settings?.toInt() ?: 0) and 8) != 0
+                val level = if (low) 0 else if (bridge) z - 1 else z
+                if (level <= top) drawTile(tile, mb)
             }
         }
-
-        // allocate enough size in the outputBuffer for the static verts + the dynamic verts -- each vertex is an ivec4, 4 ints
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpOutBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * Integer.BYTES * 4).toLong(),
-            null,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, tmpOutUvBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * java.lang.Float.BYTES * 4).toLong(),
-            null,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, colorPickerBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * Integer.BYTES).toLong(),
-            null,
-            GLC.GL_DYNAMIC_DRAW
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, animFrameBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            ((modelBuffers.targetBufferOffset + MAX_TEMP_VERTICES) * Integer.BYTES * 4).toLong(),
-            null,
-            GLC.GL_DYNAMIC_DRAW
-        )
+        c.reserve(mb.targetBufferOffset)
     }
 
-    private fun drawTile(tile: SceneTile) {
+    private fun drawTile(tile: SceneTile, modelBuffers: ModelBuffers) {
         val x: Int = tile.x
         val y: Int = tile.y
         if (tile.tilePaint != null) {
@@ -1743,40 +1729,103 @@ class Renderer @Inject constructor(
         }
     }
 
-    private fun uploadScene() {
-        modelBuffers.clearVertUv()
-        try {
-            sceneUploader.upload(scene, modelBuffers.vertexBuffer, modelBuffers.uvBuffer)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            println("out of space vertexBuffer size %d".format(modelBuffers.vertexBuffer.buffer.limit()))
+    /**
+     * Runs the compute shaders on what [c] queued this frame: its models are placed, lit and sorted into its own
+     * output buffers, which stay there until something changes (only changed models are queued again).
+     */
+    private fun computePass(c: Chunk, dynamic: Boolean) {
+        val mb = c.mb
+        if (dynamic) c.count = mb.tempOffset
+        if (mb.smallModelsCount + mb.largeModelsCount + mb.unorderedModelsCount == 0) { mb.clearVertUv(); mb.clear(); return }
+        if (dynamic) c.reserve(mb.tempOffset)
+        mb.flip()
+        mb.flipVertUv()
+        fun upload(id: Int, b: java.nio.Buffer, bytes: Long) {
+            gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, id)
+            gl.glBufferData(GLC.GL_ARRAY_BUFFER, b.limit() * bytes, b, GLC.GL_DYNAMIC_DRAW)
         }
-        modelBuffers.flipVertUv()
-        val vertexBuffer: IntBuffer = modelBuffers.vertexBuffer.buffer
-        val uvBuffer: FloatBuffer = modelBuffers.uvBuffer.buffer
-
-        println("vertexBuffer size %d".format(vertexBuffer.limit()))
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, bufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            vertexBuffer.limit() * Integer.BYTES.toLong(),
-            vertexBuffer,
-            GLC.GL_STATIC_COPY
-        )
-        gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, uvBufferId)
-        gl.glBufferData(
-            GLC.GL_ARRAY_BUFFER,
-            uvBuffer.limit() * java.lang.Float.BYTES.toLong(),
-            uvBuffer,
-            GLC.GL_STATIC_COPY
-        )
+        upload(tmpBufferId, mb.vertexBuffer.buffer, 4)
+        upload(tmpUvBufferId, mb.uvBuffer.buffer, 4)
+        upload(tmpModelBufferId, mb.modelBuffer.buffer, 4)
+        upload(tmpModelBufferSmallId, mb.modelBufferSmall.buffer, 4)
+        upload(tmpModelBufferUnorderedId, mb.modelBufferUnordered.buffer, 4)
         gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
-        modelBuffers.clearVertUv()
-        drawTiles()
+        // unordered, then small (<= 512 faces sorted) and large (<= 4096) models
+        for ((program, models, count) in listOf(
+            Triple(glUnorderedComputeProgram, tmpModelBufferUnorderedId, mb.unorderedModelsCount),
+            Triple(glSmallComputeProgram, tmpModelBufferSmallId, mb.smallModelsCount),
+            Triple(glComputeProgram, tmpModelBufferId, mb.largeModelsCount))) {
+            if (count == 0) continue
+            gl.glUseProgram(program)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 0, models)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 1, c.vb)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 2, tmpBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 3, c.out)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 4, c.outUv)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 5, c.uvb)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 6, tmpUvBufferId)
+            gl.glBindBufferBase(GLC.GL_SHADER_STORAGE_BUFFER, 7, c.picker)
+            gl.glDispatchCompute(count, 1, 1)
+        }
+        mb.clearVertUv()
+        mb.clear()
+    }
+
+    /**
+     * How far region [c] is in front of the camera (along the ground, in local units), or null when it's wholly
+     * behind it and can't be seen.
+     */
+    private fun chunkDepth(c: Chunk): Double? {
+        val half = REGION_SIZE * Constants.LOCAL_TILE_SIZE / 2.0
+        val dx = c.gx * REGION_SIZE * Constants.LOCAL_TILE_SIZE + half - camera.cameraX
+        val dy = c.gy * REGION_SIZE * Constants.LOCAL_TILE_SIZE + half - camera.cameraY
+        val depth = dx * (-camera.yawSin / 65536.0) + dy * (camera.yawCos / 65536.0)
+        // the region's corners reach 1.42 half-widths out; looking down from high up shows a bit behind you too
+        val margin = half * 1.5 + Math.abs(camera.cameraZ) * 2.0 + 2048
+        return if (depth < -margin) null else Math.hypot(dx, dy)
+    }
+
+    private fun uploadScene() {
+        if (!scene.isLoaded()) return
         isSceneUploadRequired = false
+        val changed = scene.takeChanged()
+        val n = scene.radius
+        val all = changed == null || chunks.size != n
+        if (all) {
+            chunks.forEach { row -> row.forEach { it.delete() } }
+            chunks = Array(n) { gx -> Array(n) { gy -> Chunk(gx, gy).also { it.create() } } }
+        }
+        var bytes = 0L
+        for (gx in 0 until n) for (gy in 0 until n) {
+            val c = chunks[gx][gy]
+            if (all || (gx * 256 + gy) in changed!!) {
+                val mb = c.mb
+                mb.clearVertUv()
+                scene.getRegion(gx, gy)?.let { sceneUploader.upload(it, mb.vertexBuffer, mb.uvBuffer) }
+                mb.flipVertUv()
+                for ((id, b) in listOf(c.vb to mb.vertexBuffer.buffer as java.nio.Buffer, c.uvb to mb.uvBuffer.buffer)) {
+                    gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, id)
+                    // an empty region still gets a few bytes: the compute shaders need something bound
+                    if (b.limit() == 0) gl.glBufferData(GLC.GL_ARRAY_BUFFER, 16L, null, GLC.GL_STATIC_COPY)
+                    else gl.glBufferData(GLC.GL_ARRAY_BUFFER, b.limit() * 4L, b, GLC.GL_STATIC_COPY)
+                    bytes += b.limit() * 4L
+                }
+                gl.glBindBuffer(GLC.GL_ARRAY_BUFFER, 0)
+                // the region's data is on the card now: give the (large) copy here back
+                mb.vertexBuffer.shrink()
+                mb.uvBuffer.shrink()
+            }
+            // every region queues its models again: the floors shown may have changed
+            drawTiles(c)
+        }
+        bindTiles(changed.takeUnless { all })
+        if (bytes > 0) println("3D view: uploaded ${if (all) "$n x $n regions" else "${changed!!.size} region(s)"}, %.1f MB".format(bytes / 1048576.0))
     }
 
     override fun dispose() {
+        chunks.forEach { row -> row.forEach { it.delete() } }
+        chunks = emptyArray()
+        dynamicChunk?.delete(); dynamicChunk = null
         shutdownBuffers()
         shutdownProgram()
         shutdownVao()

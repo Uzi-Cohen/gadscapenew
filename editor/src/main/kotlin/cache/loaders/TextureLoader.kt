@@ -21,7 +21,7 @@ class TextureLoader(
         return texArray
     }
 
-    fun get(id: Int): TextureDefinition? {
+    @Synchronized fun get(id: Int): TextureDefinition? {
         return textureDefinitionCache[id]
     }
 

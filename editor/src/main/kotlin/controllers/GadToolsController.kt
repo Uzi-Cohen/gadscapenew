@@ -87,7 +87,7 @@ class GadToolsController @Inject constructor(
     private val txtX = TextField()
     private val txtY = TextField()
     private val txtZ = TextField("0")
-    private val txtRadius = TextField("3")
+    private val txtRadius = TextField(controllers.worldRenderer.Renderer.mapSize().toString())
 
     private val bookmarks = GadTools.loadBookmarks()
     private val lstBookmarks = ListView<String>()
@@ -209,6 +209,23 @@ class GadToolsController @Inject constructor(
                 CheckMenuItem("Tile numbers window").apply {
                     TileNumbersWindow.showing.addListener { _, _, v -> if (isSelected != v) isSelected = v }
                     setOnAction { toggleTileNumbers(isSelected) }
+                },
+                Menu("Map size (how much is loaded around you)").apply {
+                    val group = ToggleGroup()
+                    for (n in controllers.worldRenderer.Renderer.SIZES) items.add(RadioMenuItem("$n x $n regions (${n * 64} x ${n * 64} tiles)").apply {
+                        toggleGroup = group
+                        isSelected = n == controllers.worldRenderer.Renderer.mapSize()
+                        setOnAction {
+                            configuration.saveProp("map-size", n.toString())
+                            txtRadius.text = n.toString()
+                            if (scene.isLoaded() && scene.radius != n) {
+                                status("Loading $n x $n regions...")
+                                GadTools.loadAsync(scene, scene.centerRegionId, n) { e ->
+                                    status(if (e == null) "Showing $n x $n regions around region ${scene.centerRegionId}." else "Couldn't load the map: ${e.message}")
+                                }
+                            }
+                        }
+                    })
                 },
                 SeparatorMenuItem(),
                 MenuItem("Floor up\tCtrl+PgUp").apply { setOnAction { gadToolsModel.paintPlane.set((gadToolsModel.paintPlane.get() + 1).coerceAtMost(3)) } },
@@ -480,7 +497,7 @@ class GadToolsController @Inject constructor(
             javafx.application.Platform.runLater {
                 if (gotAny) {
                     // show the region we just filled
-                    GadTools.goTo(scene, camera, ((id shr 8) shl 6) + 32, ((id and 0xFF) shl 6) + 32, 3)
+                    GadTools.goToAsync(scene, camera, ((id shr 8) shl 6) + 32, ((id and 0xFF) shl 6) + 32, scene.radius.coerceAtLeast(3))
                 }
                 status(gadToolsModel.message)
             }
@@ -591,6 +608,20 @@ class GadToolsController @Inject constructor(
         gadToolsModel.actions.add {
             val (e, n) = tileOps.fillHoles(sel, plane)
             gadToolsModel.message = if (n == 0) "No dead tiles in that area." else "Filled $n dead tiles on floor $plane. Ctrl+Z undoes it."
+            e
+        }
+    }
+
+    /** Selected area: set or clear the bridge flag (on floor 1, where the game reads it). */
+    fun bridgeSelection(on: Boolean) {
+        val sel = gadToolsModel.selection ?: run { status("Select an area first (Select area tool, drag on the map)."); return }
+        gadToolsModel.actions.add {
+            val e = tileOps.fill(sel, 1..1, false) { t, z -> models.applyFlags(t, z, 1, 2, on) }
+            gadToolsModel.message = when {
+                e == null -> if (on) "That area is already a bridge." else "No bridge in that area."
+                on -> "${sel.width} x ${sel.height} tiles are a bridge now: floor 1 there is walked on as the ground. Build the deck on floor 1; Ctrl+Z undoes it."
+                else -> "Removed the bridge from ${sel.width} x ${sel.height} tiles. Ctrl+Z undoes it."
+            }
             e
         }
     }
@@ -1167,6 +1198,27 @@ class GadToolsController @Inject constructor(
                 e
             }
         }
+        fun fillFlags(label: String, add: Boolean) {
+            val sel = needSelection() ?: return
+            val plane = gadToolsModel.paintPlane.get().coerceIn(0, 3)
+            val m = gadToolsModel.flagMask.get()
+            if (m == 0) { status("Tick the flags to change first (Paint tab, Flags)."); return }
+            gadToolsModel.actions.add {
+                val e = tileOps.fill(sel, models.flagPlanes(plane, m), false) { t, z -> models.applyFlags(t, z, plane, m, add) }
+                gadToolsModel.message = if (e == null) "$label: nothing changed." else "$label on ${sel.width} x ${sel.height} tiles" +
+                        (if (m and 2 != 0) " (the bridge flag goes on floor 1, where the game reads it)." else ".")
+                e
+            }
+        }
+        val btnBridge = Button("Make it a bridge").apply {
+            tooltip = Tooltip("Floor 1 in the selected area becomes the ground people walk on (a bridge deck); floor 0 is what's underneath. " +
+                    "Build the deck on floor 1 (paint it and put objects there). Ctrl+Z undoes it.")
+            setOnAction { bridgeSelection(true) }
+        }
+        val btnUnbridge = Button("Remove bridge").apply {
+            tooltip = Tooltip("Clears the bridge flag in the selected area: floor 1 there is an upper floor again.")
+            setOnAction { bridgeSelection(false) }
+        }
         val btnFillUnder = Button("Underlay").apply {
             setOnAction { val id = gadToolsModel.underlayId.get(); fill("Filled underlay", false, false) { it.underlayId = (id + 1) } }
         }
@@ -1182,10 +1234,10 @@ class GadToolsController @Inject constructor(
             }
         }
         val btnAddFlags = Button("Add flags").apply {
-            setOnAction { val m = gadToolsModel.flagMask.get(); fill("Added flags", false, false) { it.settings = ((it.settings.toInt() and 0xFF) or m).toByte() } }
+            setOnAction { fillFlags("Added flags", true) }
         }
         val btnRemoveFlags = Button("Remove flags").apply {
-            setOnAction { val m = gadToolsModel.flagMask.get(); fill("Removed flags", false, false) { it.settings = ((it.settings.toInt() and 0xFF) and m.inv()).toByte() } }
+            setOnAction { fillFlags("Removed flags", false) }
         }
         val btnFillHeight = Button("Exact height").apply {
             setOnAction { val h = gadToolsModel.exactHeight.get(); fill("Set height $h", true, true) { it.setGroundHeight(-h * 8) } }
@@ -1264,7 +1316,7 @@ class GadToolsController @Inject constructor(
                 tooltip = Tooltip("Tiles with no ground colour (holes) in the selected area get the ground colour around them. Ctrl+Z undoes it.")
                 setOnAction { fillSelectionHoles() }
             },
-            Label("Fill selection with:"), row(btnFillUnder, btnFillOver, btnFillHeight), row(btnAddFlags, btnRemoveFlags),
+            Label("Fill selection with:"), row(btnFillUnder, btnFillOver, btnFillHeight), row(btnAddFlags, btnRemoveFlags), row(btnBridge, btnUnbridge),
             row(btnExport, btnImport), note)
     }
 
@@ -1347,7 +1399,7 @@ class GadToolsController @Inject constructor(
     private fun buildGoTo(): Node {
         val grid = GridPane().apply { hgap = 6.0; vgap = 6.0 }
         grid.addRow(0, Label("X"), txtX, Label("Y"), txtY)
-        grid.addRow(1, Label("Plane"), txtZ, Label("Radius"), txtRadius)
+        grid.addRow(1, Label("Plane"), txtZ, Label("Regions across"), txtRadius)
         // allow pasting "3222, 3218, 0" straight into X
         txtX.textProperty().addListener { _, _, v ->
             val parts = v.split(Regex("[,\\s]+")).filter { it.isNotBlank() }
@@ -1383,10 +1435,12 @@ class GadToolsController @Inject constructor(
             status("$x, $y is outside the map (region $region).")
             return
         }
-        val radius = (txtRadius.text.trim().toIntOrNull() ?: 3).coerceIn(1, 8)
-        GadTools.goTo(scene, camera, x, y, radius)
+        val radius = (txtRadius.text.trim().toIntOrNull() ?: controllers.worldRenderer.Renderer.mapSize()).coerceIn(1, 9)
         txtX.text = x.toString(); txtY.text = y.toString(); txtZ.text = z.toString()
-        status("Loaded region $region around $x, $y.")
+        status("Loading region $region around $x, $y...")
+        GadTools.goToAsync(scene, camera, x, y, radius) { e ->
+            status(if (e == null) "Loaded region $region around $x, $y." else "Couldn't load region $region: ${e.message}")
+        }
     }
 
     private fun copyTele() {

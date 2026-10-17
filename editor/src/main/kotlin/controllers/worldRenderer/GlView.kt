@@ -36,7 +36,11 @@ interface GlListener {
 class GlView(private val listener: GlListener) {
     private val image = ImageView().apply { isPreserveRatio = false; isSmooth = false; scaleY = -1.0 /* GL rows start at the bottom */ }
     /** Add this to the scene; mouse and key events arrive on it, with x/y from its top-left corner. */
-    val node = Pane(image).apply { isFocusTraversable = true; minWidth = 1.0; minHeight = 1.0 }
+    val node = Pane(image).apply {
+        isFocusTraversable = true
+        setMinSize(0.0, 0.0); setPrefSize(1.0, 1.0)
+        image.isManaged = false
+    }
 
     /** Physical pixels per JavaFX unit (1.5 on a 150% Windows display); mouse positions are multiplied by it. */
     @Volatile var pixelScale = 1.0
@@ -81,7 +85,8 @@ class GlView(private val listener: GlListener) {
     fun resize(width: Double, height: Double) {
         val scale = node.scene?.window?.renderScaleX ?: 1.0
         pixelScale = scale
-        node.setPrefSize(width, height)
+        // the panel sets the size; the view never asks for more (that kept the docked panels from shrinking)
+        node.resize(width, height)
         image.fitWidth = max(1.0, width); image.fitHeight = max(1.0, height)
         wantW = max(1, (width * scale).roundToInt()); wantH = max(1, (height * scale).roundToInt())
     }

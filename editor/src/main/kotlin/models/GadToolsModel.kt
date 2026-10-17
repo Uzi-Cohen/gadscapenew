@@ -34,7 +34,7 @@ enum class TerrainTool(val label: String) {
 /** Tile flag bits (the "settings" value in the map file). */
 enum class TileFlag(val bit: Int, val label: String) {
     BLOCKED(1, "Blocked / unwalkable (1)"),
-    BRIDGE(2, "Bridge, plane above is walked on (2)"),
+    BRIDGE(2, "Bridge: floor 1 here is walked on as ground (2)"),
     ROOF(4, "Remove roof (4)"),
     LOWER_Z(8, "Render on plane below (8)"),
     NO_MAP(16, "Hide on minimap (16)")
@@ -94,6 +94,8 @@ class GadToolsModel {
 
     val undoRequested = AtomicBoolean(false)
     val redoRequested = AtomicBoolean(false)
+    /** Goes up by one each time an undo or redo request has been dealt with (the message says how it went). */
+    val undoRedoDone = java.util.concurrent.atomic.AtomicLong()
     val rotateRequested = AtomicBoolean(false)
     /** Ctrl+S: save (export) the map locally, nothing is sent to the server. */
     val saveRequested = AtomicBoolean(false)
@@ -127,4 +129,7 @@ class GadToolsModel {
     @Volatile var message: String = ""
     /** Set by the AI bridge: the renderer puts the next finished frame in it. */
     @Volatile var screenshotRequest: java.util.concurrent.CompletableFuture<java.awt.image.BufferedImage>? = null
+    /** Frames the 3D view has started; a screenshot is only taken from a frame started after [screenshotAfterFrame]. */
+    @Volatile var framesStarted = 0L
+    @Volatile var screenshotAfterFrame = 0L
 }

@@ -19,7 +19,7 @@ class ObjectLoader @Inject constructor(
         return objectDefinitionCache
     }
 
-    fun get(id: Int): ObjectDefinition? {
+    @Synchronized fun get(id: Int): ObjectDefinition? {
         return objectDefinitionCache[id]
     }
 
@@ -30,7 +30,7 @@ class ObjectLoader @Inject constructor(
     private fun wideSounds(id: Int) = when (soundMode) { 0 -> false; 1 -> true; else -> id > utils.ObjDefs.WIDE_SOUNDS_ABOVE }
     private var loadingId = -1
 
-    fun load(id: Int, b: ByteArray?): ObjectDefinition {
+    @Synchronized fun load(id: Int, b: ByteArray?): ObjectDefinition {
         val def = ObjectDefinition()
         val inputStream = ByteBuffer.wrap(b)
         def.id = id

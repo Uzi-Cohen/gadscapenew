@@ -56,6 +56,7 @@ Every change you send goes through the editor's undo, so the user can take it ba
   { "op": "clear", "x1": 3190, "y1": 3190, "x2": 3199, "y2": 3199, "objects": true }
 ] }
 ```
+- **Bridges:** flag `2` makes floor 1 the ground people walk on over that tile (a bridge deck); floor 0 is what's underneath (water, a road). The game reads it on floor 1, so `"op": "flags", "add": 2` always sets it there, whatever `z` is. Build the deck on floor 1 (`z: 1`): paint it and place the bridge objects there.
 - **Tiles:** an action covers one tile (`x`, `y`), a box (`x1`, `y1`, `x2`, `y2`), or a list (`tiles`). `z` defaults to the floor the user is on.
 - **All or nothing:** every action is checked first. If any is wrong, nothing changes and you get the errors. Otherwise the whole request is one undo step.
 - **`dryRun: true`** only checks the actions.

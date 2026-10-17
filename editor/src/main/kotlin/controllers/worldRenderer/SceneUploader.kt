@@ -99,7 +99,16 @@ class SceneUploader {
         }
     }
 
+    /** Uploads one region's tiles and objects into [vertexbuffer] / [uvBuffer] (offsets start at their positions). */
+    fun upload(region: models.scene.SceneRegion, vertexbuffer: GpuIntBuffer, uvBuffer: GpuFloatBuffer) {
+        for (z in 0 until RegionDefinition.Z) for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) region.tiles[z][x][y]?.let { reset(it) }
+        for (z in 0 until RegionDefinition.Z) for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) region.tiles[z][x][y]?.let { upload(it, vertexbuffer, uvBuffer) }
+    }
+
     fun upload(tile: SceneTile, vertexBuffer: GpuIntBuffer, uvBuffer: GpuFloatBuffer) {
+        // offsets are where the data goes in these buffers (each region has its own, and so does each frame)
+        offset = vertexBuffer.buffer.position() / 4
+        uvOffset = uvBuffer.buffer.position() / 4
 //		Tile bridge = tile.getBridge();
 //		if (bridge != null)
 //		{
@@ -291,6 +300,8 @@ class SceneUploader {
             return -1
         }
 
+        offset = vertexBuffer.buffer.position() / 4
+        uvOffset = uvBuffer.buffer.position() / 4
         model.computeObj.offset = offset
         if (model.modelDefinition.faceTextures != null) {
             model.computeObj.uvOffset = uvOffset

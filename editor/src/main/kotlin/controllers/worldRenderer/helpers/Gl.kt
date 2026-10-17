@@ -172,6 +172,7 @@ object GLC {
     const val GL_RGBA = 0x1908
     const val GL_RGBA8 = 0x8058
     const val GL_SHADER_STORAGE_BARRIER_BIT = 0x2000
+    const val GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT = 0x1
     const val GL_SHADER_STORAGE_BUFFER = 0x90D2
     const val GL_SRC_ALPHA = 0x302
     const val GL_STATIC_COPY = 0x88E6

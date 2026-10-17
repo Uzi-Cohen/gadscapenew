@@ -18,7 +18,7 @@ class LocationsLoader(
 ) {
     private val unencryptedRegions = HashSet<Int>()
 
-    fun get(regionId: Int): LocationsDefinition? {
+    @Synchronized fun get(regionId: Int): LocationsDefinition? {
         if (locationsDefinitionCache[regionId] != null) {
             return locationsDefinitionCache[regionId]
         }

@@ -20,6 +20,11 @@ class GpuFloatBuffer {
         buffer.clear()
     }
 
+    /** Gives back the memory of a buffer that grew large (it starts small again). */
+    fun shrink() {
+        if (buffer.capacity() > 65536) buffer = allocateDirect(65536) else buffer.clear()
+    }
+
     fun ensureCapacity(size: Int) {
         var capacity = buffer.capacity()
         val position = buffer.position()

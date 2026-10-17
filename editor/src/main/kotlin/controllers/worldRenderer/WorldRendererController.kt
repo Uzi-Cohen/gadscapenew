@@ -14,6 +14,11 @@ class WorldRendererController @Inject constructor(val renderer: Renderer) {
 
     @FXML
     fun initialize() {
+        // the panel can be any size: what's outside it is cut off, and the view follows its size
+        anchorPane.setMinSize(0.0, 0.0)
+        anchorPane.clip = javafx.scene.shape.Rectangle().apply {
+            widthProperty().bind(anchorPane.widthProperty()); heightProperty().bind(anchorPane.heightProperty())
+        }
         renderer.initCanvas(group)
         renderer.loadScene()
         // the 3D view is an ordinary node now: it just takes the panel's size
