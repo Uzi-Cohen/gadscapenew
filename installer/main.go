@@ -19,14 +19,15 @@ import (
 
 const (
 	appName = "Uzis Map Editor"
-	fullZip = "https://github.com/Uzi-Cohen/uzis-map-editor-releases/releases/latest/download/UzisMapEditor-full.zip"
+	latest  = "https://github.com/Uzi-Cohen/uzis-map-editor-releases/releases/latest/download/"
+	fullZip = latest + "UzisMapEditor-full.zip"
 	minJava = 21
 )
 
 func main() {
 	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", appName)
 	exe := filepath.Join(dest, appName+".exe")
-	if !installed(dest) {
+	if !installed(dest) || outdated(dest) {
 		fmt.Println("Installing Uzi's Map Editor. This takes a minute or two...")
 		if err := install(dest); err != nil {
 			fmt.Println("\nInstall failed:", err)
@@ -43,6 +44,23 @@ func main() {
 		fmt.Println("Couldn't start the editor:", err)
 		time.Sleep(10 * time.Second)
 	}
+}
+
+// outdated is true when a newer editor is out than the one installed (a broken install gets replaced too).
+// Offline, the installed one is used.
+func outdated(dest string) bool {
+	c := http.Client{Timeout: 10 * time.Second}
+	resp, err := c.Get(latest + "version.txt")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return false
+	}
+	b, _ := io.ReadAll(resp.Body)
+	have, _ := os.ReadFile(filepath.Join(dest, "app", "version.txt"))
+	return strings.TrimSpace(string(b)) != strings.TrimSpace(string(have))
 }
 
 // installed is true when the editor and a new enough Java are there.

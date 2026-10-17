@@ -109,7 +109,8 @@ class AppImage(private val log: (String) -> Unit) {
             appendln("echo Starting Uzi's Map Editor...")
             append("start \"\" \"%JAVA%w\"".replace("%JAVA%w", "%JAVA:java.exe=javaw.exe%"))
             append(" -Dume.appdir=\"%CD%\\app\" -Dume.noupdate=true -Dume.autolaunch=true")
-            append(" --module-path app\\modules --add-modules ${jfxModules.joinToString(",")}")
+            // run from the 1.0 jar, JavaFX is inside it (on the classpath), not separate modules
+            if (jfxModules.isNotEmpty()) append(" --module-path app\\modules --add-modules ${jfxModules.joinToString(",")}")
             flags.forEach { append(" $it") }
             appendln(" -cp app\\uzis-map-editor.jar AppKt")
         }
@@ -170,12 +171,11 @@ class AppImage(private val log: (String) -> Unit) {
         val flags = ManagementFactory.getRuntimeMXBean().inputArguments
             .filter { it.startsWith("--add-opens") || it.startsWith("--add-exports") || it.startsWith("-Xmx") }
             .map { it.replace(" ", "=") }.distinct()
-        val javaOptions = listOf(
-            "-Dume.appdir=\$APPDIR",
-            "-Dume.autolaunch=true",
-            "--module-path=\$APPDIR/modules",
-            "--add-modules=" + jfxModules.joinToString(",")
-        ) + flags
+        // an empty --add-modules= stops Java from starting at all ("Failed to launch JVM"): run from the 1.0 jar,
+        // JavaFX is inside the jar (on the classpath) and there are no separate JavaFX modules
+        val javaOptions = listOf("-Dume.appdir=\$APPDIR", "-Dume.autolaunch=true") +
+            (if (jfxModules.isEmpty()) emptyList() else listOf("--module-path=\$APPDIR/modules", "--add-modules=" + jfxModules.joinToString(","))) +
+            flags
         val out = File(work, "out").apply { mkdirs() }
         val cmd = mutableListOf(jpackage.path, "--type", "app-image", "--name", APP_NAME,
             "--input", input.path, "--main-jar", "uzis-map-editor.jar", "--main-class", "AppKt",
