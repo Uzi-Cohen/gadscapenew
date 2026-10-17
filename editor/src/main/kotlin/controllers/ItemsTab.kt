@@ -563,6 +563,8 @@ class ItemsTab(
         val results = ListView<LiveOsrs.Entry>().apply { prefHeight = 360.0; selectionModel.selectionMode = SelectionMode.MULTIPLE }
         val keepIds = CheckBox("Keep the OSRS item ids where they're free here").apply { isSelected = true }
         val go = Button("Import").apply { isDisable = true; isDefaultButton = true }
+        // items this cache already has (often with missing or zero stats on the server): only their server stats
+        val statsOnly = Button("Update server stats only").apply { isDisable = true }
         var cat: LiveOsrs.Catalog? = null
         fun mark(e: LiveOsrs.Entry): String {
             val here = try { lib()?.let { ItemStore.read(it, e.id) } } catch (x: Exception) { null }
@@ -577,7 +579,38 @@ class ItemsTab(
             results.items.setAll(found.take(200))
             status.text = if (q.isBlank()) "Build ${c.build}: ${c.entries.size} items. Type a name." else "${found.size} match(es)" + (if (found.size > 200) ", showing 200" else "") + ". Pick one or more, then Import."
         }
-        results.selectionModel.selectedItems.addListener(javafx.collections.ListChangeListener { go.isDisable = results.selectionModel.selectedItems.isEmpty() })
+        results.selectionModel.selectedItems.addListener(javafx.collections.ListChangeListener {
+            go.isDisable = results.selectionModel.selectedItems.isEmpty(); statsOnly.isDisable = go.isDisable
+        })
+        statsOnly.setOnAction {
+            val c = cat ?: return@setOnAction
+            val srv = server() ?: run { status.text = "Pick the server folder first (an item's In game section)."; return@setOnAction }
+            val picked = results.selectionModel.selectedItems.toList()
+            val done = ArrayList<String>(); val skipped = ArrayList<String>()
+            for (e in picked) {
+                try {
+                    val raw = c.raw[e.id] ?: continue
+                    val st = LiveOsrs.stats(LiveOsrs.convert(e.id, raw), srv)
+                    if (st == null) { skipped.add(e.name); continue }
+                    // keep what the server's entry has that the cache doesn't say (custom animations, special settings)
+                    val old = ItemStats.get(srv, e.id)
+                    val merged = old?.deepCopy()?.also { o -> for ((k, v) in st.entrySet()) if (k != "equipmentDefinition") o.add(k, v) } ?: st
+                    if (old != null) st.getAsJsonObject("equipmentDefinition")?.let { neq ->
+                        val oeq = merged.getAsJsonObject("equipmentDefinition") ?: com.google.gson.JsonObject().also { merged.add("equipmentDefinition", it) }
+                        neq["bonuses"]?.let { oeq.add("bonuses", it) }
+                        neq["requirements"]?.let { oeq.add("requirements", it) }
+                        if (!oeq.has("weaponDefinition")) neq["weaponDefinition"]?.let { oeq.add("weaponDefinition", it) }
+                        else neq.getAsJsonObject("weaponDefinition")?.let { nw -> val ow = oeq.getAsJsonObject("weaponDefinition")
+                            ow.add("attackSpeed", nw["attackSpeed"]); ow.add("twoHanded", nw["twoHanded"]) }
+                    }
+                    ItemStats.put(srv, merged)
+                    done.add("${e.name} (${e.id})")
+                } catch (x: Exception) { skipped.add("${e.name}: ${x.message}") }
+            }
+            status.text = (if (done.isEmpty()) "Nothing updated." else "Server stats updated for ${done.joinToString(", ")}. Send them with the Items tab's deploy.") +
+                    (if (skipped.isEmpty()) "" else " Skipped: ${skipped.joinToString("; ")}.")
+            say(status.text)
+        }
         go.setOnAction {
             val c = cat ?: return@setOnAction
             val picked = results.selectionModel.selectedItems.toList()
@@ -621,7 +654,7 @@ class ItemsTab(
                 }
             }.apply { isDaemon = true; name = "live-osrs-import" }.start()
         }
-        win.scene = javafx.scene.Scene(VBox(8.0, query, results, keepIds, HBox(8.0, go), status).apply { padding = Insets(12.0); prefWidth = 520.0 })
+        win.scene = javafx.scene.Scene(VBox(8.0, query, results, keepIds, HBox(8.0, go, statsOnly), status).apply { padding = Insets(12.0); prefWidth = 520.0 })
         stage.scene?.stylesheets?.let { win.scene.stylesheets.setAll(it) }
         win.show()
         Thread {

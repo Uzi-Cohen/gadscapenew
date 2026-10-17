@@ -52,6 +52,8 @@ public enum GodType {
 
     ZAMORAK(3976, new int[]{
             CustomItemId.ZAMORAK_BOW,
+            // Oathplate (Yama's armour) and its radiant version count as Zamorakian
+            30750, 30753, 30756, 30777, 30779, 30781,
             CustomItemId.IMBUED_ANCIENT_CAPE,
             CustomItemId.ANCIENT_MAX_CAPE,
             ItemId.ZAMORAK_MONK_BOTTOM,

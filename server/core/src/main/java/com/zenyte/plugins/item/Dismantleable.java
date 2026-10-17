@@ -2,6 +2,7 @@ package com.zenyte.plugins.item;
 
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.item.enums.DismantleableItem;
+import com.zenyte.game.model.item.enums.RuneUpgradeItem;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
 import com.zenyte.game.world.entity.player.Player;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -18,6 +19,10 @@ public class Dismantleable extends ItemPlugin {
 	public void handle() {
 		bind("Dismantle", Dismantleable::dismantle);
 		bind("Dismantle kit", Dismantleable::dismantle);
+		bind("Revert", (player, item, slotId) -> {
+			final RuneUpgradeItem upgrade = RuneUpgradeItem.forUpgraded(item.getId());
+			if (upgrade != null) upgrade.revert(player, item, slotId);
+		});
 	}
 
 	public static void dismantle(final Player player, final Item item, final int slotId) {
@@ -43,6 +48,9 @@ public class Dismantleable extends ItemPlugin {
 			if (completeItem != 26484 && completeItem != 26520) {
 				list.add(completeItem);
 			}
+		}
+		for (final RuneUpgradeItem val : RuneUpgradeItem.VALUES) {
+			list.add(val.getUpgraded());
 		}
 		return list.toArray(new int[0]);
 	}

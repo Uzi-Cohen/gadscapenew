@@ -3,6 +3,7 @@ package com.zenyte.plugins.itemonitem;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.item.ItemOnItemAction;
 import com.zenyte.game.model.item.enums.DismantleableItem;
+import com.zenyte.game.model.item.enums.RuneUpgradeItem;
 import com.zenyte.game.world.entity.player.Player;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
@@ -19,6 +20,12 @@ public final class ItemAttaching implements ItemOnItemAction {
 		DismantleableItem dis = null;
 		final int f = from.getId();
 		final int t = to.getId();
+		// kits that are kept and cost runes (Sanguine torva, Radiant oathplate)
+		final RuneUpgradeItem upgrade = RuneUpgradeItem.find(f, t);
+		if (upgrade != null) {
+			upgrade.upgrade(player, f == upgrade.getBase() ? fromSlot : toSlot);
+			return;
+		}
 		for (final DismantleableItem val : DismantleableItem.VALUES) {
 			final int base = val.getBaseItem();
 			final int kit = val.getKit();
@@ -43,6 +50,10 @@ public final class ItemAttaching implements ItemOnItemAction {
 		for (final DismantleableItem val : DismantleableItem.VALUES) {
 			list.add(val.getKit());
 			list.add(val.getBaseItem());
+		}
+		for (final RuneUpgradeItem val : RuneUpgradeItem.VALUES) {
+			list.add(val.getKit());
+			list.add(val.getBase());
 		}
 		return list.toArray(new int[0]);
 	}
