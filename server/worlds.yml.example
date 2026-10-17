@@ -1,0 +1,75 @@
+worlds:
+  localhost:
+    number: 69
+    host: "127.0.0.1"
+    port: 43594
+    activity: "GadScape Local Host"
+    private: false
+    visibility: DEVELOPER
+    verifyPasswords: true
+    location: UNITED_STATES_OF_AMERICA
+    logback: "logback-dev"
+    types:
+      - MEMBERS
+    # Generate your own keypair - see README.md ("RSA login keypair"). Never reuse
+    # a keypair that has ever been committed to source control.
+    rsaPrivateExponent: "REPLACE_WITH_RSA_PRIVATE_EXPONENT_BASE36"
+    rsaModulus: "REPLACE_WITH_RSA_MODULUS_BASE36"
+    api:
+      enabled: false
+      scheme: "http"
+      host: "127.0.0.1"
+      port: 8080
+      token: "REPLACE_WITH_TOKEN"
+      callbackPort: 6969
+  beta:
+    number: 2
+    host: "beta.yourdomain.com"
+    port: 43594
+    activity: "GadScape Beta"
+    private: false
+    visibility: BETA
+    verifyPasswords: true
+    location: UNITED_STATES_OF_AMERICA
+    logback: "logback-beta"
+    types:
+      - MEMBERS
+    rsaPrivateExponent: "REPLACE_WITH_RSA_PRIVATE_EXPONENT_BASE36"
+    rsaModulus: "REPLACE_WITH_RSA_MODULUS_BASE36"
+  main:
+    number: 1
+    host: "play.yourdomain.com"
+    port: 43594
+    activity: "GadScape"
+    private: false
+    visibility: PUBLIC
+    verifyPasswords: true
+    location: UNITED_STATES_OF_AMERICA
+    logback: "logback-live"
+    types:
+      - MEMBERS
+    # All three worlds must use the SAME rsaPrivateExponent/rsaModulus, since the
+    # client is compiled with one public modulus and can connect to any of them.
+    rsaPrivateExponent: "REPLACE_WITH_RSA_PRIVATE_EXPONENT_BASE36"
+    rsaModulus: "REPLACE_WITH_RSA_MODULUS_BASE36"
+    api:
+      enabled: false
+      scheme: "http"
+      host: "127.0.0.1"
+      port: 8080
+      token: "REPLACE_WITH_TOKEN"
+      callbackPort: 6969
+    logsDatabase:
+      enabled: false
+      databaseUrl: "jdbc:postgresql://REPLACE_WITH_HOST"
+      databasePort: 5432
+      databaseName: "REPLACE_WITH_DB_NAME"
+      databaseUser: "REPLACE_WITH_DB_USER"
+      databasePassword: "REPLACE_WITH_DB_PASSWORD"
+    mainDatabase:
+      enabled: false
+      databaseUrl: "jdbc:postgresql://REPLACE_WITH_HOST"
+      databasePort: 5432
+      databaseName: "REPLACE_WITH_DB_NAME"
+      databaseUser: "REPLACE_WITH_DB_USER"
+      databasePassword: "REPLACE_WITH_DB_PASSWORD"
