@@ -80,7 +80,7 @@ public class MeleeCombat extends PlayerCombat {
         boost += determineBountyHunterDmgBoost(player, target);
         if (attackType == AttackType.CRUSH)
             boost += CombatUtilities.getInquisitorSetBoost(player);
-        final double a = (Math.floor(player.getSkills().getLevel(SkillConstants.STRENGTH) * player.getPrayerManager().getSkillBoost(SkillConstants.STRENGTH)) + (attackExperienceType == STRENGTH_XP ? 3 : attackExperienceType == SHARED_XP ? 1 : 0) + 8) * (boost);
+        final double a = (Math.floor(player.getSkills().getLevel(SkillConstants.STRENGTH) * (player.getPrayerManager().getSkillBoost(SkillConstants.STRENGTH) + com.zenyte.game.world.entity.player.action.combat.melee.SoulreaperAxe.strengthBonus(player))) + (attackExperienceType == STRENGTH_XP ? 3 : attackExperienceType == SHARED_XP ? 1 : 0) + 8) * (boost);
         final float b = (float) player.getBonuses().getBonus(10);
         double result = Math.floor(0.5F + a * (b + 64.0F) / 640.0F);
         final int amuletId = player.getEquipment().getId(EquipmentSlot.AMULET);

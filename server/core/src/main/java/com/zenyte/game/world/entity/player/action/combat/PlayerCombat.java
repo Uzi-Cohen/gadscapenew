@@ -669,6 +669,8 @@ public abstract class PlayerCombat extends Action {
             player.getActionManager().setAction(new GraniteMaulCombat(entity));
         } else if (weaponName.equals("sanguine scythe of vitur") || weaponName.equals("holy scythe of vitur") || weaponName.equals("scythe of vitur") || weaponName.equalsIgnoreCase("christmas scythe") || weaponName.equals("scythe of gad")) {
             player.getActionManager().setAction(new ScytheOfViturCombat(entity));
+        } else if (SoulreaperAxe.isAxe(weapon.getId())) {
+            player.getActionManager().setAction(new SoulreaperAxeCombat(entity));
         } else if (weaponName.equals("dinh's bulwark")) {
             player.getActionManager().setAction(new DinhsBulwarkCombat(entity));
         } else if (weaponName.contains("guthan")) {
