@@ -101,7 +101,7 @@ open class ModelDefinition {
                 faceColors!![i] = original.faceColors!![i]
             }
         }
-        if (!shallowCopyFaceTextures && faceTextures != null) {
+        if (!shallowCopyFaceTextures && original.faceTextures != null) {
             faceTextures = ShortArray(faceCount)
             for (i in 0 until faceCount) {
                 faceTextures!![i] = original.faceTextures!![i]
