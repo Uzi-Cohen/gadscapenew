@@ -181,7 +181,7 @@ object LiveOsrs {
                 12 -> d.cost = i32()
                 13 -> d.wearPos1 = u8()
                 14 -> d.wearPos2 = u8()
-                15, 251 -> {} // newer flags with no data
+                15, 160, 251 -> {} // newer flags with no data
                 16 -> d.members = true
                 23 -> { d.maleModel0 = u16(); d.maleOffset = u8() }
                 24 -> d.maleModel1 = u16()
@@ -194,6 +194,10 @@ object LiveOsrs {
                 48 -> { d.femaleModel0 = i32(); d.femaleOffset = u8() }
                 49 -> d.femaleModel1 = i32()
                 50 -> d.femaleModel2 = i32()
+                51 -> d.maleHead = i32()
+                52 -> d.maleHead2 = i32()
+                53 -> d.femaleHead = i32()
+                54 -> d.femaleHead2 = i32()
                 in 30..34 -> d.groundOptions[o - 30] = str().takeUnless { it.equals("Hidden", true) }
                 in 35..39 -> d.inventoryOptions[o - 35] = str()
                 40 -> { val n = u8(); d.recolorFrom = ShortArray(n); d.recolorTo = ShortArray(n)
@@ -278,7 +282,13 @@ object LiveOsrs {
         o.addProperty("id", it.id)
         it.weight?.let { w -> ItemStats.setWeight(o, w / 1000.0) } ?: o.addProperty("weight", 0)
         o.addProperty("slot", it.wearPos1)
-        o.addProperty("equipmentType", "DEFAULT")
+        // what the server hides when it's worn (hair, jaw, arms), from what the item hides in the cache
+        o.addProperty("equipmentType", when {
+            it.wearPos1 == 0 && it.wearPos2 == 8 && it.wearPos3 == 11 -> "FULL_MASK"
+            it.wearPos1 == 0 && (it.wearPos2 == 8 || it.wearPos3 == 8) -> "FULL_HELM"
+            it.wearPos1 == 4 && (it.wearPos2 == 6 || it.wearPos3 == 6) -> "FULL_BODY"
+            else -> "DEFAULT"
+        })
         c.examine?.let { o.addProperty("examine", it) }
         if (it.tradeable) o.addProperty("tradable", true)
         if (!wearable) return o
