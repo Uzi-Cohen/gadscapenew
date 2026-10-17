@@ -67,6 +67,15 @@ class ItemFull(var id: Int) {
 
     fun copy(newId: Int): ItemFull = decode(newId, encode())
 
+    /** Points every model id in [moved] (old -> new) at its new id. */
+    fun remapModels(moved: Map<Int, Int>) {
+        fun m(v: Int) = moved[v] ?: v
+        inventoryModel = m(inventoryModel)
+        maleModel0 = m(maleModel0); maleModel1 = m(maleModel1); maleModel2 = m(maleModel2)
+        femaleModel0 = m(femaleModel0); femaleModel1 = m(femaleModel1); femaleModel2 = m(femaleModel2)
+        maleHead = m(maleHead); maleHead2 = m(maleHead2); femaleHead = m(femaleHead); femaleHead2 = m(femaleHead2)
+    }
+
     fun encode(): ByteArray {
         require(readOk) { "item $id has settings this editor can't read, so it can't be rewritten" }
         val out = ByteArrayOutputStream()
@@ -241,18 +250,25 @@ object ItemStore {
     fun ids(lib: CacheLibrary): List<Int> = lib.index(2).archive(10)?.fileIds()?.sorted() ?: emptyList()
     fun read(lib: CacheLibrary, id: Int): ItemFull? = lib.data(2, 10, id)?.let { ItemFull.decode(id, it) }
 
-    /** Writes [items] into the exported cache (after a backup). Each is checked by reading it back first. */
+    /**
+     * Writes [items] into the exported cache (after a backup). Each is checked by reading it back first. Models they
+     * use that were only imported to try on them ([PendingModels]) go in too, in the same undo step.
+     */
     fun save(items: List<ItemFull>, what: String) {
-        val bytes = items.map { it to it.encode() }
-        for ((it, b) in bytes) {
+        fun check(it: ItemFull): ByteArray {
             val big = it.modelIds().filter { m -> m > 65535 }
             require(big.isEmpty()) { "item ${it.id} uses model id ${big.first()}, but items can only use model ids up to 65535" }
+            val b = it.encode()
             val back = ItemFull.decode(it.id, b)
             require(back.readOk && back.encode().contentEquals(b)) { "item ${it.id} didn't read back the same, nothing was written" }
+            return b
         }
+        items.forEach { check(it) }
         CacheEdits.backup(what)
         CacheEdits.withExportCache { lib ->
-            for ((it, b) in bytes) lib.put(2, 10, it.id, b)
+            val moved = PendingModels.writeInto(lib, items.flatMap { it.modelIds() })
+            if (moved.isNotEmpty()) for (it in items) it.remapModels(moved)
+            for (it in items) lib.put(2, 10, it.id, check(it))
             lib.index(2).update()
         }
     }

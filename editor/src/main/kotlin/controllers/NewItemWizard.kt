@@ -35,6 +35,8 @@ class NewItemWizard(
     private val server: File?,
     private val specialNames: () -> Map<String, List<Int>>,
     startFrom: ItemFull?,
+    /** The model open in the Models tab, or -1. */
+    private val modelsTabModel: () -> Int = { -1 },
     private val create: (Plan) -> String?
 ) {
     /** What Create writes: the item, a noted version or not, and the server stats (null when there's no server folder). */
@@ -96,9 +98,18 @@ class NewItemWizard(
     private val tint = ColorPicker(Color.web("#b02020"))
     private var filling = false
 
+    private val lookPlayback = AnimPlayback(lookView)
+    /** Step 3's "Try a model on the player" (in the look view). */
+    private val tryLook = tryPanel(lookView, lookPlayback)
+
     // ---------- step 4: on a player ----------
     private val playerView = ModelView3D(520.0, 440.0)
     private val playback = AnimPlayback(playerView)
+    private val tryPlayer = tryPanel(playerView, playback)
+
+    private fun tryPanel(v: ModelView3D, pb: AnimPlayback) = TryModelPanel({ stage }, { lib }, { models }, { anims }, v, pb,
+        { if (step == 2) readLook(); work }, { key -> form.anim(key) }, { specialAnimation() }, modelsTabModel,
+        { id, target, place -> useTriedModel(id, target, place) }, { if (v === lookView) lastLook = "" }, { if (v === playerView) playInfo.text = it })
     private val female = CheckBox("Female")
     private val playInfo = Label("").apply { isWrapText = true }
 
@@ -151,7 +162,7 @@ class NewItemWizard(
         stage.scene = Scene(root, 1060.0, 760.0).also { sc -> owner.scene?.stylesheets?.let { sc.stylesheets.addAll(it) } }
         stage.title = "Make a new item"
         stage.initOwner(owner); stage.initModality(Modality.WINDOW_MODAL)
-        stage.setOnHidden { playback.stop() }
+        stage.setOnHidden { playback.stop(); lookPlayback.stop() }
         show()
     }
 
@@ -166,6 +177,7 @@ class NewItemWizard(
         next.text = if (step == pages.size - 1) "Create" else "Next >"
         problem.text = ""
         if (step != 3) playback.stop()
+        if (step != 2) lookPlayback.stop()
         when (step) {
             2 -> refreshLook(true)
             3 -> if (playback.current == null) playAnim(form.anim("stand") ?: 808)
@@ -325,7 +337,9 @@ class NewItemWizard(
             row("Move sideways", moveX), row("Move up/down", moveY)
         ).apply { padding = Insets(10.0) }
         val iconBox = StackPane(bigIcon).apply { style = "-fx-background-color: #3e3529; -fx-border-color: #5a4d3b;"; prefWidth = 160.0; prefHeight = 140.0; maxWidth = 160.0; maxHeight = 140.0 }
-        val left = VBox(8.0, HBox(10.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view (drag to turn)"), lookMode)), lookView).apply { padding = Insets(10.0); VBox.setVgrow(lookView, Priority.ALWAYS) }
+        val lookSplit = tryLook.under(lookView)
+        val left = VBox(8.0, HBox(10.0, iconBox, VBox(6.0, Label("Inventory picture (as in game, 4x)"), Label("3D view (drag to turn)"), lookMode)), lookSplit)
+            .apply { padding = Insets(10.0); VBox.setVgrow(lookSplit, Priority.ALWAYS) }
         return SplitPane(left, ScrollPane(right).apply { isFitToWidth = true }).apply { setDividerPositions(0.5) }
     }
 
@@ -350,7 +364,7 @@ class NewItemWizard(
         d.offsetX2d = moveX.value.toInt(); d.offsetY2d = moveY.value.toInt()
     }
 
-    private fun modelOk(id: Int) = id >= 0 && id <= 65535 && try { models.get(id) != null } catch (e: Exception) { false }
+    private fun modelOk(id: Int) = PendingModels.model(models, id) != null
 
     private fun lookProblem(): String? {
         val inv = fInvModel.text.trim().toIntOrNull() ?: return "The inventory model should be a model id."
@@ -398,7 +412,7 @@ class NewItemWizard(
         val counts = LinkedHashMap<Int, Int>()
         for (id in listOf(d.inventoryModel, d.maleModel0, d.maleModel1, d.maleModel2, d.femaleModel0, d.femaleModel1, d.femaleModel2)) {
             if (id < 0) continue
-            val md = try { models.get(id) } catch (e: Exception) { null } ?: continue
+            val md = PendingModels.model(models, id) ?: continue
             val fc = md.faceColors ?: continue
             for (i in fc.indices) { val c = fc[i].toInt() and 0xFFFF; if (c != 65535 && (md.faceTextures?.get(i)?.toInt() ?: -1) == -1) counts[c] = (counts[c] ?: 0) + 1 }
         }
@@ -445,7 +459,7 @@ class NewItemWizard(
         textureBox.children.clear()
         val used = LinkedHashSet<Int>()
         for (id in work.modelIds()) {
-            val md = try { models.get(id) } catch (e: Exception) { null } ?: continue
+            val md = PendingModels.model(models, id) ?: continue
             md.faceTextures?.forEach { t -> if (t.toInt() >= 0) used.add(t.toInt()) }
         }
         if (used.isEmpty()) { textureBox.children.add(Label("These models use no textures.")); return }
@@ -468,6 +482,7 @@ class NewItemWizard(
         val key = "$mode ${d.modelIds()} ${d.recolorFrom.joinToString()} ${d.recolorTo.joinToString()} ${d.retextureTo.joinToString()}"
         if (!force && key == lastLook) return
         lastLook = key
+        lookPlayback.stop()
         val md = try {
             when (mode) { 1 -> ItemPreview.wornModel(d, false, models); 2 -> ItemPreview.wornModel(d, true, models); else -> ItemPreview.inventoryModel(d, models) }
         } catch (e: Exception) { null }
@@ -481,17 +496,53 @@ class NewItemWizard(
         val buttons = FlowPane(6.0, 6.0,
             anim("Stand", "stand", 808), anim("Walk", "walk", 819), anim("Run", "run", 824), anim("Attack", "accurate", 422), anim("Block", "block", 424),
             Button("Special attack").apply { setOnAction {
-                val name = form.specialName ?: return@setOnAction run { playInfo.text = "It has no special attack (step 5)." }
-                val a = server?.let { ServerItems.specialAnimations(it)[name] }
-                    ?: return@setOnAction run { playInfo.text = "The $name special picks its animation in the server code, so there's no single one to show." }
-                playAnim(a)
+                val (a, why) = specialAnimation()
+                if (a == null) playInfo.text = why else playAnim(a)
             } },
             female,
             Button("Pause").apply { setOnAction { playback.playing = !playback.playing; text = if (playback.playing) "Pause" else "Play" } },
             Button("<").apply { setOnAction { playback.playing = false; playback.show(playback.frame - 1) } },
             Button(">").apply { setOnAction { playback.playing = false; playback.show(playback.frame + 1) } })
         val note = Label("The animations are the ones it will use in game (set in step 5). Drag to turn the player, scroll to zoom.").apply { isWrapText = true }
-        return VBox(8.0, buttons, note, playInfo, playerView).apply { padding = Insets(10.0); VBox.setVgrow(playerView, Priority.ALWAYS) }
+        val playerSplit = tryPlayer.under(playerView)
+        return VBox(8.0, buttons, note, playInfo, playerSplit).apply { padding = Insets(10.0); VBox.setVgrow(playerSplit, Priority.ALWAYS) }
+    }
+
+    private fun specialAnimation(): Pair<Int?, String> {
+        val name = form.specialName ?: return null to "It has no special attack (step 5)."
+        val a = server?.let { ServerItems.specialAnimations(it)[name] }
+            ?: return null to "The $name special picks its animation in the server code, so there's no single one to show."
+        return a to ""
+    }
+
+    /** A model tried on the player goes into the look fields (and the slot, when it was tried in one). */
+    private fun useTriedModel(id: Int, target: TryModelPanel.Target, place: ItemOnPlayer.Place): String {
+        val s = id.toString()
+        when (target) {
+            TryModelPanel.Target.WORN -> for (i in 0 until 3) { fMale[i].text = if (i == 0) s else ""; fFemale[i].text = if (i == 0) s else "" }
+            TryModelPanel.Target.MALE -> for (i in 0 until 3) fMale[i].text = if (i == 0) s else ""
+            TryModelPanel.Target.FEMALE -> for (i in 0 until 3) fFemale[i].text = if (i == 0) s else ""
+            TryModelPanel.Target.INVENTORY -> fInvModel.text = s
+        }
+        var moved = ""
+        val slot = place.slot
+        if (target != TryModelPanel.Target.INVENTORY && slot != null) {
+            val old = work.wearPos1
+            work.wearPos1 = slot; work.wearPos2 = place.hides; work.wearPos3 = place.hides2
+            filling = true
+            fSlot.selectionModel.select(ItemFull.SLOTS.keys.indexOf(slot).coerceAtLeast(0))
+            filling = false
+            // options still the usual ones for the old slot (not typed in): switch them to the new slot's
+            if (old != slot && (0 until 5).all { (work.inventoryOptions[it] ?: "") == (usualOptions(old)[it] ?: "") }) {
+                val opts = usualOptions(slot)
+                for (i in 0 until 5) { fInv[i].text = opts[i] ?: ""; work.inventoryOptions[i] = opts[i] }
+            }
+            moved = " It's now worn ${place.label.lowercase()} (step 2 shows the slot)."
+        }
+        readLook()
+        if (step == 2) { fillColours(); fillTextures(); refreshLook(true) }
+        val pending = if (PendingModels.isPending(id)) " The model goes into the cache when you press Create." else ""
+        return "Model $id is now ${target.label.removePrefix("As ").lowercase()}.$moved$pending"
     }
 
     private var lastPlayed: Int? = null
