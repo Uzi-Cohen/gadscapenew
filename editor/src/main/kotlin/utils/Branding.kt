@@ -11,7 +11,7 @@ import java.io.File
 
 object Branding {
     const val NAME = "Uzi's Map Editor"
-    const val VERSION = "1.0"
+    val VERSION: String get() = BuildInfo.label
 
     data class Theme(val id: String, val name: String, val file: String?)
 
