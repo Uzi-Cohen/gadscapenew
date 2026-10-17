@@ -157,6 +157,7 @@ class Packager(private val log: (String) -> Unit) {
     }
 
     companion object {
+        const val INSTALLER_NAME = "Install-Uzis-Map-Editor.cmd"
         /** Runs before every start: fetch a newer app\ from the update address if there is one. */
         const val UPDATER = """
             ${'$'}ErrorActionPreference = 'Stop'
@@ -230,7 +231,9 @@ class Packager(private val log: (String) -> Unit) {
      * gets a release with app.zip + version.txt (and optionally the full download with Java).
      * Everyone's portable copy picks it up the next time they start it. Your source stays private.
      */
-    fun publish(workDir: File, includeFull: Boolean, notes: String, includeMap: Boolean = true): Boolean {
+    fun publish(workDir: File, @Suppress("UNUSED_PARAMETER") full: Boolean, notes: String, includeMap: Boolean = true): Boolean {
+        // always: the one-click installer downloads the newest full package
+        val includeFull = true
         val login = run(listOf("gh", "api", "user", "--jq", ".login")).let { if (it.first == 0) it.second.trim() else "" }
         if (login.isEmpty()) {
             log(if (ghPath == "gh") "GitHub CLI not found. Install it: winget install --id GitHub.cli -e" else "GitHub CLI isn't logged in. Run: gh auth login --web")
@@ -287,15 +290,59 @@ class Packager(private val log: (String) -> Unit) {
             zipDir(image, full)
             log("Full download: %.0f MB".format(full.length() / 1048576.0))
             assets.add(full.path)
+            val installer = File(workDir, INSTALLER_NAME).apply { writeText(installer(base).replace("\n", "\r\n")) }
+            assets.add(installer.path)
         }
         val ok = run(listOf("gh", "release", "create", "v$stamp") + assets + listOf(
             "--repo", repo, "--latest", "--title", "Uzi's Map Editor $stamp", "--notes", notes.ifBlank { "Update $stamp" })).first == 0
         if (ok) {
             log("Published v$stamp. Everyone gets it the next time they open the editor.")
-            if (includeFull) log("Download link for friends: $base/latest/download/UzisMapEditor-full.zip")
+            log("Link for friends (download, double-click, done): $base/latest/download/$INSTALLER_NAME")
         }
         return ok
     }
+
+    /**
+     * One file a friend double-clicks: downloads the newest full package (editor + its own Java + map) into
+     * %LOCALAPPDATA%\Programs\Uzis Map Editor, puts a shortcut on the desktop and starts it. Running it again
+     * repairs or updates the install; the editor's settings in the user folder aren't touched.
+     */
+    fun installer(base: String): String = """
+        @echo off
+        title Installing Uzi's Map Editor
+        echo Installing Uzi's Map Editor. This takes a minute or two...
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "${'$'}s = (Get-Content -LiteralPath '%~f0' -Raw) -split ('::PS'+'-BEGIN'); Invoke-Expression ${'$'}s[1]"
+        if errorlevel 1 (echo. & echo Something went wrong, see the message above. & pause)
+        exit /b
+        ::PS-BEGIN
+        ${'$'}ErrorActionPreference = 'Stop'
+        ${'$'}ProgressPreference = 'SilentlyContinue'
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        try {
+            ${'$'}name = '${AppImage.APP_NAME}'
+            ${'$'}dest = Join-Path ${'$'}env:LOCALAPPDATA ('Programs' + ${'$'}name)
+            ${'$'}tmp = Join-Path ${'$'}env:TEMP ('ume-install-' + [guid]::NewGuid())
+            New-Item -ItemType Directory ${'$'}tmp | Out-Null
+            ${'$'}zip = Join-Path ${'$'}tmp 'full.zip'
+            'Downloading...'
+            Invoke-WebRequest '$base/latest/download/UzisMapEditor-full.zip' -OutFile ${'$'}zip -UseBasicParsing
+            'Unpacking...'
+            Expand-Archive ${'$'}zip ${'$'}tmp -Force
+            ${'$'}src = Join-Path ${'$'}tmp ${'$'}name
+            if (-not (Test-Path (Join-Path ${'$'}src (${'$'}name + '.exe')))) { throw 'The download looks broken. Try again.' }
+            Get-Process -ErrorAction SilentlyContinue | Where-Object { ${'$'}_.Path -like (${'$'}dest + '\*') } | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 500
+            if (Test-Path ${'$'}dest) { Remove-Item ${'$'}dest -Recurse -Force }
+            New-Item -ItemType Directory (Split-Path ${'$'}dest -Parent) -Force | Out-Null
+            Move-Item ${'$'}src ${'$'}dest
+            Remove-Item ${'$'}tmp -Recurse -Force -ErrorAction SilentlyContinue
+            ${'$'}exe = Join-Path ${'$'}dest (${'$'}name + '.exe')
+            ${'$'}lnk = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) ('Uzi''s Map Editor.lnk')))
+            ${'$'}lnk.TargetPath = ${'$'}exe; ${'$'}lnk.WorkingDirectory = ${'$'}dest; ${'$'}lnk.Save()
+            'Done. Starting it (there is a shortcut on your desktop now).'
+            Start-Process ${'$'}exe
+        } catch { ''; 'Install failed: ' + ${'$'}_.Exception.Message; exit 1 }
+    """.trimIndent()
 
     private fun zipDir(dir: File, zip: File) {
         ZipOutputStream(zip.outputStream().buffered()).use { out ->
