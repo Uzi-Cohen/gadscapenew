@@ -21,12 +21,14 @@ class KotlinSpawnFormat(private val serverDir: File) : SpawnFormat {
         private set
 
     companion object {
-        private val LINE = Regex("""^(\s*)(?:NpcId\.)?([A-Z][A-Z0-9_]*)\s*\(\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d+)\s*)?(?:,\s*(?:Direction\.)?([A-Z][A-Z_]*)\s*)?(?:,\s*(\d+)\s*)?((?:,[^)]*)?)\)(.*)$""")
+        private val LINE = Regex("""^(\s*)(?:NpcId\.)?([A-Z_][A-Z0-9_]*|\d{1,5})\s*\(\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d+)\s*)?(?:,\s*(?:Direction\.)?([A-Z][A-Z_]*)\s*)?(?:,\s*(\d+)\s*)?((?:,[^)]*)?)\)(.*)$""")
         private val CONST = Regex("""(?:const\s+val|static\s+final\s+int|val)\s+([A-Z][A-Z0-9_]*)\s*(?::\s*Int\s*)?=\s*(\d+)""")
         val DIRS = setOf("SOUTH", "SOUTH_WEST", "WEST", "NORTH_WEST", "NORTH", "NORTH_EAST", "EAST", "SOUTH_EAST")
         private fun skip(f: File) = f.invariantSeparatorsPath.let { it.contains("/build/") || it.contains("/.gradle/") || it.contains("/excluded/") || it.contains("/.git/") || it.contains("/node_modules/") }
         /** A line that calls something with x, y numbers: a spawn we may not have understood. */
         private val LOOKS_LIKE = Regex("""^\s*[\w.]+\s*\(\s*\d{3,5}\s*,\s*\d{3,5}""")
+        /** `5(false)` (north) or `5()` / `5(true)` (east): later spawns in the file get copies 64 * 5 tiles away. */
+        private val OFFSET = Regex("""^\s*(\d{1,3})\s*\(\s*(true|false|isX\s*=\s*(?:true|false))?\s*\)\s*(?://.*)?$""")
     }
 
     /** Spawn-looking lines that weren't read: name not in NpcId (count per name), or a shape we don't know (a few examples). */
@@ -43,7 +45,7 @@ class KotlinSpawnFormat(private val serverDir: File) : SpawnFormat {
         val imported = files(serverDir).take(400).flatMap { f ->
             f.useLines { ls -> ls.mapNotNull { Regex("""^\s*import\s+([\w.]+)\.NpcId(?:\.\*|\.\w+)?\s*$""").find(it)?.groupValues?.get(1) }.toList() }
         }.groupingBy { it }.eachCount()
-        val wanted = imported.maxBy { it.value }?.key
+        val wanted = imported.maxByOrNull { it.value }?.key
         val found = all.filter { wanted != null && pkg(it) == wanted }.ifEmpty { all }
         constantsFile = found.first()
         npcIdPackage = wanted
@@ -74,7 +76,12 @@ class KotlinSpawnFormat(private val serverDir: File) : SpawnFormat {
 
     override fun read(file: File): List<NpcSpawn> {
         val out = ArrayList<NpcSpawn>()
+        val xOff = ArrayList<Int>(); val yOff = ArrayList<Int>()
         file.readLines().forEachIndexed { i, l ->
+            OFFSET.matchEntire(l)?.let { o ->
+                if (o.groupValues[2].contains("false")) yOff.add(o.groupValues[1].toInt()) else xOff.add(o.groupValues[1].toInt())
+                return@forEachIndexed
+            }
             val m = LINE.matchEntire(l)
             if (m == null) {
                 if (LOOKS_LIKE.containsMatchIn(l) && oddLines.size < 8) oddLines.add(file.name + ": " + l.trim())
@@ -82,19 +89,22 @@ class KotlinSpawnFormat(private val serverDir: File) : SpawnFormat {
             }
             val name = m.groupValues[2]
             if (name == "Region" || name == "NPCSpawnsScript") return@forEachIndexed
-            val id = idOf[name] ?: run { unknownNames[name] = (unknownNames[name] ?: 0) + 1; return@forEachIndexed }
+            val id = name.toIntOrNull() ?: idOf[name] ?: run { unknownNames[name] = (unknownNames[name] ?: 0) + 1; return@forEachIndexed }
             val dir = m.groupValues[6].takeIf { it in DIRS } ?: "SOUTH"
             val s = NpcSpawn(id, m.groupValues[3].toInt(), m.groupValues[4].toInt(), m.groupValues[5].toIntOrNull() ?: 0, dir,
                 m.groupValues[7].toIntOrNull() ?: 0)
             s.line = i
             s.extra = m.groupValues[8]
+            s.numeric = name.toIntOrNull() != null
+            s.copies = xOff.map { it * 64 to 0 } + yOff.map { 0 to it * 64 }
             out.add(s)
         }
         return out
     }
 
     private fun lineFor(s: NpcSpawn, indent: String): String {
-        val c = constantFor(s.id) ?: throw IllegalStateException("No NpcId constant for NPC ${s.id}, so it can't be written to a spawn file.")
+        // a plain number is valid too (the server reads both): used when the file had one, or there's no NpcId name
+        val c = (if (s.numeric) null else constantFor(s.id)) ?: s.id.toString()
         return "$indent$c(${s.x}, ${s.y}, ${s.z}, ${s.direction}, ${s.radius}${s.extra})"
     }
 
@@ -107,7 +117,7 @@ class KotlinSpawnFormat(private val serverDir: File) : SpawnFormat {
         for ((i, s) in byLine) {
             if (i !in lines.indices) continue
             val m = LINE.matchEntire(lines[i])
-            val old = m?.let { NpcSpawn(idOf[it.groupValues[2]] ?: -1, it.groupValues[3].toInt(), it.groupValues[4].toInt(),
+            val old = m?.let { NpcSpawn(it.groupValues[2].toIntOrNull() ?: idOf[it.groupValues[2]] ?: -1, it.groupValues[3].toInt(), it.groupValues[4].toInt(),
                 it.groupValues[5].toIntOrNull() ?: 0, it.groupValues[6].takeIf { d -> d in DIRS } ?: "SOUTH", it.groupValues[7].toIntOrNull() ?: 0) }
             if (old != null && old.state() == s.state()) continue
             lines[i] = lineFor(s, m?.groupValues?.get(1) ?: indent) + (m?.groupValues?.get(9) ?: "")

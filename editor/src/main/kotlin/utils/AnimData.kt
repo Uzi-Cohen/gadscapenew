@@ -175,7 +175,7 @@ class Animator(private val baseX: IntArray, private val baseY: IntArray, private
     init {
         if (vertexSkins == null) groups = emptyArray()
         else {
-            val max = vertexSkins.max() ?: 0
+            val max = vertexSkins.maxOrNull() ?: 0
             val lists = Array(max + 1) { ArrayList<Int>() }
             for (v in vertexSkins.indices) lists[vertexSkins[v]].add(v)
             groups = Array(max + 1) { lists[it].toIntArray() }

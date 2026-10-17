@@ -242,7 +242,7 @@ class ShopBuilderWindow(
     /** The file with every shop block regenerated and everything else untouched. */
     private fun render(sf: ShopFile): String {
         if (sf.isNew) return buildString {
-            append(defaultHeader)
+            append(defaultHeader())
             val cls = sf.file.nameWithoutExtension
             appendln("class $cls : ShopScript() {")
             appendln("    init {")
@@ -266,8 +266,10 @@ class ShopBuilderWindow(
         return out.joinToString("\n") + "\n"
     }
 
-    private val defaultHeader = """
-        import com.near_reality.scripts.shops.ShopScript
+    private fun defaultHeader() = """
+        package com.${utils.ServerSource.pkg(server)}.plugins.shops
+
+        import com.${utils.ServerSource.pkg(server)}.scripts.shops.ShopScript
         import com.zenyte.game.model.shop.*
         import com.zenyte.game.model.shop.ShopPolicy
         import com.zenyte.game.model.shop.ShopPolicy.*
@@ -275,17 +277,17 @@ class ShopBuilderWindow(
         import com.zenyte.game.model.shop.ShopCurrency.*
         import com.zenyte.game.item.ItemId
         import com.zenyte.game.item.ItemId.*
-        import com.near_reality.game.content.universalshop.*
-        import com.near_reality.game.content.universalshop.UnivShopItem
-        import com.near_reality.game.content.universalshop.UnivShopItem.*
+        import com.${utils.ServerSource.pkg(server)}.game.content.universalshop.*
+        import com.${utils.ServerSource.pkg(server)}.game.content.universalshop.UnivShopItem
+        import com.${utils.ServerSource.pkg(server)}.game.content.universalshop.UnivShopItem.*
     """.trimIndent() + "\n\n"
 
     // ---------------- server source lookups ----------------
 
     private fun guessServerDir(): File? = utils.ServerSource.dir(configuration)
 
-    private fun shopsDir(server: File) = File(server, "plugins/shops/src/main/kotlin/com/near_reality/plugins/shops")
-    private val UNIV_DIR = "core-model/src/main/kotlin/com/near_reality/game/content/universalshop"
+    private fun shopsDir(server: File) = File(server, utils.Deployer.shopsPath(server))
+    private val UNIV_DIR get() = utils.ServerSource.pkgPath(server, "core-model/src/main/kotlin", "game/content/universalshop")
 
     private fun findSource(server: File, vararg names: String): File? = server.walkTopDown().maxDepth(16)
         .onEnter { it.name != "build" && it.name != ".git" && it.name != "node_modules" }
@@ -372,7 +374,7 @@ class ShopBuilderWindow(
 
         fun reloadFiles() {
             val s = server
-            lblServer.text = s?.path ?: "Pick your server folder (near-reality-server-main)."
+            lblServer.text = s?.path ?: "Pick your server folder (the one with gradlew)."
             currencies.clear(); policies.clear(); itemIdConsts.clear()
             if (s == null) { allFiles.clear(); return }
             loadItemIds(s)
@@ -403,7 +405,7 @@ class ShopBuilderWindow(
         }
         val btnServer = Button("Server folder...").apply {
             setOnAction {
-                val d = DirectoryChooser().apply { title = "Pick near-reality-server-main"; server?.let { initialDirectory = it } }
+                val d = DirectoryChooser().apply { title = "Pick your server folder"; server?.let { initialDirectory = it } }
                     .showDialog(scene?.window) ?: return@setOnAction
                 server = utils.ServerSource.fromPicked(configuration, d).first ?: d; reloadFiles()
             }
@@ -576,7 +578,7 @@ class ShopBuilderWindow(
                 val name = TextInputDialog("My Shop").apply { headerText = "Shop name (shown in game)"; title = "New shop" }.showAndWait().orElse(null) ?: return@setOnAction
                 val cls = name.replace(Regex("[^A-Za-z0-9]"), "").ifBlank { "Custom" } + "Shop"
                 val sf = ShopFile(File(dir, "$cls.kt"), ArrayList()).apply { isNew = true }
-                val nextId = (allFiles.flatMap { f -> f.shops.mapNotNull { it.id.trim().toIntOrNull() } }.max() ?: 1000) + 1
+                val nextId = (allFiles.flatMap { f -> f.shops.mapNotNull { it.id.trim().toIntOrNull() } }.maxOrNull() ?: 1000) + 1
                 sf.shops.add(Shop(name).apply {
                     headerArgs.addAll(listOf(nextId.toString(), "ShopCurrency.COINS", "STOCK_ONLY")); idIdx = 0; curIdx = 1; polIdx = 2
                 })

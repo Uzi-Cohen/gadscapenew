@@ -46,6 +46,117 @@ class ItemsTab(
     private var work: ItemFull? = null
     private var filling = false
 
+    // ---------- server stats (data/items/ItemDefinitions.json on the server) ----------
+    private var serverDir: File? = null
+    private var stats: com.google.gson.JsonObject? = null
+    private val sInfo = Label("").apply { isWrapText = true }
+    private val sSlot = ComboBox(FXCollections.observableArrayList(ItemFull.SLOTS.entries.map { it.value }))
+    private val sTwoHanded = CheckBox("Two-handed")
+    private val sWeight = TextField().apply { prefColumnCount = 6 }
+    private val sBonus = Array(14) { TextField().apply { prefColumnCount = 4 } }
+    private val sSpeed = TextField().apply { prefColumnCount = 3 }
+    private val sVarbit = TextField().apply { prefColumnCount = 4 }
+    private val sRange = TextField().apply { prefColumnCount = 3 }
+    private val sLongRange = TextField().apply { prefColumnCount = 3 }
+    private val sAnims = ItemStats.ANIMS.keys.associateWith { TextField().apply { prefColumnCount = 5 } }
+    private val sReq = TextField().apply { promptText = "e.g. Attack 75, Strength 80" }
+
+    private fun server(): File? = serverDir?.takeIf { it.isDirectory } ?: ServerSource.guess()?.also { serverDir = it }
+
+    /** The current item's server stats -> fields. */
+    private fun fillStats() {
+        val id = work?.id ?: return
+        val srv = server()
+        // what the server really uses for it (OSRS items also get the wiki stats merged in)
+        stats = try { srv?.let { ItemStats.effective(it, id) } } catch (e: Exception) { sInfo.text = "Can't read the server's item stats: ${e.message}"; null }
+        val e = stats
+        fillStatsFields(e ?: com.google.gson.JsonObject())
+        sInfo.text = when {
+            srv == null -> "Pick the server folder to see what this item does in game (bonuses, attack speed, animations)."
+            srv != null && ItemStats.osrs(srv, id) != null -> "Item $id is an OSRS item: the server also uses its OSRS stats (the higher bonus wins, attack speed and requirements from OSRS), so lowering a stat here may not change it in game."
+            e == null -> "The server has no stats for item $id, so it can't be worn or wielded in game. Copy them from a similar item, change them, and Save stats."
+            else -> "What item $id does in game (the server's data/items/ItemDefinitions.json)."
+        }
+    }
+
+    private fun fillStatsFields(e: com.google.gson.JsonObject) {
+        sSlot.selectionModel.select(ItemFull.SLOTS.keys.indexOf(ItemStats.int(e, "slot", -1)).coerceAtLeast(0))
+        val wd = e.getAsJsonObject("equipmentDefinition")?.getAsJsonObject("weaponDefinition")
+        sTwoHanded.isSelected = ItemStats.bool(wd, "twoHanded")
+        sWeight.text = if (e.has("weight")) ItemStats.weight(e).toString() else ""
+        val b = ItemStats.bonuses(e); for (i in 0 until 14) sBonus[i].text = b[i].toString()
+        sSpeed.text = wd?.takeIf { it.has("attackSpeed") }?.let { ItemStats.ticks(ItemStats.int(it, "attackSpeed")).toString() } ?: ""
+        sVarbit.text = wd?.let { ItemStats.int(it, "interfaceVarbit").toString() } ?: ""
+        sRange.text = wd?.let { ItemStats.int(it, "normalAttackDistance").toString() } ?: ""
+        sLongRange.text = wd?.let { ItemStats.int(it, "longAttackDistance").toString() } ?: ""
+        for ((k, f) in sAnims) f.text = wd?.get(k)?.asInt?.toString() ?: ""
+        sReq.text = ItemStats.requirements(e).entries.joinToString(", ") { (k, v) -> "${ItemStats.SKILLS.getOrElse(k) { k.toString() }} $v" }
+    }
+
+    private val reqPart = Regex("""^([A-Za-z]+|\d+)\s*:?\s*(\d+)$""")
+
+    /** Fields -> a stats entry for the current item. */
+    private fun statsFromFields(): com.google.gson.JsonObject {
+        val id = work?.id ?: error("pick an item first")
+        val e = stats?.deepCopy() ?: com.google.gson.JsonObject().apply { addProperty("id", id); addProperty("equipmentType", "DEFAULT") }
+        e.addProperty("id", id)
+        val slot = ItemFull.SLOTS.keys.toList().getOrElse(sSlot.selectionModel.selectedIndex) { -1 }
+        e.addProperty("slot", slot.coerceAtLeast(0))
+        ItemStats.setWeight(e, sWeight.text.trim().toDoubleOrNull() ?: 0.0)
+        ItemStats.setBonuses(e, IntArray(14) { sBonus[it].text.trim().toIntOrNull() ?: error("${ItemStats.BONUS_NAMES[it]} isn't a number") })
+        if (slot == 3 || e.getAsJsonObject("equipmentDefinition")?.has("weaponDefinition") == true) {
+            val w = ItemStats.weapon(e)
+            w.addProperty("twoHanded", sTwoHanded.isSelected)
+            sSpeed.text.trim().toIntOrNull()?.let { w.addProperty("attackSpeed", ItemStats.stored(it)) }
+            sVarbit.text.trim().toIntOrNull()?.let { w.addProperty("interfaceVarbit", it) }
+            sRange.text.trim().toIntOrNull()?.let { w.addProperty("normalAttackDistance", it) }
+            sLongRange.text.trim().toIntOrNull()?.let { w.addProperty("longAttackDistance", it) }
+            for ((k, f) in sAnims) f.text.trim().toIntOrNull()?.let { w.addProperty(k, it) }
+        }
+        val req = LinkedHashMap<Int, Int>()
+        for (part in sReq.text.split(',').map { it.trim() }.filter { it.isNotEmpty() }) {
+            val m = reqPart.find(part) ?: error("requirement '$part' should look like Attack 75")
+            val skill = m.groupValues[1].toIntOrNull() ?: ItemStats.SKILLS.indexOfFirst { it.equals(m.groupValues[1], true) }.takeIf { it >= 0 }
+                ?: error("${m.groupValues[1]} isn't a skill")
+            req[skill] = m.groupValues[2].toInt()
+        }
+        ItemStats.setRequirements(e, req)
+        return e
+    }
+
+    private fun saveStats() {
+        val srv = server() ?: return say("Pick the server folder first.")
+        try {
+            val e = statsFromFields()
+            ItemStats.put(srv, e)
+            say("Saved the stats of item ${e["id"].asInt} in ${ItemStats.file(srv).path}. Send stats to server puts them on the live server.")
+            fillStats()
+        } catch (ex: Exception) { say("Couldn't save the stats: ${ex.message}") }
+    }
+
+    private fun copyStats() {
+        val srv = server() ?: return say("Pick the server folder first.")
+        val id = work?.id ?: return say("Pick an item first.")
+        val from = TextInputDialog("22325").apply { title = "Copy stats"; headerText = null; contentText = "Copy the stats of item id (22325 = Scythe of vitur, 4151 = whip):"; initOwner(stage) }
+            .showAndWait().orElse(null)?.trim()?.toIntOrNull() ?: return
+        val e = ItemStats.copyFrom(srv, from, id) ?: return say("The server has no stats for item $from.")
+        stats = e
+        fillStatsFields(e)
+        sInfo.text = "Copied from item $from (not saved yet). Change what you want, then Save stats."
+    }
+
+    private fun sendStats() {
+        val srv = server() ?: return say("Pick the server folder first.")
+        val ids = ItemStats.pending()
+        if (ids.isEmpty()) return say("No saved stats to send. Save stats first.")
+        say("Sending stats for ${ids.size} item(s) to the server (it restarts)...")
+        Thread({
+            val lines = ArrayList<String>()
+            val ok = try { Deployer { lines.add(it); println(it) }.deployItemStats(srv) } catch (ex: Exception) { lines.add("Failed: ${ex.message}"); false }
+            javafx.application.Platform.runLater { say((if (ok) "Item stats are on the live server. " else "Sending the stats failed. ") + lines.takeLast(3).joinToString(" ")) }
+        }, "send-item-stats").apply { isDaemon = true }.start()
+    }
+
     // ---------- fields ----------
     private fun num(w: Int = 6) = TextField().apply { prefColumnCount = w }
     private val fName = TextField()
@@ -80,6 +191,7 @@ class ItemsTab(
         if (!d.readOk) { work = null; info.text = "Item $id (${d.name}) can't be edited: ${d.problem}."; bigIcon.image = null; view.show(null); return }
         work = d.copy(d.id)
         fill()
+        fillStats()
         info.text = "Item $id: ${d.name}" + (if (d.isNoted) " - this is the noted version of item ${d.noteLinked}; change the real item instead." else "")
     }
 
@@ -427,6 +539,27 @@ class ItemsTab(
                 } },
                 Button("Remove").apply { setOnAction { val k = pKey.text.trim().toIntOrNull(); params.removeIf { it.first == k }; apply() } }),
             Label("Skill needed: key 434 = skill (0 Attack, 1 Defence, 2 Strength, 4 Ranged, 6 Magic...), 436 = level; 435 / 437 for a second skill.").apply { isWrapText = true },
+            Separator(),
+            Label("In game (the server's item stats: bonuses, speed, animations)").apply { styleClass.add("section") },
+            sInfo,
+            HBox(6.0, Button("Server folder...").apply { setOnAction {
+                    javafx.stage.DirectoryChooser().apply { title = "Your server folder (with gradlew and data)" }.showDialog(stage)?.let { d ->
+                        val s = ServerSource.near(d); if (s == null) say("${d.path} isn't a server folder.") else { serverDir = s; fillStats() } } } },
+                Button("Copy stats from item...").apply { setOnAction { copyStats() } }),
+            row("Slot", sSlot, sTwoHanded),
+            row("Weight kg", sWeight),
+            Label("Bonuses"),
+            GridPane().apply { hgap = 4.0; vgap = 3.0
+                for (i in 0 until 14) { add(Label(ItemStats.BONUS_NAMES[i]).apply { minWidth = Region.USE_PREF_SIZE }, (i % 4) * 2, i / 4); add(sBonus[i], (i % 4) * 2 + 1, i / 4) } },
+            row("Attack speed", sSpeed, Label("ticks (4 = whip, 5 = scythe, 6 = slow)")),
+            row("Weapon type", sVarbit, Label("(attack styles tab; copy it from a similar weapon)")),
+            row("Attack range", sRange, Label("long range"), sLongRange),
+            Label("Weapon animations (animation ids; empty = keep as is)"),
+            GridPane().apply { hgap = 4.0; vgap = 3.0
+                sAnims.entries.forEachIndexed { i, (k, f) -> add(Label(ItemStats.ANIMS[k]).apply { minWidth = Region.USE_PREF_SIZE }, (i % 2) * 2, i / 2); add(f, (i % 2) * 2 + 1, i / 2) } },
+            row("Requirements", sReq),
+            HBox(6.0, Button("Save stats").apply { styleClass.add("accent"); setOnAction { saveStats() } },
+                Button("Send stats to server").apply { setOnAction { sendStats() } }),
             Separator(),
             HBox(8.0, noteInfo, Button("Make noted version").apply { setOnAction { makeNoted() } }).apply { alignment = Pos.CENTER_LEFT },
             HBox(6.0, Button("Save").apply { styleClass.add("accent"); setOnAction { save(false) } },

@@ -285,7 +285,7 @@ class SideMapWindow(
             val me = myCenter() ?: Pair(3200, 3200)
             val myRegion = ((me.first shr 6) shl 8) or (me.second shr 6)
             val target = if (knownRegions.isEmpty() || myRegion in knownRegions) me else {
-                val near = knownRegions.minBy { r -> val dx = (r shr 8) - (myRegion shr 8); val dy = (r and 0xFF) - (myRegion and 0xFF); dx * dx + dy * dy }!!
+                val near = knownRegions.minByOrNull { r -> val dx = (r shr 8) - (myRegion shr 8); val dy = (r and 0xFF) - (myRegion and 0xFF); dx * dx + dy * dy }!!
                 Pair(((near shr 8) shl 6) + 32, ((near and 0xFF) shl 6) + 32)
             }
             cx = target.first.toDouble(); cy = target.second.toDouble()

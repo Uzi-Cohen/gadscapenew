@@ -188,7 +188,7 @@ class AiBridge(
         val so = model.selectedObject
         val area = if (ids.isEmpty()) null else {
             val xs = ids.map { (it shr 8) shl 6 }; val ys = ids.map { (it and 0xFF) shl 6 }
-            mapOf("x1" to xs.min(), "y1" to ys.min(), "x2" to xs.max()!! + 63, "y2" to ys.max()!! + 63)
+            mapOf("x1" to xs.minOrNull(), "y1" to ys.minOrNull(), "x2" to xs.maxOrNull()!! + 63, "y2" to ys.maxOrNull()!! + 63)
         }
         return linkedMapOf(
             "loaded" to scene.isLoaded(),

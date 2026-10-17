@@ -286,9 +286,9 @@ class WorldMapWindow(
                 if (has) found.add((rx shl 8) or ry)
             }
             if (found.isEmpty()) throw IllegalStateException("no map files in this layer")
-            val minRx = found.map { it shr 8 }.min()!!
-            val minRy = found.map { it and 0xFF }.min()!!
-            val maxRy = found.map { it and 0xFF }.max()!!
+            val minRx = found.map { it shr 8 }.minOrNull()!!
+            val minRy = found.map { it and 0xFF }.minOrNull()!!
+            val maxRy = found.map { it and 0xFF }.maxOrNull()!!
             val topRy = minRy + ((maxRy - minRy) / CHUNK + 1) * CHUNK - 1
 
             val chunkPixels = HashMap<Pair<Int, Int>, IntArray>()

@@ -34,6 +34,9 @@ class TeleportWindow(
             (open ?: TeleportWindow(gadToolsModel, configuration, goTo, log).also { open = it }).show()
         }
         private val CODE = Regex("""(?:Location|ImmutableLocation|WorldTile|Position|Tile|Coordinate|Coords|teleport|tele)\s*\(\s*(\d{3,5})\s*,\s*(\d{3,5})(?:\s*,\s*(\d))?\s*[,)]""", RegexOption.IGNORE_CASE)
+        /** Teleport menu entries: "Alchemical Hydra"(4289, 1351, 10248, 0, "wiki link") (icon, x, y, z). */
+        private val MENU = Regex(""""[^"]{2,60}"\s*\(\s*-?\d+\s*,\s*(\d{3,5})\s*,\s*(\d{3,5})\s*,\s*([0-3])\b""")
+        private fun codeMatches(l: String) = CODE.findAll(l) + MENU.findAll(l)
         private val DATA = Regex("""[\[(]\s*(\d{4,5})\s*,\s*(\d{4,5})\s*(?:,\s*([0-3]))?\s*[\])]""")
         private val STRING = Regex(""""([^"\\]{2,60})"""")
         private fun skip(f: File) = f.invariantSeparatorsPath.let { it.contains("/build/") || it.contains("/.gradle/") || it.contains("/.git/") || it.contains("/node_modules/") }
@@ -85,7 +88,7 @@ class TeleportWindow(
             val ls = try { f.readLines() } catch (e: Exception) { return@forEach }
             ls.forEachIndexed { i, l ->
                 if (l.trimStart().startsWith("//") || l.trimStart().startsWith("import ")) return@forEachIndexed
-                val m = (if (isData) DATA else CODE).find(l) ?: return@forEachIndexed
+                val m = (if (isData) DATA.find(l) else codeMatches(l).firstOrNull()) ?: return@forEachIndexed
                 val x = m.groupValues[1].toInt(); val y = m.groupValues[2].toInt()
                 if (!inWorld(x, y)) return@forEachIndexed
                 val z = m.groupValues[3].toIntOrNull() ?: 0
@@ -120,7 +123,7 @@ class TeleportWindow(
         val ls = lines(h.file)
         val l = ls.getOrNull(h.line) ?: return false
         val isData = h.file.extension !in setOf("kt", "kts", "java")
-        val m = (if (isData) DATA else CODE).findAll(l).firstOrNull { it.groupValues[1].toInt() == h.origX && it.groupValues[2].toInt() == h.origY } ?: return false
+        val m = (if (isData) DATA.findAll(l) else codeMatches(l)).firstOrNull { it.groupValues[1].toInt() == h.origX && it.groupValues[2].toInt() == h.origY } ?: return false
         val gx = m.groups[1]!!.range; val gy = m.groups[2]!!.range; val gz = m.groups[3]?.range
         val sb = StringBuilder(l)
         // right to left so the earlier ranges stay valid

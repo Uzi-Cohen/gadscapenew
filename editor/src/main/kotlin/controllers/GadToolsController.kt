@@ -573,7 +573,7 @@ class GadToolsController @Inject constructor(
             val ids = GadTools.loadedRegionIds(scene)
             if (ids.isEmpty()) { status("No map loaded."); return }
             val xs = ids.map { (it shr 8) shl 6 }; val ys = ids.map { (it and 0xFF) shl 6 }
-            models.TileRect(xs.min()!!, ys.min()!!, xs.max()!! + 63, ys.max()!! + 63)
+            models.TileRect(xs.minOrNull()!!, ys.minOrNull()!!, xs.maxOrNull()!! + 63, ys.maxOrNull()!! + 63)
         } else gadToolsModel.selection ?: run { status("Select an area first (Select area tool, drag on the map)."); return }
         if (!confirm("Delete roofs?", "Removes every roof piece " + (if (wholeMap) "in all loaded regions" else "in ${rect.width} x ${rect.height} tiles") +
                     ", on all floors. Walls and everything else stay. Ctrl+Z undoes it.")) return

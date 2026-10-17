@@ -473,7 +473,7 @@ class TileOps(private val access: RegionAccess) {
                     val u = underlayAt(x + dx, y + dy)
                     if (u != 0) counts[u] = (counts[u] ?: 0) + 1
                 }
-                if (counts.isNotEmpty()) { pick = counts.maxBy { it.value }!!.key; break }
+                if (counts.isNotEmpty()) { pick = counts.maxByOrNull { it.value }!!.key; break }
             }
             if (pick != 0) plan.add(Triple(x, y, pick))
         }

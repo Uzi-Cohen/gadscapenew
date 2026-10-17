@@ -56,6 +56,7 @@ class InspectorController @Inject constructor(
                         }
 
                     }
+                    else -> {}
                 }
 
                 sb.append("\n" + hovered.toString())

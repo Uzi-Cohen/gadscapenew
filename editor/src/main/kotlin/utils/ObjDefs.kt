@@ -12,6 +12,8 @@ class ObjDef(val id: Int, val raw: ByteArray) {
     val options = arrayOfNulls<String>(5)
     internal val parts = ArrayList<Triple<Int, Int, Int>>()
     var readOk = true
+    /** Read with the extra ambient sound byte (opcodes 78/79). */
+    var wideSounds = false
     /** The first setting this editor doesn't know (when [readOk] is false), to tell the user. */
     var unknownOp = -1
     override fun toString() = "$id  $name"
@@ -50,6 +52,30 @@ class ObjDef(val id: Int, val raw: ByteArray) {
 }
 
 object ObjDefs {
+    /** The GadScape client reads the extra sound byte (opcodes 78/79) only for object ids above this. */
+    const val WIDE_SOUNDS_ABOVE = 47337
+
+    /**
+     * The same settings with the ambient sound opcodes (78/79) in the width the client expects for [newId], for
+     * moving an object to another id (one above 47337 is read with the extra byte, one below without).
+     */
+    fun resoundFor(def: ObjDef, bytes: ByteArray, newId: Int): ByteArray {
+        val want = newId > WIDE_SOUNDS_ABOVE
+        val d = decodeWith(def.id, bytes, def.wideSounds) ?: return bytes
+        if (d.wideSounds == want || d.parts.none { it.first == 78 || it.first == 79 }) return bytes
+        val out = ByteArrayOutputStream()
+        for ((op, s, e) in d.parts) {
+            if (op != 78 && op != 79) { out.write(bytes, s, e - s); continue }
+            val fixed = if (op == 78) 4 else 6 // opcode + the settings before the extra byte
+            out.write(bytes, s, fixed)
+            if (want) out.write(0)
+            val rest = s + fixed + (if (d.wideSounds) 1 else 0)
+            out.write(bytes, rest, e - rest)
+        }
+        out.write(0)
+        return out.toByteArray()
+    }
+
     /** [wideSounds]: caches from 220+ have an extra byte in the ambient sound opcodes (78/79). */
     private fun decodeWith(id: Int, b: ByteArray, wideSounds: Boolean): ObjDef? {
         val d = ObjDef(id, b)
@@ -60,7 +86,8 @@ object ObjDefs {
             while (p < b.size) {
                 val start = p
                 val op = u8()
-                if (op == 0) { return if (p == b.size) d else null }
+                // the game stops at the end marker; some server packers pad the definition with zeros after it
+                if (op == 0) { d.wideSounds = wideSounds; return if (p == b.size || (p until b.size).all { b[it].toInt() == 0 }) d else null }
                 when (op) {
                     1 -> { val n = u8(); p += 3 * n }
                     2 -> d.name = str()
@@ -84,7 +111,7 @@ object ObjDefs {
     }
 
     fun decode(id: Int, b: ByteArray): ObjDef =
-        decodeWith(id, b, false) ?: decodeWith(id, b, true) ?: ObjDef(id, b).also { d ->
+        decodeWith(id, b, id > WIDE_SOUNDS_ABOVE) ?: decodeWith(id, b, id <= WIDE_SOUNDS_ABOVE) ?: ObjDef(id, b).also { d ->
             d.readOk = false
             // still show what we can: name and options are plain text settings
             readLoose(b, d)
@@ -139,8 +166,9 @@ object ObjDefs {
         val bytes = if (def.readOk) def.encode(name, options) else def.encodeAppended(name, options)
         val dir = GadTools.ensureExportCache()
         val lib = CacheLibrary(dir.path)
-        val newId = try { (lib.index(2).archive(6)?.fileIds()?.max() ?: 0) + 1 } finally { lib.close() }
-        write(newId, bytes)
+        val newId = try { (lib.index(2).archive(6)?.fileIds()?.maxOrNull() ?: 0) + 1 } finally { lib.close() }
+        // the client reads opcodes 78/79 one byte wider above 47337: match the new id or the rest reads as garbage
+        write(newId, if (def.readOk) resoundFor(def, bytes, newId) else bytes)
         return decode(newId, bytes)
     }
 

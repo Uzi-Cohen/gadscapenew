@@ -11,6 +11,13 @@ class NpcSpawn(var id: Int, var x: Int, var y: Int, var z: Int, var direction: S
     var line = -1
     /** Anything after the numbers on its line that we don't understand, kept as it was. */
     var extra: String = ""
+    /** Written as a plain number in the file (not an NpcId name). */
+    var numeric = false
+    /**
+     * Extra copies the server makes of this spawn: `5(false)` lines before it in the file copy every spawn
+     * 5 * 64 tiles north (`5()` east). Shown on the map; they move with this one.
+     */
+    var copies: List<Pair<Int, Int>> = emptyList()
 
     data class State(val id: Int, val x: Int, val y: Int, val z: Int, val direction: String, val radius: Int)
     fun state() = State(id, x, y, z, direction, radius)
@@ -42,7 +49,7 @@ object NpcSpawns {
     /** Spawns on a tile (big NPCs cover more than one tile; the one whose corner is closest wins). */
     fun at(x: Int, y: Int, z: Int, size: (Int) -> Int): NpcSpawn? =
         all.filter { it.z == z && x >= it.x && y >= it.y && x < it.x + size(it.id) && y < it.y + size(it.id) }
-            .minBy { (x - it.x) + (y - it.y) }
+            .minByOrNull { (x - it.x) + (y - it.y) }
 
     fun add(s: NpcSpawn) { if (s.file == null) s.file = format?.fileFor(s, serverDir); all.add(s); deleted.remove(s); touched(s) }
     fun remove(s: NpcSpawn) {
