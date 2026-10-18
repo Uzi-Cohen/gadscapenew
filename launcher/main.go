@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -43,15 +44,26 @@ func main() {
 	// its own folder: the old installer's folder (Programs\Uzis Map Editor) has an auto-updater that puts the old
 	// launcher back
 	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "UzisMapEditor")
+	startLog(dest)
+	logf("launcher %s starting", build)
 	withProgress(func(p *progress) {
+		defer func() {
+			if r := recover(); r != nil {
+				logf("crashed: %v\n%s", r, debug.Stack())
+				fail(fmt.Sprintf("The launcher crashed: %v\n\nSend Claude %s", r, filepath.Join(dest, "launcher.log")))
+			}
+		}()
 		if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
 			p.say("Installing...", -1)
 			if err := install(dest); err != nil {
 				fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
 			}
 		}
+		logf("installed; placing exe")
 		placeSelf(dest)
+		logf("checking for updates")
 		update(dest, p)
+		logf("starting the editor")
 		javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
 		cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
 		cmd.Dir = dest
@@ -66,14 +78,23 @@ func main() {
 		// an editor that closes right away has crashed: say why instead of just vanishing
 		exited := make(chan error, 1)
 		go func() { exited <- cmd.Wait() }()
-		for wait := 0; wait < 15; wait++ {
+		for wait := 0; ; wait++ {
 			select {
 			case err := <-exited:
 				fail(crashReport(dest, err, time.Since(started)))
 			case <-time.After(time.Second):
 			}
+			if hasVisibleWindow(cmd.Process.Pid) {
+				logf("editor window is up after %ds", wait+1)
+				break
+			}
 			if wait == 3 {
 				p.hide() // the editor's own splash is up by now
+			}
+			if wait == 25 {
+				// running, but nothing on screen: say so instead of leaving it invisible
+				logf("editor running but no window after 25s")
+				fail(crashReport(dest, fmt.Errorf("it is running but never showed a window"), time.Since(started)))
 			}
 		}
 	})
@@ -326,7 +347,28 @@ func crashReport(dest string, err error, ran time.Duration) string {
 	return msg
 }
 
+var logFile *os.File
+
+// startLog keeps launcher.log next to the install: every step, and (SetCrashOutput) any crash, which a windowless
+// program would otherwise lose without a trace.
+func startLog(dest string) {
+	os.MkdirAll(dest, 0o755)
+	f, err := os.OpenFile(filepath.Join(dest, "launcher.log"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return
+	}
+	logFile = f
+}
+
+func logf(format string, a ...any) {
+	if logFile != nil {
+		fmt.Fprintf(logFile, time.Now().Format("15:04:05.000")+" "+format+"\n", a...)
+		logFile.Sync()
+	}
+}
+
 func fail(msg string) {
+	logf("FAIL: %s", msg)
 	t, _ := syscall.UTF16PtrFromString("Uzi's Map Editor")
 	m, _ := syscall.UTF16PtrFromString(msg)
 	syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x10)

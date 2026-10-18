@@ -857,7 +857,7 @@ class Renderer @Inject constructor(
         if (!utils.HdFloors.enabled) return
         val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return
         val swaps = utils.HdFloors.makeShowAsPainted(ct, w.first, w.second, plane) { overlay, stored ->
-            utils.FloorTwins.twinFor(overlay, stored) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) }
+            utils.FloorTwins.twinFor(overlay, stored, overlayLoader, underlayLoader)
         }
         if (swaps.isNotEmpty()) hdTwinNote = "So HD shows it as painted, swapped " + swaps.joinToString(", ") + ": the same floors, which HD leaves alone."
     }

@@ -783,7 +783,7 @@ class GadToolsController @Inject constructor(
                 if (utils.HdFloors.recolouredBy(t.overlayId, t.underlayId, wx, wy, z) == null) continue
                 rec.touch(rid, z, x, y, t)
                 val swaps = utils.HdFloors.makeShowAsPainted(t, wx, wy, z) { overlay, stored ->
-                    utils.FloorTwins.twinFor(overlay, stored) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) }
+                    utils.FloorTwins.twinFor(overlay, stored, overlayLoader, underlayLoader)
                 }
                 def.syncTile(z, x, y)
                 for (k in swaps) swapped[k] = (swapped[k] ?: 0) + 1
