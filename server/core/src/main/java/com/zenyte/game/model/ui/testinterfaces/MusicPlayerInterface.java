@@ -1,7 +1,6 @@
 package com.zenyte.game.model.ui.testinterfaces;
 
 import com.gadscape.game.content.kits.KitsTabCache;
-import com.gadscape.game.content.kits.SidePanel;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.preset.Preset;
 import com.zenyte.game.content.preset.PresetManager;
@@ -24,9 +23,6 @@ public class MusicPlayerInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(KitsTabCache.MAIN_ICON, "Main tab");
-        put(KitsTabCache.KITS_ICON, "Kit tab");
-        put(KitsTabCache.STORE_ICON, "PK Store");
         put(KitsTabCache.SAVE_BUTTON, "Save");
         for (int row = 0; row < KitsTabCache.ROWS; row++) {
             put(KitsTabCache.FIRST_ROW + row, "Kit " + row);
@@ -43,7 +39,6 @@ public class MusicPlayerInterface extends Interface {
     public void open(Player player) {
         player.getInterfaceHandler().sendInterface(getInterface());
         refresh(player);
-        SidePanel.show(player, SidePanel.page(player));
     }
 
     public static void refresh(Player player) {
@@ -73,7 +68,7 @@ public class MusicPlayerInterface extends Interface {
         }
         player.getPacketDispatcher().sendComponentText(tab, KitsTabCache.PAGE, (page + 1) + "/" + pages);
         player.getPacketDispatcher().sendComponentText(tab, KitsTabCache.COUNT,
-                total == 0 ? "No kits yet. Gear up, then save." : total + " / " + presets.getMaximumPresets() + " kits");
+                total == 0 ? "No kits yet. Gear up, then save it." : total + " / " + presets.getMaximumPresets() + " kits");
     }
 
     private static int page(Player player) {
@@ -113,12 +108,6 @@ public class MusicPlayerInterface extends Interface {
 
     @Override
     protected void build() {
-        bind("Main tab", player -> SidePanel.show(player, SidePanel.MAIN));
-        bind("Kit tab", player -> {
-            refresh(player);
-            SidePanel.show(player, SidePanel.KITS);
-        });
-        bind("PK Store", com.gadscape.game.content.pk.PkStore::open);
         bind("Save", player -> {
             if (!canUse(player)) {
                 return;

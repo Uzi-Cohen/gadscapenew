@@ -926,7 +926,7 @@ LABEL754:
    jump                   LABEL782
 LABEL757:
    get_varc_string        335
-   sconst                 "::gadscape-no-such-command"
+   sconst                 "::bank"
    iconst                 0
    string_indexof_string 
    iconst                 0
