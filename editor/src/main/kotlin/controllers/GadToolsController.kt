@@ -980,7 +980,8 @@ class GadToolsController @Inject constructor(
         TerrainTool.INSPECT to "Select obj", TerrainTool.RAISE to "Raise", TerrainTool.LOWER to "Lower",
         TerrainTool.FLATTEN to "Flatten", TerrainTool.SMOOTH to "Smooth", TerrainTool.REMOVE to "Remove",
         TerrainTool.SET_HEIGHT to "Set height", TerrainTool.NOISE to "Roughen", TerrainTool.UNDERLAY to "Underlay",
-        TerrainTool.OVERLAY to "Overlay", TerrainTool.FLAGS to "Flags", TerrainTool.SELECT to "Select"
+        TerrainTool.OVERLAY to "Overlay", TerrainTool.FLAGS to "Flags", TerrainTool.SELECT to "Select",
+        TerrainTool.PICK to "Pen (pick)"
     )
     private val toolTips = mapOf(
         TerrainTool.INSPECT to "Click an object to select it. Drag it to move it. R rotates, Ctrl+C / Ctrl+V copy and paste, M picks it up, Delete removes it.",
@@ -994,7 +995,9 @@ class GadToolsController @Inject constructor(
         TerrainTool.UNDERLAY to "Paints the underlay picked in the Paint tab. Shift erases.",
         TerrainTool.OVERLAY to "Paints the overlay + shape picked in the Paint tab. Shift erases, R rotates.",
         TerrainTool.FLAGS to "Paints the tile flags picked in the Paint tab. Shift clears them.",
-        TerrainTool.SELECT to "Drag a box. Then drag inside the box to move it (hold Shift to drag a copy), or Ctrl+C / Ctrl+V."
+        TerrainTool.SELECT to "Drag a box. Then drag inside the box to move it (hold Shift to drag a copy), or Ctrl+C / Ctrl+V.",
+        TerrainTool.PICK to "Click a tile to pick up its paint (underlay, overlay, shape and turn), then paint with it. " +
+                "With the Underlay, Overlay or Flags tool, Alt + click does the same without changing tool."
     )
 
     /** Tool buttons shared by the Tools and Paint tabs, kept in sync with the model. */
@@ -1211,7 +1214,7 @@ class GadToolsController @Inject constructor(
             .forEach { it.addListener { _, _, _ -> redrawPreview() } }
         redrawPreview()
 
-        val paintTools = toolButtons(listOf(TerrainTool.UNDERLAY, TerrainTool.OVERLAY, TerrainTool.FLAGS), 3)
+        val paintTools = toolButtons(listOf(TerrainTool.UNDERLAY, TerrainTool.OVERLAY, TerrainTool.FLAGS, TerrainTool.PICK), 4)
         val btnMapNumbers = ToggleButton("Numbers on map").apply {
             tooltip = Tooltip("Every tile's underlay/overlay number drawn on the 3D map, all floors (Ctrl+T). Red = a tile that's dead in game.")
             isSelected = gadToolsModel.tileLabelMode.get() != 0

@@ -25,7 +25,8 @@ enum class TerrainTool(val label: String) {
     OVERLAY("Paint overlay"),
     FLAGS("Paint tile flags"),
     SELECT("Select area"),
-    NPC("NPCs (place, drag, turn, remove)");
+    NPC("NPCs (place, drag, turn, remove)"),
+    PICK("Pick paint (pen)");
 
     val paints: Boolean get() = this == UNDERLAY || this == OVERLAY || this == FLAGS
     val heights: Boolean get() = this == RAISE || this == LOWER || this == FLATTEN || this == SMOOTH || this == SET_HEIGHT || this == NOISE

@@ -489,6 +489,7 @@ class Renderer @Inject constructor(
 
     // ---- editing: strokes, area tools, undo/redo ----
     private var recorder: TileRecorder? = null
+    private var pickDone = false
     // floor decorations (carpets, rugs...) taken off painted tiles during this stroke
     private val strokeDecorGone = ArrayList<Edit>()
     private var strokeHeightOnly = true
@@ -842,6 +843,43 @@ class Renderer @Inject constructor(
     }
 
     private fun heightOf(t: SceneTile?): Int? = groundTile(t)?.second?.height
+
+    /** The pen: take the paint off the tile under the mouse (on the floor being edited) and paint with it. */
+    private fun pickPaint(tool: TerrainTool) {
+        val plane = currentPlane
+        val t = scene.getTile(0, hoverId shr 18 and 0x1FFF, hoverId shr 5 and 0x1FFF)
+        val ct = groundTile(t, plane)?.second ?: return
+        val under = ct.underlayId - 1
+        val over = ct.overlayId - 1
+        val shape = ct.overlayPath.toInt()
+        val turn = ct.overlayRotation.toInt() and 3
+        val flags = ct.settings.toInt() and 0x1F
+        if (tool == TerrainTool.FLAGS) {
+            if (flags == 0) { gadToolsModel.message = "No flags on that tile (floor $plane)."; return }
+            javafx.application.Platform.runLater { gadToolsModel.flagMask.set(flags) }
+            gadToolsModel.message = "Picked flags $flags from that tile. Painting with them now."
+            return
+        }
+        if (under < 0 && over < 0) { gadToolsModel.message = "Nothing painted on that tile (floor $plane)."; return }
+        val next = when {
+            tool == TerrainTool.UNDERLAY || tool == TerrainTool.OVERLAY -> tool
+            over >= 0 -> TerrainTool.OVERLAY
+            else -> TerrainTool.UNDERLAY
+        }
+        javafx.application.Platform.runLater {
+            if (under >= 0) gadToolsModel.underlayId.set(under)
+            if (over >= 0) {
+                gadToolsModel.overlayId.set(over)
+                gadToolsModel.overlayShape.set(shape)
+                gadToolsModel.overlayRotation.set(turn)
+            }
+            if (tool == TerrainTool.PICK) gadToolsModel.tool.set(next)
+        }
+        gadToolsModel.message = "Picked " + listOfNotNull(
+            if (under >= 0) "underlay $under" else null,
+            if (over >= 0) "overlay $over" + (if (shape != 0) " (shape $shape, turned ${turn * 90}\u00B0)" else "") else null
+        ).joinToString(", ") + " from floor $plane. Painting with " + (if (next == TerrainTool.OVERLAY) "the overlay" else "the underlay") + " now."
+    }
 
     private fun setHeight(t: SceneTile, h: Int, changed: HashSet<SceneRegion>) {
         val (def, ct, local) = groundTile(t) ?: return
@@ -1232,6 +1270,8 @@ class Renderer @Inject constructor(
         lastClick = 0.0
 
         val tool = gadToolsModel.tool.get()
+        // one pick per click; holding on after a pick doesn't start painting
+        if (!inputHandler.isLeftMouseDown) pickDone = false
         // terrain tools only run when not holding an object to place
         if (inputHandler.isLeftMouseDown && injectedObject == null && tool == TerrainTool.SELECT) {
             val cx = hoverId shr 18 and 0x1FFF
@@ -1264,7 +1304,10 @@ class Renderer @Inject constructor(
                     }
                 }
             }
-        } else if (inputHandler.isLeftMouseDown && injectedObject == null && tool != TerrainTool.INSPECT && tool != TerrainTool.REMOVE) {
+        } else if (inputHandler.isLeftMouseDown && injectedObject == null &&
+            (tool == TerrainTool.PICK || (tool.paints && inputHandler.isKeyDown(KeyCode.ALT)))) {
+            if (!pickDone) { pickDone = true; pickPaint(tool) }
+        } else if (inputHandler.isLeftMouseDown && injectedObject == null && !pickDone && tool != TerrainTool.INSPECT && tool != TerrainTool.REMOVE) {
             val cx = hoverId shr 18 and 0x1FFF
             val cy = hoverId shr 5 and 0x1FFF
             val center = scene.getTile(0, cx, cy) ?: return
