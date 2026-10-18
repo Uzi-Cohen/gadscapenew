@@ -457,8 +457,28 @@ public final class GameCommands {
 
             p.sendMessage("Your combat XP gain is currently " + (current ? "un" : "") + "locked.");
         });
-        new Command(PlayerPrivilege.PLAYER, new String[]{"gambling", "gamble", "dice", "dicing", "fp", "flowerpoker",
-                "flower"}, "Teleports you to the gambling zone.",(p, args) -> {
+        new Command(PlayerPrivilege.PLAYER, new String[]{"gambling", "gamble"}, "Teleports you to the gambling zone.", (p, args) -> {
+            if (p.isLocked()) {
+                return;
+            }
+            final Teleport teleport = new Teleport() {
+                @Override public TeleportType getType() {return TeleportType.GADSCAPE_PORTAL_TELEPORT;}
+                @Override public Location getDestination() {return com.gadscape.game.content.gamble.zone.GambleZone.INSTANCE.getARRIVAL();}
+                @Override public int getLevel() {return 0;}
+                @Override public double getExperience() {return 0;}
+                @Override public int getRandomizationDistance() {return 1;}
+                @Override public Item[] getRunes() {return new Item[0];}
+                @Override public int getWildernessLevel() {return 0;}
+                @Override public boolean isCombatRestricted() {return true;}
+                @Override public void onUsage(Player player) {
+                    player.lock(3);
+                    new FadeScreen(player, () -> {}).fade(3);
+                }
+            };
+            teleport.teleport(p);
+        });
+        new Command(PlayerPrivilege.PLAYER, new String[]{"dice", "dicing", "fp", "flowerpoker", "flower"},
+                "Teleports you to the flower poker and dicing room.", (p, args) -> {
             if (p.isLocked()) {
                 return;
             }
