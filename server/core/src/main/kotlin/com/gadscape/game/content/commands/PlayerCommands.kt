@@ -3,6 +3,9 @@ package com.gadscape.game.content.commands
 import com.gadscape.game.content.commands.DeveloperCommands.enableWildernessVault
 import com.gadscape.game.item.CustomItemId
 import com.gadscape.game.world.entity.player.manuallyLeftHelpChat
+import com.gadscape.game.content.pk.PkStore
+import com.gadscape.game.world.entity.player.pkPoints
+import com.gadscape.game.world.entity.player.pvpBestKillStreak
 import com.gadscape.game.world.entity.player.pvpDeaths
 import com.gadscape.game.world.entity.player.pvpKillStreak
 import com.gadscape.game.world.entity.player.pvpKills
@@ -101,6 +104,16 @@ object PlayerCommands {
             val msg = "Kills: $kills Deaths: $deaths Ratio: $ratio Streak: $killStreak"
             p.forceTalk = ForceTalk(msg)
             p.sendMessage(msg)
+        }
+
+        Command(PlayerPrivilege.PLAYER, "pkp", "Shows your PK points, kills, deaths and killstreaks.") { p, _ ->
+            p.sendMessage("PK points: <col=ff0000>${p.pkPoints}</col>")
+            p.sendMessage("Kills: <col=ff0000>${p.pvpKills}</col> Deaths: <col=ff0000>${p.pvpDeaths}</col> " +
+                    "Streak: <col=ff0000>${p.pvpKillStreak}</col> Best streak: <col=ff0000>${maxOf(p.pvpBestKillStreak, p.pvpKillStreak)}</col>")
+        }
+
+        Command(PlayerPrivilege.PLAYER, arrayOf("pkstore", "pkshop"), "Opens the PK store, paid in PK points.") { p, _ ->
+            PkStore.open(p)
         }
 
         Command(PlayerPrivilege.PLAYER, "box", "Stake coins on a provably fair boxing bout against the house.") { p, _ ->

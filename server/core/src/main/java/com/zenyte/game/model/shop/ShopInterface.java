@@ -86,7 +86,9 @@ public class ShopInterface extends Interface {
                 } else if (price == 0) {
                     player.sendMessage(item.getName() + ": currently costs nothing.");
                 } else {
-                    player.sendMessage(item.getName() + ": currently costs " + StringFormatUtil.format(price) + " " + shop.getCurrency() + ".");
+                    final int bundleSize = shop.getBundleSize(item.getId());
+                    final String name = bundleSize > 1 ? item.getName() + " (x" + StringFormatUtil.format(bundleSize) + ")" : item.getName();
+                    player.sendMessage(name + ": currently costs " + StringFormatUtil.format(price) + " " + shop.getCurrency() + ".");
                 }
                 return;
             }

@@ -3,6 +3,7 @@ package com.gadscape.game.content.shop
 import com.gadscape.api.service.vote.totalVoteCredits
 import com.gadscape.game.world.entity.player.bountyHunterPoints
 import com.gadscape.game.world.entity.player.exchangePoints
+import com.gadscape.game.world.entity.player.pkPoints
 import com.gadscape.game.world.entity.player.pvmArenaPoints
 import com.zenyte.game.content.skills.afk.AfkSkillingConstants
 import com.zenyte.game.item.Item
@@ -24,6 +25,7 @@ object ShopCurrencyHandler {
             ShopCurrency.EXCHANGE_POINTS -> player.exchangePoints
             ShopCurrency.TOURNAMENT_POINTS -> player.getNumericAttribute("tournament points").toInt()
             ShopCurrency.PVM_ARENA_POINTS -> player.pvmArenaPoints.toInt()
+            ShopCurrency.PK_POINTS -> player.pkPoints
             else -> {
                 if (type.isPhysical) {
                     val itemId = type.id.takeIf { it > 0 } ?: error("Invalid item id: ${type.id} for currency type: ${type::class.simpleName}")
@@ -47,6 +49,7 @@ object ShopCurrencyHandler {
             ShopCurrency.TOURNAMENT_POINTS -> player.incrementNumericAttribute("tournament points", -amount)
             ShopCurrency.EXCHANGE_POINTS -> player.exchangePoints -= amount
             ShopCurrency.PVM_ARENA_POINTS -> player.pvmArenaPoints -= amount
+            ShopCurrency.PK_POINTS -> player.pkPoints = max(0, player.pkPoints - amount)
             else -> {
                 if (type.isPhysical) {
                     val itemId = type.id.takeIf { it > 0 } ?: error("Invalid item id: ${type.id} for currency type: ${type::class.simpleName}")
@@ -70,6 +73,7 @@ object ShopCurrencyHandler {
             ShopCurrency.TOURNAMENT_POINTS -> player.incrementNumericAttribute("tournament points", amount)
             ShopCurrency.EXCHANGE_POINTS -> player.exchangePoints += amount
             ShopCurrency.PVM_ARENA_POINTS -> player.pvmArenaPoints += amount
+            ShopCurrency.PK_POINTS -> player.pkPoints = (player.pkPoints.toLong() + amount).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             else -> {
                 if (type.isPhysical) {
                     val itemId = type.id.takeIf { it > 0 } ?: error("Invalid item id: ${type.id} for currency type: ${type::class.simpleName}")
