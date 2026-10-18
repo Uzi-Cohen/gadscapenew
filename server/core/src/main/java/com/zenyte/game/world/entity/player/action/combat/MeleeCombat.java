@@ -62,8 +62,7 @@ public class MeleeCombat extends PlayerCombat {
 
     @Override
     public Hit getHit(final Player player, final Entity target, final double accuracyModifier, final double passiveModifier, double activeModifier, final boolean ignorePrayers) {
-        final int maxHit = com.gadscape.game.content.accounttype.Sigils.maxHit(player, target, com.gadscape.game.content.accounttype.Sigils.MELEE, getMaxHit(player, passiveModifier, activeModifier, ignorePrayers));
-        return new Hit(player, getRandomHit(player, target, maxHit, accuracyModifier * com.gadscape.game.content.accounttype.Sigils.accuracy(player, target, com.gadscape.game.content.accounttype.Sigils.MELEE)), HitType.MELEE);
+        return new Hit(player, getRandomHit(player, target, getMaxHit(player, passiveModifier, activeModifier, ignorePrayers), accuracyModifier), HitType.MELEE);
     }
 
     @Override

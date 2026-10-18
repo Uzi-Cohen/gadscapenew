@@ -1,6 +1,5 @@
 package com.zenyte.game.content.killstreak;
 
-import com.gadscape.game.content.pk.PkPoints;
 import com.gadscape.game.world.entity.player.PlayerAttributesKt;
 import com.zenyte.game.content.well.WellPerk;
 import com.zenyte.game.content.xamphur.XamphurBoost;
@@ -19,10 +18,6 @@ public class Killstreaks {
     public static void handlePlayerKill(Player attacker, Player victim) {
         if(!WildernessArea.isWithinWilderness(victim.getLocation().getX(), victim.getLocation().getY()))
             return;
-        if (attacker == victim)
-            return;
-        // PK points first: they have their own anti-farming rules and read the streaks before this kill changes them.
-        PkPoints.handlePlayerKill(attacker, victim);
         if(attacker.getIP().equalsIgnoreCase(victim.getIP()))
             return;
 
@@ -42,8 +37,6 @@ public class Killstreaks {
             totalBloodmoney *= 2;
         int attackerCurrentStreak = PlayerAttributesKt.getPvpKillStreak(attacker);
         PlayerAttributesKt.setPvpKillStreak(attacker, attackerCurrentStreak + 1);
-        if (attackerCurrentStreak + 1 > PlayerAttributesKt.getPvpBestKillStreak(attacker))
-            PlayerAttributesKt.setPvpBestKillStreak(attacker, attackerCurrentStreak + 1);
 
         attacker.sendMessage(
                 "You have received <col=ff0000>" + totalBloodmoney + "</col> blood money. Your killstreak is now <col=ff0000>"

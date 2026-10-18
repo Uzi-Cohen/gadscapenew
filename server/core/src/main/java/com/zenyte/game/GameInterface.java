@@ -201,7 +201,7 @@ public enum GameInterface {
     QUEST_COMPLETED(153),
     RAIDS_SHARED_STORAGE(550),
     RAIDS_STORAGE_INVENTORY_INTERFACE(551, SINGLE_TAB),
-    MUSIC_TAB(com.gadscape.game.content.kits.KitsTabCache.INTERFACE_ID, InterfacePosition.MUSIC_TAB),
+    MUSIC_TAB(239, InterfacePosition.MUSIC_TAB),
     BOOK(26),
     CANOE_SHAPE(416),
     CANOE_SELECTION(57),

@@ -57,29 +57,6 @@ public final class Shop {
     private static final Map<String, List<BiConsumer<Player, Item>>> consumerMap = new HashMap<>();
     private static final Map<String, Consumer<Player>> consumerOpenMap = new HashMap<>();
     private static final Map<String, List<BiPredicate<Player, Item>>> predicateMap = new HashMap<>();
-    /**
-     * Shop name -> (item id -> bundle size). A purchase of one unit of a bundled item hands out the bundle size, so
-     * shops can sell cheap stackables (runes, bolts) in chunks for a whole-number price.
-     */
-    private static final Map<String, Map<Integer, Integer>> bundleMap = new ConcurrentHashMap<>();
-
-    /**
-     * Sets how many of the item each unit bought from the shop by the {@param shopName} hands out.
-     */
-    public static void setBundleSize(final String shopName, final int itemId, final int bundleSize) {
-        bundleMap.computeIfAbsent(StringUtilities.escape(shopName), name -> new ConcurrentHashMap<>()).put(itemId, Math.max(1, bundleSize));
-    }
-
-    /**
-     * @return how many of the item one unit bought from this shop hands out (1 unless the item is sold in bundles).
-     */
-    public int getBundleSize(final int itemId) {
-        final Map<Integer, Integer> bundles = bundleMap.get(name);
-        if (bundles == null) {
-            return 1;
-        }
-        return bundles.getOrDefault(itemId, 1);
-    }
 
     static {
         appendConsumer("Culinaromancer's Chest", (player, item) -> {
@@ -602,9 +579,7 @@ public final class Shop {
                 container.set(slotId, null);
             }
         }
-        final int bundleSize = getBundleSize(item.getId());
-        final int handedOut = bundleSize <= 1 ? amount : (int) Math.min((long) amount * bundleSize, (long) Integer.MAX_VALUE - inInventory);
-        final Item succeeded = new Item(item.getId(), handedOut, DegradableItem.getFullCharges(item.getId()));
+        final Item succeeded = new Item(item.getId(), amount, DegradableItem.getFullCharges(item.getId()));
         inventory.add(succeeded);
         inventory.refresh(player);
         refresh();

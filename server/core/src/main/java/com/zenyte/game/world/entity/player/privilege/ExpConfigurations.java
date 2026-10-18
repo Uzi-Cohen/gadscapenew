@@ -74,12 +74,6 @@ public enum ExpConfigurations {
         return 0;
     }
 
-    /** The drop rate boost from the account type or exp mode, 0.05 = 5%. */
-    public static double modeDropRate(Player player) {
-        final Double typed = com.gadscape.game.content.accounttype.Sigils.modeDropRate(player);
-        return typed != null ? typed : getForPlayer(player).getDropRateIncrease() / 100.0D;
-    }
-
     public static ExpConfiguration getForPlayer(Player player) {
         ExpConfigurations config = ExpConfigurations.of(player.getGameMode());
         int currentIndex = config.getExpConfigurationIndex(player.getCombatXPRate(), player.getSkillingXPRate());

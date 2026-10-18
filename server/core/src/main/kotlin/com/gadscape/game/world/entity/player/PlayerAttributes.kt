@@ -105,10 +105,6 @@ var Player.pvmArenaInRevivalState: Boolean by attribute("pvmArenaInRevivalState"
 var Player.pvpKills : Int by persistentAttribute("pvp-kills", 0)
 var Player.pvpDeaths : Int by persistentAttribute("pvp-deaths", 0)
 var Player.pvpKillStreak: Int by persistentAttribute("current-killstreak", 0)
-var Player.pvpBestKillStreak: Int by persistentAttribute("best-killstreak", 0)
-
-/** PK points (PKP), earned from player kills in the Wilderness and spent in the PK store. */
-var Player.pkPoints: Int by persistentAttribute("pk-points", 0)
 
 var Player.wildernessResourceAreaPaidFeeAmount: Int by attribute("wildernessResourceAreaPaidFeeAmount", 0)
 

@@ -762,17 +762,33 @@ class Renderer @Inject constructor(
         val tile = planeTile(x, y) ?: return null
         val region = scene.getRegionFromSceneCoord(x, y) ?: return null
         val objectDefinition: ObjectDefinition = held.objectDefinition
-        objectToModelConverter.toModel(objectDefinition, held.type, held.orientation) ?: run {
+        val modelDefinition: ModelDefinition = objectToModelConverter.toModel(objectDefinition, held.type, held.orientation) ?: run {
             gadToolsModel.message = "Object ${objectDefinition.id} has no model for that type."
             return null
         }
         val plane = currentPlane
+        val onFloor = tile.z == plane
+        val baseHeight = tile.tilePaint?.nwHeight ?: tile.cacheTile?.height ?: 0
+        val groundHeight = if (onFloor) baseHeight else baseHeight - 240 * plane
         val loc = Location(objectDefinition.id, held.type, held.orientation and 3, x % REGION_SIZE, y % REGION_SIZE, plane)
         region.locationsDefinition.locations.add(loc)
-        // shown by rebuilding its region when the mouse is let go (straight away for a click). There's no quick
-        // preview draw any more: it went into the region's output where other objects already were, so placing one
-        // object made others (fence pieces, walls) vanish or turn into it.
+        // rebuilt properly when the mouse is let go: until then it's only drawn from the scratch buffer, which the next
+        // placed object reuses (walls placed before a door turned into the door) and a rebuild of another region drops
         objStrokeRegions.add(region.regionDefinition.regionId)
+
+        val model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)
+        model.xOff = objectDefinition.sizeX * REGION_SIZE
+        model.yOff = objectDefinition.sizeY * REGION_SIZE
+        // shown right away in its region's output (room is kept for this); the region is rebuilt when the drag ends
+        val chunk = chunkAt(x, y)
+        if (chunk != null && chunk.mb.targetBufferOffset + modelDefinition.faceCount * 3 <= chunk.capacity) {
+            sceneUploader.uploadModel(
+                StaticObject(objectDefinition, model, groundHeight, held.type, held.orientation),
+                chunk.mb.vertexBuffer,
+                chunk.mb.uvBuffer
+            )
+            model.drawPersistent(chunk.mb, x, y, groundHeight, held.type)
+        }
         gadToolsModel.message = "Placed ${objectDefinition.name} (${objectDefinition.id})."
         return ObjectEdit(region.regionDefinition.regionId, loc, true)
     }
