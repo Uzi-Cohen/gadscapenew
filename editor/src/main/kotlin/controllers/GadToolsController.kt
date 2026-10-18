@@ -241,7 +241,7 @@ class GadToolsController @Inject constructor(
         val tiles = Menu("Tiles").apply {
             items.addAll(
                 MenuItem("Pick from hovered tile\tI").apply { setOnAction { inputHandler.pickFromHover() } },
-                MenuItem("Make HD show my paint (selection, or the whole map)").apply { setOnAction { makeHdShowPaint() } },
+                MenuItem("Make floors look the same in HD (selection, or the whole map)").apply { setOnAction { matchFloors() } },
                 MenuItem("Copy selected object\tCtrl+C").apply { setOnAction { gadToolsModel.copyObjectRequested.set(true) } },
                 MenuItem("Options of selected object...").apply { setOnAction { ObjectOptionsWindow.show(gadToolsModel, configuration, objectLoader, locationsLoader, ::log) } },
                 MenuItem("Pick up selected object\tM").apply { setOnAction { gadToolsModel.moveObjectRequested.set(true) } },
@@ -759,6 +759,51 @@ class GadToolsController @Inject constructor(
      * twin there instead: the same floor under a number HD leaves alone. Looks the same without HD; with HD it now
      * shows as painted. Selection, or every loaded region. Ctrl+Z undoes it.
      */
+    /**
+     * 117 HD draws a floor by its number and where it is: overlay 10 is gravel in one spot, brown tiles in an old
+     * house, paving by the bank, marble in it. Same paint, a patchwork in HD. This puts every painted tile in the
+     * selection (or every loaded region) on numbers HD has no rules for: the overlay's identical twin (10 -> 34) and,
+     * under a full overlay, the closest ground colour HD leaves alone. HD then draws them all alike, in the painted
+     * colours; without HD nothing changes. Nothing is written to the cache. Ctrl+Z undoes it.
+     */
+    fun matchFloors() {
+        val ids = GadTools.loadedRegionIds(scene)
+        if (ids.isEmpty()) { status("No map loaded."); return }
+        val sel = gadToolsModel.selection
+        gadToolsModel.actions.add {
+            val rec = models.TileRecorder()
+            var overlays = 0; var grounds = 0
+            val noTwin = java.util.TreeSet<Int>()
+            for (rid in ids) {
+                val def = editorRegions.region(rid) ?: continue
+                for (z in 0 until 4) for (x in 0 until 64) for (y in 0 until 64) {
+                    if (sel != null && !sel.contains(def.baseX + x, def.baseY + y)) continue
+                    val t = def.tiles[z][x][y] ?: continue
+                    if (t.overlayId <= 0) continue
+                    var o = t.overlayId
+                    if (utils.HdFloors.hasRules(true, o)) {
+                        val tw = utils.FloorTwins.twinFor(true, o, overlayLoader, underlayLoader)
+                        if (tw != null) o = tw else noTwin.add(o - 1)
+                    }
+                    var u = t.underlayId
+                    // the ground colour under the paint too (on edge tiles it shows in half: the stand-in is the closest colour)
+                    if (u > 0 && utils.HdFloors.hasRules(false, u))
+                        u = utils.FloorTwins.twinFor(false, u, overlayLoader, underlayLoader) ?: u
+                    if (o == t.overlayId && u == t.underlayId) continue
+                    rec.touch(rid, z, x, y, t)
+                    if (o != t.overlayId) { t.overlayId = o; overlays++ }
+                    if (u != t.underlayId) { t.underlayId = u; grounds++ }
+                    def.syncTile(z, x, y)
+                }
+            }
+            val edit = rec.finish(false)
+            gadToolsModel.message = (if (edit == null) "Nothing to change here." else
+                "HD now draws these floors alike, in your colours: $overlays overlays and $grounds hidden ground colours moved to numbers HD leaves alone. Ctrl+Z undoes it.") +
+                (if (noTwin.isNotEmpty()) " No HD-free lookalike for overlay ${noTwin.joinToString(", ")}: those keep HD's look." else "")
+            edit
+        }
+    }
+
     fun makeHdShowPaint() {
         if (GadTools.loadedRegionIds(scene).isEmpty()) { status("No map loaded."); return }
         val sel = gadToolsModel.selection
@@ -1412,7 +1457,7 @@ class GadToolsController @Inject constructor(
                 // carpets and rugs are objects lying on the old floor: the game keeps drawing them unless they go too
                 val (decor, n) = if (newFloor == null) Pair(null, 0) else tileOps.removeFloorDecor(sel, plane, walk, newFloor)
                 // View > 117 HD floors: swap numbers HD would recolour here for their twins, so HD shows the fill as painted
-                val hd = if (newFloor != null && utils.HdFloors.enabled) hdPass(sel, plane..plane).first else null
+                val hd: models.Edit? = null
                 val parts = listOfNotNull(e, decor, hd)
                 gadToolsModel.message = if (parts.isEmpty()) "$label: nothing changed." else "$label on ${sel.width} x ${sel.height} tiles." +
                         (if (n > 0) " Took $n carpets/rugs/floor decorations off it (Ctrl+Z puts them back)." else "")
