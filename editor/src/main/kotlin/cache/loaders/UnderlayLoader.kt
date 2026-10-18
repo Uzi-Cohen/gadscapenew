@@ -86,6 +86,6 @@ class UnderlayLoader @Inject constructor(
                     }
                 } finally { lib.close() }
             }
-        } catch (e: Exception) { println("Exported floors not read: ${e.message}") }
+        } catch (e: Throwable) { println("Exported floors not read: ${e.message}") }
     }
 }

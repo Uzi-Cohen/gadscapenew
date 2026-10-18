@@ -50,7 +50,7 @@ class TextureManager @Inject constructor(
             GLC.GL_RGBA8,
             TEXTURE_SIZE,
             TEXTURE_SIZE,
-            textures.size + utils.HdFloors.images.size
+            textures.size + (try { utils.HdFloors.images.size } catch (e: Throwable) { 0 })
         )
         gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_MIN_FILTER, GLC.GL_NEAREST)
         gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_MAG_FILTER, GLC.GL_NEAREST)
@@ -60,7 +60,7 @@ class TextureManager @Inject constructor(
 //		double save = textureProvider.getBrightness();
 //		textureProvider.setBrightness(1.0d);
         updateTextures(gl, textureArrayId)
-        uploadHdTextures(gl, textures.size)
+        try { uploadHdTextures(gl, textures.size) } catch (e: Throwable) { e.printStackTrace() }
 
 //		textureProvider.setBrightness(save);
         gl.glActiveTexture(GLC.GL_TEXTURE1)

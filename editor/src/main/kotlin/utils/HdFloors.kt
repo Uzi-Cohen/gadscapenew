@@ -37,14 +37,24 @@ object HdFloors {
     private val underlays: List<Rule>
 
     init {
+        var imgs: List<String> = emptyList(); var ov: List<Rule> = emptyList(); var un: List<Rule> = emptyList()
+        try {
+            val (a, b, c) = read()
+            imgs = a; ov = b; un = c
+        } catch (e: Throwable) {
+            println("117 HD floor rules not loaded: $e")
+        }
+        images = imgs; overlays = ov; underlays = un
+    }
+
+    private fun read(): Triple<List<String>, List<Rule>, List<Rule>> {
         val res = HdFloors::class.java
-        images = res.getResourceAsStream("/hd/textures/list.json")?.reader()?.use { r ->
+        val images = res.getResourceAsStream("/hd/textures/list.json")?.reader()?.use { r ->
             JsonParser.parseReader(r).asJsonArray.map { it.asString }
         } ?: emptyList()
         val root = res.getResourceAsStream("/hd/floors.json")?.reader()?.use { JsonParser.parseReader(it).asJsonObject }
-        if (root == null) {
-            overlays = emptyList(); underlays = emptyList()
-        } else {
+        if (root == null) return Triple(images, emptyList(), emptyList())
+        run {
             for ((name, boxes) in root.getAsJsonObject("areas").entrySet()) {
                 areas[name] = boxes.asJsonArray.map { b ->
                     val v = b.asJsonArray.map { it.asInt }
@@ -71,8 +81,7 @@ object HdFloors {
                     }.toIntArray()
                 )
             }
-            overlays = rules("overlays")
-            underlays = rules("underlays")
+            return Triple(images, rules("overlays"), rules("underlays"))
         }
     }
 

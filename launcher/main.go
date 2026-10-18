@@ -55,13 +55,26 @@ func main() {
 		javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
 		cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
 		cmd.Dir = dest
+		started := time.Now()
 		if err := cmd.Start(); err != nil {
 			fail("Couldn't start Uzi's Map Editor:\n" + err.Error())
 		}
 		if p.shown {
 			// the editor takes a few seconds to open: keep saying so until it does
 			p.say("Starting...", -1)
-			time.Sleep(4 * time.Second)
+		}
+		// an editor that closes right away has crashed: say why instead of just vanishing
+		exited := make(chan error, 1)
+		go func() { exited <- cmd.Wait() }()
+		for wait := 0; wait < 15; wait++ {
+			select {
+			case err := <-exited:
+				fail(crashReport(dest, err, time.Since(started)))
+			case <-time.After(time.Second):
+			}
+			if wait == 3 {
+				p.hide() // the editor's own splash is up by now
+			}
 		}
 	})
 }
@@ -273,6 +286,44 @@ func shortcut(exe, dir string) {
 	c := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", ps)
 	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	c.Run()
+}
+
+// crashReport tells what stopped the editor: the end of its log, and Java's crash file if it left one.
+func crashReport(dest string, err error, ran time.Duration) string {
+	msg := fmt.Sprintf("Uzi's Map Editor closed %d seconds after starting", int(ran.Seconds()))
+	if err != nil {
+		msg += " (" + err.Error() + ")"
+	}
+	msg += ".\n\nSend this to Claude (Ctrl+C copies this box):\n"
+	home, _ := os.UserHomeDir()
+	if b, e := os.ReadFile(filepath.Join(home, ".uzis-map-editor", "last-run.log")); e == nil {
+		lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+		if len(lines) > 25 {
+			lines = lines[len(lines)-25:]
+		}
+		msg += "\n--- last-run.log ---\n" + strings.Join(lines, "\n")
+	}
+	if ents, e := os.ReadDir(dest); e == nil {
+		var newest os.DirEntry
+		var newestTime time.Time
+		for _, f := range ents {
+			if strings.HasPrefix(f.Name(), "hs_err_pid") {
+				if fi, e := f.Info(); e == nil && fi.ModTime().After(newestTime) {
+					newest, newestTime = f, fi.ModTime()
+				}
+			}
+		}
+		if newest != nil && time.Since(newestTime) < 2*time.Minute {
+			if b, e := os.ReadFile(filepath.Join(dest, newest.Name())); e == nil {
+				lines := strings.Split(string(b), "\n")
+				if len(lines) > 12 {
+					lines = lines[:12]
+				}
+				msg += "\n--- " + newest.Name() + " ---\n" + strings.Join(lines, "\n")
+			}
+		}
+	}
+	return msg
 }
 
 func fail(msg string) {

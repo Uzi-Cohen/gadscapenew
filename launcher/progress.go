@@ -332,6 +332,13 @@ func (p *progress) say(text string, pct int) {
 	}
 }
 
+// hide takes the window away (the launcher keeps watching the editor start in the background).
+func (p *progress) hide() {
+	if p.hwnd != 0 && p.shown {
+		procShowWindowAsync.Call(p.hwnd, 0) // SW_HIDE
+	}
+}
+
 // bytes is a download step for say: "what 12 of 65 MB".
 func (p *progress) bytes(what string, done, total int64) {
 	const mb = 1 << 20
