@@ -187,7 +187,6 @@ object Main {
             )
         }
         PluginLoader.load()
-        com.gadscape.game.content.gamble.zone.GambleZone.register()
         PluginManager.post(PluginsLoadedEvent())
 
         ItemActionHandler.setDefaults()
