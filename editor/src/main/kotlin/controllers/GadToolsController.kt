@@ -195,6 +195,7 @@ class GadToolsController @Inject constructor(
                 },
                 SeparatorMenuItem(),
                 CheckMenuItem("Show floors above").apply { selectedProperty().bindBidirectional(gadToolsModel.showAllFloors) },
+                CheckMenuItem("117 HD floors (as players with HD see them)").apply { selectedProperty().bindBidirectional(gadToolsModel.hdFloors) },
                 CheckMenuItem("Show flagged tiles (red)").apply { selectedProperty().bindBidirectional(gadToolsModel.showFlags) },
                 CheckMenuItem("Show where players can't walk (orange = object, red = blocked mark on the floor)").apply { selectedProperty().bindBidirectional(gadToolsModel.showBlocking) },
                 CheckMenuItem("Tile numbers on the map").apply {

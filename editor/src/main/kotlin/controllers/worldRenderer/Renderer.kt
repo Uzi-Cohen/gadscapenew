@@ -288,6 +288,7 @@ class Renderer @Inject constructor(
             lastHovered = null
         }
         gadToolsModel.showAllFloors.addListener { _, _, _ -> requeueAll = true; isSceneUploadRequired = true }
+        gadToolsModel.hdFloors.addListener { _, _, v -> utils.HdFloors.enabled = v; hdViewChanged = true }
 
         var loadsSeen = -1
         scene.sceneChangeListeners.add(ActionListener {
@@ -490,6 +491,8 @@ class Renderer @Inject constructor(
     // ---- editing: strokes, area tools, undo/redo ----
     private var recorder: TileRecorder? = null
     private var pickDone = false
+    // View > 117 HD floors was switched: rebuild the loaded map in the render loop
+    @Volatile private var hdViewChanged = false
     // floor decorations (carpets, rugs...) taken off painted tiles during this stroke
     private val strokeDecorGone = ArrayList<Edit>()
     private var strokeHeightOnly = true
@@ -861,6 +864,7 @@ class Renderer @Inject constructor(
             return
         }
         if (under < 0 && over < 0) { gadToolsModel.message = "Nothing painted on that tile (floor $plane)."; return }
+        val hdNote = hdRuleNote(t, plane, ct)
         val next = when {
             tool == TerrainTool.UNDERLAY || tool == TerrainTool.OVERLAY -> tool
             over >= 0 -> TerrainTool.OVERLAY
@@ -878,7 +882,17 @@ class Renderer @Inject constructor(
         gadToolsModel.message = "Picked " + listOfNotNull(
             if (under >= 0) "underlay $under" else null,
             if (over >= 0) "overlay $over" + (if (shape != 0) " (shape $shape, turned ${turn * 90}\u00B0)" else "") else null
-        ).joinToString(", ") + " from floor $plane. Painting with " + (if (next == TerrainTool.OVERLAY) "the overlay" else "the underlay") + " now."
+        ).joinToString(", ") + " from floor $plane. Painting with " + (if (next == TerrainTool.OVERLAY) "the overlay" else "the underlay") + " now." + hdNote
+    }
+
+    /** With View > 117 HD floors on: which HD rule repaints this tile, and how to get the painted colour back. */
+    private fun hdRuleNote(t: SceneTile?, plane: Int, ct: RegionDefinition.Tile): String {
+        if (!utils.HdFloors.enabled || t == null) return ""
+        val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return ""
+        val r = utils.HdFloors.ruleFor(ct.overlayId, ct.underlayId, w.first, w.second, plane) ?: return ""
+        if (r.isNone || r.water) return ""
+        return if (r.ids.isEmpty()) " HD: ${r.name} repaints every floor here."
+        else " HD: ${r.name} repaints this floor number here; another floor number keeps its own colour."
     }
 
     private fun setHeight(t: SceneTile, h: Int, changed: HashSet<SceneRegion>) {
@@ -1269,6 +1283,12 @@ class Renderer @Inject constructor(
         }
         lastClick = 0.0
 
+        if (hdViewChanged) {
+            hdViewChanged = false
+            refresh(scene.getRegions().flatten().mapNotNull { it?.regionDefinition?.regionId })
+            gadToolsModel.message = if (utils.HdFloors.enabled) "Showing floors as 117 HD draws them. The pen says which HD rule repaints a tile."
+                else "Showing floors in their map colours."
+        }
         val tool = gadToolsModel.tool.get()
         // one pick per click; holding on after a pick doesn't start painting
         if (!inputHandler.isLeftMouseDown) pickDone = false

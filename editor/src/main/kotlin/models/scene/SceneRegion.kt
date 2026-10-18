@@ -32,7 +32,8 @@ class SceneRegion(val regionDefinition: RegionDefinition, val locationsDefinitio
         overlayRgb: Int,
         underlayDefinition: UnderlayDefinition?,
         overlayDefinition: OverlayDefinition?,
-        cacheTile: RegionDefinition.Tile?
+        cacheTile: RegionDefinition.Tile?,
+        underlayTexture: Int = -1
     ) {
         when {
             overlayPath == 0 -> {
@@ -50,7 +51,7 @@ class SceneRegion(val regionDefinition: RegionDefinition, val locationsDefinitio
                     seColor,
                     neColor,
                     nwColor,
-                    -1,
+                    underlayTexture,
                     rgb
                 )
             }

@@ -65,6 +65,11 @@ class GadToolsModel {
     val paintPlane: IntegerProperty = SimpleIntegerProperty(0)
     /** Draw floors above paintPlane too (normally hidden so you can work inside buildings). */
     val showAllFloors: BooleanProperty = SimpleBooleanProperty(false)
+    /** Draw floors the way 117 HD does for players using it (utils.HdFloors). */
+    val hdFloors: BooleanProperty = SimpleBooleanProperty(Configuration().getProp("hd-floors") == "on").apply {
+        utils.HdFloors.enabled = get()
+        addListener { _, _, v -> Configuration().saveProp("hd-floors", if (v) "on" else "off") }
+    }
     /** On floor 1+ a copy takes only that floor (so it can be pasted on another floor) unless this is ticked. */
     val copyAllFloors: BooleanProperty = SimpleBooleanProperty(false)
     /** What Ctrl+C takes: -2 = auto (ground: all floors, floor 1-3: that floor), -3 = the floor I'm on, -1 = all floors, 0..3 = that floor. */
