@@ -233,7 +233,11 @@ public class Item extends _Item {
 		}
 		if(itemBlacklist.contains(id))
 			return false;
-		return attributes == null && (id == 13204 || id == 995 || id == 13307 || getDefinitions().isGrandExchange() || getDefinitions().getNotedTemplate() > 0 || getDefinitions().getNotedId() > 0);
+		final ItemDefinitions defs = getDefinitions();
+		if (defs == null) {
+			return false;
+		}
+		return attributes == null && (id == 13204 || id == 995 || id == 13307 || defs.isGrandExchange() || defs.getNotedTemplate() > 0 || defs.getNotedId() > 0);
 	}
 
 	public boolean isWieldable() {

@@ -11,6 +11,7 @@ import com.gadscape.util.gson.Int2ObjectMapDeserializer;
 import com.gadscape.util.gson.IntListTypeAdapter;
 import com.gadscape.util.gson.Object2IntMapDeserializer;
 import com.gadscape.util.gson.ObjectCollectionDeserializer;
+import com.zenyte.game.item.Item;
 import com.zenyte.cores.CoresManager;
 import com.zenyte.game.GameConstants;
 import com.zenyte.game.content.boons.Boon;
@@ -688,8 +689,33 @@ public final class LoginManager {
         player.setLootkeySettings(parser.getLootkeySettings());
         player.getCollectionLogRewardManager().initialize(parser.getCollectionLogRewardManager());
 
+        removeMissingItems(player);
         PluginManager.post(new InitializationEvent(player, parser));
         PluginManager.post(new PostInitializationEvent(player));
+    }
+
+    /**
+     * Items whose id the cache no longer has (taken out with a removed feature) break everything that looks at them,
+     * the login included: take them out of the player's containers first, and log what went.
+     */
+    private static void removeMissingItems(final Player player) {
+        final com.zenyte.game.world.entity.player.container.Container[] containers = {
+                player.getInventory().getContainer(), player.getBank().getContainer(),
+                player.getEquipment().getContainer(), player.getRetrievalService().getContainer()
+        };
+        for (final com.zenyte.game.world.entity.player.container.Container container : containers) {
+            if (container == null) {
+                continue;
+            }
+            final java.util.Iterator<Item> it = container.getItems().values().iterator();
+            while (it.hasNext()) {
+                final Item item = it.next();
+                if (item != null && item.getDefinitions() == null) {
+                    log.warn("Removed item {} x{} from {}: the cache has no such item", item.getId(), item.getAmount(), player.getUsername());
+                    it.remove();
+                }
+            }
+        }
     }
 
     public Thread getThread() {
