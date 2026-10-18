@@ -658,7 +658,15 @@ class Renderer @Inject constructor(
         }
         selectObject(region.regionDefinition.regionId, target)
         val sel = gadToolsModel.selectedObject!!
+        val why = objectLoader.get(target.objId)?.let { d ->
+            objectToModelConverter.whyNoModel(d, target.type, target.orientation)?.takeIf {
+                // objects that change with game state show their default look, which may have a model
+                val transforms = try { d.transforms } catch (e: UninitializedPropertyAccessException) { null }
+                transforms == null || transforms.none { t -> t >= 0 && objectLoader.get(t)?.let { objectToModelConverter.whyNoModel(it, target.type, target.orientation) == null } == true }
+            }
+        }
         gadToolsModel.message = "Selected ${objectName(target.objId)} (${target.objId}) at ${sel.worldX}, ${sel.worldY}. " +
+                (if (why != null) "Purple box: $why " else "") +
                 "Drag to move, R rotate, Ctrl+C copy, M pick up, Delete remove, Esc deselect."
         return true
     }

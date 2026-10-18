@@ -159,6 +159,29 @@ class ObjectToModelConverter @Inject constructor(
         return m
     }
 
+    /**
+     * Why an object placed as [type] shows as a purple box, or null when it has a model. The type is mapped the way
+     * the scene does it (wall decorations use their type-4 model, diagonal objects their type-10 one).
+     */
+    fun whyNoModel(objectDefinition: ObjectDefinition, type: Int, orientation: Int): String? {
+        val modelType = when (type) { in 4..8 -> 4; 11 -> 10; else -> type }
+        try {
+            if (toModel(objectDefinition, modelType, orientation) != null) return null
+        } catch (e: Exception) { }
+        val ids = objectDefinition.modelIds
+            ?: return "it has no model at all. In game it's invisible too, and it still blocks if it's solid."
+        val types = objectDefinition.modelTypes
+        if (types != null && modelType !in types || types == null && modelType != 10)
+            return "it has no model for how it's placed (type $type; its models are for type ${types?.joinToString("/") ?: "10"}). " +
+                    "In game it's invisible there but can still block. Place it as one of those types, or remove it."
+        for (id in ids) {
+            val ok = try { modelLoader.get(id) != null } catch (e: Exception) { false }
+            if (!ok) return "its model $id isn't in your cache (or can't be read). In game it's invisible but still blocks. " +
+                    "Import model $id (Models window) or remove the object."
+        }
+        return "the editor couldn't build its model."
+    }
+
     companion object {
         /** Purple in the game's 16-bit HSL. */
         const val STAND_IN_HSL: Short = ((51 shl 10) or (6 shl 7) or 60).toShort()
