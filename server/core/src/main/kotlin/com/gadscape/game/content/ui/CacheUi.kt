@@ -1,5 +1,6 @@
 package com.gadscape.game.content.ui
 
+import com.gadscape.game.content.gamble.ui.GambleCache
 import com.gadscape.game.content.kits.KitsTabCache
 import com.zenyte.CacheManager
 import mgi.tools.jagcached.ArchiveType
@@ -22,6 +23,7 @@ import javax.imageio.ImageIO
  *  - interfaces: kits/side panel 5110-5119, gambling 5120-5139, donator 5140-5159, slayer 5160-5169, tabs 5170-5189
  *  - sprites: side panel 7100-7199, gambling 7200-7599, donator 7600-7799, slayer 7800-7899, tabs 7900-8199
  *  - models: gamble zone 65000-65199; object definitions: gamble zone 60000-60199
+ *  - client scripts: 9500-9599 (ClientScriptsCache)
  */
 interface CachePack {
     val name: String
@@ -36,6 +38,8 @@ object CacheUi {
     @JvmField
     val PACKS: List<CachePack> = listOf(
         KitsTabCache,
+        ClientScriptsCache,
+        GambleCache,
     )
 
     @JvmStatic
