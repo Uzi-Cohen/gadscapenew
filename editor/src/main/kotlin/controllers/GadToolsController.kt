@@ -268,6 +268,7 @@ class GadToolsController @Inject constructor(
                     val f = gadToolsModel.paintPlane.get(); if (f > 0) moveSelectionFloors(listOf(f), f - 1, false) else status("Already on floor 0.") } },
                 MenuItem("Fill dead tiles in selection").apply { setOnAction { fillSelectionHoles() } },
                 MenuItem("Delete roofs in selection").apply { setOnAction { deleteRoofs(false) } },
+                MenuItem("Fix pathing and objects in selection...").apply { setOnAction { fixArea() } },
                 MenuItem("Delete roofs in loaded map").apply { setOnAction { deleteRoofs(true) } },
                 MenuItem("Remove stacked copies (fixes blocked paths)").apply { setOnAction { removeStackedCopies() } },
                 SeparatorMenuItem(),
@@ -623,6 +624,105 @@ class GadToolsController @Inject constructor(
             val e = tileOps.removeObjects(rect) { loc -> (loc in stacked).also { if (it) n++ } }
             gadToolsModel.message = if (e == null) "Nothing removed." else "Removed $n stacked copies. Ctrl+Z undoes it."
             e
+        }
+    }
+
+    /**
+     * Selected area: finds what makes paths and objects go wrong there, says what it found, and fixes what's ticked
+     * (one undo step):
+     *  - stacked copies of the same object (they block more than they show),
+     *  - objects this cache doesn't have (invisible in game, can crash the client),
+     *  - objects with nothing to draw (shown as purple boxes; they can still block),
+     *  - tiles flagged "blocked" with nothing on them and no painted floor (an invisible wall).
+     */
+    fun fixArea() {
+        val sel = gadToolsModel.selection ?: run { status("Select an area first (Select area tool, drag on the map)."); return }
+        val stacked = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<cache.definitions.Location, Boolean>())
+        val unknown = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<cache.definitions.Location, Boolean>())
+        val modelless = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<cache.definitions.Location, Boolean>())
+        val modellessNames = LinkedHashMap<String, Int>()
+        val looseBlocks = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<cache.definitions.RegionDefinition.Tile, Boolean>())
+        var solid = 0
+        val regions = HashSet<Int>()
+        for (x in (sel.x1 shr 6)..(sel.x2 shr 6)) for (y in (sel.y1 shr 6)..(sel.y2 shr 6)) regions.add((x shl 8) or y)
+        for (id in regions) {
+            val def = editorRegions.region(id) ?: continue
+            val locs = editorRegions.locations(id)?.locations ?: emptyList()
+            val bx = (id shr 8) shl 6
+            val by = (id and 0xFF) shl 6
+            val kept = ArrayList<IntArray>()
+            // what stands on each tile, per floor the game puts it on, for the blocked-flag check
+            val occupied = HashSet<Int>()
+            for (loc in locs) {
+                val od = objectLoader.get(loc.objId)
+                val big = loc.type == 10 || loc.type == 11
+                val w = if (!big || od == null) 1 else if (loc.orientation == 1 || loc.orientation == 3) od.sizeY else od.sizeX
+                val h = if (!big || od == null) 1 else if (loc.orientation == 1 || loc.orientation == 3) od.sizeX else od.sizeY
+                val z = if (loc.z > 0 && ((def.tiles[1][loc.x][loc.y]?.settings?.toInt() ?: 0) and 2) != 0) loc.z - 1 else loc.z
+                for (dx in 0 until w) for (dy in 0 until h) occupied.add((z shl 12) or ((loc.x + dx) shl 6) or (loc.y + dy))
+                if (!sel.contains(bx + loc.x, by + loc.y)) {
+                    kept.add(intArrayOf(loc.objId, if (big) 1 else loc.type + 2, loc.z, loc.x, loc.y, loc.x + w, loc.y + h, loc.orientation))
+                    continue
+                }
+                if (od == null) { unknown.add(loc); continue }
+                val dup = kept.any { k ->
+                    k[0] == loc.objId && k[2] == loc.z && (
+                        if (big) k[1] == 1 && loc.x < k[5] && k[3] < loc.x + w && loc.y < k[6] && k[4] < loc.y + h
+                        else k[1] == loc.type + 2 && k[3] == loc.x && k[4] == loc.y && k[7] == loc.orientation)
+                }
+                if (dup) { stacked.add(loc); continue }
+                kept.add(intArrayOf(loc.objId, if (big) 1 else loc.type + 2, loc.z, loc.x, loc.y, loc.x + w, loc.y + h, loc.orientation))
+                val transforms = try { od.transforms } catch (e: UninitializedPropertyAccessException) { null }
+                if (od.modelIds == null && (transforms == null || transforms.none { it >= 0 && objectLoader.get(it)?.modelIds != null })) {
+                    modelless.add(loc)
+                    val name = od.name.takeIf { it != "null" } ?: "unnamed object ${od.id}"
+                    modellessNames[name] = (modellessNames[name] ?: 0) + 1
+                }
+                if (od.interactType != 0 && (big || loc.type in 0..3 || (loc.type == 22 && od.interactType == 1))) solid++
+            }
+            for (lx in 0 until 64) for (ly in 0 until 64) {
+                if (!sel.contains(bx + lx, by + ly)) continue
+                for (z in 0 until 4) {
+                    val t = def.tiles[z][lx][ly] ?: continue
+                    if (t.settings.toInt() and 1 == 0 || t.overlayId != 0) continue
+                    if ((z shl 12) or (lx shl 6) or ly in occupied) continue
+                    looseBlocks.add(t)
+                }
+            }
+        }
+
+        val cStacked = CheckBox("Remove ${stacked.size} stacked copies (the same object on top of itself; blocks more than it shows)").apply { isSelected = stacked.isNotEmpty(); isDisable = stacked.isEmpty() }
+        val cUnknown = CheckBox("Remove ${unknown.size} objects this cache doesn't have (invisible, can crash the client)").apply { isSelected = unknown.isNotEmpty(); isDisable = unknown.isEmpty() }
+        val cLoose = CheckBox("Clear ${looseBlocks.size} \"blocked\" tiles with nothing on them (invisible walls)").apply { isSelected = looseBlocks.isNotEmpty(); isDisable = looseBlocks.isEmpty() }
+        val cModelless = CheckBox("Remove ${modelless.size} objects with nothing to draw (purple boxes)").apply { isSelected = false; isDisable = modelless.isEmpty() }
+        val found = buildString {
+            append("${sel.width} x ${sel.height} tiles, all floors. $solid solid objects (players walk around those; that's normal).\n")
+            if (modellessNames.isNotEmpty()) append("Nothing to draw: " + modellessNames.entries.take(8).joinToString(", ") { "${it.key} x${it.value}" } +
+                    (if (modellessNames.size > 8) ", ..." else "") + ". Some are meant to be invisible (blockers, spawn points); untick if unsure.\n")
+            if (stacked.isEmpty() && unknown.isEmpty() && looseBlocks.isEmpty() && modelless.isEmpty()) append("Nothing wrong found here. View > Show where players can't walk shows what blocks paths.")
+        }
+        val box = VBox(8.0, Label(found).apply { isWrapText = true; maxWidth = 560.0 }, cStacked, cUnknown, cLoose, cModelless)
+        val dialog = Dialog<ButtonType>().apply {
+            title = "Fix pathing and objects"
+            headerText = "What's wrong in this area"
+            dialogPane.content = box
+            dialogPane.buttonTypes.addAll(ButtonType("Fix ticked", ButtonBar.ButtonData.OK_DONE), ButtonType.CANCEL)
+        }
+        if (dialog.showAndWait().orElse(ButtonType.CANCEL).buttonData != ButtonBar.ButtonData.OK_DONE) return
+        val removeStacked = cStacked.isSelected; val removeUnknown = cUnknown.isSelected
+        val clearLoose = cLoose.isSelected; val removeModelless = cModelless.isSelected
+        gadToolsModel.actions.add {
+            var removed = 0
+            val objects = tileOps.removeObjects(sel) { loc ->
+                ((removeStacked && loc in stacked) || (removeUnknown && loc in unknown) || (removeModelless && loc in modelless)).also { if (it) removed++ }
+            }
+            var cleared = 0
+            val flags = if (!clearLoose) null else tileOps.fill(sel, 0..3, false) { t, _ ->
+                if (t in looseBlocks && t.settings.toInt() and 1 != 0) { t.settings = (t.settings.toInt() and 1.inv()).toByte(); cleared++ }
+            }
+            val parts = listOfNotNull(objects, flags)
+            gadToolsModel.message = if (parts.isEmpty()) "Nothing changed." else "Removed $removed objects, cleared $cleared blocked tiles. Ctrl+Z undoes it."
+            if (parts.isEmpty()) null else if (parts.size == 1) parts[0] else models.MultiEdit(parts)
         }
     }
 
@@ -1346,6 +1446,7 @@ class GadToolsController @Inject constructor(
                 valueProperty().addListener { _, _, v -> gadToolsModel.copyFloor.set(values[choices.indexOf(v).coerceAtLeast(0)]) }
             }).apply { alignment = javafx.geometry.Pos.CENTER_LEFT },
             row(btnClear, btnDeselect),
+            Button("Fix pathing and objects...").apply { maxWidth = Double.MAX_VALUE; styleClass.add("accent"); setOnAction { fixArea() } },
             Separator(), header("Move between floors"), buildFloorMover(chkBridge), btnToGround, chkBridge,
             row(Button("Delete roofs").apply {
                 tooltip = Tooltip("Deletes every roof piece (object types 12-21) in the selected area, on all floors. Ctrl+Z undoes it.")
