@@ -636,6 +636,8 @@ public final class LoginManager {
      * @param parser the loaded deserialized account.
      */
     public static void setFields(final Player player, final Player parser) {
+        // items the cache has no definition for (deleted from the cache) break the login: take them off the save first
+        removeMissingItems(parser, player.getUsername());
         Location location = AreaManagerExtKt.fixLocationIfInstanceDC(parser, parser.getLocation());
         player.setLastLocation(location);
         if (!(player instanceof FakePlayer))
@@ -691,6 +693,37 @@ public final class LoginManager {
 
         PluginManager.post(new InitializationEvent(player, parser));
         PluginManager.post(new PostInitializationEvent(player));
+    }
+
+    /**
+     * Takes items whose id the cache doesn't have out of the account's containers, and logs each one
+     * ("Removed item <id> x<amount> from <name>") so it can be given back once the item is in the cache again.
+     */
+    private static void removeMissingItems(final Player player, final String name) {
+        final java.util.List<java.util.function.Supplier<com.zenyte.game.world.entity.player.container.Container>> containers = java.util.List.of(
+                () -> player.getInventory().getContainer(), () -> player.getBank().getContainer(),
+                () -> player.getEquipment().getContainer(), () -> player.getRetrievalService().getContainer(),
+                () -> player.getPersonalBank().getContainer()
+        );
+        for (final java.util.function.Supplier<com.zenyte.game.world.entity.player.container.Container> get : containers) {
+            final com.zenyte.game.world.entity.player.container.Container container;
+            try {
+                container = get.get();
+            } catch (final Exception e) {
+                continue; // a save without that part
+            }
+            if (container == null || container.getItems() == null) {
+                continue;
+            }
+            final java.util.Iterator<Item> it = container.getItems().values().iterator();
+            while (it.hasNext()) {
+                final Item item = it.next();
+                if (item != null && item.getDefinitions() == null) {
+                    log.warn("Removed item {} x{} from {}: the cache has no such item", item.getId(), item.getAmount(), name);
+                    it.remove();
+                }
+            }
+        }
     }
 
     public Thread getThread() {
