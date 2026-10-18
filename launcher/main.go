@@ -43,19 +43,27 @@ func main() {
 	// its own folder: the old installer's folder (Programs\Uzis Map Editor) has an auto-updater that puts the old
 	// launcher back
 	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "UzisMapEditor")
-	if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
-		if err := install(dest); err != nil {
-			fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
+	withProgress(func(p *progress) {
+		if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
+			p.say("Installing Uzi's Map Editor "+build+"...", -1)
+			if err := install(dest); err != nil {
+				fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
+			}
 		}
-	}
-	placeSelf(dest)
-	update(dest)
-	javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
-	cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
-	cmd.Dir = dest
-	if err := cmd.Start(); err != nil {
-		fail("Couldn't start Uzi's Map Editor:\n" + err.Error())
-	}
+		placeSelf(dest)
+		update(dest, p)
+		javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
+		cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
+		cmd.Dir = dest
+		if err := cmd.Start(); err != nil {
+			fail("Couldn't start Uzi's Map Editor:\n" + err.Error())
+		}
+		if p.shown {
+			// the editor takes a few seconds to open: keep saying so until it does
+			p.say("Up to date. Starting the editor...", 100)
+			time.Sleep(4 * time.Second)
+		}
+	})
 }
 
 func install(dest string) error {
@@ -101,7 +109,7 @@ func placeSelf(dest string) {
 
 // update gets the newest editor build from main when it's newer than the one here, and the newest map Publish uploaded.
 // Offline or on any error the installed ones are used.
-func update(dest string) {
+func update(dest string, p *progress) {
 	c := http.Client{Timeout: 15 * time.Second}
 	text := func(url string) string {
 		r, err := c.Get(url)
@@ -124,7 +132,9 @@ func update(dest string) {
 		have, _ := strconv.ParseInt(local("editor-version.txt"), 10, 64)
 		if remote > have {
 			tmp := filepath.Join(dest, "editor.jar.new")
-			if download(editorReleases+"latest/download/editor.jar", tmp) == nil && validJar(tmp) {
+			p.say("Updating the editor...", 0)
+			step := func(done, total int64) { p.bytes("Updating the editor...", done, total) }
+			if download(editorReleases+"latest/download/editor.jar", tmp, step) == nil && validJar(tmp) {
 				os.Remove(filepath.Join(dest, "editor.jar"))
 				if os.Rename(tmp, filepath.Join(dest, "editor.jar")) == nil {
 					os.WriteFile(filepath.Join(dest, "editor-version.txt"), []byte(strconv.FormatInt(remote, 10)), 0o644)
@@ -136,7 +146,10 @@ func update(dest string) {
 
 	if remote := text(releases + "download/map/map-version.txt"); remote != "" && remote != local(filepath.Join("map", "map-version.txt")) {
 		tmp := filepath.Join(dest, "map.zip.new")
-		if download(mapZip, tmp) == nil {
+		p.say("Downloading the new map...", 0)
+		step := func(done, total int64) { p.bytes("Downloading the new map...", done, total) }
+		if download(mapZip, tmp, step) == nil {
+			p.say("Unpacking the new map...", 100)
 			if b, err := os.ReadFile(tmp); err == nil {
 				staging := filepath.Join(dest, "map.new")
 				os.RemoveAll(staging)
@@ -155,7 +168,8 @@ func update(dest string) {
 	}
 }
 
-func download(url, to string) error {
+// download saves url to a file, telling step how far it got.
+func download(url, to string, step func(done, total int64)) error {
 	c := http.Client{Timeout: 30 * time.Minute}
 	r, err := c.Get(url)
 	if err != nil {
@@ -169,11 +183,25 @@ func download(url, to string) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(f, r.Body)
+	_, err = io.Copy(f, &counter{r: r.Body, total: r.ContentLength, step: step})
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
 	return err
+}
+
+type counter struct {
+	r     io.Reader
+	done  int64
+	total int64
+	step  func(done, total int64)
+}
+
+func (c *counter) Read(b []byte) (int, error) {
+	n, err := c.r.Read(b)
+	c.done += int64(n)
+	c.step(c.done, c.total)
+	return n, err
 }
 
 // validJar is true when the download is a whole editor jar.

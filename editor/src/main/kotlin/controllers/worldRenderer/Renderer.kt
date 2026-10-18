@@ -228,6 +228,8 @@ class Renderer @Inject constructor(
     fun setPaused(paused: Boolean) { if (::view.isInitialized) view.paused = paused }
 
     companion object {
+        // how far above the ground the camera stops (a tile is 128)
+        private const val GROUND_CLEARANCE = 160
         /** Map sizes offered (regions across; a region is 64 x 64 tiles). */
         val SIZES = listOf(3, 5, 7)
         fun mapSize(): Int = models.Configuration().getProp("map-size").toIntOrNull()?.takeIf { it in SIZES } ?: 5
@@ -1470,6 +1472,8 @@ class Renderer @Inject constructor(
 
         val clientCycle = ((System.currentTimeMillis() - clientStart) / 20).toInt() // 50 fps
 
+        keepAboveGround()
+
         // UBO
         gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, uniformBufferId)
         uniformBuffer.clear()
@@ -1643,6 +1647,24 @@ class Renderer @Inject constructor(
     private var npcModelsBuiltFor = -1
 
     private fun npcSize(id: Int) = utils.NpcDefs.cachedOrNull()?.get(id)?.size ?: 1
+
+    /**
+     * The camera never goes under the floor: however far down you move, it stops a little above the highest ground
+     * around it (heights grow upwards as negative numbers), on the floor being edited and every floor below it.
+     */
+    private fun keepAboveGround() {
+        if (!scene.isLoaded()) return
+        val tx = Math.floorDiv(camera.cameraX, Constants.LOCAL_TILE_SIZE)
+        val ty = Math.floorDiv(camera.cameraY, Constants.LOCAL_TILE_SIZE)
+        var top = Int.MAX_VALUE
+        for (dx in -1..1) for (dy in -1..1) for (z in 0..currentPlane) {
+            val h = scene.getTile(z, tx + dx, ty + dy)?.cacheTile?.height ?: continue
+            if (h < top) top = h
+        }
+        if (top == Int.MAX_VALUE) return
+        val limit = top - GROUND_CLEARANCE
+        if (camera.cameraZ > limit) camera.cameraZ = limit
+    }
 
     private fun npcHeight(s: utils.NpcSpawn, x: Int = s.x, y: Int = s.y): Int {
         val d = editorRegions.region(models.regionIdOf(x, y)) ?: return 0
