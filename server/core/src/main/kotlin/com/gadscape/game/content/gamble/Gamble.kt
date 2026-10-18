@@ -3,6 +3,7 @@ package com.gadscape.game.content.gamble
 import com.gadscape.game.content.gamble.ui.RoatUi
 import com.gadscape.game.content.ui.ClientScriptsCache
 import com.gadscape.game.world.entity.player.pkPoints
+import com.zenyte.game.content.flowerpoker.GambleBan
 import com.zenyte.game.item.Item
 import com.zenyte.game.packet.out.IfSetPosition
 import com.zenyte.game.world.entity.persistentAttribute
@@ -118,6 +119,7 @@ object Gamble {
 
     /** Why the player can't gamble right now, or null if they can. */
     fun refusal(player: Player): String? = when {
+        GambleBan.isGambleBanValid(player) -> "You are currently gamble banned and cannot gamble."
         player.isIronman -> "Ironmen can't gamble."
         WildernessArea.isWithinWilderness(player) -> "You can't gamble in the Wilderness."
         player.isUnderCombat -> "You can't gamble while in combat."
