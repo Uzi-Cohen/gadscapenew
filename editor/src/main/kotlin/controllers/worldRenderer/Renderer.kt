@@ -1073,7 +1073,7 @@ class Renderer @Inject constructor(
                     if (z != plane) continue
                     val od = objectLoader.get(loc.objId) ?: continue
                     when (loc.type) {
-                        in 0..3 -> if (od.interactType != 0) blocked[loc.x][loc.y] = true
+                        in 0..3, 9 -> if (od.interactType != 0) blocked[loc.x][loc.y] = true
                         10, 11 -> if (od.interactType != 0) {
                             val w = if (loc.orientation == 1 || loc.orientation == 3) od.sizeY else od.sizeX
                             val h = if (loc.orientation == 1 || loc.orientation == 3) od.sizeX else od.sizeY
