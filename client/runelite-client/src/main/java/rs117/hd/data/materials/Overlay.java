@@ -450,10 +450,7 @@ public enum Overlay {
     OVERLAY_29(29, GroundMaterial.GRASS_1),
     OVERLAY_32(32, GroundMaterial.CONCRETE),
 
-    NONE(GroundMaterial.DIRT, p -> {}),
-
-    // the floor exactly as the map paints it: no texture, no colour changes (see HdPluginConfig.mapFloorColors)
-    MAP_COLORS(GroundMaterial.NONE, p -> {});
+    NONE(GroundMaterial.DIRT, p -> {});
 
     public final Integer[] ids;
     public final Area area;
@@ -530,8 +527,6 @@ public enum Overlay {
     static {
         GROUND_MATERIAL_MAP = ArrayListMultimap.create();
         for (Overlay overlay : values()) {
-            if (overlay == MAP_COLORS)
-                continue;
             if (overlay.ids.length == 0) {
                 GROUND_MATERIAL_MAP.put(null, overlay);
             } else {
@@ -566,10 +561,6 @@ public enum Overlay {
             .findFirst()
             .orElse(anyOverlay);
 
-        overlay = overlay.replacementCondition.apply(pluginConfig) ? overlay.replacementOverlay : overlay;
-        // custom maps: Jagex-area floor rules repaint whatever was painted there, so only water keeps its HD look
-        if (pluginConfig.mapFloorColors() && overlay.waterType == WaterType.NONE)
-            return MAP_COLORS;
-        return overlay;
+        return overlay.replacementCondition.apply(pluginConfig) ? overlay.replacementOverlay : overlay;
     }
 }

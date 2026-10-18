@@ -461,18 +461,6 @@ public interface HdPluginConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "mapFloorColors",
-		name = "Map Floor Colours",
-		description = "Shows floors in the colours the map paints them, instead of HD's per-area floor textures and recolouring. Water keeps its HD look.",
-		position = 207,
-		section = environmentSettings
-	)
-	default boolean mapFloorColors()
-	{
-		return true;
-	}
-
-	@ConfigItem(
 		keyName = "groundBlending",
 		name = "Ground Blending",
 		description = "Affects the quality of blending between different ground/terrain textures.",
