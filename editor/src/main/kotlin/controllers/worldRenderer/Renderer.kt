@@ -1074,7 +1074,8 @@ class Renderer @Inject constructor(
                     val od = objectLoader.get(loc.objId) ?: continue
                     when (loc.type) {
                         in 0..3, 9 -> if (od.interactType != 0) blocked[loc.x][loc.y] = true
-                        10, 11 -> if (od.interactType != 0) {
+                        // roof pieces (12-21) block like any game object; with roofs hidden they're invisible walls
+                        10, 11, in 12..21 -> if (od.interactType != 0) {
                             val w = if (loc.orientation == 1 || loc.orientation == 3) od.sizeY else od.sizeX
                             val h = if (loc.orientation == 1 || loc.orientation == 3) od.sizeX else od.sizeY
                             for (dx in 0 until w) for (dy in 0 until h) {

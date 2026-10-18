@@ -430,8 +430,9 @@ class TileOps(private val access: RegionAccess) {
                         ground.overlayRotation = t.overlayRotation
                     }
                 }
-                // carry blocked / remove roof / hide on minimap down; not the floor-linking flags (bridge, render below)
-                if (hasFlags) ground.settings = (ground.settings.toInt() or (t.settings.toInt() and 0x15)).toByte()
+                // carry remove-roof / hide-on-minimap down. Not "blocked": upper floors are blocked wherever they have no
+                // floor, and carrying that down made invisible walls all over the ground. Not the floor-linking flags.
+                if (hasFlags) ground.settings = (ground.settings.toInt() or (t.settings.toInt() and 0x14)).toByte()
                 if (z != 0) t.underlayId = 0
                 t.overlayId = 0; t.attrOpcode = 0; t.overlayPath = 0; t.overlayRotation = 0
                 // the bridge flag belongs to floor 1 (see flagPlanes): it stays unless asked to clear it
@@ -452,12 +453,20 @@ class TileOps(private val access: RegionAccess) {
         val edits = ArrayList<Edit>()
         rec.finish(false)?.let { edits.add(it) }
         var objectsMoved = 0
+        var roofsDropped = 0
         for (id in regionsIn(rect)) {
             val locs = access.locations(id)?.locations ?: continue
             val bx = (id shr 8) shl 6
             val by = (id and 0xFF) shl 6
             val up = locs.filter { it.z in sources && rect.contains(bx + it.x, by + it.y) }
             for (l in up) {
+                if (to == 0 && l.type in 12..21) {
+                    // a roof piece on the ground is solid and, with roofs hidden, an invisible wall: drop it
+                    locs.remove(l)
+                    edits.add(ObjectEdit(id, l, false))
+                    roofsDropped++
+                    continue
+                }
                 val down = l.copy(z = to)
                 locs.remove(l)
                 locs.add(down)
@@ -467,6 +476,7 @@ class TileOps(private val access: RegionAccess) {
             }
         }
         val msg = "Moved $tilesMoved tiles and $objectsMoved objects from floor ${sources.sorted().joinToString("+")} to floor $to" +
+                (if (roofsDropped > 0) ", removed $roofsDropped roof pieces (they'd be invisible walls on the ground)" else "") +
                 if (clearBridgeFlags) " (bridge flags cleared)." else "."
         val edit = when (edits.size) { 0 -> null; 1 -> edits[0]; else -> MultiEdit(edits) }
         return Pair(edit, msg)
