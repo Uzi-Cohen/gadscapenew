@@ -120,6 +120,39 @@ object HdFloors {
         return if (!r.water && r.recolours && r.ids.any { idMatches(it, stored) }) r else null
     }
 
+    /**
+     * Where HD would colour this tile differently from how it's painted because of a floor number: which number
+     * (true = the overlay, false = the underlay) and the rule. HD uses the underlay's rule on a tile with an overlay
+     * too when it has none for the overlay's number, so a hidden underlay can recolour a painted overlay.
+     */
+    fun recolouredBy(overlay: Int, underlay: Int, x: Int, y: Int, z: Int): Pair<Boolean, Rule>? {
+        val o = lookup(overlays, overlay, x, y, z)
+        val rule: Rule
+        val byOverlay: Boolean
+        if (o != null && !o.isNone) { rule = o; byOverlay = true }
+        else { rule = lookup(underlays, underlay, x, y, z)?.takeIf { !it.isNone } ?: return null; byOverlay = false }
+        val stored = if (byOverlay) overlay else underlay
+        if (rule.water || !rule.recolours || rule.ids.none { idMatches(it, stored) }) return null
+        return byOverlay to rule
+    }
+
+    /**
+     * Swap the floor number(s) on one tile for twins until HD shows it as painted. [twin] gives a twin's stored number.
+     * Returns what was swapped ("overlay 10 -> 34 (RULE)"), or null if nothing needed to change.
+     */
+    fun makeShowAsPainted(t: cache.definitions.RegionDefinition.Tile, x: Int, y: Int, z: Int,
+                          twin: (overlay: Boolean, stored: Int) -> Int?): List<String> {
+        val done = ArrayList<String>()
+        repeat(2) {
+            val (byOverlay, rule) = recolouredBy(t.overlayId, t.underlayId, x, y, z) ?: return done
+            val stored = if (byOverlay) t.overlayId else t.underlayId
+            val tw = twin(byOverlay, stored) ?: return done
+            if (byOverlay) t.overlayId = tw else t.underlayId = tw
+            done.add("${if (byOverlay) "overlay" else "underlay"} ${stored - 1} -> ${tw - 1} (${rule.name})")
+        }
+        return done
+    }
+
     /** Floor numbers HD has a rule for anywhere: a twin must not be one of them. */
     fun hasRules(overlay: Boolean, stored: Int): Boolean =
         (if (overlay) overlays else underlays).any { r -> r.ids.any { idMatches(it, stored) } }

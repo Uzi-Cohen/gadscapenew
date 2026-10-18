@@ -849,18 +849,17 @@ class Renderer @Inject constructor(
     private fun heightOf(t: SceneTile?): Int? = groundTile(t)?.second?.height
 
     /**
-     * With View > 117 HD floors on: the floor to paint here so HD shows it as painted. When HD has a rule that repaints
-     * this floor number on this tile, its twin (same floor, another number) goes down instead. [id] is the floor's
-     * number in the Paint tab (stored value - 1); the result is too.
+     * With View > 117 HD floors on: where HD would colour this painted tile differently because of its overlay number,
+     * or the underlay number hidden under it, swap that number for its twin (the same floor under a number HD leaves
+     * alone), so the tile shows in HD as painted. Looks the same without HD.
      */
-    private fun hdSafe(overlay: Boolean, id: Int, t: SceneTile, plane: Int): Int {
-        if (!utils.HdFloors.enabled || id < 0) return id
-        val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return id
-        val rule = utils.HdFloors.numberRule(overlay, id + 1, w.first, w.second, plane) ?: return id
-        val twin = utils.FloorTwins.twinFor(overlay, id + 1) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) } ?: return id
-        hdTwinNote = "HD repaints ${if (overlay) "overlay" else "underlay"} $id here (${rule.name}), so its twin ${twin - 1} went down: " +
-                "the same floor, which HD leaves as painted."
-        return twin - 1
+    private fun hdShowAsPainted(ct: RegionDefinition.Tile, t: SceneTile, plane: Int) {
+        if (!utils.HdFloors.enabled) return
+        val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return
+        val swaps = utils.HdFloors.makeShowAsPainted(ct, w.first, w.second, plane) { overlay, stored ->
+            utils.FloorTwins.twinFor(overlay, stored) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) }
+        }
+        if (swaps.isNotEmpty()) hdTwinNote = "So HD shows it as painted, swapped " + swaps.joinToString(", ") + ": the same floors, which HD leaves alone."
     }
     private var hdTwinNote: String? = null
 
@@ -945,13 +944,13 @@ class Renderer @Inject constructor(
         recorder?.touch(def.regionId, plane, local.first, local.second, ct)
         when (tool) {
             TerrainTool.UNDERLAY -> {
-                val id = if (erase) -1 else hdSafe(false, gadToolsModel.underlayId.get(), t, plane)
+                val id = if (erase) -1 else gadToolsModel.underlayId.get()
                 ct.underlayId = (id + 1)
                 // the game draws an overlay over the underlay: painting the ground colour has to take the old floor off too
                 if (!erase) { ct.attrOpcode = 0; ct.overlayId = 0; ct.overlayPath = 0; ct.overlayRotation = 0 }
             }
             TerrainTool.OVERLAY -> {
-                val id = if (erase) -1 else hdSafe(true, gadToolsModel.overlayId.get(), t, plane)
+                val id = if (erase) -1 else gadToolsModel.overlayId.get()
                 if (id < 0) {
                     ct.attrOpcode = 0; ct.overlayId = 0; ct.overlayPath = 0; ct.overlayRotation = 0
                 } else {
@@ -985,6 +984,7 @@ class Renderer @Inject constructor(
         if (tool == TerrainTool.OVERLAY) ct.blockFor(walk.waterOverlay(ct.overlayId))
         else if (tool == TerrainTool.UNDERLAY && !erase && !walk.water(ct)) ct.blockFor(false)
         if (ct.settings != before.settings) highlightDirty = true
+        if (!erase && (tool == TerrainTool.OVERLAY || tool == TerrainTool.UNDERLAY)) hdShowAsPainted(ct, t, plane)
         // a new floor replaces what lay on the old one: carpets and rugs are objects, and the game would keep drawing them
         val newFloor = !erase && (tool == TerrainTool.OVERLAY || (tool == TerrainTool.UNDERLAY && ct.overlayId == 0))
         if (newFloor && areaOps.removeFloorDecor(def.regionId, plane, local.first, local.second, walk, strokeDecorGone) > 0) strokeRebuild.add(def.regionId)

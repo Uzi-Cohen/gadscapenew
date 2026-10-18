@@ -755,58 +755,41 @@ class GadToolsController @Inject constructor(
     }
 
     /**
-     * View > 117 HD floors: the floor to fill the selection with so HD shows it as painted. If HD repaints this floor
-     * number anywhere in the selection, its twin (the same floor under a number HD leaves alone) is used instead.
-     */
-    private fun hdSafeFill(overlay: Boolean, id: Int): Int {
-        if (!utils.HdFloors.enabled || id < 0) return id
-        val sel = gadToolsModel.selection ?: return id
-        val plane = gadToolsModel.paintPlane.get()
-        var rule: utils.HdFloors.Rule? = null
-        loop@ for (x in sel.x1..sel.x2) for (y in sel.y1..sel.y2) {
-            rule = utils.HdFloors.numberRule(overlay, id + 1, x, y, plane)
-            if (rule != null) break@loop
-        }
-        rule ?: return id
-        val twin = utils.FloorTwins.twinFor(overlay, id + 1) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) } ?: return id
-        status("HD repaints ${if (overlay) "overlay" else "underlay"} $id here (${rule.name}), so its twin ${twin - 1} is used: the same floor, which HD leaves as painted.")
-        return twin - 1
-    }
-
-    /**
      * Where 117 HD repaints a floor by its number (Edgeville's old house spots and overlay 10, for one), put the floor's
      * twin there instead: the same floor under a number HD leaves alone. Looks the same without HD; with HD it now
      * shows as painted. Selection, or every loaded region. Ctrl+Z undoes it.
      */
     fun makeHdShowPaint() {
-        val ids = GadTools.loadedRegionIds(scene)
-        if (ids.isEmpty()) { status("No map loaded."); return }
+        if (GadTools.loadedRegionIds(scene).isEmpty()) { status("No map loaded."); return }
         val sel = gadToolsModel.selection
         gadToolsModel.actions.add {
-            val rec = models.TileRecorder()
-            val swapped = java.util.TreeMap<String, Int>()
-            for (rid in ids) {
-                val def = editorRegions.region(rid) ?: continue
-                for (z in 0 until 4) for (x in 0 until 64) for (y in 0 until 64) {
-                    val wx = def.baseX + x; val wy = def.baseY + y
-                    if (sel != null && !sel.contains(wx, wy)) continue
-                    val t = def.tiles[z][x][y] ?: continue
-                    val overlay = t.overlayId > 0
-                    val stored = if (overlay) t.overlayId else t.underlayId
-                    val rule = utils.HdFloors.numberRule(overlay, stored, wx, wy, z) ?: continue
-                    val twin = utils.FloorTwins.twinFor(overlay, stored) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) } ?: continue
-                    rec.touch(rid, z, x, y, t)
-                    if (overlay) t.overlayId = twin else t.underlayId = twin
-                    def.syncTile(z, x, y)
-                    val k = "${if (overlay) "overlay" else "underlay"} ${stored - 1} -> ${twin - 1} (${rule.name})"
-                    swapped[k] = (swapped[k] ?: 0) + 1
-                }
-            }
-            val e = rec.finish(false)
+            val (e, swapped) = hdPass(sel, 0..3)
             gadToolsModel.message = if (e == null) "HD shows every floor here as painted already." else
                 "HD now shows these as painted: " + swapped.entries.joinToString("; ") { "${it.key} x${it.value}" } + ". Ctrl+Z undoes it."
             e
         }
+    }
+
+    /** makeShowAsPainted on every tile of the loaded map (or [rect]) on [planes]: the edit, and what was swapped how often. */
+    private fun hdPass(rect: models.TileRect?, planes: IntRange): Pair<models.Edit?, java.util.TreeMap<String, Int>> {
+        val rec = models.TileRecorder()
+        val swapped = java.util.TreeMap<String, Int>()
+        for (rid in GadTools.loadedRegionIds(scene)) {
+            val def = editorRegions.region(rid) ?: continue
+            for (z in planes) for (x in 0 until 64) for (y in 0 until 64) {
+                val wx = def.baseX + x; val wy = def.baseY + y
+                if (rect != null && !rect.contains(wx, wy)) continue
+                val t = def.tiles[z][x][y] ?: continue
+                if (utils.HdFloors.recolouredBy(t.overlayId, t.underlayId, wx, wy, z) == null) continue
+                rec.touch(rid, z, x, y, t)
+                val swaps = utils.HdFloors.makeShowAsPainted(t, wx, wy, z) { overlay, stored ->
+                    utils.FloorTwins.twinFor(overlay, stored) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) }
+                }
+                def.syncTile(z, x, y)
+                for (k in swaps) swapped[k] = (swapped[k] ?: 0) + 1
+            }
+        }
+        return Pair(rec.finish(false), swapped)
     }
 
     private fun blocksWalking(od: cache.definitions.ObjectDefinition, type: Int): Boolean =
@@ -1428,7 +1411,9 @@ class GadToolsController @Inject constructor(
                 val e = tileOps.fill(sel, plane..plane, heightOnly) { t, _ -> change(t) }
                 // carpets and rugs are objects lying on the old floor: the game keeps drawing them unless they go too
                 val (decor, n) = if (newFloor == null) Pair(null, 0) else tileOps.removeFloorDecor(sel, plane, walk, newFloor)
-                val parts = listOfNotNull(e, decor)
+                // View > 117 HD floors: swap numbers HD would recolour here for their twins, so HD shows the fill as painted
+                val hd = if (newFloor != null && utils.HdFloors.enabled) hdPass(sel, plane..plane).first else null
+                val parts = listOfNotNull(e, decor, hd)
                 gadToolsModel.message = if (parts.isEmpty()) "$label: nothing changed." else "$label on ${sel.width} x ${sel.height} tiles." +
                         (if (n > 0) " Took $n carpets/rugs/floor decorations off it (Ctrl+Z puts them back)." else "")
                 if (parts.isEmpty()) null else if (parts.size == 1) parts[0] else models.MultiEdit(parts)
@@ -1456,7 +1441,7 @@ class GadToolsController @Inject constructor(
             setOnAction { bridgeSelection(false) }
         }
         val btnFillUnder = Button("Underlay").apply {
-            setOnAction { val id = hdSafeFill(false, gadToolsModel.underlayId.get()); fill("Filled underlay", false, false, { true }) {
+            setOnAction { val id = gadToolsModel.underlayId.get(); fill("Filled underlay", false, false, { true }) {
                     // the game draws an overlay over the underlay: the old floor has to go for the new colour to show
                     it.underlayId = (id + 1); it.attrOpcode = 0; it.overlayId = 0; it.overlayPath = 0; it.overlayRotation = 0
                     it.blockFor(false)
@@ -1464,7 +1449,7 @@ class GadToolsController @Inject constructor(
         }
         val btnFillOver = Button("Overlay").apply {
             setOnAction {
-                val id = hdSafeFill(true, gadToolsModel.overlayId.get())
+                val id = gadToolsModel.overlayId.get()
                 val shape = gadToolsModel.overlayShape.get()
                 val rot = gadToolsModel.overlayRotation.get() and 3
                 fill("Filled overlay", false, false, { id >= 0 }) {
