@@ -335,7 +335,6 @@ public final class Skills extends SkillConstants implements TempPlayerStatePlugi
 			exp *= 1.1F;
 
 		exp *= player.getExperienceRate(skill);
-		exp *= com.gadscape.game.content.accounttype.Sigils.experience(player, skill);
 		if (GameConstants.BOOSTED_XP) {
 			exp *= (1.0F + GameConstants.BOOSTED_XP_MODIFIER / 100.0);
 		}

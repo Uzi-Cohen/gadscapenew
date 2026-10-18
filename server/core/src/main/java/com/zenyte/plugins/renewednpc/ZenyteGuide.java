@@ -168,7 +168,6 @@ public class ZenyteGuide extends NPCPlugin {
             final DailyChallenge challenge = player.getDailyChallengeManager().getRandomChallenge();
             if (challenge != null)
                 player.getDailyChallengeManager().assignChallenge(challenge);
-            com.gadscape.game.content.accounttype.AccountSetup.afterRegistration(player);
             return Unit.INSTANCE;
         });
     }
@@ -181,10 +180,6 @@ public class ZenyteGuide extends NPCPlugin {
                 player.stopAll();
                 player.faceEntity(npc);
                 if (!player.getBooleanAttribute("registered")) {
-                    com.gadscape.game.content.accounttype.AccountSetup.openPicker(player);
-                    return;
-                }
-                if (false) {
 
                     player.getDialogueManager().start(new Dialogue(player, npc) {
                         @Override
@@ -207,10 +202,6 @@ public class ZenyteGuide extends NPCPlugin {
                         public void buildDialogue() {
                             npc("Hey! It's good to see you again, " + player.getName() + ". What can I do for you?");
                             options(TITLE, "Talk about my experience mode.", "Rewatch the tutorial.").onOptionOne(() -> {
-                                if (com.gadscape.game.content.accounttype.AccountType.of(player) != null) {
-                                    setKey(50);
-                                    return;
-                                }
                                 setKey(5);
                             }).onOptionTwo(() -> {
                                 player.lock();
@@ -220,7 +211,6 @@ public class ZenyteGuide extends NPCPlugin {
                                 player.addTemporaryAttribute("tutorial_rewatch", 1);
                                 player.getCutsceneManager().play(new EdgevilleCutscene());
                             });
-                            npc(50, "Your experience rate comes with your account type, so it can't be changed.");
                             ExpConfigurations config = ExpConfigurations.of(player.getGameMode());
                             if (config != null) {
                                 int currentIndex = config.getExpConfigurationIndex(player.getCombatXPRate(), player.getSkillingXPRate());

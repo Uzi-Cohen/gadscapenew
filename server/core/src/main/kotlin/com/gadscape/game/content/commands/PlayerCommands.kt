@@ -3,9 +3,6 @@ package com.gadscape.game.content.commands
 import com.gadscape.game.content.commands.DeveloperCommands.enableWildernessVault
 import com.gadscape.game.item.CustomItemId
 import com.gadscape.game.world.entity.player.manuallyLeftHelpChat
-import com.gadscape.game.content.pk.PkStore
-import com.gadscape.game.world.entity.player.pkPoints
-import com.gadscape.game.world.entity.player.pvpBestKillStreak
 import com.gadscape.game.world.entity.player.pvpDeaths
 import com.gadscape.game.world.entity.player.pvpKillStreak
 import com.gadscape.game.world.entity.player.pvpKills
@@ -22,7 +19,6 @@ import com.zenyte.game.world.entity.Location
 import com.zenyte.game.world.entity.player.GameCommands.Command
 import com.zenyte.game.world.entity.player.dialogue.dialogue
 import com.zenyte.game.world.entity.player.dialogue.options
-import com.zenyte.game.world.entity.player.privilege.MemberRank
 import com.zenyte.game.world.entity.player.privilege.PlayerPrivilege
 import com.zenyte.utils.TimeUnit
 import java.util.*
@@ -97,19 +93,6 @@ object PlayerCommands {
             teleport.teleport(p)
         }
 
-        // Super skill island, in the sea south-east of Karamja (region 12334): Super Donator and above.
-        // Nothing else leads there (it's surrounded by sea), so the teleport is the only way in.
-        Command(PlayerPrivilege.PLAYER, arrayOf("ssi", "skillisland"), "Teleport to the Super skill island (Super Donator+).") { p, _ ->
-            if (p.isLocked)
-                return@Command
-            if (!p.memberRank.equalToOrGreaterThan(MemberRank.EXPANSION) && !p.isStaff) {
-                p.sendMessage("The Super skill island is for Super Donators and above.")
-                return@Command
-            }
-            p.sendMessage("You teleport to the Super skill island.")
-            RegularTeleport(Location(3104, 2972, 0)).teleport(p)
-        }
-
         Command(PlayerPrivilege.PLAYER, "kdr") { p, _ ->
             val kills = p.pvpKills
             val deaths = p.pvpDeaths
@@ -118,16 +101,6 @@ object PlayerCommands {
             val msg = "Kills: $kills Deaths: $deaths Ratio: $ratio Streak: $killStreak"
             p.forceTalk = ForceTalk(msg)
             p.sendMessage(msg)
-        }
-
-        Command(PlayerPrivilege.PLAYER, "pkp", "Shows your PK points, kills, deaths and killstreaks.") { p, _ ->
-            p.sendMessage("PK points: <col=ff0000>${p.pkPoints}</col>")
-            p.sendMessage("Kills: <col=ff0000>${p.pvpKills}</col> Deaths: <col=ff0000>${p.pvpDeaths}</col> " +
-                    "Streak: <col=ff0000>${p.pvpKillStreak}</col> Best streak: <col=ff0000>${maxOf(p.pvpBestKillStreak, p.pvpKillStreak)}</col>")
-        }
-
-        Command(PlayerPrivilege.PLAYER, arrayOf("pkstore", "pkshop"), "Opens the PK store, paid in PK points.") { p, _ ->
-            PkStore.open(p)
         }
 
         Command(PlayerPrivilege.PLAYER, "box", "Stake coins on a provably fair boxing bout against the house.") { p, _ ->

@@ -52,9 +52,6 @@ enum class ShopCurrency(
     },
     PVM_ARENA_POINTS(isStackable = false, isPhysical = false) {
         override fun toString(): String = "pvm arena points"
-    },
-    PK_POINTS(isStackable = false, isPhysical = false) {
-        override fun toString(): String = "PK points"
     };
 
     private val formattedString by lazy { name.lowercase() }
