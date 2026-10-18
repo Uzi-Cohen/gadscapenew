@@ -1359,13 +1359,18 @@ class GadToolsController @Inject constructor(
             setOnAction { moveSelectionToGround(chkBridge.isSelected) }
         }
 
-        fun fill(label: String, heightOnly: Boolean, groundOnly: Boolean, change: (cache.definitions.RegionDefinition.Tile) -> Unit) {
+        fun fill(label: String, heightOnly: Boolean, groundOnly: Boolean, newFloor: ((cache.definitions.RegionDefinition.Tile) -> Boolean)? = null,
+                 change: (cache.definitions.RegionDefinition.Tile) -> Unit) {
             val sel = needSelection() ?: return
             val plane = if (groundOnly) 0 else gadToolsModel.paintPlane.get()
             gadToolsModel.actions.add {
                 val e = tileOps.fill(sel, plane..plane, heightOnly) { t, _ -> change(t) }
-                gadToolsModel.message = if (e == null) "$label: nothing changed." else "$label on ${sel.width} x ${sel.height} tiles."
-                e
+                // carpets and rugs are objects lying on the old floor: the game keeps drawing them unless they go too
+                val (decor, n) = if (newFloor == null) Pair(null, 0) else tileOps.removeFloorDecor(sel, plane, walk, newFloor)
+                val parts = listOfNotNull(e, decor)
+                gadToolsModel.message = if (parts.isEmpty()) "$label: nothing changed." else "$label on ${sel.width} x ${sel.height} tiles." +
+                        (if (n > 0) " Took $n carpets/rugs/floor decorations off it (Ctrl+Z puts them back)." else "")
+                if (parts.isEmpty()) null else if (parts.size == 1) parts[0] else models.MultiEdit(parts)
             }
         }
         fun fillFlags(label: String, add: Boolean) {
@@ -1390,14 +1395,18 @@ class GadToolsController @Inject constructor(
             setOnAction { bridgeSelection(false) }
         }
         val btnFillUnder = Button("Underlay").apply {
-            setOnAction { val id = gadToolsModel.underlayId.get(); fill("Filled underlay", false, false) { it.underlayId = (id + 1); if (!walk.water(it)) it.blockFor(false) } }
+            setOnAction { val id = gadToolsModel.underlayId.get(); fill("Filled underlay", false, false, { true }) {
+                    // the game draws an overlay over the underlay: the old floor has to go for the new colour to show
+                    it.underlayId = (id + 1); it.attrOpcode = 0; it.overlayId = 0; it.overlayPath = 0; it.overlayRotation = 0
+                    it.blockFor(false)
+                } }
         }
         val btnFillOver = Button("Overlay").apply {
             setOnAction {
                 val id = gadToolsModel.overlayId.get()
                 val shape = gadToolsModel.overlayShape.get()
                 val rot = gadToolsModel.overlayRotation.get() and 3
-                fill("Filled overlay", false, false) {
+                fill("Filled overlay", false, false, { id >= 0 }) {
                     if (id < 0) { it.attrOpcode = 0; it.overlayId = 0; it.overlayPath = 0; it.overlayRotation = 0 }
                     else { it.attrOpcode = 2 + shape * 4 + rot; it.overlayId = (id + 1); it.overlayPath = shape.toByte(); it.overlayRotation = rot.toByte() }
                     it.blockFor(walk.waterOverlay(it.overlayId))

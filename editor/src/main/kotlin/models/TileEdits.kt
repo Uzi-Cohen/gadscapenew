@@ -252,6 +252,17 @@ class Walkability(
 
     fun water(t: RegionDefinition.Tile): Boolean = waterOverlay(t.overlayId)
 
+    /**
+     * A flat decoration lying on the floor: carpets, rugs, grass tufts, cracks (type 22). Painting a new floor goes
+     * over them in the editor but the game still draws them, so they go with the old floor. Things you can click
+     * (trapdoors and the like) and solid ones stay.
+     */
+    fun floorDecor(l: Location): Boolean {
+        if (l.type != 22) return false
+        val d = objects(l.objId) ?: return false
+        return d.interactType != 1 && d.actions.all { it == null }
+    }
+
     companion object {
         fun isWater(d: cache.definitions.OverlayDefinition?): Boolean {
             if (d == null) return false
@@ -436,6 +447,29 @@ class TileOps(private val access: RegionAccess) {
         }
         val flags = rec.finish(false) ?: return removal
         return MultiEdit(listOf(removal, flags))
+    }
+
+    /** Take the floor decorations off one tile (floor [z], region-local x/y); each removal is added to [out]. */
+    fun removeFloorDecor(regionId: Int, z: Int, lx: Int, ly: Int, walk: Walkability, out: MutableList<Edit>): Int {
+        val locs = access.locations(regionId)?.locations ?: return 0
+        var n = 0
+        val it = locs.iterator()
+        while (it.hasNext()) {
+            val l = it.next()
+            if (l.z != z || l.x != lx || l.y != ly || !walk.floorDecor(l)) continue
+            it.remove()
+            out.add(ObjectEdit(regionId, l, false))
+            n++
+        }
+        return n
+    }
+
+    /** removeFloorDecor over an area, on one floor; [where] picks the tiles. */
+    fun removeFloorDecor(rect: TileRect, z: Int, walk: Walkability, where: (RegionDefinition.Tile) -> Boolean): Pair<Edit?, Int> {
+        val out = ArrayList<Edit>()
+        var n = 0
+        forTiles(rect, z..z) { id, _, _, lx, ly, t -> if (where(t)) n += removeFloorDecor(id, z, lx, ly, walk, out) }
+        return Pair(if (out.isEmpty()) null else MultiEdit(out), n)
     }
 
     fun removeObjects(rect: TileRect, filter: (Location) -> Boolean = { true }): Edit? {

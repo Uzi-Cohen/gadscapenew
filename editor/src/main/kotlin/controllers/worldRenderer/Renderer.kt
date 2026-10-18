@@ -489,6 +489,8 @@ class Renderer @Inject constructor(
 
     // ---- editing: strokes, area tools, undo/redo ----
     private var recorder: TileRecorder? = null
+    // floor decorations (carpets, rugs...) taken off painted tiles during this stroke
+    private val strokeDecorGone = ArrayList<Edit>()
     private var strokeHeightOnly = true
     /** Regions whose tile data changed during the current stroke and need a rebuild to show it. */
     private val strokeRebuild = HashSet<Int>()
@@ -876,6 +878,8 @@ class Renderer @Inject constructor(
             TerrainTool.UNDERLAY -> {
                 val id = if (erase) -1 else gadToolsModel.underlayId.get()
                 ct.underlayId = (id + 1)
+                // the game draws an overlay over the underlay: painting the ground colour has to take the old floor off too
+                if (!erase) { ct.attrOpcode = 0; ct.overlayId = 0; ct.overlayPath = 0; ct.overlayRotation = 0 }
             }
             TerrainTool.OVERLAY -> {
                 val id = if (erase) -1 else gadToolsModel.overlayId.get()
@@ -912,6 +916,9 @@ class Renderer @Inject constructor(
         if (tool == TerrainTool.OVERLAY) ct.blockFor(walk.waterOverlay(ct.overlayId))
         else if (tool == TerrainTool.UNDERLAY && !erase && !walk.water(ct)) ct.blockFor(false)
         if (ct.settings != before.settings) highlightDirty = true
+        // a new floor replaces what lay on the old one: carpets and rugs are objects, and the game would keep drawing them
+        val newFloor = !erase && (tool == TerrainTool.OVERLAY || (tool == TerrainTool.UNDERLAY && ct.overlayId == 0))
+        if (newFloor && areaOps.removeFloorDecor(def.regionId, plane, local.first, local.second, walk, strokeDecorGone) > 0) strokeRebuild.add(def.regionId)
         if (ct == before) return
         def.syncTile(plane, local.first, local.second)
         strokeRebuild.add(def.regionId)
@@ -949,7 +956,10 @@ class Renderer @Inject constructor(
             refresh(strokeRebuild.toList())
             strokeRebuild.clear()
         }
-        rec.finish(strokeHeightOnly)?.let { pushUndo(it) }
+        val parts = listOfNotNull(rec.finish(strokeHeightOnly)) + strokeDecorGone
+        if (strokeDecorGone.isNotEmpty()) gadToolsModel.message = "Painted. Took ${strokeDecorGone.size} carpets/rugs/floor decorations off the painted tiles (Ctrl+Z puts them back)."
+        strokeDecorGone.clear()
+        when (parts.size) { 0 -> {}; 1 -> pushUndo(parts[0]); else -> pushUndo(MultiEdit(parts)) }
     }
 
     private fun applyUndoRedo() {
