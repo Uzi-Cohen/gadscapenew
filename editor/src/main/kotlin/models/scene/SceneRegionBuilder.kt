@@ -423,6 +423,18 @@ class SceneRegionBuilder @Inject constructor(
     )
 
     private val entityCache: HashMap<ModelKey, Model> = HashMap()
+    /** The object a multiloc shows by default (state 0, else its default state), like the game does. */
+    private fun transformed(objectDefinition: ObjectDefinition): ObjectDefinition? {
+        val transforms = try { objectDefinition.transforms } catch (e: UninitializedPropertyAccessException) { return null }
+        val candidates = listOfNotNull(transforms.firstOrNull(), transforms.lastOrNull()) + transforms.toList()
+        for (id in candidates) {
+            if (id < 0 || id == objectDefinition.id) continue
+            val def = objectLoader.get(id) ?: continue
+            if (def.modelIds != null) return def
+        }
+        return null
+    }
+
     private fun getEntity(
         objectDefinition: ObjectDefinition,
         type: Int,
@@ -433,8 +445,9 @@ class SceneRegionBuilder @Inject constructor(
         baseX: Int,
         baseY: Int
     ): Entity? {
-        val modelDefinition: ModelDefinition =
-            objectToModelConverter.toModel(objectDefinition, type, orientation) ?: return null
+        val modelDefinition: ModelDefinition = objectToModelConverter.toModel(objectDefinition, type, orientation)
+            ?: transformed(objectDefinition)?.let { objectToModelConverter.toModel(it, type, orientation) }
+            ?: objectToModelConverter.standIn(objectDefinition)
 
         // FIXME: nonFlatShading affects fence doors
         var model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)

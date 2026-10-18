@@ -34,7 +34,9 @@ var stamp = "0"
 const (
 	appName  = "Uzis Map Editor"
 	releases = "https://github.com/Uzi-Cohen/uzis-map-editor-releases/releases/"
-	mapZip   = releases + "download/map/map.zip"
+	// Every merge to main publishes the editor here (Build workflow), so friends get it on their next start.
+	editorReleases = "https://github.com/Uzi-Cohen/gadscape/releases/"
+	mapZip         = releases + "download/map/map.zip"
 )
 
 func main() {
@@ -97,7 +99,7 @@ func placeSelf(dest string) {
 	shortcut(exe, dest)
 }
 
-// update gets the editor Publish uploaded when it's newer than the one here, and the newest map.
+// update gets the newest editor build from main when it's newer than the one here, and the newest map Publish uploaded.
 // Offline or on any error the installed ones are used.
 func update(dest string) {
 	c := http.Client{Timeout: 15 * time.Second}
@@ -118,11 +120,11 @@ func update(dest string) {
 		return strings.TrimSpace(string(b))
 	}
 
-	if remote, err := strconv.ParseInt(text(releases+"latest/download/editor-version.txt"), 10, 64); err == nil {
+	if remote, err := strconv.ParseInt(text(editorReleases+"latest/download/editor-version.txt"), 10, 64); err == nil {
 		have, _ := strconv.ParseInt(local("editor-version.txt"), 10, 64)
 		if remote > have {
 			tmp := filepath.Join(dest, "editor.jar.new")
-			if download(releases+"latest/download/editor.jar", tmp) == nil && validJar(tmp) {
+			if download(editorReleases+"latest/download/editor.jar", tmp) == nil && validJar(tmp) {
 				os.Remove(filepath.Join(dest, "editor.jar"))
 				if os.Rename(tmp, filepath.Join(dest, "editor.jar")) == nil {
 					os.WriteFile(filepath.Join(dest, "editor-version.txt"), []byte(strconv.FormatInt(remote, 10)), 0o644)

@@ -549,6 +549,8 @@ class Renderer @Inject constructor(
     private var strokeLastX = -1
     private var strokeLastY = -1
     private val objStrokeRegions = HashSet<Int>()
+    /** Footprints placed during the current drag (scene x1, y1, x2, y2 exclusive, plane). */
+    private val strokePlaced = ArrayList<IntArray>()
     private fun tileKey(x: Int, y: Int) = (x.toLong() shl 32) or (y.toLong() and 0xFFFFFFFFL)
 
     /** The stored object under the mouse at scene (x, y) with hover type, or null. */
@@ -762,33 +764,32 @@ class Renderer @Inject constructor(
         val tile = planeTile(x, y) ?: return null
         val region = scene.getRegionFromSceneCoord(x, y) ?: return null
         val objectDefinition: ObjectDefinition = held.objectDefinition
-        val modelDefinition: ModelDefinition = objectToModelConverter.toModel(objectDefinition, held.type, held.orientation) ?: run {
+        objectToModelConverter.toModel(objectDefinition, held.type, held.orientation) ?: run {
             gadToolsModel.message = "Object ${objectDefinition.id} has no model for that type."
             return null
         }
         val plane = currentPlane
-        val onFloor = tile.z == plane
-        val baseHeight = tile.tilePaint?.nwHeight ?: tile.cacheTile?.height ?: 0
-        val groundHeight = if (onFloor) baseHeight else baseHeight - 240 * plane
-        val loc = Location(objectDefinition.id, held.type, held.orientation and 3, x % REGION_SIZE, y % REGION_SIZE, plane)
-        region.locationsDefinition.locations.add(loc)
-        // rebuilt properly when the mouse is let go: until then it's only drawn from the scratch buffer, which the next
-        // placed object reuses (walls placed before a door turned into the door) and a rebuild of another region drops
-        objStrokeRegions.add(region.regionDefinition.regionId)
-
-        val model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)
-        model.xOff = objectDefinition.sizeX * REGION_SIZE
-        model.yOff = objectDefinition.sizeY * REGION_SIZE
-        // shown right away in its region's output (room is kept for this); the region is rebuilt when the drag ends
-        val chunk = chunkAt(x, y)
-        if (chunk != null && chunk.mb.targetBufferOffset + modelDefinition.faceCount * 3 <= chunk.capacity) {
-            sceneUploader.uploadModel(
-                StaticObject(objectDefinition, model, groundHeight, held.type, held.orientation),
-                chunk.mb.vertexBuffer,
-                chunk.mb.uvBuffer
-            )
-            model.drawPersistent(chunk.mb, x, y, groundHeight, held.type)
+        val rot = held.orientation and 3
+        val big = held.type == 10 || held.type == 11
+        val w = if (!big) 1 else if (rot == 1 || rot == 3) objectDefinition.sizeY else objectDefinition.sizeX
+        val h = if (!big) 1 else if (rot == 1 || rot == 3) objectDefinition.sizeX else objectDefinition.sizeY
+        // Dragging places one per tile the mouse crosses. A copy that overlaps one placed earlier in the same drag
+        // used to go in too: it looked like one object in the editor but blocked a bigger area in game, so players
+        // walked far around it. Overlapping copies and exact duplicates are skipped now.
+        if (strokePlaced.any { it[4] == plane && x < it[2] && it[0] < x + w && y < it[3] && it[1] < y + h }) return null
+        val lx = x % REGION_SIZE
+        val ly = y % REGION_SIZE
+        if (region.locationsDefinition.locations.any { it.objId == objectDefinition.id && it.type == held.type && it.x == lx && it.y == ly && it.z == plane }) {
+            gadToolsModel.message = "${objectDefinition.name} is already there."
+            return null
         }
+        strokePlaced.add(intArrayOf(x, y, x + w, y + h, plane))
+        val loc = Location(objectDefinition.id, held.type, rot, lx, ly, plane)
+        region.locationsDefinition.locations.add(loc)
+        // shown by rebuilding its region when the mouse is let go (straight away for a click). There's no quick
+        // preview draw any more: it went into the region's output where other objects already were, so placing one
+        // object made others (fence pieces, walls) vanish or turn into it.
+        objStrokeRegions.add(region.regionDefinition.regionId)
         gadToolsModel.message = "Placed ${objectDefinition.name} (${objectDefinition.id})."
         return ObjectEdit(region.regionDefinition.regionId, loc, true)
     }
@@ -797,6 +798,8 @@ class Renderer @Inject constructor(
         val st = objStroke ?: return
         if (objStrokeRegions.isNotEmpty()) refresh(objStrokeRegions.toList())
         objStrokeRegions.clear()
+        strokePlaced.clear()
+        highlightDirty = true
         if (st.size == 1) pushUndo(st[0]) else if (st.size > 1) {
             pushUndo(MultiEdit(ArrayList(st)))
             val placed = (st[0] as? ObjectEdit)?.added == true
@@ -1014,6 +1017,7 @@ class Renderer @Inject constructor(
     @Volatile private var highlightDirty = true
     private var shownSelection: TileRect? = null
     private var shownFlags = false
+    private var shownBlocking = false
     private var shownMask = 0
     private var shownPlane = 0
     private val selectedTiles = ArrayList<SceneTile>()
@@ -1025,12 +1029,13 @@ class Renderer @Inject constructor(
         if (!scene.isLoaded()) return
         val sel = gadToolsModel.selection
         val flags = gadToolsModel.showFlags.get()
+        val blocking = gadToolsModel.showBlocking.get()
         val mask = gadToolsModel.flagMask.get()
         val plane = gadToolsModel.paintPlane.get().coerceIn(0, 3)
         val objSel = gadToolsModel.selectedObject
-        if (!highlightDirty && sel == shownSelection && flags == shownFlags && mask == shownMask && plane == shownPlane && objSel == shownObjSel) return
+        if (!highlightDirty && sel == shownSelection && flags == shownFlags && blocking == shownBlocking && mask == shownMask && plane == shownPlane && objSel == shownObjSel) return
         highlightDirty = false
-        shownSelection = sel; shownFlags = flags; shownMask = mask; shownPlane = plane; shownObjSel = objSel
+        shownSelection = sel; shownFlags = flags; shownBlocking = blocking; shownMask = mask; shownPlane = plane; shownObjSel = objSel
 
         selectedTiles.forEach { it.tilePaint?.isSelected = false; it.tileModel?.isSelected = false }
         selectedTiles.clear()
@@ -1053,6 +1058,43 @@ class Renderer @Inject constructor(
 
         markedTiles.forEach { it.tilePaint?.markColor = -1; it.tileModel?.markColor = -1 }
         markedTiles.clear()
+        if (blocking) {
+            for (col in scene.getRegions()) for (region in col) {
+                region ?: continue
+                val def = region.regionDefinition
+                val blocked = Array(REGION_SIZE) { BooleanArray(REGION_SIZE) }
+                for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
+                    // the game moves everything on a bridge tile down a floor
+                    val ct = def.tiles[plane][x][y] ?: continue
+                    if (ct.settings.toInt() and 1 != 0) blocked[x][y] = true
+                }
+                for (loc in region.locationsDefinition.locations) {
+                    val z = if (loc.z > 0 && def.isBridge(loc.x, loc.y)) loc.z - 1 else loc.z
+                    if (z != plane) continue
+                    val od = objectLoader.get(loc.objId) ?: continue
+                    when (loc.type) {
+                        in 0..3 -> if (od.interactType != 0) blocked[loc.x][loc.y] = true
+                        10, 11 -> if (od.interactType != 0) {
+                            val w = if (loc.orientation == 1 || loc.orientation == 3) od.sizeY else od.sizeX
+                            val h = if (loc.orientation == 1 || loc.orientation == 3) od.sizeX else od.sizeY
+                            for (dx in 0 until w) for (dy in 0 until h) {
+                                val bx = loc.x + dx
+                                val by = loc.y + dy
+                                if (bx < REGION_SIZE && by < REGION_SIZE) blocked[bx][by] = true
+                            }
+                        }
+                        22 -> if (od.interactType == 1) blocked[loc.x][loc.y] = true
+                    }
+                }
+                for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
+                    if (!blocked[x][y]) continue
+                    val t = region.tiles[0][x][y] ?: continue
+                    t.tilePaint?.markColor = Constants.BLOCK_HSL
+                    t.tileModel?.markColor = Constants.BLOCK_HSL
+                    markedTiles.add(t)
+                }
+            }
+        }
         if (flags && mask != 0) {
             for (col in scene.getRegions()) for (region in col) {
                 region ?: continue

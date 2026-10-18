@@ -82,6 +82,8 @@ class GadToolsModel {
     val exactHeight: IntegerProperty = SimpleIntegerProperty(0)
     /** Tint tiles that carry any of the flagMask bits on paintPlane. */
     val showFlags: BooleanProperty = SimpleBooleanProperty(false)
+    /** Tint the tiles players can't walk on (blocked flag, solid objects, walls) on paintPlane, like the game's collision. */
+    val showBlocking: BooleanProperty = SimpleBooleanProperty(false)
 
     @Volatile var selection: TileRect? = null
     @Volatile var clipboard: Prefab? = null

@@ -194,6 +194,7 @@ class GadToolsController @Inject constructor(
                 SeparatorMenuItem(),
                 CheckMenuItem("Show floors above").apply { selectedProperty().bindBidirectional(gadToolsModel.showAllFloors) },
                 CheckMenuItem("Show flagged tiles (red)").apply { selectedProperty().bindBidirectional(gadToolsModel.showFlags) },
+                CheckMenuItem("Show where players can't walk (orange)").apply { selectedProperty().bindBidirectional(gadToolsModel.showBlocking) },
                 CheckMenuItem("Tile numbers on the map").apply {
                     accelerator = javafx.scene.input.KeyCombination.keyCombination("Ctrl+T")
                     isSelected = gadToolsModel.tileLabelMode.get() != 0
@@ -268,6 +269,7 @@ class GadToolsController @Inject constructor(
                 MenuItem("Fill dead tiles in selection").apply { setOnAction { fillSelectionHoles() } },
                 MenuItem("Delete roofs in selection").apply { setOnAction { deleteRoofs(false) } },
                 MenuItem("Delete roofs in loaded map").apply { setOnAction { deleteRoofs(true) } },
+                MenuItem("Remove stacked copies (fixes blocked paths)").apply { setOnAction { removeStackedCopies() } },
                 SeparatorMenuItem(),
                 MenuItem("Undo\tCtrl+Z").apply { setOnAction { gadToolsModel.undoRequested.set(true) } },
                 MenuItem("Redo\tCtrl+Y").apply { setOnAction { gadToolsModel.redoRequested.set(true) } }
@@ -583,6 +585,45 @@ class GadToolsController @Inject constructor(
                 gadToolsModel.message = if (e == null) "Paste changed nothing." else "Placed ${p.width} x ${p.height} at $x, $y. Ctrl+Z undoes it."
                 e
             } }, ::log, regionLoader, locationsLoader).show()
+    }
+
+    /**
+     * Older editor versions placed a copy on every tile the mouse moved over, so one click could leave several of the
+     * same object overlapping. They look like one, but in game they block a bigger area and players walk around it.
+     * This removes every copy of an object whose footprint overlaps an earlier copy of the same object on the same
+     * floor (and exact duplicates of walls and decorations).
+     */
+    fun removeStackedCopies() {
+        val ids = GadTools.loadedRegionIds(scene)
+        if (ids.isEmpty()) { status("No map loaded."); return }
+        val stacked = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<cache.definitions.Location, Boolean>())
+        for (id in ids) {
+            val locs = locationsLoader.get(id)?.locations ?: continue
+            val kept = ArrayList<IntArray>() // objId, type group, z, x1, y1, x2, y2, rotation
+            for (loc in locs) {
+                val big = loc.type == 10 || loc.type == 11
+                val def = objectLoader.get(loc.objId)
+                val w = if (!big || def == null) 1 else if (loc.orientation == 1 || loc.orientation == 3) def.sizeY else def.sizeX
+                val h = if (!big || def == null) 1 else if (loc.orientation == 1 || loc.orientation == 3) def.sizeX else def.sizeY
+                val dup = kept.any { k ->
+                    k[0] == loc.objId && k[2] == loc.z && (
+                        if (big) k[1] == 1 && loc.x < k[5] && k[3] < loc.x + w && loc.y < k[6] && k[4] < loc.y + h
+                        else k[1] == loc.type + 2 && k[3] == loc.x && k[4] == loc.y && k[7] == loc.orientation)
+                }
+                if (dup) stacked.add(loc) else kept.add(intArrayOf(loc.objId, if (big) 1 else loc.type + 2, loc.z, loc.x, loc.y, loc.x + w, loc.y + h, loc.orientation))
+            }
+        }
+        if (stacked.isEmpty()) { status("No stacked copies in the loaded map."); return }
+        if (!confirm("Remove stacked copies?", "Found ${stacked.size} objects sitting on top of another copy of themselves in the loaded map. " +
+                    "Remove them? Ctrl+Z undoes it.")) return
+        val xs = ids.map { (it shr 8) shl 6 }; val ys = ids.map { (it and 0xFF) shl 6 }
+        val rect = models.TileRect(xs.minOrNull()!!, ys.minOrNull()!!, xs.maxOrNull()!! + 63, ys.maxOrNull()!! + 63)
+        gadToolsModel.actions.add {
+            var n = 0
+            val e = tileOps.removeObjects(rect) { loc -> (loc in stacked).also { if (it) n++ } }
+            gadToolsModel.message = if (e == null) "Nothing removed." else "Removed $n stacked copies. Ctrl+Z undoes it."
+            e
+        }
     }
 
     /** Roof pieces are object types 12-21 (roof edges, slopes, flat tops). */
