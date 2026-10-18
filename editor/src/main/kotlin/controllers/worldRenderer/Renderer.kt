@@ -43,6 +43,7 @@ import models.MultiEdit
 import models.TileRecorder
 import models.TileRect
 import models.TileOps
+import models.blockFor
 import models.TileParts
 import models.OVERLAY_SHAPES
 import models.applyEdit
@@ -497,6 +498,10 @@ class Renderer @Inject constructor(
     private var areaDragOrig: TileRect? = null
     private var areaDragCopy = false
     private val areaOps by lazy { TileOps(editorRegions) }
+    private val walk by lazy { models.Walkability({ objectLoader.get(it) }, { overlayLoader.get(it) }) }
+
+    /** A removal plus clearing the old "blocked" marks under what was removed (see TileOps.unblockUnder). */
+    private fun unblocked(e: Edit): Edit = (areaOps.unblockUnder(e, walk) ?: e).also { if (it !== e) highlightDirty = true }
     private val undoStack: ArrayDeque<Edit> = ArrayDeque()
     private val redoStack: ArrayDeque<Edit> = ArrayDeque()
 
@@ -590,7 +595,7 @@ class Renderer @Inject constructor(
             objStrokeRegions.add(id)
         }
         gadToolsModel.message = "Removed object ${target.objId} at ${region.regionDefinition.baseX + target.x}, ${region.regionDefinition.baseY + target.y}. Ctrl+Z brings it back."
-        return ObjectEdit(id, target, false)
+        return unblocked(ObjectEdit(id, target, false))
     }
 
     /** Remove the object under the mouse (Delete key). */
@@ -703,7 +708,7 @@ class Renderer @Inject constructor(
     private fun deleteSelected() {
         val (region, sel) = liveSelection() ?: return
         region.locationsDefinition.locations.remove(sel.loc)
-        pushUndo(ObjectEdit(sel.regionId, sel.loc, false))
+        pushUndo(unblocked(ObjectEdit(sel.regionId, sel.loc, false)))
         refresh(listOf(sel.regionId))
         gadToolsModel.selectedObject = null
         highlightDirty = true
@@ -743,7 +748,7 @@ class Renderer @Inject constructor(
         }
         val def = objectLoader.get(sel.loc.objId) ?: return
         region.locationsDefinition.locations.remove(sel.loc)
-        pushUndo(ObjectEdit(sel.regionId, sel.loc, false))
+        pushUndo(unblocked(ObjectEdit(sel.regionId, sel.loc, false)))
         refresh(listOf(sel.regionId))
         gadToolsModel.selectedObject = null
         highlightDirty = true
@@ -901,6 +906,10 @@ class Renderer @Inject constructor(
             }
             else -> return
         }
+        // keep the floor's "blocked" mark in step with the paint: water can't be walked on, a painted-over river can
+        if (tool == TerrainTool.OVERLAY) ct.blockFor(walk.waterOverlay(ct.overlayId))
+        else if (tool == TerrainTool.UNDERLAY && !erase && !walk.water(ct)) ct.blockFor(false)
+        if (ct.settings != before.settings) highlightDirty = true
         if (ct == before) return
         def.syncTile(plane, local.first, local.second)
         strokeRebuild.add(def.regionId)
@@ -1071,10 +1080,14 @@ class Renderer @Inject constructor(
                 region ?: continue
                 val def = region.regionDefinition
                 val blocked = Array(REGION_SIZE) { BooleanArray(REGION_SIZE) }
+                // "blocked" marks on the floor itself: red, they are invisible walls unless something is drawn there (water, cliffs)
+                val marked = Array(REGION_SIZE) { BooleanArray(REGION_SIZE) }
                 for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
-                    // the game moves everything on a bridge tile down a floor
-                    val ct = def.tiles[plane][x][y] ?: continue
-                    if (ct.settings.toInt() and 1 != 0) blocked[x][y] = true
+                    // the game moves everything on a bridge tile down a floor, the mark included
+                    val z = if (def.isBridge(x, y)) plane + 1 else plane
+                    if (z > 3) continue
+                    val ct = def.tiles[z][x][y] ?: continue
+                    if (ct.settings.toInt() and 1 != 0) marked[x][y] = true
                 }
                 for (loc in region.locationsDefinition.locations) {
                     val z = if (loc.z > 0 && def.isBridge(loc.x, loc.y)) loc.z - 1 else loc.z
@@ -1096,10 +1109,11 @@ class Renderer @Inject constructor(
                     }
                 }
                 for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
-                    if (!blocked[x][y]) continue
+                    if (!blocked[x][y] && !marked[x][y]) continue
                     val t = region.tiles[0][x][y] ?: continue
-                    t.tilePaint?.markColor = Constants.BLOCK_HSL
-                    t.tileModel?.markColor = Constants.BLOCK_HSL
+                    val c = if (blocked[x][y]) Constants.BLOCK_HSL else Constants.MARK_HSL
+                    t.tilePaint?.markColor = c
+                    t.tileModel?.markColor = c
                     markedTiles.add(t)
                 }
             }

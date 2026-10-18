@@ -33,6 +33,7 @@ class InputHandler @Inject internal constructor(
 ) {
 
     private val tileOps = TileOps(editorRegions)
+    private val walk by lazy { models.Walkability({ objectLoader.get(it) }, { overlayLoader.get(it) }) }
 
     var renderer: Renderer? = null
 
@@ -290,7 +291,7 @@ class InputHandler @Inject internal constructor(
         copySelection()
         gadToolsModel.actions.add {
             val onlyFloor = gadToolsModel.floorToCopy()
-            val e = tileOps.removeObjects(sel) { onlyFloor < 0 || it.z == onlyFloor }
+            val e = tileOps.unblockUnder(tileOps.removeObjects(sel) { onlyFloor < 0 || it.z == onlyFloor }, walk)
             gadToolsModel.message = "Cut ${sel.width} x ${sel.height}: objects removed, copy kept. Hover the new spot and press Ctrl+V (Ctrl+R turns it)."
             e
         }

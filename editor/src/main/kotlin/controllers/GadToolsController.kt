@@ -3,6 +3,7 @@ package controllers
 import cache.XteaManager
 import com.google.inject.Inject
 import com.google.inject.Provider
+import models.blockFor
 import controllers.worldRenderer.Camera
 import javafx.animation.AnimationTimer
 import javafx.geometry.Insets
@@ -78,6 +79,7 @@ class GadToolsController @Inject constructor(
     private val configuration: models.Configuration
 ) {
     private val tileOps = TileOps(editorRegions)
+    private val walk by lazy { models.Walkability({ objectLoader.get(it) }, { overlayLoader.get(it) }) }
     /** Lets Claude read and edit the loaded map (Tools > AI bridge). */
     private val aiBridge by lazy { utils.AiBridge(scene, camera, gadToolsModel, editorRegions, objectLoader, underlayLoader, overlayLoader, textureLoader) { log(it) } }
     private val lblStatus = Label("")
@@ -194,7 +196,7 @@ class GadToolsController @Inject constructor(
                 SeparatorMenuItem(),
                 CheckMenuItem("Show floors above").apply { selectedProperty().bindBidirectional(gadToolsModel.showAllFloors) },
                 CheckMenuItem("Show flagged tiles (red)").apply { selectedProperty().bindBidirectional(gadToolsModel.showFlags) },
-                CheckMenuItem("Show where players can't walk (orange)").apply { selectedProperty().bindBidirectional(gadToolsModel.showBlocking) },
+                CheckMenuItem("Show where players can't walk (orange = object, red = blocked mark on the floor)").apply { selectedProperty().bindBidirectional(gadToolsModel.showBlocking) },
                 CheckMenuItem("Tile numbers on the map").apply {
                     accelerator = javafx.scene.input.KeyCombination.keyCombination("Ctrl+T")
                     isSelected = gadToolsModel.tileLabelMode.get() != 0
@@ -663,7 +665,9 @@ class GadToolsController @Inject constructor(
                 val w = if (!big || od == null) 1 else if (loc.orientation == 1 || loc.orientation == 3) od.sizeY else od.sizeX
                 val h = if (!big || od == null) 1 else if (loc.orientation == 1 || loc.orientation == 3) od.sizeX else od.sizeY
                 val z = if (loc.z > 0 && ((def.tiles[1][loc.x][loc.y]?.settings?.toInt() ?: 0) and 2) != 0) loc.z - 1 else loc.z
-                for (dx in 0 until w) for (dy in 0 until h) occupied.add((z shl 12) or ((loc.x + dx) shl 6) or (loc.y + dy))
+                // only solid things count: flowers, grass and river-edge decor sit on old blocked marks all the time
+                if (od != null && blocksWalking(od, loc.type))
+                    for (dx in 0 until w) for (dy in 0 until h) occupied.add((z shl 12) or ((loc.x + dx) shl 6) or (loc.y + dy))
                 if (!sel.contains(bx + loc.x, by + loc.y)) {
                     kept.add(intArrayOf(loc.objId, if (big) 1 else loc.type + 2, loc.z, loc.x, loc.y, loc.x + w, loc.y + h, loc.orientation))
                     continue
@@ -687,10 +691,12 @@ class GadToolsController @Inject constructor(
             }
             for (lx in 0 until 64) for (ly in 0 until 64) {
                 if (!sel.contains(bx + lx, by + ly)) continue
+                val bridge = ((def.tiles[1][lx][ly]?.settings?.toInt() ?: 0) and 2) != 0
                 for (z in 0 until 4) {
                     val t = def.tiles[z][lx][ly] ?: continue
                     if (t.settings.toInt() and 1 == 0) continue
-                    if ((z shl 12) or (lx shl 6) or ly in occupied) continue
+                    val cz = if (bridge) z - 1 else z
+                    if (cz < 0 || (cz shl 12) or (lx shl 6) or ly in occupied) continue
                     looseBlocks.getOrPut(t.overlayId) { java.util.Collections.newSetFromMap(java.util.IdentityHashMap()) }.add(t)
                 }
             }
@@ -732,9 +738,9 @@ class GadToolsController @Inject constructor(
         val removeRoofs = cRoofs.isSelected
         gadToolsModel.actions.add {
             var removed = 0
-            val objects = tileOps.removeObjects(sel) { loc ->
+            val objects = tileOps.unblockUnder(tileOps.removeObjects(sel) { loc ->
                 ((removeStacked && loc in stacked) || (removeUnknown && loc in unknown) || (removeRoofs && loc in groundRoofs) || (removeModelless && loc in modelless)).also { if (it) removed++ }
-            }
+            }, walk)
             var cleared = 0
             val flags = if (clearTiles.isEmpty()) null else tileOps.fill(sel, 0..3, false) { t, _ ->
                 if (t in clearTiles && t.settings.toInt() and 1 != 0) { t.settings = (t.settings.toInt() and 1.inv()).toByte(); cleared++ }
@@ -744,6 +750,9 @@ class GadToolsController @Inject constructor(
             if (parts.isEmpty()) null else if (parts.size == 1) parts[0] else models.MultiEdit(parts)
         }
     }
+
+    private fun blocksWalking(od: cache.definitions.ObjectDefinition, type: Int): Boolean =
+        if (type == 22) od.interactType == 1 else od.interactType != 0 && type in 0..21 && type !in 4..8
 
     /** Roof pieces are object types 12-21 (roof edges, slopes, flat tops). */
     fun deleteRoofs(wholeMap: Boolean) {
@@ -757,7 +766,7 @@ class GadToolsController @Inject constructor(
                     ", on all floors. Walls and everything else stay. Ctrl+Z undoes it.")) return
         gadToolsModel.actions.add {
             var n = 0
-            val e = tileOps.removeObjects(rect) { loc -> (loc.type in 12..21).also { if (it) n++ } }
+            val e = tileOps.unblockUnder(tileOps.removeObjects(rect) { loc -> (loc.type in 12..21).also { if (it) n++ } }, walk)
             gadToolsModel.message = if (e == null) "No roofs there." else "Deleted $n roof pieces. Ctrl+Z undoes it."
             e
         }
@@ -1335,7 +1344,7 @@ class GadToolsController @Inject constructor(
                 val opts = readParts()
                 if (!confirm("Clear the selected area?", "Removes the ticked parts (except heights) on every plane of ${sel.width} x ${sel.height} tiles. Ctrl+Z undoes it.")) return@setOnAction
                 gadToolsModel.actions.add {
-                    val e = tileOps.clear(sel, opts, 0..3)
+                    val e = tileOps.unblockUnder(tileOps.clear(sel, opts, 0..3), walk)
                     gadToolsModel.message = if (e == null) "Nothing to clear." else "Cleared ${sel.width} x ${sel.height}."
                     e
                 }
@@ -1381,7 +1390,7 @@ class GadToolsController @Inject constructor(
             setOnAction { bridgeSelection(false) }
         }
         val btnFillUnder = Button("Underlay").apply {
-            setOnAction { val id = gadToolsModel.underlayId.get(); fill("Filled underlay", false, false) { it.underlayId = (id + 1) } }
+            setOnAction { val id = gadToolsModel.underlayId.get(); fill("Filled underlay", false, false) { it.underlayId = (id + 1); if (!walk.water(it)) it.blockFor(false) } }
         }
         val btnFillOver = Button("Overlay").apply {
             setOnAction {
@@ -1391,6 +1400,7 @@ class GadToolsController @Inject constructor(
                 fill("Filled overlay", false, false) {
                     if (id < 0) { it.attrOpcode = 0; it.overlayId = 0; it.overlayPath = 0; it.overlayRotation = 0 }
                     else { it.attrOpcode = 2 + shape * 4 + rot; it.overlayId = (id + 1); it.overlayPath = shape.toByte(); it.overlayRotation = rot.toByte() }
+                    it.blockFor(walk.waterOverlay(it.overlayId))
                 }
             }
         }
