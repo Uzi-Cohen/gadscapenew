@@ -62,6 +62,10 @@ public final class SpriteGroupDefinitions implements Definitions, Cloneable {
         this.images = new Int2ObjectAVLTreeMap<>();
     }
 
+    public static SpriteGroupDefinitions decode(final int id, final ByteBuffer buffer) {
+        return new SpriteGroupDefinitions(id, buffer);
+    }
+
     private SpriteGroupDefinitions(final int id, final ByteBuffer buffer) {
         this.id = id;
         decode(buffer);

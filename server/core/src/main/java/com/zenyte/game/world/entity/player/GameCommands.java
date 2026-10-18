@@ -2454,15 +2454,12 @@ public final class GameCommands {
             }
             com.gadscape.game.content.accounttype.AccountSetup.pickBuild(p);
         });
-        new Command(PlayerPrivilege.PLAYER, new String[]{"presets", "kits", "preset"}, "Opens your gear presets.", (p, args) -> {
-            if (!p.isStaff() && com.zenyte.game.world.region.area.wilderness.WildernessArea.isWithinWilderness(p.getLocation())) {
-                p.sendMessage("You can't load presets in the Wilderness.");
-                return;
-            }
-            GameInterface.PRESET_MANAGER.open(p);
-        });
-        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank anywhere outside the Wilderness.",
+        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank. Available to staff and donators.",
                 (p, args) -> {
+                    if (!p.isStaff() && !p.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM)) {
+                        p.sendMessage("This command is only available to staff and donators.");
+                        return;
+                    }
                     if (!p.isStaff() && com.zenyte.game.world.region.area.wilderness.WildernessArea.isWithinWilderness(p.getLocation())) {
                         p.sendMessage("You can't open the bank in the Wilderness.");
                         return;
