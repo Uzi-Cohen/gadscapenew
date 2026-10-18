@@ -45,7 +45,7 @@ func main() {
 	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "UzisMapEditor")
 	withProgress(func(p *progress) {
 		if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
-			p.say("Installing Uzi's Map Editor "+build+"...", -1)
+			p.say("Installing...", -1)
 			if err := install(dest); err != nil {
 				fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
 			}
@@ -60,7 +60,7 @@ func main() {
 		}
 		if p.shown {
 			// the editor takes a few seconds to open: keep saying so until it does
-			p.say("Up to date. Starting the editor...", 100)
+			p.say("Starting...", -1)
 			time.Sleep(4 * time.Second)
 		}
 	})
@@ -132,8 +132,8 @@ func update(dest string, p *progress) {
 		have, _ := strconv.ParseInt(local("editor-version.txt"), 10, 64)
 		if remote > have {
 			tmp := filepath.Join(dest, "editor.jar.new")
-			p.say("Updating the editor...", 0)
-			step := func(done, total int64) { p.bytes("Updating the editor...", done, total) }
+			p.say("Updating the editor:", 0)
+			step := func(done, total int64) { p.bytes("Updating the editor:", done, total) }
 			if download(editorReleases+"latest/download/editor.jar", tmp, step) == nil && validJar(tmp) {
 				os.Remove(filepath.Join(dest, "editor.jar"))
 				if os.Rename(tmp, filepath.Join(dest, "editor.jar")) == nil {
@@ -146,10 +146,10 @@ func update(dest string, p *progress) {
 
 	if remote := text(releases + "download/map/map-version.txt"); remote != "" && remote != local(filepath.Join("map", "map-version.txt")) {
 		tmp := filepath.Join(dest, "map.zip.new")
-		p.say("Downloading the new map...", 0)
-		step := func(done, total int64) { p.bytes("Downloading the new map...", done, total) }
+		p.say("Updating the map:", 0)
+		step := func(done, total int64) { p.bytes("Updating the map:", done, total) }
 		if download(mapZip, tmp, step) == nil {
-			p.say("Unpacking the new map...", 100)
+			p.say("Updating the map: unpacking...", 100)
 			if b, err := os.ReadFile(tmp); err == nil {
 				staging := filepath.Join(dest, "map.new")
 				os.RemoveAll(staging)
