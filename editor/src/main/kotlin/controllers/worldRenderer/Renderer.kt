@@ -43,6 +43,7 @@ import models.MultiEdit
 import models.TileRecorder
 import models.TileRect
 import models.TileOps
+import models.blockFor
 import models.TileParts
 import models.OVERLAY_SHAPES
 import models.applyEdit
@@ -77,7 +78,8 @@ class Renderer @Inject constructor(
     private val gadToolsModel: GadToolsModel,
     private val editorRegions: EditorRegions,
     private val objectLoader: cache.loaders.ObjectLoader,
-    private val overlayLoader: cache.loaders.OverlayLoader
+    private val overlayLoader: cache.loaders.OverlayLoader,
+    private val underlayLoader: cache.loaders.UnderlayLoader
 ) : GlListener {
     private val MAX_TEMP_VERTICES: Int = 65535
 
@@ -227,6 +229,8 @@ class Renderer @Inject constructor(
     fun setPaused(paused: Boolean) { if (::view.isInitialized) view.paused = paused }
 
     companion object {
+        // how far above the ground the camera stops (a tile is 128)
+        private const val GROUND_CLEARANCE = 160
         /** Map sizes offered (regions across; a region is 64 x 64 tiles). */
         val SIZES = listOf(3, 5, 7)
         fun mapSize(): Int = models.Configuration().getProp("map-size").toIntOrNull()?.takeIf { it in SIZES } ?: 5
@@ -285,6 +289,7 @@ class Renderer @Inject constructor(
             lastHovered = null
         }
         gadToolsModel.showAllFloors.addListener { _, _, _ -> requeueAll = true; isSceneUploadRequired = true }
+        gadToolsModel.hdFloors.addListener { _, _, v -> utils.HdFloors.enabled = v; hdViewChanged = true }
 
         var loadsSeen = -1
         scene.sceneChangeListeners.add(ActionListener {
@@ -486,6 +491,11 @@ class Renderer @Inject constructor(
 
     // ---- editing: strokes, area tools, undo/redo ----
     private var recorder: TileRecorder? = null
+    private var pickDone = false
+    // View > 117 HD floors was switched: rebuild the loaded map in the render loop
+    @Volatile private var hdViewChanged = false
+    // floor decorations (carpets, rugs...) taken off painted tiles during this stroke
+    private val strokeDecorGone = ArrayList<Edit>()
     private var strokeHeightOnly = true
     /** Regions whose tile data changed during the current stroke and need a rebuild to show it. */
     private val strokeRebuild = HashSet<Int>()
@@ -497,6 +507,10 @@ class Renderer @Inject constructor(
     private var areaDragOrig: TileRect? = null
     private var areaDragCopy = false
     private val areaOps by lazy { TileOps(editorRegions) }
+    private val walk by lazy { models.Walkability({ objectLoader.get(it) }, { overlayLoader.get(it) }) }
+
+    /** A removal plus clearing the old "blocked" marks under what was removed (see TileOps.unblockUnder). */
+    private fun unblocked(e: Edit): Edit = (areaOps.unblockUnder(e, walk) ?: e).also { if (it !== e) highlightDirty = true }
     private val undoStack: ArrayDeque<Edit> = ArrayDeque()
     private val redoStack: ArrayDeque<Edit> = ArrayDeque()
 
@@ -549,6 +563,8 @@ class Renderer @Inject constructor(
     private var strokeLastX = -1
     private var strokeLastY = -1
     private val objStrokeRegions = HashSet<Int>()
+    /** Footprints placed during the current drag (scene x1, y1, x2, y2 exclusive, plane). */
+    private val strokePlaced = ArrayList<IntArray>()
     private fun tileKey(x: Int, y: Int) = (x.toLong() shl 32) or (y.toLong() and 0xFFFFFFFFL)
 
     /** The stored object under the mouse at scene (x, y) with hover type, or null. */
@@ -588,7 +604,7 @@ class Renderer @Inject constructor(
             objStrokeRegions.add(id)
         }
         gadToolsModel.message = "Removed object ${target.objId} at ${region.regionDefinition.baseX + target.x}, ${region.regionDefinition.baseY + target.y}. Ctrl+Z brings it back."
-        return ObjectEdit(id, target, false)
+        return unblocked(ObjectEdit(id, target, false))
     }
 
     /** Remove the object under the mouse (Delete key). */
@@ -656,7 +672,15 @@ class Renderer @Inject constructor(
         }
         selectObject(region.regionDefinition.regionId, target)
         val sel = gadToolsModel.selectedObject!!
+        val why = objectLoader.get(target.objId)?.let { d ->
+            objectToModelConverter.whyNoModel(d, target.type, target.orientation)?.takeIf {
+                // objects that change with game state show their default look, which may have a model
+                val transforms = try { d.transforms } catch (e: UninitializedPropertyAccessException) { null }
+                transforms == null || transforms.none { t -> t >= 0 && objectLoader.get(t)?.let { objectToModelConverter.whyNoModel(it, target.type, target.orientation) == null } == true }
+            }
+        }
         gadToolsModel.message = "Selected ${objectName(target.objId)} (${target.objId}) at ${sel.worldX}, ${sel.worldY}. " +
+                (if (why != null) "Purple box: $why " else "") +
                 "Drag to move, R rotate, Ctrl+C copy, M pick up, Delete remove, Esc deselect."
         return true
     }
@@ -693,7 +717,7 @@ class Renderer @Inject constructor(
     private fun deleteSelected() {
         val (region, sel) = liveSelection() ?: return
         region.locationsDefinition.locations.remove(sel.loc)
-        pushUndo(ObjectEdit(sel.regionId, sel.loc, false))
+        pushUndo(unblocked(ObjectEdit(sel.regionId, sel.loc, false)))
         refresh(listOf(sel.regionId))
         gadToolsModel.selectedObject = null
         highlightDirty = true
@@ -733,7 +757,7 @@ class Renderer @Inject constructor(
         }
         val def = objectLoader.get(sel.loc.objId) ?: return
         region.locationsDefinition.locations.remove(sel.loc)
-        pushUndo(ObjectEdit(sel.regionId, sel.loc, false))
+        pushUndo(unblocked(ObjectEdit(sel.regionId, sel.loc, false)))
         refresh(listOf(sel.regionId))
         gadToolsModel.selectedObject = null
         highlightDirty = true
@@ -762,33 +786,32 @@ class Renderer @Inject constructor(
         val tile = planeTile(x, y) ?: return null
         val region = scene.getRegionFromSceneCoord(x, y) ?: return null
         val objectDefinition: ObjectDefinition = held.objectDefinition
-        val modelDefinition: ModelDefinition = objectToModelConverter.toModel(objectDefinition, held.type, held.orientation) ?: run {
+        objectToModelConverter.toModel(objectDefinition, held.type, held.orientation) ?: run {
             gadToolsModel.message = "Object ${objectDefinition.id} has no model for that type."
             return null
         }
         val plane = currentPlane
-        val onFloor = tile.z == plane
-        val baseHeight = tile.tilePaint?.nwHeight ?: tile.cacheTile?.height ?: 0
-        val groundHeight = if (onFloor) baseHeight else baseHeight - 240 * plane
-        val loc = Location(objectDefinition.id, held.type, held.orientation and 3, x % REGION_SIZE, y % REGION_SIZE, plane)
-        region.locationsDefinition.locations.add(loc)
-        // rebuilt properly when the mouse is let go: until then it's only drawn from the scratch buffer, which the next
-        // placed object reuses (walls placed before a door turned into the door) and a rebuild of another region drops
-        objStrokeRegions.add(region.regionDefinition.regionId)
-
-        val model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)
-        model.xOff = objectDefinition.sizeX * REGION_SIZE
-        model.yOff = objectDefinition.sizeY * REGION_SIZE
-        // shown right away in its region's output (room is kept for this); the region is rebuilt when the drag ends
-        val chunk = chunkAt(x, y)
-        if (chunk != null && chunk.mb.targetBufferOffset + modelDefinition.faceCount * 3 <= chunk.capacity) {
-            sceneUploader.uploadModel(
-                StaticObject(objectDefinition, model, groundHeight, held.type, held.orientation),
-                chunk.mb.vertexBuffer,
-                chunk.mb.uvBuffer
-            )
-            model.drawPersistent(chunk.mb, x, y, groundHeight, held.type)
+        val rot = held.orientation and 3
+        val big = held.type == 10 || held.type == 11
+        val w = if (!big) 1 else if (rot == 1 || rot == 3) objectDefinition.sizeY else objectDefinition.sizeX
+        val h = if (!big) 1 else if (rot == 1 || rot == 3) objectDefinition.sizeX else objectDefinition.sizeY
+        // Dragging places one per tile the mouse crosses. A copy that overlaps one placed earlier in the same drag
+        // used to go in too: it looked like one object in the editor but blocked a bigger area in game, so players
+        // walked far around it. Overlapping copies and exact duplicates are skipped now.
+        if (strokePlaced.any { it[4] == plane && x < it[2] && it[0] < x + w && y < it[3] && it[1] < y + h }) return null
+        val lx = x % REGION_SIZE
+        val ly = y % REGION_SIZE
+        if (region.locationsDefinition.locations.any { it.objId == objectDefinition.id && it.type == held.type && it.x == lx && it.y == ly && it.z == plane }) {
+            gadToolsModel.message = "${objectDefinition.name} is already there."
+            return null
         }
+        strokePlaced.add(intArrayOf(x, y, x + w, y + h, plane))
+        val loc = Location(objectDefinition.id, held.type, rot, lx, ly, plane)
+        region.locationsDefinition.locations.add(loc)
+        // shown by rebuilding its region when the mouse is let go (straight away for a click). There's no quick
+        // preview draw any more: it went into the region's output where other objects already were, so placing one
+        // object made others (fence pieces, walls) vanish or turn into it.
+        objStrokeRegions.add(region.regionDefinition.regionId)
         gadToolsModel.message = "Placed ${objectDefinition.name} (${objectDefinition.id})."
         return ObjectEdit(region.regionDefinition.regionId, loc, true)
     }
@@ -797,6 +820,8 @@ class Renderer @Inject constructor(
         val st = objStroke ?: return
         if (objStrokeRegions.isNotEmpty()) refresh(objStrokeRegions.toList())
         objStrokeRegions.clear()
+        strokePlaced.clear()
+        highlightDirty = true
         if (st.size == 1) pushUndo(st[0]) else if (st.size > 1) {
             pushUndo(MultiEdit(ArrayList(st)))
             val placed = (st[0] as? ObjectEdit)?.added == true
@@ -822,6 +847,69 @@ class Renderer @Inject constructor(
     }
 
     private fun heightOf(t: SceneTile?): Int? = groundTile(t)?.second?.height
+
+    /**
+     * With View > 117 HD floors on: where HD would colour this painted tile differently because of its overlay number,
+     * or the underlay number hidden under it, swap that number for its twin (the same floor under a number HD leaves
+     * alone), so the tile shows in HD as painted. Looks the same without HD.
+     */
+    private fun hdShowAsPainted(ct: RegionDefinition.Tile, t: SceneTile, plane: Int) {
+        if (!utils.HdFloors.enabled) return
+        val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return
+        val swaps = utils.HdFloors.makeShowAsPainted(ct, w.first, w.second, plane) { overlay, stored ->
+            utils.FloorTwins.twinFor(overlay, stored, overlayLoader, underlayLoader)
+        }
+        if (swaps.isNotEmpty()) hdTwinNote = "So HD shows it as painted, swapped " + swaps.joinToString(", ") + ": the same floors, which HD leaves alone."
+    }
+    private var hdTwinNote: String? = null
+
+    /** The pen: take the paint off the tile under the mouse (on the floor being edited) and paint with it. */
+    private fun pickPaint(tool: TerrainTool) {
+        val plane = currentPlane
+        val t = scene.getTile(0, hoverId shr 18 and 0x1FFF, hoverId shr 5 and 0x1FFF)
+        val ct = groundTile(t, plane)?.second ?: return
+        val under = ct.underlayId - 1
+        val over = ct.overlayId - 1
+        val shape = ct.overlayPath.toInt()
+        val turn = ct.overlayRotation.toInt() and 3
+        val flags = ct.settings.toInt() and 0x1F
+        if (tool == TerrainTool.FLAGS) {
+            if (flags == 0) { gadToolsModel.message = "No flags on that tile (floor $plane)."; return }
+            javafx.application.Platform.runLater { gadToolsModel.flagMask.set(flags) }
+            gadToolsModel.message = "Picked flags $flags from that tile. Painting with them now."
+            return
+        }
+        if (under < 0 && over < 0) { gadToolsModel.message = "Nothing painted on that tile (floor $plane)."; return }
+        val hdNote = hdRuleNote(t, plane, ct)
+        val next = when {
+            tool == TerrainTool.UNDERLAY || tool == TerrainTool.OVERLAY -> tool
+            over >= 0 -> TerrainTool.OVERLAY
+            else -> TerrainTool.UNDERLAY
+        }
+        javafx.application.Platform.runLater {
+            if (under >= 0) gadToolsModel.underlayId.set(under)
+            if (over >= 0) {
+                gadToolsModel.overlayId.set(over)
+                gadToolsModel.overlayShape.set(shape)
+                gadToolsModel.overlayRotation.set(turn)
+            }
+            if (tool == TerrainTool.PICK) gadToolsModel.tool.set(next)
+        }
+        gadToolsModel.message = "Picked " + listOfNotNull(
+            if (under >= 0) "underlay $under" else null,
+            if (over >= 0) "overlay $over" + (if (shape != 0) " (shape $shape, turned ${turn * 90}\u00B0)" else "") else null
+        ).joinToString(", ") + " from floor $plane. Painting with " + (if (next == TerrainTool.OVERLAY) "the overlay" else "the underlay") + " now." + hdNote
+    }
+
+    /** With View > 117 HD floors on: which HD rule repaints this tile, and how to get the painted colour back. */
+    private fun hdRuleNote(t: SceneTile?, plane: Int, ct: RegionDefinition.Tile): String {
+        if (!utils.HdFloors.enabled || t == null) return ""
+        val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return ""
+        val r = utils.HdFloors.ruleFor(ct.overlayId, ct.underlayId, w.first, w.second, plane) ?: return ""
+        if (r.isNone || r.water) return ""
+        return if (r.ids.isEmpty()) " HD: ${r.name} repaints every floor here."
+        else " HD: ${r.name} repaints this floor number here; another floor number keeps its own colour."
+    }
 
     private fun setHeight(t: SceneTile, h: Int, changed: HashSet<SceneRegion>) {
         val (def, ct, local) = groundTile(t) ?: return
@@ -858,6 +946,8 @@ class Renderer @Inject constructor(
             TerrainTool.UNDERLAY -> {
                 val id = if (erase) -1 else gadToolsModel.underlayId.get()
                 ct.underlayId = (id + 1)
+                // the game draws an overlay over the underlay: painting the ground colour has to take the old floor off too
+                if (!erase) { ct.attrOpcode = 0; ct.overlayId = 0; ct.overlayPath = 0; ct.overlayRotation = 0 }
             }
             TerrainTool.OVERLAY -> {
                 val id = if (erase) -1 else gadToolsModel.overlayId.get()
@@ -890,6 +980,14 @@ class Renderer @Inject constructor(
             }
             else -> return
         }
+        // keep the floor's "blocked" mark in step with the paint: water can't be walked on, a painted-over river can
+        if (tool == TerrainTool.OVERLAY) ct.blockFor(walk.waterOverlay(ct.overlayId))
+        else if (tool == TerrainTool.UNDERLAY && !erase && !walk.water(ct)) ct.blockFor(false)
+        if (ct.settings != before.settings) highlightDirty = true
+        if (!erase && (tool == TerrainTool.OVERLAY || tool == TerrainTool.UNDERLAY)) hdShowAsPainted(ct, t, plane)
+        // a new floor replaces what lay on the old one: carpets and rugs are objects, and the game would keep drawing them
+        val newFloor = !erase && (tool == TerrainTool.OVERLAY || (tool == TerrainTool.UNDERLAY && ct.overlayId == 0))
+        if (newFloor && areaOps.removeFloorDecor(def.regionId, plane, local.first, local.second, walk, strokeDecorGone) > 0) strokeRebuild.add(def.regionId)
         if (ct == before) return
         def.syncTile(plane, local.first, local.second)
         strokeRebuild.add(def.regionId)
@@ -927,7 +1025,11 @@ class Renderer @Inject constructor(
             refresh(strokeRebuild.toList())
             strokeRebuild.clear()
         }
-        rec.finish(strokeHeightOnly)?.let { pushUndo(it) }
+        hdTwinNote?.let { gadToolsModel.message = it; hdTwinNote = null }
+        val parts = listOfNotNull(rec.finish(strokeHeightOnly)) + strokeDecorGone
+        if (strokeDecorGone.isNotEmpty()) gadToolsModel.message = "Painted. Took ${strokeDecorGone.size} carpets/rugs/floor decorations off the painted tiles (Ctrl+Z puts them back)."
+        strokeDecorGone.clear()
+        when (parts.size) { 0 -> {}; 1 -> pushUndo(parts[0]); else -> pushUndo(MultiEdit(parts)) }
     }
 
     private fun applyUndoRedo() {
@@ -1014,6 +1116,7 @@ class Renderer @Inject constructor(
     @Volatile private var highlightDirty = true
     private var shownSelection: TileRect? = null
     private var shownFlags = false
+    private var shownBlocking = false
     private var shownMask = 0
     private var shownPlane = 0
     private val selectedTiles = ArrayList<SceneTile>()
@@ -1025,12 +1128,13 @@ class Renderer @Inject constructor(
         if (!scene.isLoaded()) return
         val sel = gadToolsModel.selection
         val flags = gadToolsModel.showFlags.get()
+        val blocking = gadToolsModel.showBlocking.get()
         val mask = gadToolsModel.flagMask.get()
         val plane = gadToolsModel.paintPlane.get().coerceIn(0, 3)
         val objSel = gadToolsModel.selectedObject
-        if (!highlightDirty && sel == shownSelection && flags == shownFlags && mask == shownMask && plane == shownPlane && objSel == shownObjSel) return
+        if (!highlightDirty && sel == shownSelection && flags == shownFlags && blocking == shownBlocking && mask == shownMask && plane == shownPlane && objSel == shownObjSel) return
         highlightDirty = false
-        shownSelection = sel; shownFlags = flags; shownMask = mask; shownPlane = plane; shownObjSel = objSel
+        shownSelection = sel; shownFlags = flags; shownBlocking = blocking; shownMask = mask; shownPlane = plane; shownObjSel = objSel
 
         selectedTiles.forEach { it.tilePaint?.isSelected = false; it.tileModel?.isSelected = false }
         selectedTiles.clear()
@@ -1053,6 +1157,49 @@ class Renderer @Inject constructor(
 
         markedTiles.forEach { it.tilePaint?.markColor = -1; it.tileModel?.markColor = -1 }
         markedTiles.clear()
+        if (blocking) {
+            for (col in scene.getRegions()) for (region in col) {
+                region ?: continue
+                val def = region.regionDefinition
+                val blocked = Array(REGION_SIZE) { BooleanArray(REGION_SIZE) }
+                // "blocked" marks on the floor itself: red, they are invisible walls unless something is drawn there (water, cliffs)
+                val marked = Array(REGION_SIZE) { BooleanArray(REGION_SIZE) }
+                for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
+                    // the game moves everything on a bridge tile down a floor, the mark included
+                    val z = if (def.isBridge(x, y)) plane + 1 else plane
+                    if (z > 3) continue
+                    val ct = def.tiles[z][x][y] ?: continue
+                    if (ct.settings.toInt() and 1 != 0) marked[x][y] = true
+                }
+                for (loc in region.locationsDefinition.locations) {
+                    val z = if (loc.z > 0 && def.isBridge(loc.x, loc.y)) loc.z - 1 else loc.z
+                    if (z != plane) continue
+                    val od = objectLoader.get(loc.objId) ?: continue
+                    when (loc.type) {
+                        in 0..3, 9 -> if (od.interactType != 0) blocked[loc.x][loc.y] = true
+                        // roof pieces (12-21) block like any game object; with roofs hidden they're invisible walls
+                        10, 11, in 12..21 -> if (od.interactType != 0) {
+                            val w = if (loc.orientation == 1 || loc.orientation == 3) od.sizeY else od.sizeX
+                            val h = if (loc.orientation == 1 || loc.orientation == 3) od.sizeX else od.sizeY
+                            for (dx in 0 until w) for (dy in 0 until h) {
+                                val bx = loc.x + dx
+                                val by = loc.y + dy
+                                if (bx < REGION_SIZE && by < REGION_SIZE) blocked[bx][by] = true
+                            }
+                        }
+                        22 -> if (od.interactType == 1) blocked[loc.x][loc.y] = true
+                    }
+                }
+                for (x in 0 until REGION_SIZE) for (y in 0 until REGION_SIZE) {
+                    if (!blocked[x][y] && !marked[x][y]) continue
+                    val t = region.tiles[0][x][y] ?: continue
+                    val c = if (blocked[x][y]) Constants.BLOCK_HSL else Constants.MARK_HSL
+                    t.tilePaint?.markColor = c
+                    t.tileModel?.markColor = c
+                    markedTiles.add(t)
+                }
+            }
+        }
         if (flags && mask != 0) {
             for (col in scene.getRegions()) for (region in col) {
                 region ?: continue
@@ -1154,7 +1301,15 @@ class Renderer @Inject constructor(
         }
         lastClick = 0.0
 
+        if (hdViewChanged) {
+            hdViewChanged = false
+            refresh(scene.getRegions().flatten().mapNotNull { it?.regionDefinition?.regionId })
+            gadToolsModel.message = if (utils.HdFloors.enabled) "Showing floors as 117 HD draws them. The pen says which HD rule repaints a tile."
+                else "Showing floors in their map colours."
+        }
         val tool = gadToolsModel.tool.get()
+        // one pick per click; holding on after a pick doesn't start painting
+        if (!inputHandler.isLeftMouseDown) pickDone = false
         // terrain tools only run when not holding an object to place
         if (inputHandler.isLeftMouseDown && injectedObject == null && tool == TerrainTool.SELECT) {
             val cx = hoverId shr 18 and 0x1FFF
@@ -1187,7 +1342,10 @@ class Renderer @Inject constructor(
                     }
                 }
             }
-        } else if (inputHandler.isLeftMouseDown && injectedObject == null && tool != TerrainTool.INSPECT && tool != TerrainTool.REMOVE) {
+        } else if (inputHandler.isLeftMouseDown && injectedObject == null &&
+            (tool == TerrainTool.PICK || (tool.paints && inputHandler.isKeyDown(KeyCode.ALT)))) {
+            if (!pickDone) { pickDone = true; pickPaint(tool) }
+        } else if (inputHandler.isLeftMouseDown && injectedObject == null && !pickDone && tool != TerrainTool.INSPECT && tool != TerrainTool.REMOVE) {
             val cx = hoverId shr 18 and 0x1FFF
             val cy = hoverId shr 5 and 0x1FFF
             val center = scene.getTile(0, cx, cy) ?: return
@@ -1405,6 +1563,8 @@ class Renderer @Inject constructor(
 
         val clientCycle = ((System.currentTimeMillis() - clientStart) / 20).toInt() // 50 fps
 
+        keepAboveGround()
+
         // UBO
         gl.glBindBuffer(GLC.GL_UNIFORM_BUFFER, uniformBufferId)
         uniformBuffer.clear()
@@ -1578,6 +1738,24 @@ class Renderer @Inject constructor(
     private var npcModelsBuiltFor = -1
 
     private fun npcSize(id: Int) = utils.NpcDefs.cachedOrNull()?.get(id)?.size ?: 1
+
+    /**
+     * The camera never goes under the floor: however far down you move, it stops a little above the highest ground
+     * around it (heights grow upwards as negative numbers), on the floor being edited and every floor below it.
+     */
+    private fun keepAboveGround() {
+        if (!scene.isLoaded()) return
+        val tx = Math.floorDiv(camera.cameraX, Constants.LOCAL_TILE_SIZE)
+        val ty = Math.floorDiv(camera.cameraY, Constants.LOCAL_TILE_SIZE)
+        var top = Int.MAX_VALUE
+        for (dx in -1..1) for (dy in -1..1) for (z in 0..currentPlane) {
+            val h = scene.getTile(z, tx + dx, ty + dy)?.cacheTile?.height ?: continue
+            if (h < top) top = h
+        }
+        if (top == Int.MAX_VALUE) return
+        val limit = top - GROUND_CLEARANCE
+        if (camera.cameraZ > limit) camera.cameraZ = limit
+    }
 
     private fun npcHeight(s: utils.NpcSpawn, x: Int = s.x, y: Int = s.y): Int {
         val d = editorRegions.region(models.regionIdOf(x, y)) ?: return 0

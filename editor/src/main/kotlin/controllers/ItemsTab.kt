@@ -451,6 +451,26 @@ class ItemsTab(
         } catch (e: Exception) { say("Couldn't save: ${e.message}") }
     }
 
+    /** Removes the item open now, with its noted and placeholder versions. */
+    private fun removeItem() {
+        val d = original ?: return say("Pick a saved item first.")
+        val l = lib() ?: return
+        val ids = arrayListOf(d.id)
+        if (d.noteLinked >= 0 && ItemStore.read(l, d.noteLinked)?.noteLinked == d.id) ids.add(d.noteLinked)
+        if (d.placeholderLink >= 0 && ItemStore.read(l, d.placeholderLink)?.placeholderLink == d.id) ids.add(d.placeholderLink)
+        val ok = Alert(Alert.AlertType.CONFIRMATION, "Remove ${d.name} (item ${ids.joinToString(", ")})?\n\n" +
+                "It goes from the exported cache; Deploy sends that to the server. Players who have it will hold a \"null\" item. " +
+                "Undo with Tools > backups, or by importing it again.",
+            ButtonType.YES, ButtonType.CANCEL).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.CANCEL)
+        if (ok != ButtonType.YES) return
+        try {
+            ItemStore.remove(ids, "remove-item-${d.id}")
+            original = null; work = null
+            afterWrite(null)
+            say("Removed ${d.name} (item ${ids.joinToString(", ")}). Deploy to make it gone in game.")
+        } catch (e: Exception) { say("Couldn't remove it: ${e.message}") }
+    }
+
     private fun makeNoted() {
         val d = work ?: return say("Pick an item first.")
         val l = lib() ?: return
@@ -790,7 +810,8 @@ class ItemsTab(
             HBox(8.0, noteInfo, Button("Make noted version").apply { setOnAction { makeNoted() } }).apply { alignment = Pos.CENTER_LEFT },
             HBox(6.0, Button("Save").apply { styleClass.add("accent"); setOnAction { save(false) } },
                 Button("Save as new item").apply { setOnAction { save(true) } },
-                Button("Reset").apply { setOnAction { val o = original; if (o != null) load(o.id) else if (work != null) newBlank() } })
+                Button("Reset").apply { setOnAction { val o = original; if (o != null) load(o.id) else if (work != null) newBlank() } },
+                Button("Remove item...").apply { setOnAction { removeItem() } })
         ).apply { padding = Insets(8.0) }
         val right = ScrollPane(form).apply { isFitToWidth = true; prefWidth = 520.0; minWidth = 480.0 }
         val left = VBox(6.0,

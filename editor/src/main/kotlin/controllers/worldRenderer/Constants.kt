@@ -19,4 +19,8 @@ object Constants {
     const val SELECTED_HSL = 22222
     /** Red tint for tiles shown by the tile flag view. */
     const val FLAG_HSL = 7 shl 7 or 50
+    /** Orange: tiles the game won't let players walk on. */
+    const val BLOCK_HSL = (6 shl 10) or (7 shl 7) or 60
+    /** Tile marked "blocked" with nothing solid on it. */
+    const val MARK_HSL = (0 shl 10) or (7 shl 7) or 50
 }

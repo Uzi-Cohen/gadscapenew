@@ -63,7 +63,8 @@ void main() {
     int textureIdx = int(n);
 
     vec2 uv = fUv.yz;
-    vec2 animatedUv = uv + textureOffsets[textureIdx];
+    // layers past 64 (117 HD's floor textures) don't animate
+    vec2 animatedUv = textureIdx < 64 ? uv + textureOffsets[textureIdx] : uv;
 
     vec4 textureColor = texture(textures, vec3(animatedUv, n));
     vec4 textureColorBrightness = pow(textureColor, vec4(brightness, brightness, brightness, 1.0f));

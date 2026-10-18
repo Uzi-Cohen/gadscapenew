@@ -230,6 +230,53 @@ fun applyEdit(access: RegionAccess, edit: Edit, undo: Boolean): Pair<Set<Int>, S
     return Pair(rebuild, heights)
 }
 
+/** What blocks walking, for keeping the floor's "blocked" marks in step with what's drawn. */
+class Walkability(
+    private val objects: (Int) -> cache.definitions.ObjectDefinition?,
+    private val overlays: (Int) -> cache.definitions.OverlayDefinition?
+) {
+    /** Blocks players the way the game clips it: walls, game objects and roofs unless "walkable", floor decor only when flagged. */
+    fun solid(l: Location): Boolean {
+        val d = objects(l.objId) ?: return false
+        return if (l.type == 22) d.interactType == 1 else d.interactType != 0 && l.type in 0..21 && l.type !in 4..8
+    }
+
+    fun size(l: Location): Pair<Int, Int> {
+        val d = objects(l.objId)
+        if (d == null || !(l.type == 10 || l.type == 11 || l.type in 12..21)) return 1 to 1
+        return if (l.orientation and 1 == 1) d.sizeY to d.sizeX else d.sizeX to d.sizeY
+    }
+
+    /** Stored overlay value (id + 1); 0 = none. */
+    fun waterOverlay(stored: Int): Boolean = stored > 0 && isWater(overlays(stored - 1))
+
+    fun water(t: RegionDefinition.Tile): Boolean = waterOverlay(t.overlayId)
+
+    /**
+     * A flat decoration lying on the floor: carpets, rugs, grass tufts, cracks (type 22). Painting a new floor goes
+     * over them in the editor but the game still draws them, so they go with the old floor. Things you can click
+     * (trapdoors and the like) and solid ones stay.
+     */
+    fun floorDecor(l: Location): Boolean {
+        if (l.type != 22) return false
+        val d = objects(l.objId) ?: return false
+        return d.interactType != 1 && d.actions.all { it == null }
+    }
+
+    companion object {
+        fun isWater(d: cache.definitions.OverlayDefinition?): Boolean {
+            if (d == null) return false
+            val c = d.rgbColor
+            return d.texture == 1 || ((c and 0xFF) > ((c shr 16) and 0xFF) + 30 && (c and 0xFF) > ((c shr 8) and 0xFF))
+        }
+    }
+}
+
+/** After a floor is painted: water can't be walked on, anything else can. */
+fun RegionDefinition.Tile.blockFor(water: Boolean) {
+    settings = (if (water) settings.toInt() or 1 else settings.toInt() and 1.inv()).toByte()
+}
+
 /** Area operations on the region data. Every call returns the edit it made (already applied), or null if nothing changed. */
 class TileOps(private val access: RegionAccess) {
 
@@ -358,6 +405,73 @@ class TileOps(private val access: RegionAccess) {
         return when (parts2.size) { 0 -> null; 1 -> parts2[0]; else -> MultiEdit(parts2) }
     }
 
+    /**
+     * Old maps keep a "blocked" mark on the floor under fences, hedges and buildings. Take the object away and the mark
+     * stays: an invisible wall. Clears it on the tiles the removed objects stood on, unless something solid is still
+     * there or the floor is water. [removal] is what a removal returned; the result is it plus the cleared marks.
+     */
+    fun unblockUnder(removal: Edit?, walk: Walkability): Edit? {
+        removal ?: return null
+        val gone = ArrayList<ObjectEdit>()
+        fun collect(e: Edit) { when (e) { is ObjectEdit -> if (!e.added) gone.add(e); is MultiEdit -> e.parts.forEach { collect(it) }; else -> {} } }
+        collect(removal)
+        val rec = TileRecorder()
+        val solidCache = HashMap<Int, Set<Int>>()
+        fun solidAt(rid: Int): Set<Int> = solidCache.getOrPut(rid) {
+            val set = HashSet<Int>()
+            for (l in access.locations(rid)?.locations ?: emptyList<Location>()) {
+                if (!walk.solid(l)) continue
+                val (w, h) = walk.size(l)
+                for (dx in 0 until w) for (dy in 0 until h) set.add((l.z shl 12) or ((l.x + dx) shl 6) or (l.y + dy))
+            }
+            set
+        }
+        for (g in gone) {
+            if (!walk.solid(g.loc)) continue
+            val (w, h) = walk.size(g.loc)
+            val bx = (g.regionId shr 8) shl 6
+            val by = (g.regionId and 0xFF) shl 6
+            for (dx in 0 until w) for (dy in 0 until h) {
+                val wx = bx + g.loc.x + dx; val wy = by + g.loc.y + dy
+                val rid = regionIdOf(wx, wy)
+                val def = access.region(rid) ?: continue
+                val lx = wx and 63; val ly = wy and 63
+                val t = def.tiles[g.loc.z][lx][ly] ?: continue
+                if (t.settings.toInt() and 1 == 0 || walk.water(t)) continue
+                // something solid left on it: covers the objects that spill over from the region next door only roughly, fine
+                if ((g.loc.z shl 12) or (lx shl 6) or ly in solidAt(rid)) continue
+                rec.touch(rid, g.loc.z, lx, ly, t)
+                t.settings = (t.settings.toInt() and 1.inv()).toByte()
+                def.syncTile(g.loc.z, lx, ly)
+            }
+        }
+        val flags = rec.finish(false) ?: return removal
+        return MultiEdit(listOf(removal, flags))
+    }
+
+    /** Take the floor decorations off one tile (floor [z], region-local x/y); each removal is added to [out]. */
+    fun removeFloorDecor(regionId: Int, z: Int, lx: Int, ly: Int, walk: Walkability, out: MutableList<Edit>): Int {
+        val locs = access.locations(regionId)?.locations ?: return 0
+        var n = 0
+        val it = locs.iterator()
+        while (it.hasNext()) {
+            val l = it.next()
+            if (l.z != z || l.x != lx || l.y != ly || !walk.floorDecor(l)) continue
+            it.remove()
+            out.add(ObjectEdit(regionId, l, false))
+            n++
+        }
+        return n
+    }
+
+    /** removeFloorDecor over an area, on one floor; [where] picks the tiles. */
+    fun removeFloorDecor(rect: TileRect, z: Int, walk: Walkability, where: (RegionDefinition.Tile) -> Boolean): Pair<Edit?, Int> {
+        val out = ArrayList<Edit>()
+        var n = 0
+        forTiles(rect, z..z) { id, _, _, lx, ly, t -> if (where(t)) n += removeFloorDecor(id, z, lx, ly, walk, out) }
+        return Pair(if (out.isEmpty()) null else MultiEdit(out), n)
+    }
+
     fun removeObjects(rect: TileRect, filter: (Location) -> Boolean = { true }): Edit? {
         val edits = ArrayList<Edit>()
         for (id in regionsIn(rect)) {
@@ -430,8 +544,9 @@ class TileOps(private val access: RegionAccess) {
                         ground.overlayRotation = t.overlayRotation
                     }
                 }
-                // carry blocked / remove roof / hide on minimap down; not the floor-linking flags (bridge, render below)
-                if (hasFlags) ground.settings = (ground.settings.toInt() or (t.settings.toInt() and 0x15)).toByte()
+                // carry remove-roof / hide-on-minimap down. Not "blocked": upper floors are blocked wherever they have no
+                // floor, and carrying that down made invisible walls all over the ground. Not the floor-linking flags.
+                if (hasFlags) ground.settings = (ground.settings.toInt() or (t.settings.toInt() and 0x14)).toByte()
                 if (z != 0) t.underlayId = 0
                 t.overlayId = 0; t.attrOpcode = 0; t.overlayPath = 0; t.overlayRotation = 0
                 // the bridge flag belongs to floor 1 (see flagPlanes): it stays unless asked to clear it
@@ -452,12 +567,20 @@ class TileOps(private val access: RegionAccess) {
         val edits = ArrayList<Edit>()
         rec.finish(false)?.let { edits.add(it) }
         var objectsMoved = 0
+        var roofsDropped = 0
         for (id in regionsIn(rect)) {
             val locs = access.locations(id)?.locations ?: continue
             val bx = (id shr 8) shl 6
             val by = (id and 0xFF) shl 6
             val up = locs.filter { it.z in sources && rect.contains(bx + it.x, by + it.y) }
             for (l in up) {
+                if (to == 0 && l.type in 12..21) {
+                    // a roof piece on the ground is solid and, with roofs hidden, an invisible wall: drop it
+                    locs.remove(l)
+                    edits.add(ObjectEdit(id, l, false))
+                    roofsDropped++
+                    continue
+                }
                 val down = l.copy(z = to)
                 locs.remove(l)
                 locs.add(down)
@@ -467,6 +590,7 @@ class TileOps(private val access: RegionAccess) {
             }
         }
         val msg = "Moved $tilesMoved tiles and $objectsMoved objects from floor ${sources.sorted().joinToString("+")} to floor $to" +
+                (if (roofsDropped > 0) ", removed $roofsDropped roof pieces (they'd be invisible walls on the ground)" else "") +
                 if (clearBridgeFlags) " (bridge flags cleared)." else "."
         val edit = when (edits.size) { 0 -> null; 1 -> edits[0]; else -> MultiEdit(edits) }
         return Pair(edit, msg)

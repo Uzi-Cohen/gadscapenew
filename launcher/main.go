@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -34,26 +35,69 @@ var stamp = "0"
 const (
 	appName  = "Uzis Map Editor"
 	releases = "https://github.com/Uzi-Cohen/uzis-map-editor-releases/releases/"
-	mapZip   = releases + "download/map/map.zip"
+	// Every merge to main publishes the editor here (Build workflow), so friends get it on their next start.
+	editorReleases = "https://github.com/Uzi-Cohen/gadscape/releases/"
+	mapZip         = releases + "download/map/map.zip"
 )
 
 func main() {
 	// its own folder: the old installer's folder (Programs\Uzis Map Editor) has an auto-updater that puts the old
 	// launcher back
 	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "UzisMapEditor")
-	if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
-		if err := install(dest); err != nil {
-			fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
+	startLog(dest)
+	logf("launcher %s starting", build)
+	withProgress(func(p *progress) {
+		defer func() {
+			if r := recover(); r != nil {
+				logf("crashed: %v\n%s", r, debug.Stack())
+				fail(fmt.Sprintf("The launcher crashed: %v\n\nSend Claude %s", r, filepath.Join(dest, "launcher.log")))
+			}
+		}()
+		if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
+			p.say("Installing...", -1)
+			if err := install(dest); err != nil {
+				fail("Couldn't install Uzi's Map Editor:\n" + err.Error())
+			}
 		}
-	}
-	placeSelf(dest)
-	update(dest)
-	javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
-	cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
-	cmd.Dir = dest
-	if err := cmd.Start(); err != nil {
-		fail("Couldn't start Uzi's Map Editor:\n" + err.Error())
-	}
+		logf("installed; placing exe")
+		placeSelf(dest)
+		logf("checking for updates")
+		update(dest, p)
+		logf("starting the editor")
+		javaw := filepath.Join(dest, "java", "bin", "javaw.exe")
+		cmd := exec.Command(javaw, "-Dume.appdir="+filepath.Join(dest, "app"), "-Dume.noupdate=true", "-jar", filepath.Join(dest, "editor.jar"))
+		cmd.Dir = dest
+		started := time.Now()
+		if err := cmd.Start(); err != nil {
+			fail("Couldn't start Uzi's Map Editor:\n" + err.Error())
+		}
+		if p.shown {
+			// the editor takes a few seconds to open: keep saying so until it does
+			p.say("Starting...", -1)
+		}
+		// an editor that closes right away has crashed: say why instead of just vanishing
+		exited := make(chan error, 1)
+		go func() { exited <- cmd.Wait() }()
+		for wait := 0; ; wait++ {
+			select {
+			case err := <-exited:
+				fail(crashReport(dest, err, time.Since(started)))
+			case <-time.After(time.Second):
+			}
+			if hasVisibleWindow(cmd.Process.Pid) {
+				logf("editor window is up after %ds", wait+1)
+				break
+			}
+			if wait == 3 {
+				p.hide() // the editor's own splash is up by now
+			}
+			if wait == 25 {
+				// running, but nothing on screen: say so instead of leaving it invisible
+				logf("editor running but no window after 25s")
+				fail(crashReport(dest, fmt.Errorf("it is running but never showed a window"), time.Since(started)))
+			}
+		}
+	})
 }
 
 func install(dest string) error {
@@ -97,9 +141,9 @@ func placeSelf(dest string) {
 	shortcut(exe, dest)
 }
 
-// update gets the editor Publish uploaded when it's newer than the one here, and the newest map.
+// update gets the newest editor build from main when it's newer than the one here, and the newest map Publish uploaded.
 // Offline or on any error the installed ones are used.
-func update(dest string) {
+func update(dest string, p *progress) {
 	c := http.Client{Timeout: 15 * time.Second}
 	text := func(url string) string {
 		r, err := c.Get(url)
@@ -118,11 +162,13 @@ func update(dest string) {
 		return strings.TrimSpace(string(b))
 	}
 
-	if remote, err := strconv.ParseInt(text(releases+"latest/download/editor-version.txt"), 10, 64); err == nil {
+	if remote, err := strconv.ParseInt(text(editorReleases+"latest/download/editor-version.txt"), 10, 64); err == nil {
 		have, _ := strconv.ParseInt(local("editor-version.txt"), 10, 64)
 		if remote > have {
 			tmp := filepath.Join(dest, "editor.jar.new")
-			if download(releases+"latest/download/editor.jar", tmp) == nil && validJar(tmp) {
+			p.say("Updating the editor:", 0)
+			step := func(done, total int64) { p.bytes("Updating the editor:", done, total) }
+			if download(editorReleases+"latest/download/editor.jar", tmp, step) == nil && validJar(tmp) {
 				os.Remove(filepath.Join(dest, "editor.jar"))
 				if os.Rename(tmp, filepath.Join(dest, "editor.jar")) == nil {
 					os.WriteFile(filepath.Join(dest, "editor-version.txt"), []byte(strconv.FormatInt(remote, 10)), 0o644)
@@ -134,7 +180,10 @@ func update(dest string) {
 
 	if remote := text(releases + "download/map/map-version.txt"); remote != "" && remote != local(filepath.Join("map", "map-version.txt")) {
 		tmp := filepath.Join(dest, "map.zip.new")
-		if download(mapZip, tmp) == nil {
+		p.say("Updating the map:", 0)
+		step := func(done, total int64) { p.bytes("Updating the map:", done, total) }
+		if download(mapZip, tmp, step) == nil {
+			p.say("Updating the map: unpacking...", 100)
 			if b, err := os.ReadFile(tmp); err == nil {
 				staging := filepath.Join(dest, "map.new")
 				os.RemoveAll(staging)
@@ -153,7 +202,8 @@ func update(dest string) {
 	}
 }
 
-func download(url, to string) error {
+// download saves url to a file, telling step how far it got.
+func download(url, to string, step func(done, total int64)) error {
 	c := http.Client{Timeout: 30 * time.Minute}
 	r, err := c.Get(url)
 	if err != nil {
@@ -167,11 +217,25 @@ func download(url, to string) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(f, r.Body)
+	_, err = io.Copy(f, &counter{r: r.Body, total: r.ContentLength, step: step})
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
 	return err
+}
+
+type counter struct {
+	r     io.Reader
+	done  int64
+	total int64
+	step  func(done, total int64)
+}
+
+func (c *counter) Read(b []byte) (int, error) {
+	n, err := c.r.Read(b)
+	c.done += int64(n)
+	c.step(c.done, c.total)
+	return n, err
 }
 
 // validJar is true when the download is a whole editor jar.
@@ -245,7 +309,66 @@ func shortcut(exe, dir string) {
 	c.Run()
 }
 
+// crashReport tells what stopped the editor: the end of its log, and Java's crash file if it left one.
+func crashReport(dest string, err error, ran time.Duration) string {
+	msg := fmt.Sprintf("Uzi's Map Editor closed %d seconds after starting", int(ran.Seconds()))
+	if err != nil {
+		msg += " (" + err.Error() + ")"
+	}
+	msg += ".\n\nSend this to Claude (Ctrl+C copies this box):\n"
+	home, _ := os.UserHomeDir()
+	if b, e := os.ReadFile(filepath.Join(home, ".uzis-map-editor", "last-run.log")); e == nil {
+		lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+		if len(lines) > 25 {
+			lines = lines[len(lines)-25:]
+		}
+		msg += "\n--- last-run.log ---\n" + strings.Join(lines, "\n")
+	}
+	if ents, e := os.ReadDir(dest); e == nil {
+		var newest os.DirEntry
+		var newestTime time.Time
+		for _, f := range ents {
+			if strings.HasPrefix(f.Name(), "hs_err_pid") {
+				if fi, e := f.Info(); e == nil && fi.ModTime().After(newestTime) {
+					newest, newestTime = f, fi.ModTime()
+				}
+			}
+		}
+		if newest != nil && time.Since(newestTime) < 2*time.Minute {
+			if b, e := os.ReadFile(filepath.Join(dest, newest.Name())); e == nil {
+				lines := strings.Split(string(b), "\n")
+				if len(lines) > 12 {
+					lines = lines[:12]
+				}
+				msg += "\n--- " + newest.Name() + " ---\n" + strings.Join(lines, "\n")
+			}
+		}
+	}
+	return msg
+}
+
+var logFile *os.File
+
+// startLog keeps launcher.log next to the install: every step, and (SetCrashOutput) any crash, which a windowless
+// program would otherwise lose without a trace.
+func startLog(dest string) {
+	os.MkdirAll(dest, 0o755)
+	f, err := os.OpenFile(filepath.Join(dest, "launcher.log"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return
+	}
+	logFile = f
+}
+
+func logf(format string, a ...any) {
+	if logFile != nil {
+		fmt.Fprintf(logFile, time.Now().Format("15:04:05.000")+" "+format+"\n", a...)
+		logFile.Sync()
+	}
+}
+
 func fail(msg string) {
+	logf("FAIL: %s", msg)
 	t, _ := syscall.UTF16PtrFromString("Uzi's Map Editor")
 	m, _ := syscall.UTF16PtrFromString(msg)
 	syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x10)

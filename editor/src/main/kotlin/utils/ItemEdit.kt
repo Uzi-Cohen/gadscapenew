@@ -273,6 +273,22 @@ object ItemStore {
         }
     }
 
+    /**
+     * Removes items from the exported cache (after a backup). Items at the end of the list are deleted; any other
+     * one is turned into an empty "null" item instead, because item ids after it must keep their numbers.
+     */
+    fun remove(ids: List<Int>, what: String) {
+        CacheEdits.backup(what)
+        CacheEdits.withExportCache { lib ->
+            for (id in ids.sortedDescending()) {
+                if (lib.data(2, 10, id) == null) continue
+                if (id == nextFreeId(lib) - 1) lib.remove(2, 10, id)
+                else lib.put(2, 10, id, ItemFull(id).apply { name = "null" }.encode())
+            }
+            lib.index(2).update()
+        }
+    }
+
     fun nextFreeId(lib: CacheLibrary): Int = (lib.index(2).archive(10)?.fileIds()?.maxOrNull() ?: -1) + 1
 
     /** The noted version's template (the "paper" item, 799 in OSRS): the one most noted items use. */

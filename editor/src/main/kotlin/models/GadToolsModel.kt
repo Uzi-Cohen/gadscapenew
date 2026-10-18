@@ -25,7 +25,8 @@ enum class TerrainTool(val label: String) {
     OVERLAY("Paint overlay"),
     FLAGS("Paint tile flags"),
     SELECT("Select area"),
-    NPC("NPCs (place, drag, turn, remove)");
+    NPC("NPCs (place, drag, turn, remove)"),
+    PICK("Pick paint (pen)");
 
     val paints: Boolean get() = this == UNDERLAY || this == OVERLAY || this == FLAGS
     val heights: Boolean get() = this == RAISE || this == LOWER || this == FLATTEN || this == SMOOTH || this == SET_HEIGHT || this == NOISE
@@ -64,6 +65,14 @@ class GadToolsModel {
     val paintPlane: IntegerProperty = SimpleIntegerProperty(0)
     /** Draw floors above paintPlane too (normally hidden so you can work inside buildings). */
     val showAllFloors: BooleanProperty = SimpleBooleanProperty(false)
+    /** Draw floors the way 117 HD does for players using it (utils.HdFloors). */
+    val hdFloors: BooleanProperty = SimpleBooleanProperty(try { Configuration().getProp("hd-floors") == "on" } catch (e: Throwable) { false }).apply {
+        // never let the HD view stop the editor from starting
+        try { utils.HdFloors.enabled = get() } catch (e: Throwable) { e.printStackTrace(); set(false) }
+        addListener { _, _, v ->
+            try { Configuration().saveProp("hd-floors", if (v) "on" else "off"); utils.HdFloors.enabled = v } catch (e: Throwable) { e.printStackTrace() }
+        }
+    }
     /** On floor 1+ a copy takes only that floor (so it can be pasted on another floor) unless this is ticked. */
     val copyAllFloors: BooleanProperty = SimpleBooleanProperty(false)
     /** What Ctrl+C takes: -2 = auto (ground: all floors, floor 1-3: that floor), -3 = the floor I'm on, -1 = all floors, 0..3 = that floor. */
@@ -82,6 +91,8 @@ class GadToolsModel {
     val exactHeight: IntegerProperty = SimpleIntegerProperty(0)
     /** Tint tiles that carry any of the flagMask bits on paintPlane. */
     val showFlags: BooleanProperty = SimpleBooleanProperty(false)
+    /** Tint the tiles players can't walk on (blocked flag, solid objects, walls) on paintPlane, like the game's collision. */
+    val showBlocking: BooleanProperty = SimpleBooleanProperty(false)
 
     @Volatile var selection: TileRect? = null
     @Volatile var clipboard: Prefab? = null

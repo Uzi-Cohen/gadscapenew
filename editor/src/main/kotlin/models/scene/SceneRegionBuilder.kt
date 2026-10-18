@@ -177,8 +177,14 @@ class SceneRegionBuilder @Inject constructor(
 
                             // an overlay number this cache doesn't have: draw the underlay instead of dropping the region
                             if (overlayId != 0 && overlayLoader.get(overlayId - 1) == null) overlayId = 0
+                            // View > 117 HD floors: recolour and texture the tile the way HD does for players using it
+                            val hd = if (utils.HdFloors.enabled) utils.HdFloors.ruleFor(overlayId, underlayId, baseX + xi, baseY + yi, z) else null
+                            val hdUnder = if (hd != null && overlayId != 0) utils.HdFloors.ruleFor(0, underlayId, baseX + xi, baseY + yi, z) else hd
+                            fun hdU(c: Int) = if (hdUnder == null) c else utils.HdFloors.recolour(hdUnder, c)
+                            fun hdO(c: Int) = if (hd == null) c else utils.HdFloors.recolour(hd, c)
                             if (overlayId == 0) {
                                 val underlay: UnderlayDefinition? = underlayLoader.get(underlayId - 1)
+                                val hdTexture = if (hd == null) -1 else utils.HdFloors.textureFor(hd, z, baseX + xi, baseY + yi, textureLoader.getAll().size)
                                 sceneRegion.addTile(
                                     z,
                                     xi,
@@ -190,10 +196,10 @@ class SceneRegionBuilder @Inject constructor(
                                     seHeight,
                                     neHeight,
                                     nwHeight,
-                                    method4220(rgb, swColor),
-                                    method4220(rgb, seColor),
-                                    method4220(rgb, neColor),
-                                    method4220(rgb, nwColor),
+                                    hdU(method4220(rgb, swColor)),
+                                    hdU(method4220(rgb, seColor)),
+                                    hdU(method4220(rgb, neColor)),
+                                    hdU(method4220(rgb, nwColor)),
                                     0,
                                     0,
                                     0,
@@ -202,7 +208,8 @@ class SceneRegionBuilder @Inject constructor(
                                     0,
                                     underlay,
                                     null,
-                                    r.tiles[z][xi][yi]
+                                    r.tiles[z][xi][yi],
+                                    hdTexture
                                 )
                             } else {
                                 val overlayPath: Int = r.tiles[z][xi][yi]?.overlayPath!!.toInt() + 1
@@ -255,6 +262,9 @@ class SceneRegionBuilder @Inject constructor(
                                     overlayRgb = colorPalette[var0]
                                 }
                                 val underlay: UnderlayDefinition? = underlayLoader.get(underlayId - 1)
+                                // HD's texture goes on plain-coloured overlays; ones with their own texture (water...) keep it
+                                if (hd != null && overlayTexture < 0 && overlayHsl >= 0)
+                                    overlayTexture = utils.HdFloors.textureFor(hd, z, baseX + xi, baseY + yi, textureLoader.getAll().size)
                                 sceneRegion.addTile(
                                     z,
                                     xi,
@@ -266,14 +276,14 @@ class SceneRegionBuilder @Inject constructor(
                                     seHeight,
                                     neHeight,
                                     nwHeight,
-                                    method4220(rgb, swColor),
-                                    method4220(rgb, seColor),
-                                    method4220(rgb, neColor),
-                                    method4220(rgb, nwColor),
-                                    adjustHSLListness0(overlayHsl, swColor),
-                                    adjustHSLListness0(overlayHsl, seColor),
-                                    adjustHSLListness0(overlayHsl, neColor),
-                                    adjustHSLListness0(overlayHsl, nwColor),
+                                    hdU(method4220(rgb, swColor)),
+                                    hdU(method4220(rgb, seColor)),
+                                    hdU(method4220(rgb, neColor)),
+                                    hdU(method4220(rgb, nwColor)),
+                                    hdO(adjustHSLListness0(overlayHsl, swColor)),
+                                    hdO(adjustHSLListness0(overlayHsl, seColor)),
+                                    hdO(adjustHSLListness0(overlayHsl, neColor)),
+                                    hdO(adjustHSLListness0(overlayHsl, nwColor)),
                                     underlayRgb,
                                     overlayRgb,
                                     underlay,
@@ -423,6 +433,18 @@ class SceneRegionBuilder @Inject constructor(
     )
 
     private val entityCache: HashMap<ModelKey, Model> = HashMap()
+    /** The object a multiloc shows by default (state 0, else its default state), like the game does. */
+    private fun transformed(objectDefinition: ObjectDefinition): ObjectDefinition? {
+        val transforms = try { objectDefinition.transforms } catch (e: UninitializedPropertyAccessException) { return null }
+        val candidates = listOfNotNull(transforms.firstOrNull(), transforms.lastOrNull()) + transforms.toList()
+        for (id in candidates) {
+            if (id < 0 || id == objectDefinition.id) continue
+            val def = objectLoader.get(id) ?: continue
+            if (def.modelIds != null) return def
+        }
+        return null
+    }
+
     private fun getEntity(
         objectDefinition: ObjectDefinition,
         type: Int,
@@ -433,8 +455,9 @@ class SceneRegionBuilder @Inject constructor(
         baseX: Int,
         baseY: Int
     ): Entity? {
-        val modelDefinition: ModelDefinition =
-            objectToModelConverter.toModel(objectDefinition, type, orientation) ?: return null
+        val modelDefinition: ModelDefinition = objectToModelConverter.toModel(objectDefinition, type, orientation)
+            ?: transformed(objectDefinition)?.let { objectToModelConverter.toModel(it, type, orientation) }
+            ?: objectToModelConverter.standIn(objectDefinition)
 
         // FIXME: nonFlatShading affects fence doors
         var model = Model(modelDefinition, objectDefinition.ambient, objectDefinition.contrast)

@@ -50,7 +50,7 @@ class TextureManager @Inject constructor(
             GLC.GL_RGBA8,
             TEXTURE_SIZE,
             TEXTURE_SIZE,
-            textures.size
+            textures.size + (try { utils.HdFloors.images.size } catch (e: Throwable) { 0 })
         )
         gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_MIN_FILTER, GLC.GL_NEAREST)
         gl.glTexParameteri(GLC.GL_TEXTURE_2D_ARRAY, GLC.GL_TEXTURE_MAG_FILTER, GLC.GL_NEAREST)
@@ -60,12 +60,34 @@ class TextureManager @Inject constructor(
 //		double save = textureProvider.getBrightness();
 //		textureProvider.setBrightness(1.0d);
         updateTextures(gl, textureArrayId)
+        try { uploadHdTextures(gl, textures.size) } catch (e: Throwable) { e.printStackTrace() }
 
 //		textureProvider.setBrightness(save);
         gl.glActiveTexture(GLC.GL_TEXTURE1)
         gl.glBindTexture(GLC.GL_TEXTURE_2D_ARRAY, textureArrayId)
         gl.glActiveTexture(GLC.GL_TEXTURE0)
         return textureArrayId
+    }
+
+    /** 117 HD's floor textures (View > 117 HD floors), in the layers after the cache's own. */
+    private fun uploadHdTextures(gl: Gl, first: Int) {
+        utils.HdFloors.images.forEachIndexed { i, name ->
+            val img = try {
+                TextureManager::class.java.getResourceAsStream("/hd/textures/$name.png")?.use { javax.imageio.ImageIO.read(it) }
+            } catch (e: Exception) { null } ?: return@forEachIndexed
+            // HD's floor textures are all 128 x 128 (no Graphics2D scaling: it can start AWT, which upsets JavaFX)
+            if (img.width != TEXTURE_SIZE || img.height != TEXTURE_SIZE) return@forEachIndexed
+            val scaled = img
+            val pixels = ByteArray(TEXTURE_SIZE * TEXTURE_SIZE * 4)
+            var p = 0
+            for (y in 0 until TEXTURE_SIZE) for (x in 0 until TEXTURE_SIZE) {
+                val argb = scaled.getRGB(x, y)
+                pixels[p++] = (argb shr 16).toByte(); pixels[p++] = (argb shr 8).toByte()
+                pixels[p++] = argb.toByte(); pixels[p++] = (argb ushr 24).toByte()
+            }
+            gl.glTexSubImage3D(GLC.GL_TEXTURE_2D_ARRAY, 0, 0, 0, first + i, TEXTURE_SIZE, TEXTURE_SIZE, 1,
+                GLC.GL_RGBA, GLC.GL_UNSIGNED_BYTE, ByteBuffer.wrap(pixels))
+        }
     }
 
     fun freeTextureArray(gl: Gl, textureArrayId: Int) {
