@@ -218,11 +218,7 @@ public final class GameNoticeboardInterface extends Interface {
     }
 
     public static void updateDropRate(Player player) {
-        ExpConfigurations config = ExpConfigurations.of(player.getGameMode());
-        int currentIndex = config.getExpConfigurationIndex(player.getCombatXPRate(), player.getSkillingXPRate());
-        ExpConfiguration[] configurations = ExpConfigurations.of(player.getGameMode()).getConfigurations();
-        ExpConfiguration configuration = configurations[currentIndex];
-        double gameMode = configuration.getDropRateIncrease() / 100.0D;
+        double gameMode = ExpConfigurations.modeDropRate(player);
         double donor = player.getMemberRank().getDR();
         double pin = player.getBooleanAttribute("drop_rate_pin_claimed") ? 0.05D : 0.0D;
         double pet = player.getBoonManager().hasBoon(AnimalTamer.class) && player.getPetId() != -1 ? 0.02D : 0.0D;

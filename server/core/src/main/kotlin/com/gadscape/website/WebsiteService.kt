@@ -3,6 +3,7 @@ package com.gadscape.website
 import com.gadscape.api.model.Bond
 import com.gadscape.api.service.store.notify
 import com.gadscape.api.service.vote.totalVoteCredits
+import com.gadscape.api.service.user.updateDonationInfoOnPlayerDetailsTab
 import com.gadscape.api.service.user.updateVoteStatisticOnPlayerDetailsTab
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -164,7 +165,7 @@ object WebsiteService {
         if (!isEnabled) return
         val info = loginInfo.remove(key(player.name)) ?: return
         info.obj("tier")?.str("key")?.let { applyTier(player, it, announce = false) }
-        info.int("claimedCents")?.let { player.claimedPinCents = it }
+        info.int("claimedCents")?.let { player.claimedPinCents = it; player.updateDonationInfoOnPlayerDetailsTab() }
         val pending = info.int("pendingRewards") ?: 0
         if (pending > 0)
             player.sendMessage(Colour.RS_GREEN.wrap("You have $pending reward${if (pending == 1) "" else "s"} waiting. Type ::claim to collect them."))
@@ -376,6 +377,7 @@ object WebsiteService {
                 }
                 val total = result.int("claimedCents") ?: 0
                 player.claimedPinCents = total
+                player.updateDonationInfoOnPlayerDetailsTab()
                 val tier = result.obj("tier")
                 tier?.str("key")?.let { applyTier(player, it, announce = true) }
                 player.dialogue {
@@ -391,6 +393,7 @@ object WebsiteService {
     private fun redeemPinLocally(player: Player, pin: Item, bond: Bond) {
         val total = player.claimedPinCents + bond.amount * 100
         player.claimedPinCents = total
+        player.updateDonationInfoOnPlayerDetailsTab()
         val tierKey = LOCAL_TIERS.firstOrNull { total >= it.first }?.second
         applyTier(player, tierKey, announce = true)
         player.dialogue {
@@ -462,7 +465,7 @@ object WebsiteService {
             }
             "TIER_CHANGED" -> if (online != null) WorldTasksManager.schedule {
                 data.str("tier")?.let { applyTier(online, it, announce = true) }
-                data.int("claimedCents")?.let { online.claimedPinCents = it }
+                data.int("claimedCents")?.let { online.claimedPinCents = it; online.updateDonationInfoOnPlayerDetailsTab() }
             }
             "VOTE_RECEIVED" -> online?.let { p ->
                 WorldTasksManager.schedule { p.notify("Your vote on ${data.str("site") ?: "the toplist"} was received!<br>Type ::claim to collect your reward.") }

@@ -99,7 +99,8 @@ public class MagicCombat extends PlayerCombat {
 
     @Override
     public Hit getHit(Player player, Entity target, double accuracyModifier, double passiveModifier, double activeModifier, final boolean ignorePrayers) {
-        final Hit hit = new Hit(player, getRandomHit(player, target, getMaxHit(player, passiveModifier, activeModifier, false), accuracyModifier), getHitType());
+        final int maxHit = com.gadscape.game.content.accounttype.Sigils.maxHit(player, target, com.gadscape.game.content.accounttype.Sigils.MAGIC, getMaxHit(player, passiveModifier, activeModifier, false));
+        final Hit hit = new Hit(player, getRandomHit(player, target, maxHit, accuracyModifier * com.gadscape.game.content.accounttype.Sigils.accuracy(player, target, com.gadscape.game.content.accounttype.Sigils.MAGIC)), getHitType());
         hit.setWeapon(spell);
         hit.setSpell(spell);
         return hit;

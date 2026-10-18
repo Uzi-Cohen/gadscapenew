@@ -2430,11 +2430,7 @@ public final class GameCommands {
         });
 
         new Command(PlayerPrivilege.PLAYER, new String[]{"droprate", "dr"}, "Displays your drop rate.", (p, args) -> {
-            ExpConfigurations config = ExpConfigurations.of(p.getGameMode());
-            int currentIndex = config.getExpConfigurationIndex(p.getCombatXPRate(), p.getSkillingXPRate());
-            ExpConfiguration[] configurations = ExpConfigurations.of(p.getGameMode()).getConfigurations();
-            ExpConfiguration configuration = configurations[currentIndex];
-            double gameMode = configuration.getDropRateIncrease() / 100.0D;
+            double gameMode = ExpConfigurations.modeDropRate(p);
             double donor = p.getMemberRank().getDR();
             double pin = p.getBooleanAttribute("drop_rate_pin_claimed") ? 0.05D : 0.0D;
             double pet = p.getBoonManager().hasBoon(AnimalTamer.class) && p.getPetId() != -1 ? 0.02D : 0.0D;
@@ -2442,10 +2438,37 @@ public final class GameCommands {
             p.sendMessage("DropRate: " + (int) ((gameMode + donor + pin + pet + compCape) * 100D) + "%. Mode: " + (int) (gameMode * 100D) + "%. Donor: " + (int) (donor * 100D) + "%. Pin: " + (int) (pin * 100D) + "%. Pet: " + (int) (pet * 100D) +"%");
         });
 
-        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank. Available to staff and donators.",
+        new Command(PlayerPrivilege.PLAYER, "start", "Picks your account type if you haven't yet.", (p, args) -> {
+            if (p.getBooleanAttribute("registered")) {
+                p.sendMessage("You've already picked your account type.");
+                return;
+            }
+            com.gadscape.game.content.accounttype.AccountSetup.openPicker(p);
+        });
+        new Command(PlayerPrivilege.PLAYER, "sigil", "Shows or changes your Ultraman sigil.", (p, args) ->
+                com.gadscape.game.content.accounttype.AccountSetup.sigilCommand(p));
+        new Command(PlayerPrivilege.PLAYER, "build", "Picks your PK build (PvP accounts, once).", (p, args) -> {
+            if (p.getBooleanAttribute("pvp_build_picked") || com.gadscape.game.content.accounttype.AccountType.of(p) != com.gadscape.game.content.accounttype.AccountType.PVP) {
+                p.sendMessage("Only a new PvP account can pick a build.");
+                return;
+            }
+            com.gadscape.game.content.accounttype.AccountSetup.pickBuild(p);
+        });
+        new Command(PlayerPrivilege.PLAYER, new String[]{"presets", "kits", "preset"}, "Opens your gear presets.", (p, args) -> {
+            if (!p.isStaff() && com.zenyte.game.world.region.area.wilderness.WildernessArea.isWithinWilderness(p.getLocation())) {
+                p.sendMessage("You can't load presets in the Wilderness.");
+                return;
+            }
+            GameInterface.PRESET_MANAGER.open(p);
+        });
+        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank anywhere outside the Wilderness.",
                 (p, args) -> {
-                    if (!p.isStaff() && !p.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM)) {
-                        p.sendMessage("This command is only available to staff and donators.");
+                    if (!p.isStaff() && com.zenyte.game.world.region.area.wilderness.WildernessArea.isWithinWilderness(p.getLocation())) {
+                        p.sendMessage("You can't open the bank in the Wilderness.");
+                        return;
+                    }
+                    if (!p.isStaff() && p.isUnderCombat()) {
+                        p.sendMessage("You can't open the bank while you're in combat.");
                         return;
                     }
                     GameInterface.BANK.open(p);

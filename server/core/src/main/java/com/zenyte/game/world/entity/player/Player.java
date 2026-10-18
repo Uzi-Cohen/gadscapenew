@@ -1801,8 +1801,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
      * @return the fractional bonus appended to a 100% drop rate (i.e. 0.10D for a 10% boost)
      */
     public double getDropRateBonus() {
-        ExpConfiguration configuration = ExpConfigurations.getForPlayer(this);
-        double gameMode = configuration.getDropRateIncrease() / 100.0D;
+        double gameMode = ExpConfigurations.modeDropRate(this);
         double donor = getMemberRank().getDR();
         double pin = getBooleanAttribute("drop_rate_pin_claimed") ? 0.05D : 0.0D;
         double pet = getBoonManager().hasBoon(AnimalTamer.class) && getPetId() != -1 ? 0.02D : 0.0D;
@@ -4088,7 +4087,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (!getBooleanAttribute("registered")) {
 //            addAttribute("registered", 1);
             gameMode = GameMode.REGULAR;
-            setLocation(GameConstants.REGISTRATION_LOCATION);
+            com.gadscape.game.content.accounttype.AccountSetup.onUnregisteredLogin(this);
             if (getSettings().getChannelOwner() == null) {
                 ClanManager.join(this, GameConstants.SERVER_CHANNEL_NAME);
             }

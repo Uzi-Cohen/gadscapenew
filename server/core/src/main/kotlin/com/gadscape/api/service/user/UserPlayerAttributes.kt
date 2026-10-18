@@ -3,6 +3,7 @@ package com.gadscape.api.service.user
 import com.gadscape.api.model.User
 import com.gadscape.api.util.toMemberRank
 import com.gadscape.api.util.toPrivilege
+import com.gadscape.website.claimedPinCents
 import com.zenyte.game.util.Colour
 import com.zenyte.game.world.entity.player.Player
 import com.zenyte.game.world.entity.player.privilege.MemberRank
@@ -29,7 +30,7 @@ fun Player.onSetUser(value: User?) {
 /**
  * The total amount of dollars the player has spent in the store.
  */
-val Player.storeTotalSpent get() = user?.totalSpent ?: 0
+val Player.storeTotalSpent get() = maxOf(user?.totalSpent ?: 0, claimedPinCents / 100)
 
 /**
  * The amount of spendable store credits the player has.
