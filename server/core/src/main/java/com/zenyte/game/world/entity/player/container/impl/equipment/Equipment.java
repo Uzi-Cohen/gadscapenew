@@ -259,7 +259,7 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 				player.getCombatDefinitions().setSpecial(false, false);
 			}
 		} else if (equipmentSlot == 5) {
-			final boolean twoHanded = weapon != null && weapon.getDefinitions().isTwoHanded();
+			final boolean twoHanded = weapon != null && weapon.getDefinitions() != null && weapon.getDefinitions().isTwoHanded();
 			if (twoHanded) {
 				final EquipPlugin weaponPlugin = EquipPluginLoader.plugins.get(weapon.getId());
 				if (weaponPlugin != null) {
@@ -293,7 +293,7 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 				inventory.refresh();
 			}
 		} else {
-			if (worn != null && worn.getDefinitions().isStackable() && inventory.containsItem(worn.getId(), 1)) {
+			if (worn != null && worn.getDefinitions() != null && worn.getDefinitions().isStackable() && inventory.containsItem(worn.getId(), 1)) {
 				final int wornAmount = worn.getAmount();
 				final int itemAmount = inventory.getAmountOf(worn.getId());
 				if (itemAmount + wornAmount < 0) {
