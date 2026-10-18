@@ -88,7 +88,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: editor-pr${{ github.event.number }}-build-${{ env.BUILD }}
-          name: Editor test build ${{ env.BUILD }} (PR #${{ github.event.number }})
+          name: "Editor test build ${{ env.BUILD }} (PR #${{ github.event.number }})"
           target_commitish: ${{ github.event.pull_request.head.sha }}
           prerelease: true
           files: editor/build/libs/Uzis-Map-Editor.exe
