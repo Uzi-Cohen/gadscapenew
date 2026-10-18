@@ -984,7 +984,6 @@ class Renderer @Inject constructor(
         if (tool == TerrainTool.OVERLAY) ct.blockFor(walk.waterOverlay(ct.overlayId))
         else if (tool == TerrainTool.UNDERLAY && !erase && !walk.water(ct)) ct.blockFor(false)
         if (ct.settings != before.settings) highlightDirty = true
-        if (!erase && (tool == TerrainTool.OVERLAY || tool == TerrainTool.UNDERLAY)) hdShowAsPainted(ct, t, plane)
         // a new floor replaces what lay on the old one: carpets and rugs are objects, and the game would keep drawing them
         val newFloor = !erase && (tool == TerrainTool.OVERLAY || (tool == TerrainTool.UNDERLAY && ct.overlayId == 0))
         if (newFloor && areaOps.removeFloorDecor(def.regionId, plane, local.first, local.second, walk, strokeDecorGone) > 0) strokeRebuild.add(def.regionId)
