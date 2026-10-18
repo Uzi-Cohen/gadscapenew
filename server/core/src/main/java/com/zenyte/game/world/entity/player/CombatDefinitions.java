@@ -85,7 +85,7 @@ public final class CombatDefinitions {
 	public AttackStyle getAttackStyle() {
 		if (styleDefinition == null) {
 			final Item weapon = player.getEquipment().getItem(EquipmentSlot.WEAPON);
-			final int interVarbit = weapon != null ? weapon.getDefinitions().getInterfaceVarbit() : 0;
+			final int interVarbit = weapon != null && weapon.getDefinitions() != null ? weapon.getDefinitions().getInterfaceVarbit() : 0;
 			log.error("Null style for weapon " + weapon + ", varbit " + interVarbit + ", player " + player.getName(), new Throwable());
 		}
 
@@ -169,7 +169,7 @@ public final class CombatDefinitions {
 	private int getWeaponTypeVarbit() {
 		final Item weapon = player.getEquipment().getItem(EquipmentSlot.WEAPON);
 		if (weapon == null) return 0;
-		return weapon.getDefinitions().getInterfaceVarbit();
+		return weapon.getDefinitions() == null ? 0 : weapon.getDefinitions().getInterfaceVarbit();
 	}
 
 	private void refreshCachedSettings() {

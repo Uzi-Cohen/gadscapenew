@@ -259,7 +259,7 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 				player.getCombatDefinitions().setSpecial(false, false);
 			}
 		} else if (equipmentSlot == 5) {
-			final boolean twoHanded = weapon != null && weapon.getDefinitions().isTwoHanded();
+			final boolean twoHanded = weapon != null && weapon.getDefinitions() != null && weapon.getDefinitions().isTwoHanded();
 			if (twoHanded) {
 				final EquipPlugin weaponPlugin = EquipPluginLoader.plugins.get(weapon.getId());
 				if (weaponPlugin != null) {
@@ -293,7 +293,7 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 				inventory.refresh();
 			}
 		} else {
-			if (worn != null && worn.getDefinitions().isStackable() && inventory.containsItem(worn.getId(), 1)) {
+			if (worn != null && worn.getDefinitions() != null && worn.getDefinitions().isStackable() && inventory.containsItem(worn.getId(), 1)) {
 				final int wornAmount = worn.getAmount();
 				final int itemAmount = inventory.getAmountOf(worn.getId());
 				if (itemAmount + wornAmount < 0) {
@@ -560,7 +560,7 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 		public void set(final int slot, final Item item) {
 			final Item oldItem = item == null ? items.remove(slot) : items.put(slot, item);
 			if (oldItem != null) {
-				weight -= oldItem.getDefinitions().getWeight();
+				weight -= weightOf(oldItem);
 			}
 			if (player != null) {
 				final RegionArea area = player.getArea();
@@ -574,7 +574,7 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 				modifiedSlots.add(slot);
 				availableSlots.add(slot);
 			} else {
-				weight += item.getDefinitions().getWeight();
+				weight += weightOf(item);
 				modifiedSlots.add(slot);
 				availableSlots.remove(slot);
 			}
@@ -590,16 +590,22 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 			}
 		}
 
+		/** An item the cache has no definition for weighs nothing, rather than breaking the login. */
+		private static float weightOf(final Item item) {
+			final ItemDefinitions defs = item.getDefinitions();
+			return defs == null ? 0 : defs.getWeight();
+		}
+
 		public void silentSet(final int slot, final Item item) {
 			final Item oldItem = item == null ? items.remove(slot) : items.put(slot, item);
 			if (oldItem != null) {
-				weight -= oldItem.getDefinitions().getWeight();
+				weight -= weightOf(oldItem);
 			}
 			if (item == null) {
 				modifiedSlots.add(slot);
 				availableSlots.add(slot);
 			} else {
-				weight += item.getDefinitions().getWeight();
+				weight += weightOf(item);
 				modifiedSlots.add(slot);
 				availableSlots.remove(slot);
 				try {
