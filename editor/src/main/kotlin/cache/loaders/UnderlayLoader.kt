@@ -60,6 +60,11 @@ class UnderlayLoader @Inject constructor(
         return def
     }
 
+    /** A floor added after start (a twin made for View > 117 HD floors, utils.FloorTwins). */
+    @Synchronized fun add(id: Int, b: ByteArray) {
+        underlayDefinitionCache[id] = load(id, b)
+    }
+
     init {
         val index = cacheLibrary.index(IndexType.CONFIGS.id)
         val archive = index.archive(ConfigType.UNDERLAY.id)
@@ -68,5 +73,19 @@ class UnderlayLoader @Inject constructor(
             val def = load(file, data)
             underlayDefinitionCache[def.id] = def
         }
+        // floors the editor added (HD twins) live in the exported cache only
+        try {
+            val out = utils.GadTools.exportCacheDir
+            if (java.io.File(out, "main_file_cache.dat2").exists()) {
+                val lib = CacheLibrary(out.path)
+                try {
+                    for (file in lib.index(IndexType.CONFIGS.id).archive(ConfigType.UNDERLAY.id)?.fileIds() ?: intArrayOf()) {
+                        if (underlayDefinitionCache.containsKey(file)) continue
+                        val data = lib.data(IndexType.CONFIGS.id, ConfigType.UNDERLAY.id, file) ?: continue
+                        underlayDefinitionCache[file] = load(file, data)
+                    }
+                } finally { lib.close() }
+            }
+        } catch (e: Exception) { println("Exported floors not read: ${e.message}") }
     }
 }

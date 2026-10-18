@@ -78,7 +78,8 @@ class Renderer @Inject constructor(
     private val gadToolsModel: GadToolsModel,
     private val editorRegions: EditorRegions,
     private val objectLoader: cache.loaders.ObjectLoader,
-    private val overlayLoader: cache.loaders.OverlayLoader
+    private val overlayLoader: cache.loaders.OverlayLoader,
+    private val underlayLoader: cache.loaders.UnderlayLoader
 ) : GlListener {
     private val MAX_TEMP_VERTICES: Int = 65535
 
@@ -847,6 +848,22 @@ class Renderer @Inject constructor(
 
     private fun heightOf(t: SceneTile?): Int? = groundTile(t)?.second?.height
 
+    /**
+     * With View > 117 HD floors on: the floor to paint here so HD shows it as painted. When HD has a rule that repaints
+     * this floor number on this tile, its twin (same floor, another number) goes down instead. [id] is the floor's
+     * number in the Paint tab (stored value - 1); the result is too.
+     */
+    private fun hdSafe(overlay: Boolean, id: Int, t: SceneTile, plane: Int): Int {
+        if (!utils.HdFloors.enabled || id < 0) return id
+        val w = GadTools.sceneToWorld(scene, t.x, t.y) ?: return id
+        val rule = utils.HdFloors.numberRule(overlay, id + 1, w.first, w.second, plane) ?: return id
+        val twin = utils.FloorTwins.twinFor(overlay, id + 1) { f, b -> if (overlay) overlayLoader.add(f, b) else underlayLoader.add(f, b) } ?: return id
+        hdTwinNote = "HD repaints ${if (overlay) "overlay" else "underlay"} $id here (${rule.name}), so its twin ${twin - 1} went down: " +
+                "the same floor, which HD leaves as painted."
+        return twin - 1
+    }
+    private var hdTwinNote: String? = null
+
     /** The pen: take the paint off the tile under the mouse (on the floor being edited) and paint with it. */
     private fun pickPaint(tool: TerrainTool) {
         val plane = currentPlane
@@ -928,13 +945,13 @@ class Renderer @Inject constructor(
         recorder?.touch(def.regionId, plane, local.first, local.second, ct)
         when (tool) {
             TerrainTool.UNDERLAY -> {
-                val id = if (erase) -1 else gadToolsModel.underlayId.get()
+                val id = if (erase) -1 else hdSafe(false, gadToolsModel.underlayId.get(), t, plane)
                 ct.underlayId = (id + 1)
                 // the game draws an overlay over the underlay: painting the ground colour has to take the old floor off too
                 if (!erase) { ct.attrOpcode = 0; ct.overlayId = 0; ct.overlayPath = 0; ct.overlayRotation = 0 }
             }
             TerrainTool.OVERLAY -> {
-                val id = if (erase) -1 else gadToolsModel.overlayId.get()
+                val id = if (erase) -1 else hdSafe(true, gadToolsModel.overlayId.get(), t, plane)
                 if (id < 0) {
                     ct.attrOpcode = 0; ct.overlayId = 0; ct.overlayPath = 0; ct.overlayRotation = 0
                 } else {
@@ -1008,6 +1025,7 @@ class Renderer @Inject constructor(
             refresh(strokeRebuild.toList())
             strokeRebuild.clear()
         }
+        hdTwinNote?.let { gadToolsModel.message = it; hdTwinNote = null }
         val parts = listOfNotNull(rec.finish(strokeHeightOnly)) + strokeDecorGone
         if (strokeDecorGone.isNotEmpty()) gadToolsModel.message = "Painted. Took ${strokeDecorGone.size} carpets/rugs/floor decorations off the painted tiles (Ctrl+Z puts them back)."
         strokeDecorGone.clear()

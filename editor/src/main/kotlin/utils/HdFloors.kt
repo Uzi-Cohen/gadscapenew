@@ -108,6 +108,22 @@ object HdFloors {
         return if (u != null && !u.isNone) u else o ?: u
     }
 
+    /**
+     * HD's rule for this floor number on this tile when it changes the floor's colour and is one made for the number
+     * (so a twin floor with another number escapes it); null when HD keeps the painted colour here, or only has an
+     * area-wide rule.
+     */
+    fun numberRule(overlay: Boolean, stored: Int, x: Int, y: Int, z: Int): Rule? {
+        if (stored <= 0) return null
+        val r = lookup(if (overlay) overlays else underlays, stored, x, y, z) ?: return null
+        // only rules that change the colour: texture-only ones (road paving, grass detail) keep what was painted
+        return if (!r.water && r.recolours && r.ids.any { idMatches(it, stored) }) r else null
+    }
+
+    /** Floor numbers HD has a rule for anywhere: a twin must not be one of them. */
+    fun hasRules(overlay: Boolean, stored: Int): Boolean =
+        (if (overlay) overlays else underlays).any { r -> r.ids.any { idMatches(it, stored) } }
+
     /** HD's colour change on a packed HSL colour (6 bits hue, 3 saturation, 7 lightness). */
     fun recolour(rule: Rule, hsl: Int): Int {
         if (hsl < 0 || !rule.recolours) return hsl
