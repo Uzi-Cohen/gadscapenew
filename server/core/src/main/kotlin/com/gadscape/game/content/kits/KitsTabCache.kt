@@ -1,6 +1,10 @@
 package com.gadscape.game.content.kits
 
-import com.zenyte.CacheManager
+import com.gadscape.game.content.ui.CachePack
+import com.gadscape.game.content.ui.CacheUi
+import com.gadscape.game.content.ui.UiBuilder
+import com.gadscape.game.content.ui.at
+import com.gadscape.game.content.ui.ops
 import mgi.tools.jagcached.ArchiveType
 import mgi.tools.jagcached.cache.Cache
 import mgi.tools.jagcached.cache.File
@@ -17,7 +21,9 @@ import javax.imageio.ImageIO
  * the rest of the cache: the Roat Pkz style side panel that replaces the music player (Main and Kits pages)
  * and the PK store window. Running it again changes nothing once the cache already has them.
  */
-object KitsTabCache {
+object KitsTabCache : CachePack {
+
+    override val name = "side panel and PK store"
 
     private val log = LoggerFactory.getLogger(KitsTabCache::class.java)
 
@@ -77,84 +83,22 @@ object KitsTabCache {
     private const val BORDER_LIGHT = 0x7A6E5B
     private const val CELL = 0x3A3329
 
-    private const val SMALL = 494
-    private const val REGULAR = 495
-    private const val BOLD = 496
+    private const val SMALL = UiBuilder.SMALL
+    private const val REGULAR = UiBuilder.REGULAR
+    private const val BOLD = UiBuilder.BOLD
     private const val CLOSE_SPRITE = 535
 
-    @JvmStatic
-    fun ensure(path: String) {
-        val cache = try {
-            Cache.openCache(path, false)
-        } catch (e: Exception) {
-            log.warn("Couldn't open the cache to add GadScape's interfaces: {}", e.message)
-            return
-        } ?: return
-        try {
-            CacheManager.loadCache(cache)
-            packSprites(cache)
-            packTabIcon(cache)
-            packGroup(cache, INTERFACE_ID, sidePanel())
-            packGroup(cache, STORE_ID, store())
-            log.info("Side panel ({}) and PK store ({}) are in the cache.", INTERFACE_ID, STORE_ID)
-        } catch (e: Exception) {
-            log.error("Couldn't add GadScape's interfaces to the cache", e)
-        } finally {
-            cache.close()
-        }
+    override fun pack(cache: Cache) {
+        CacheUi.packSprites(cache, "/gadscape/panel", SPRITE_BASE, SPRITES)
+        packTabIcon(cache)
+        CacheUi.packInterface(cache, INTERFACE_ID, sidePanel())
+        CacheUi.packInterface(cache, STORE_ID, store())
     }
 
     // ---- builders ----------------------------------------------------------------------------------------
 
-    private class Builder(val interfaceId: Int) {
-        val list = ArrayList<ComponentDefinitions>()
-
-        fun add(id: Int, type: Int, parent: Int, build: ComponentDefinitions.() -> Unit): ComponentDefinitions {
-            check(id == list.size) { "component $id out of order (next is ${list.size})" }
-            val c = ComponentDefinitions().apply {
-                this.interfaceId = this@Builder.interfaceId
-                componentId = id
-                isIf3 = true
-                this.type = type
-                parentId = parent
-                build()
-            }
-            list += c
-            return c
-        }
-
-        fun layer(id: Int, parent: Int, build: ComponentDefinitions.() -> Unit) = add(id, 0, parent, build)
-        fun rect(id: Int, parent: Int, colour: Int, fill: Boolean, build: ComponentDefinitions.() -> Unit) =
-            add(id, 3, parent) { color = colour; filled = fill; build() }
-
-        fun sprite(id: Int, parent: Int, spriteId: Int, build: ComponentDefinitions.() -> Unit) =
-            add(id, 5, parent) { this.spriteId = spriteId; build() }
-
-        fun text(id: Int, parent: Int, value: String, font: Int, colour: Int, build: ComponentDefinitions.() -> Unit) =
-            add(id, 4, parent) {
-                this.font = font
-                text = value
-                color = colour
-                textShadowed = true
-                xAllignment = 0
-                yAllignment = 1
-                build()
-            }
-    }
-
-    private fun ComponentDefinitions.at(x: Int, y: Int, w: Int, h: Int) {
-        this.x = x; this.y = y; width = w; height = h
-    }
-
-    private fun ComponentDefinitions.ops(vararg names: String) {
-        actions = arrayOf(*names)
-        var mask = 0
-        for (i in names.indices) mask = mask or (1 shl (i + 1))
-        accessMask = mask
-    }
-
     /** The music tab replacement, laid out like the Roat Pkz quest tab (184x222 panel under a row of tab icons). */
-    private fun sidePanel(): List<ComponentDefinitions> = Builder(INTERFACE_ID).run {
+    private fun sidePanel(): List<ComponentDefinitions> = UiBuilder(INTERFACE_ID).run {
         layer(0, -1) { widthMode = 1; heightMode = 1 }
         text(1, 0, "Gad", BOLD, ORANGE) { at(7, 2, 32, 14) }
         text(2, 0, "Scape", REGULAR, ORANGE) { at(4, 15, 34, 14) }
@@ -190,7 +134,7 @@ object KitsTabCache {
     }
 
     /** The PK store window: categories on the left, 8x5 items with prices on the right. */
-    private fun store(): List<ComponentDefinitions> = Builder(STORE_ID).run {
+    private fun store(): List<ComponentDefinitions> = UiBuilder(STORE_ID).run {
         layer(0, -1) { xMode = 1; yMode = 1; at(0, 0, 488, 300) }
         rect(1, 0, PANEL, true) { at(0, 0, 488, 300) }
         rect(2, 0, BORDER_LIGHT, false) { at(0, 0, 488, 300) }
@@ -227,43 +171,6 @@ object KitsTabCache {
     }
 
     // ---- packing -----------------------------------------------------------------------------------------
-
-    private fun packGroup(cache: Cache, groupId: Int, components: List<ComponentDefinitions>) {
-        val archive = cache.getArchive(ArchiveType.INTERFACES)
-        var group = archive.findGroupByID(groupId)
-        if (group == null) {
-            group = Group(groupId)
-            for (c in components) group.addFile(File(c.componentId, c.encode().trimmed()))
-            archive.addGroup(group)
-            return
-        }
-        for (c in components) {
-            val file = group.findFileByID(c.componentId)
-            if (file == null) group.addFile(File(c.componentId, c.encode().trimmed())) else file.setData(c.encode().trimmed())
-        }
-        // components left over from an older layout
-        for (id in components.size until group.highestFileId) group.findFileByID(id)?.let { group.removeFile(it) }
-    }
-
-    private fun packSprites(cache: Cache) {
-        val archive = cache.getArchive(ArchiveType.SPRITES)
-        for ((i, name) in SPRITES.withIndex()) {
-            val image = KitsTabCache::class.java.getResourceAsStream("/gadscape/panel/$name.png")?.use { ImageIO.read(it) }
-                ?: error("missing sprite $name")
-            val argb = BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_ARGB)
-            for (x in 0 until image.width) for (y in 0 until image.height) {
-                val p = image.getRGB(x, y)
-                // the cache palette has no partial transparency
-                argb.setRGB(x, y, if (p ushr 24 < 128) 0 else (p or (0xFF shl 24)).let { if (it and 0xFFFFFF == 0) it or 1 else it })
-            }
-            val def = SpriteGroupDefinitions(SPRITE_BASE + i, image.width, image.height)
-            def.setImage(0, argb)
-            val data = def.encode()
-            val group = archive.findGroupByID(SPRITE_BASE + i)
-            if (group == null) archive.addGroup(Group(SPRITE_BASE + i, File(data)))
-            else group.findFileByID(0).setData(data)
-        }
-    }
 
     /** Sprite groups of the music tab icon (modern, 2005 and unused styles); they get the gold crossed swords. */
     private val MUSIC_ICONS = intArrayOf(910, 787, 893)
@@ -304,5 +211,4 @@ object KitsTabCache {
         return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
     }
 
-    private fun ByteBuffer.trimmed() = ByteBuffer(toArray(0, position))
 }
