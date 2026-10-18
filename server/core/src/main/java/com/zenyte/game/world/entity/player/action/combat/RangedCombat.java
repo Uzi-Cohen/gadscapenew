@@ -142,7 +142,8 @@ public class RangedCombat extends PlayerCombat {
     @Override
     public Hit getHit(final Player player, final Entity target, final double accuracyModifier,
                       final double passiveModifier, double activeModifier, final boolean ignorePrayers) {
-        return new Hit(player, getRandomHit(player, target, getMaxHit(player, passiveModifier, 1, ignorePrayers), accuracyModifier), HitType.RANGED);
+        final int maxHit = com.gadscape.game.content.accounttype.Sigils.maxHit(player, target, com.gadscape.game.content.accounttype.Sigils.RANGED, getMaxHit(player, passiveModifier, 1, ignorePrayers));
+        return new Hit(player, getRandomHit(player, target, maxHit, accuracyModifier * com.gadscape.game.content.accounttype.Sigils.accuracy(player, target, com.gadscape.game.content.accounttype.Sigils.RANGED)), HitType.RANGED);
     }
 
     @Override

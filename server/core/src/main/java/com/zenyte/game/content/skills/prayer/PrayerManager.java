@@ -383,6 +383,7 @@ public class PrayerManager {
 			}
 		}
 
+		resistance = com.gadscape.game.content.accounttype.Sigils.prayerResistance(player, resistance);
 		while (drain > resistance) {
 			//Only send the message if prayer is about to go from 1 point to 0.
 			drainPrayerPoints(1);

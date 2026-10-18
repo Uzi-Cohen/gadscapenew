@@ -28,6 +28,7 @@ public final class GameLoader {
     }
 
     public static void load(ExecutorService pool) {
+        com.gadscape.game.content.kits.KitsTabCache.ensure("./cache/data/cache/");
         Cache cache = CacheManager.loadCacheFiles("./cache/data/cache/", true);
         HuffmanManager.load(cache);
         ZenyteHuffman.load(cache);

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       build:
-        description: "Build number to send (empty = the newest one)"
+        description: "Build number to send, e.g. 135 (empty = the newest build on main)"
         required: false
         default: ""
 
@@ -36,22 +36,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           WANT: ${{ inputs.build }}
         run: |
-          if [ -n "$WANT" ]; then TAG="editor-exe-build-$WANT"
-          else TAG=$(gh release list --repo "${{ github.repository }}" --limit 100 --json tagName,createdAt \
-                 --jq '[.[] | select(.tagName | startswith("editor-exe-build-"))] | sort_by(.createdAt) | last | .tagName')
+          if [ -n "$WANT" ]; then TAG="editor-1.0-build-$WANT"
+          else TAG=$(gh release list --repo "${{ github.repository }}" --limit 100 --exclude-pre-releases --json tagName,createdAt \
+                 --jq '[.[] | select(.tagName | startswith("editor-1.0-build-"))] | sort_by(.createdAt) | last | .tagName')
           fi
-          [ -n "$TAG" ] && [ "$TAG" != "null" ] || { echo "::error::No editor exe build found. Merge an editor change first (or run Build editor exe)."; exit 1; }
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
-          mkdir out && gh release download "$TAG" --repo "${{ github.repository }}" --dir out
+          [ -n "$TAG" ] && [ "$TAG" != "null" ] || { echo "::error::No editor build found on main."; exit 1; }
+          BUILD=${TAG#editor-1.0-build-}
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          mkdir out && gh release download "$TAG" --repo "${{ github.repository }}" --dir out \
+            --pattern "uzis-map-editor-1.0-build-$BUILD-windows.jar" --pattern "Uzis-Map-Editor.exe" --pattern "editor-version.txt"
+          [ -f out/Uzis-Map-Editor.exe ] || { echo "::error::Build $BUILD has no exe (it's older than the exe builds). Pick a newer build."; exit 1; }
+          mv "out/uzis-map-editor-1.0-build-$BUILD-windows.jar" out/editor.jar
           ls -la out
 
       - name: Send it to friends
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
-          BUILD=${TAG#editor-exe-build-}
-          gh release create "v$(date -u +%Y%m%d-%H%M)-b$BUILD" out/editor.jar out/editor-version.txt "out/Uzis Map Editor.exe" \
+          gh release create "v$(date -u +%Y%m%d-%H%M)-b$BUILD" out/editor.jar out/editor-version.txt out/Uzis-Map-Editor.exe \
             --repo "$RELEASES_REPO" --latest \
             --title "Uzi's Map Editor 1.0 build $BUILD" \
             --notes "Build $BUILD. Everyone's Uzis Map Editor.exe updates the next time it's opened. New here? Download Uzis Map Editor.exe below."
-          echo "Build $BUILD is out: https://github.com/$RELEASES_REPO/releases/latest/download/Uzis.Map.Editor.exe"
+          echo "Build $BUILD is out: https://github.com/$RELEASES_REPO/releases/latest/download/Uzis-Map-Editor.exe"

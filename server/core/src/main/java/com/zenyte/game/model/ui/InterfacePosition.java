@@ -27,7 +27,7 @@ public enum InterfacePosition {
 	LOGOUT_TAB(85, 182, true),
 	SETTINGS_TAB(86, 116, true),
 	EMOTE_TAB(87, 216, true),
-	MUSIC_TAB(88, 239, true),
+	MUSIC_TAB(88, com.gadscape.game.content.kits.KitsTabCache.INTERFACE_ID, true),
 	COMBAT_TAB(75, 593, true),
 	CENTRAL(16, false),
 	DIALOGUE(559, false),
