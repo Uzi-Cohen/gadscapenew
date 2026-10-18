@@ -49,19 +49,50 @@ jobs:
           mv "uzis-map-editor-1.0-build-$BUILD.jar" "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar"
           unzip -p "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" version.properties
           unzip -l "uzis-map-editor-1.0-build-$BUILD-${{ matrix.os }}.jar" AppKt.class
+      # Windows: Uzis-Map-Editor.exe, the one-file editor (Java 21 + this build's jar), same build number
+      - uses: actions/setup-go@v5
+        if: matrix.os == 'windows'
+        with:
+          go-version: "1.22"
+      - name: Build Uzis-Map-Editor.exe
+        if: matrix.os == 'windows'
+        run: |
+          mkdir -p launcher/payload
+          cp "editor/build/libs/uzis-map-editor-1.0-build-$BUILD-windows.jar" launcher/payload/editor.jar
+          curl -sSfL -o launcher/payload/jre.zip "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk"
+          STAMP=$(date +%s%3N)
+          echo "$STAMP" > editor/build/libs/editor-version.txt
+          cd launcher && go build -trimpath -ldflags "-s -w -H windowsgui -X main.build=1.0-build-$BUILD -X main.stamp=$STAMP" -o ../editor/build/libs/Uzis-Map-Editor.exe .
+          ls -la ../editor/build/libs
       - uses: actions/upload-artifact@v4
         with:
           name: uzis-map-editor-1.0-build-${{ env.BUILD }}-${{ matrix.os }}
-          path: editor/build/libs/uzis-map-editor-*-build-*-${{ matrix.os }}.jar
+          path: |
+            editor/build/libs/uzis-map-editor-*-build-*-${{ matrix.os }}.jar
+            editor/build/libs/Uzis-Map-Editor.exe
+            editor/build/libs/editor-version.txt
           if-no-files-found: error
-      - name: Release (main only)
+      - name: Release (main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: editor-1.0-build-${{ env.BUILD }}
           name: Editor 1.0 (build ${{ env.BUILD }})
-          files: editor/build/libs/uzis-map-editor-*-build-*-${{ matrix.os }}.jar
-          body: "Uzi's Map Editor 1.0, build ${{ env.BUILD }} (commit ${{ github.sha }}). Take the -windows jar on Windows. Needs Java 21 and a graphics card with OpenGL 4.3 or newer."
+          files: |
+            editor/build/libs/uzis-map-editor-*-build-*-${{ matrix.os }}.jar
+            editor/build/libs/Uzis-Map-Editor.exe
+            editor/build/libs/editor-version.txt
+          body: "Uzi's Map Editor 1.0, build ${{ env.BUILD }} (commit ${{ github.sha }}). Uzis-Map-Editor.exe is the one-file editor for Windows. Friends get it only when you run Actions > Deploy editor."
+      - name: Test build for the pull request (not for friends)
+        if: github.event_name == 'pull_request' && matrix.os == 'windows' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: editor-pr${{ github.event.number }}-build-${{ env.BUILD }}
+          name: Editor test build ${{ env.BUILD }} (PR #${{ github.event.number }})
+          target_commitish: ${{ github.event.pull_request.head.sha }}
+          prerelease: true
+          files: editor/build/libs/Uzis-Map-Editor.exe
+          body: "Test build of PR #${{ github.event.number }} (${{ github.event.pull_request.head.sha }}), not merged. Try it here; friends can't get test builds."
 
   server:
     name: Server compiles
