@@ -31,6 +31,11 @@ public final class SpotAnimationDefinition implements Definitions {
     public static Int2ObjectOpenHashMap<SpotAnimationDefinition> definitions = new Int2ObjectOpenHashMap<>();
     private int id;
     private int modelId;
+    /**
+     * Build-241 extras (opcodes 9 and 10); decoded to keep definitions aligned, unused by game logic.
+     */
+    private String debugName;
+    private boolean clickable = true;
     private int animationId;
     private int widthScale;
     private int heightScale;
@@ -142,22 +147,35 @@ public final class SpotAnimationDefinition implements Definitions {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("spotanim", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
+    /*
+     * Opcodes 3, 9, 10 and 42 follow RuneLite's SpotAnimLoader (RuneLite master 330e650,
+     * Copyright (c) 2016-2017, Adam <Adam@sigterm.info>, BSD 2-Clause licence; see ItemDefinitionsDecoding.kt for the
+     * full licence text).
+     */
     @Override
     public void decode(final ByteBuffer buffer, final int opcode) {
         switch (opcode) {
             case 1 -> modelId = buffer.readUnsignedShort();
             case 2 -> animationId = buffer.readUnsignedShort();
+            case 3 -> modelId = buffer.readInt(); // build 241: 4-byte model id (replaces 1)
             case 4 -> widthScale = buffer.readUnsignedShort();
             case 5 -> heightScale = buffer.readUnsignedShort();
             case 6 -> orientation = buffer.readUnsignedShort();
             case 7 -> ambient = buffer.readUnsignedByte();
             case 8 -> contrast = buffer.readUnsignedByte();
+            case 9 -> debugName = buffer.readString(); // build 241
+            case 10 -> clickable = false; // build 241
             case 40 -> {
                 final int length = buffer.readUnsignedByte();
                 recolorFrom = new short[length];
@@ -178,6 +196,8 @@ public final class SpotAnimationDefinition implements Definitions {
                     }
                 }
             }
+            case 42 -> buffer.readUnsignedShort(); // full recolour
+            default -> throw mgi.tools.jagcached.CacheFormat.unknownOpcode("spotanim", id, opcode);
         }
     }
 

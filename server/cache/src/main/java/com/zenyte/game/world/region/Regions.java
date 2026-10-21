@@ -51,13 +51,10 @@ public class Regions {
 
     public static final byte[] inject(final int regionId, @Nullable final Predicate<WorldObject> filter, @NotNull final WorldObject... objects) {
         try {
-            final int[] xteas = XTEALoader.getXTEAs(regionId);
             final Cache cache = CacheManager.getCache();
-            final Archive archive = cache.getArchive(ArchiveType.MAPS);
-            final Group landGroup = archive.findGroupByName("l" + (regionId >> 8) + "_" + (regionId & 255), xteas);
-            final int locFileId = landGroup == null ? -1 : landGroup.getID();
-            Preconditions.checkArgument(locFileId != -1);
-            final ByteBuffer landBuffer = landGroup == null ? null : landGroup.findFileByID(0).getData();
+            // rev 211: "l{x}_{y}" (XTEA); build 241: group = region id, file 1 (see MapFiles)
+            final ByteBuffer landBuffer = mgi.tools.jagcached.MapFiles.locs(cache, regionId);
+            Preconditions.checkArgument(landBuffer != null);
             final Collection<WorldObject> mapObjects = MapUtils.decode(landBuffer);
             mapObjects.removeIf(obj -> {
                 final int mapObjHash = ((obj.getX() & 63) << 6) | (obj.getY() & 63) | ((obj.getPlane() & 3) << 12);

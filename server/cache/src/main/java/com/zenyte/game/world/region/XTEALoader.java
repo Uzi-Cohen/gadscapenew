@@ -26,6 +26,11 @@ public final class XTEALoader {
 	private static final int[] defaultKeys = new int[4];
 
 	public static void load(String path) throws FileNotFoundException {
+		if (com.zenyte.CacheManager.isExternalCache()) {
+			// rev 237+ caches (the build-241 test cache) store maps by region id without XTEA encryption.
+			log.info("External cache ({}): map XTEA keys are not used, skipping {}", com.zenyte.CacheManager.externalCacheDir(), path);
+			return;
+		}
 		try (BufferedReader br = Files.newBufferedReader(Path.of(path), StandardCharsets.UTF_8)) {
 			Gson gson = DefaultGson.getGson();
 			final XTEA[] xteas = gson.fromJson(br, XTEA[].class);

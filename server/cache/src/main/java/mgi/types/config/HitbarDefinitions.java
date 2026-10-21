@@ -82,9 +82,14 @@ public class HitbarDefinitions implements Definitions {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("hitbar", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
@@ -103,15 +108,17 @@ public class HitbarDefinitions implements Definitions {
         } else if (opcode == 6) {
             buffer.readByte();
         } else if (opcode == 7) {
-            secondarySprite = buffer.readSmartInt();
+            secondarySprite = buffer.readBigSmart(); // ushort or int smart, 32767 = -1 (client/RuneLite readBigSmart2)
         } else if (opcode == 8) {
-            primarySprite = buffer.readSmartInt();
+            primarySprite = buffer.readBigSmart();
         } else if (opcode == 11) {
             cycles = buffer.readUnsignedShort();
         } else if (opcode == 14) {
             size = buffer.readUnsignedByte();
         } else if (opcode == 15) {
             extraWidth = buffer.readUnsignedByte();
+        } else {
+            throw mgi.tools.jagcached.CacheFormat.unknownOpcode("hitbar", id, opcode);
         }
     }
 

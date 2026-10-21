@@ -43,6 +43,32 @@ public class Index {
      * @param indexChannel The channel of the index file for this index.
      * @param maxSize      The maximum size of a file in this index.
      */
+    /**
+     * Creates an index for an archive whose idx file does not exist (for example archive 16 or 23 in the
+     * build-241 cache). It contains no groups and cannot be written to.
+     */
+    public static Index missing(int id) {
+        return new Index(id);
+    }
+
+    private Index(int id) {
+        this.id = id;
+        this.dataChannel = null;
+        this.indexChannel = null;
+        this.maxSize = 0;
+        this.dataBufferSize = 0;
+        this.dataBuffer = null;
+        this.indexBufferSize = 0;
+        this.indexBuffer = ByteBuffer.allocate(0);
+    }
+
+    /**
+     * Whether this index is backed by an idx file (false for archives missing from the cache).
+     */
+    public boolean exists() {
+        return indexChannel != null;
+    }
+
     public Index(int id, FileChannel dataChannel,
                  FileChannel indexChannel, int maxSize) throws IOException {
         this.id = id;
@@ -75,6 +101,7 @@ public class Index {
      * @return The group's data, or null if the group was invalid.
      */
     public mgi.utilities.ByteBuffer get(final int group) {
+        if (indexChannel == null) return null;
         final int indexPos = group * INDEX_ENTRY_SIZE;
         if (indexPos + INDEX_ENTRY_SIZE > indexBufferSize) return null;
 
@@ -149,6 +176,9 @@ public class Index {
      * @return true if the group was written, false otherwise.
      */
     public boolean put(int group, mgi.utilities.ByteBuffer data, int size) {
+        if (indexChannel == null) {
+            throw new IllegalStateException("Index " + id + " has no idx file in this cache; it cannot be written.");
+        }
         if (size < 0 || size > maxSize) {
             throw new IllegalArgumentException("Group too big: " + group + " size: " + size);
         }
@@ -297,6 +327,7 @@ public class Index {
      * Close's this store.
      */
     public void close() {
+        if (indexChannel == null) return;
         try {
             this.dataChannel.close();
         } catch (IOException e) {

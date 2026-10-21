@@ -115,6 +115,11 @@ public final class EnumDefinitions implements Definitions, Cloneable {
     private String defaultString;
     private int defaultInt;
     private Map<Integer, Object> values;
+    /**
+     * Build 241: enums with long values (opcode 7) are kept here but not registered as Int/String enums.
+     */
+    private boolean longValues;
+    private long defaultLong;
     private transient int largestIntValue = -1;
     private transient int largestIntKey = -1;
 
@@ -122,7 +127,7 @@ public final class EnumDefinitions implements Definitions, Cloneable {
         this.id = id;
         defaultString = "null";
         decode(buffer);
-        if (values == null) {
+        if (values == null || longValues) {
             return;
         }
         Enum anEnum;
@@ -203,9 +208,14 @@ public final class EnumDefinitions implements Definitions, Cloneable {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("enum", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
@@ -242,7 +252,30 @@ public final class EnumDefinitions implements Definitions, Cloneable {
                 values.put(key, value);
             }
             return;
+        case 7: // build 241 (RuneLite EnumLoader): long values
+            size = buffer.readUnsignedShort();
+            values = new TreeMap<>();
+            longValues = true;
+            for (int index = 0; index < size; ++index) {
+                final int key = buffer.readInt();
+                final long value = buffer.readLong();
+                values.put(key, value);
+            }
+            return;
+        case 8: // build 241: default long
+            defaultLong = buffer.readLong();
+            return;
+        default:
+            throw mgi.tools.jagcached.CacheFormat.unknownOpcode("enum", id, opcode);
         }
+    }
+
+    public boolean hasLongValues() {
+        return longValues;
+    }
+
+    public long getDefaultLong() {
+        return defaultLong;
     }
 
     public static EnumDefinitions get(final int id) {

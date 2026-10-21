@@ -18,6 +18,7 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 import mgi.tools.jagcached.ArchiveType;
 import mgi.tools.jagcached.cache.Archive;
+import mgi.tools.jagcached.MapFiles;
 import mgi.tools.jagcached.cache.Cache;
 import mgi.tools.jagcached.cache.Group;
 import mgi.types.config.ObjectDefinitions;
@@ -366,15 +367,25 @@ public class Region {
 
     public void loadRegionMap() {
         try {
+            loadRegionMapOrThrow();
+        } catch (final Exception e) {
+            if (log.isErrorEnabled())
+                log.error("Failed to load region {}", regionId, e);
+        }
+    }
+
+    /**
+     * Decodes this region's terrain and locs from the cache and builds its collision. Works with the rev-211 cache
+     * (named, XTEA-encrypted map groups) and the build-241 cache (groups keyed by region id, file 0 = terrain,
+     * file 1 = locs, no XTEA); see {@link MapFiles}.
+     */
+    public void loadRegionMapOrThrow() {
+        {
             final int baseX = (regionId >> 8) * 64;
             final int baseY = (regionId & 255) * 64;
-            final int[] xteas = XTEALoader.getXTEAs(regionId);
             final Cache cache = CacheManager.getCache();
-            final Archive archive = cache.getArchive(ArchiveType.MAPS);
-            final Group mapGroup = archive.findGroupByName("m" + (regionId >> 8) + "_" + (regionId & 255));
-            final Group landGroup = archive.findGroupByName("l" + (regionId >> 8) + "_" + (regionId & 255), xteas);
-            final ByteBuffer mapBuffer = mapGroup == null ? null : mapGroup.findFileByID(0).getData();
-            final ByteBuffer landBuffer = landGroup == null ? null : landGroup.findFileByID(0).getData();
+            final ByteBuffer mapBuffer = MapFiles.terrain(cache, regionId);
+            final ByteBuffer landBuffer = MapFiles.locs(cache, regionId);
             final byte[][][] mapSettings = mapBuffer == null ? null : new byte[4][64][64];
             if (mapBuffer != null) {
                 mapBuffer.setPosition(0);
@@ -450,9 +461,6 @@ public class Region {
                 }
             }
             //log.info("Loaded region {}", regionId);
-        } catch (final Exception e) {
-            if (log.isErrorEnabled())
-                log.error("Failed to load region {}", regionId);
         }
     }
 

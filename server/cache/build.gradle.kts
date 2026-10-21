@@ -155,3 +155,25 @@ val downloadRuneSpawnCache = tasks.register("downloadRuneSpawnCache") {
 tasks.named("build") {
     dependsOn(download225Cache, download219Cache, downloadRuneSpawnCache)
 }
+
+/*
+ * Decodes a whole cache in strict mode and, optionally, compares every decoded value with RuneLite master's own
+ * decoders (see src/test/java/com/gadscape/cache/verify/CacheVerifier.java and REV241.md):
+ *
+ *   ./gradlew :cache:verifyCache --offline -Dgadscape.cache.dir=/path/to/cache241 \
+ *       [-Dgadscape.rlref.jar=/path/to/runelite-cache-master.jar]
+ *
+ * Every -Dgadscape.* property given to Gradle is passed on to the verifier JVM.
+ */
+tasks.register<JavaExec>("verifyCache") {
+    group = "verification"
+    description = "Decodes every archive, config, interface, clientscript and map of -Dgadscape.cache.dir in strict mode."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.gadscape.cache.verify.CacheVerifier")
+    maxHeapSize = "3g"
+    System.getProperties().stringPropertyNames()
+        .filter { it.startsWith("gadscape.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
+    // lets the check be re-run without Gradle: java -cp "$(cat build/verify-cache-classpath.txt)" <main class>
+    doFirst { layout.buildDirectory.file("verify-cache-classpath.txt").get().asFile.writeText(classpath.asPath) }
+}

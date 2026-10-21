@@ -73,8 +73,15 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
     private int animMayaEnd;
     private Map<Integer, Sound> animMayaFrameSounds;
     private int animMayaID = -1;
+    /**
+     * Build-241 (rev 226+) fields: opcode 16 vertical offset, 18 debug name, 19 cross-world-view sounds.
+     */
+    private int verticalOffset;
+    private String debugName;
+    private boolean soundsCrossWorldView;
 
     private boolean oldFormat = true;
+    private transient int ignoredLegacySoundBytes = -1;
 
     public AnimationDefinitions(final int id, final ByteBuffer buffer) {
         this.id = id;
@@ -250,6 +257,9 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
                 definitions[id] = new AnimationDefinitions(id, buffer);
             }
         } catch (final Exception e) {
+            if (mgi.tools.jagcached.CacheFormat.isStrict()) {
+                throw e;
+            }
             log.error("", e);
         }
     }
@@ -271,6 +281,11 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
     public int getDuration() {
         int duration = 0;
         if (frameLengths == null) {
+            // Skeletal (animaya) sequences have no frame list: they play one keyframe per client cycle (20 ms)
+            // from animMayaStart to animMayaEnd. Many build-241 sequences are skeletal.
+            if (animMayaID != -1 && animMayaEnd > animMayaStart) {
+                return (animMayaEnd - animMayaStart) * 20;
+            }
             return 0;
         }
         for (final int i : frameLengths) {
@@ -287,13 +302,91 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                // Rev 211 quirk: sequences with more than 255 frames store the opcode-13 sound count as one byte
+                // (count & 255) but still list a sound per frame; the client reads count & 255 sounds and ignores
+                // the rest (vanilla 211 sequence 8127: 291 frames, 35 sounds read, 768 bytes left).
+                if (buffer.getBuffer().length - buffer.getPosition() != ignoredLegacySoundBytes) {
+                    mgi.tools.jagcached.CacheFormat.checkFullyRead("sequence", id, buffer);
+                }
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
+        }
+    }
+
+    /*
+     * The rev-226 layout of opcodes 13-19 and the sound record with a weight byte were ported from RuneLite's
+     * SequenceLoader (net.runelite.cache.definitions.loaders.SequenceLoader, RuneLite master 330e650),
+     * Copyright (c) 2016-2017, Adam <Adam@sigterm.info>, BSD 2-Clause licence:
+     *
+     * Redistribution and use in source and binary forms, with or without modification, are permitted provided that
+     * the following conditions are met: 1. Redistributions of source code must retain the above copyright notice,
+     * this list of conditions and the following disclaimer. 2. Redistributions in binary form must reproduce the
+     * above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other
+     * materials provided with the distribution. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+     * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+     * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+     * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+     * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+     * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+     * THE POSSIBILITY OF SUCH DAMAGE.
+     */
+    private void decodeRev226(final ByteBuffer buffer, final int opcode) {
+        switch (opcode) {
+            case 13:
+                animMayaID = buffer.readInt();
+                return;
+            case 14: {
+                // sounds keyed by frame (frame index for frame-based sequences, keyframe for skeletal ones)
+                final int count = buffer.readUnsignedShort();
+                final Map<Integer, Sound> sounds = new HashMap<>();
+                for (int i = 0; i < count; i++) {
+                    final int frame = buffer.readUnsignedShort();
+                    sounds.put(frame, readFrameSound(buffer, true));
+                }
+                if (animMayaID != -1) {
+                    animMayaFrameSounds = sounds;
+                } else {
+                    soundEffects = sounds;
+                }
+                return;
+            }
+            case 15:
+                animMayaStart = buffer.readUnsignedShort();
+                animMayaEnd = buffer.readUnsignedShort();
+                return;
+            case 16:
+                verticalOffset = buffer.readByte();
+                return;
+            case 17: {
+                animMayaMasks = new boolean[256];
+                final int count = buffer.readUnsignedByte();
+                for (int i = 0; i < count; i++) {
+                    animMayaMasks[buffer.readUnsignedByte()] = true;
+                }
+                return;
+            }
+            case 18:
+                debugName = buffer.readString();
+                return;
+            case 19:
+                soundsCrossWorldView = true;
+                return;
+            default:
+                throw mgi.tools.jagcached.CacheFormat.unknownOpcode("sequence", id, opcode);
         }
     }
 
     public void decode(final ByteBuffer buffer, final int opcode) {
+        if (opcode >= 13 && mgi.tools.jagcached.CacheFormat.rev226Sequences()) {
+            decodeRev226(buffer, opcode);
+            return;
+        }
         switch (opcode) {
         case 1:
             {
@@ -369,6 +462,9 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
         case 13:
             {
                 final int count = buffer.readUnsignedByte();
+                if (oldFormat && frameIds != null && frameIds.length > 255 && (frameIds.length & 0xFF) == count) {
+                    ignoredLegacySoundBytes = (frameIds.length - count) * 3;
+                }
                 soundEffects = new HashMap<>();
                 for (int index = 0; index < count; ++index) {
                     if(oldFormat) {
@@ -424,19 +520,32 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
                 for (int i = 0; i < count; i++) {
                     animMayaMasks[buffer.readUnsignedByte()] = true;
                 }
+                return;
             }
-
+            default:
+                throw mgi.tools.jagcached.CacheFormat.unknownOpcode("sequence", id, opcode);
         }
 
     }
 
-    private Sound readFrameSound(ByteBuffer stream)
+    private Sound readFrameSound(ByteBuffer stream) {
+        return readFrameSound(stream, false);
+    }
+
+    /**
+     * Rev 220+ sound record; {@code withWeight} for rev 226+ (build 241), which adds a weight byte after the id.
+     */
+    private Sound readFrameSound(ByteBuffer stream, boolean withWeight)
     {
         int id;
         int loops;
         int location;
         int retain;
+        int weight = -1;
             id = stream.readUnsignedShort();
+            if (withWeight) {
+                weight = stream.readUnsignedByte();
+            }
             loops = stream.readUnsignedByte();
             location = stream.readUnsignedByte();
             retain = stream.readUnsignedByte();
@@ -444,7 +553,9 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
 
         if (id >= 1 && loops >= 1 && location >= 0 && retain >= 0)
         {
-            return new Sound(id, loops, location, retain);
+            final Sound sound = new Sound(id, loops, location, retain);
+            sound.weight = weight;
+            return sound;
         }
         else
         {
@@ -459,6 +570,10 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
         public int location;
         public int retain;
         public int effect = -1;
+        /**
+         * Rev 226+ only (-1 otherwise).
+         */
+        public int weight = -1;
 
         public Sound(int id, int loops, int location, int retain) {
             this.id = id;
@@ -617,6 +732,26 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
 
     public int getId() {
         return id;
+    }
+
+    public int getAnimMayaID() {
+        return animMayaID;
+    }
+
+    public int getAnimMayaStart() {
+        return animMayaStart;
+    }
+
+    public int getAnimMayaEnd() {
+        return animMayaEnd;
+    }
+
+    public int getVerticalOffset() {
+        return verticalOffset;
+    }
+
+    public String getDebugName() {
+        return debugName;
     }
 
     public void setId(int id) {

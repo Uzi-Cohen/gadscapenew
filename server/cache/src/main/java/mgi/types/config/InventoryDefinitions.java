@@ -41,6 +41,7 @@ public final class InventoryDefinitions implements Definitions {
 
 	private final int id;
 	private int size;
+	private it.unimi.dsi.fastutil.ints.Int2ObjectMap<Object> parameters;
 
 	public InventoryDefinitions(final int id, final ByteBuffer buffer) {
 		this.id = id;
@@ -52,9 +53,14 @@ public final class InventoryDefinitions implements Definitions {
 		while (true) {
 			final int opcode = buffer.readUnsignedByte();
 			if (opcode == 0) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("inventory", id, buffer);
 				return;
 			}
-			decode(buffer, opcode);
+			try {
+				decode(buffer, opcode);
+			} catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+				mgi.tools.jagcached.CacheFormat.handle(e);
+			}
 		}
 	}
 
@@ -63,7 +69,17 @@ public final class InventoryDefinitions implements Definitions {
 		switch (opcode) {
 		case 2:
 			size = buffer.readUnsignedShort();
+			return;
+		case 249: // build 241 (RuneLite InventoryLoader)
+			parameters = buffer.readParameters();
+			return;
+		default:
+			throw mgi.tools.jagcached.CacheFormat.unknownOpcode("inventory", id, opcode);
 		}
+	}
+
+	public it.unimi.dsi.fastutil.ints.Int2ObjectMap<Object> getParameters() {
+		return parameters;
 	}
 
 	public InventoryDefinitions() {

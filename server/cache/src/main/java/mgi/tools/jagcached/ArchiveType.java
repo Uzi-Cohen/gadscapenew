@@ -49,6 +49,16 @@ public enum ArchiveType {
     WORLDMAPDATA(19),
     WORLDMAPGROUND(20),
     DBTABLEINDEX(21),
+    /**
+     * Skeletal animation keyframes ("animayas"), added after rev 211. Present in the build-241 cache.
+     */
+    ANIMAYAS(22),
+    /**
+     * Jagex game value names (objs, npcs, locs, interfaces...), added after rev 211. Present in the build-241 cache.
+     * Archive 23 does not exist in build 241 and archive 16 (WORLDMAPDATA_LEGACY) no longer exists either:
+     * code must treat any archive as optional (see {@link mgi.tools.jagcached.cache.Cache#hasArchive(int)}).
+     */
+    GAMEVALS(24),
     REFERENCE(255);
 
     private final int id;

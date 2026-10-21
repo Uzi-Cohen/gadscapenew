@@ -88,9 +88,14 @@ public final class MapElementDefinitions implements Definitions {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("mapelement", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
@@ -130,6 +135,8 @@ public final class MapElementDefinitions implements Definitions {
             case 14:
                 options[opcode - 10] = buffer.readString();
                 return;
+            case 16:
+                return; // no payload (RuneLite AreaLoader)
             case 15:
                 var3 = buffer.readUnsignedByte();
                 field3312 = new int[var3 * 2];
@@ -181,6 +188,8 @@ public final class MapElementDefinitions implements Definitions {
             case 30:
                 verticalAlignment = buffer.readUnsignedByte();
                 return;
+            default:
+                throw mgi.tools.jagcached.CacheFormat.unknownOpcode("mapelement", id, opcode);
         }
     }
 

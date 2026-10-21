@@ -53,6 +53,13 @@ public final class ParamDefinitions implements Definitions {
 	private int defaultInt;
 	private String defaultString;
 	private boolean autoDisable = true;
+	/**
+	 * Build 241: opcode 7 (default long) and opcode 8 (type given by var type id rather than char key).
+	 * {@code varTypeId} is -1 when the type came from opcode 1. {@code varType} stays null for ids the bundled
+	 * RuneLite 1.9.8 ScriptVarType enum does not know (e.g. 110 = long).
+	 */
+	private long defaultLong;
+	private int varTypeId = -1;
 
 	private ParamDefinitions(final int id, final ByteBuffer buffer) {
 		this.id = id;
@@ -112,9 +119,14 @@ public final class ParamDefinitions implements Definitions {
 		while (true) {
 			final int opcode = buffer.readUnsignedByte();
 			if (opcode == 0) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("param", id, buffer);
 				return;
 			}
-			decode(buffer, opcode);
+			try {
+				decode(buffer, opcode);
+			} catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+				mgi.tools.jagcached.CacheFormat.handle(e);
+			}
 		}
 	}
 
@@ -134,7 +146,28 @@ public final class ParamDefinitions implements Definitions {
 		case 5: 
 			defaultString = buffer.readString();
 			return;
+		case 7: // build 241
+			defaultLong = buffer.readLong();
+			return;
+		case 8: { // build 241
+			varTypeId = buffer.readUnsignedByte();
+			varType = ScriptVarType.forId(varTypeId);
+			if (varType != null) {
+				stackType = varType.getKeyChar();
+			}
+			return;
 		}
+		default:
+			throw mgi.tools.jagcached.CacheFormat.unknownOpcode("param", id, opcode);
+		}
+	}
+
+	public long getDefaultLong() {
+		return defaultLong;
+	}
+
+	public int getVarTypeId() {
+		return varTypeId;
 	}
 
 	public static final ParamDefinitions get(final int id) {

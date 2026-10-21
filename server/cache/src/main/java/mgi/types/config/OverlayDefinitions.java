@@ -49,9 +49,14 @@ public final class OverlayDefinitions implements Definitions {
 		while (true) {
 			final int opcode = buffer.readUnsignedByte();
 			if (opcode == 0) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("overlay", id, buffer);
 				return;
 			}
-			decode(buffer, opcode);
+			try {
+				decode(buffer, opcode);
+			} catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+				mgi.tools.jagcached.CacheFormat.handle(e);
+			}
 		}
 	}
 
@@ -70,6 +75,8 @@ public final class OverlayDefinitions implements Definitions {
 		case 7: 
 			otherColor = buffer.readMedium();
 			return;
+		default:
+			throw mgi.tools.jagcached.CacheFormat.unknownOpcode("overlay", id, opcode);
 		}
 	}
 

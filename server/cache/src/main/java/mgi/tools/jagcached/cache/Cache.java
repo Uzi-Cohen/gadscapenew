@@ -17,6 +17,18 @@ public class Cache {
 	private static final String DATA_FILE = "main_file_cache.dat2";
 	private static final String INDEX_FILE = "main_file_cache.idx";
 
+	/**
+	 * Largest group the master index (idx255) may hold. Build 241's reference table for the models
+	 * archive is 525,411 bytes, more than the old 500,000 byte limit, so the limit is now 16 MiB.
+	 */
+	public static final int MASTER_INDEX_MAX_GROUP_SIZE = 0x1000000;
+	/**
+	 * Largest group a regular index may hold (was 1,000,000 bytes).
+	 */
+	public static final int INDEX_MAX_GROUP_SIZE = 0x1000000;
+
+	private String path;
+
 	private Index[] indexes;
 	private Index masterindex;
 	private Archive[] archives;
@@ -26,7 +38,15 @@ public class Cache {
 
 	private Cache(String path, boolean readOnly) {
 		this.readOnly = readOnly;
+		this.path = path;
 		openFiles(path);
+	}
+
+	/**
+	 * The directory this cache was opened from.
+	 */
+	public String getPath() {
+		return path;
 	}
 
 	private void openFiles(String path) {
@@ -39,14 +59,20 @@ public class Cache {
 			FileChannel dataFileChannel = dataFile.getChannel();
 			FileChannel referenceFileChannel = referenceFile.getChannel();
 
-			masterindex = new Index(255, dataFileChannel, referenceFileChannel, 0x7a120);
+			masterindex = new Index(255, dataFileChannel, referenceFileChannel, MASTER_INDEX_MAX_GROUP_SIZE);
 
 			int numIndices = masterindex.groupCount();
 			indexes = new Index[numIndices];
 			archives = new Archive[numIndices];
 			for (int i = 0; i < numIndices; i++) {
-				@SuppressWarnings("resource") RandomAccessFile indexFile = new RandomAccessFile(path + seperator + INDEX_FILE + i, readOnly ? "r" : "rw");
-				indexes[i] = new Index(i, dataFileChannel, indexFile.getChannel(), 0xf4240);
+				final File idx = new File(path + seperator + INDEX_FILE + i);
+				if (readOnly && !idx.exists()) {
+					// Build 241 has no idx16 (old world map data) and no idx23; the master index still counts them.
+					indexes[i] = Index.missing(i);
+				} else {
+					@SuppressWarnings("resource") RandomAccessFile indexFile = new RandomAccessFile(idx, readOnly ? "r" : "rw");
+					indexes[i] = new Index(i, dataFileChannel, indexFile.getChannel(), INDEX_MAX_GROUP_SIZE);
+				}
 				archives[i] = new Archive(i, this);
 			}
 
@@ -163,6 +189,19 @@ public class Cache {
 		}
 	}
 
+	/**
+	 * Whether this cache contains the given archive (it has a reference table in the master index).
+	 * Build 241 has no archive 16 or 23; build 211 has no archive 22 or 24.
+	 */
+	public boolean hasArchive(int id) {
+		final Archive archive = getArchive(id);
+		return archive != null && archive.isLoaded();
+	}
+
+	public boolean hasArchive(final ArchiveType archive) {
+		return hasArchive(archive.getId());
+	}
+
 	public Index getIndex(final ArchiveType archive) {
 		return getIndex(archive.getId());
 	}
@@ -261,7 +300,8 @@ public class Cache {
 		for (int i = 0; i < indicesCount; i++) {
 			alloc.writeInt(archives[i].getCRC32());
 			alloc.writeInt(archives[i].getVersion());
-			alloc.writeBytes(archives[i].getDigest(), 0, 64);
+			// a missing archive (e.g. 16 or 23 in build 241) has crc 0, version 0 and an empty digest
+			alloc.writeBytes(archives[i].isLoaded() ? archives[i].getDigest() : new byte[64], 0, 64);
 		}
 		byte[] selfDigest = Whirlpool.whirlpool(alloc.getBuffer(), 0, alloc.getPosition());
 		ByteBuffer rsa = new ByteBuffer(65);

@@ -8,7 +8,6 @@ import com.zenyte.utils.MapLocations
 import it.unimi.dsi.fastutil.ints.IntList
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.ints.IntSet
-import mgi.tools.jagcached.ArchiveType
 
 /**
  * @author Jire
@@ -54,10 +53,11 @@ interface AreaType {
             // and adds the region id to the list if so - if there's no map, there's no multi.
 
             val set: IntSet = IntOpenHashSet(2560)
-            val archive = CacheManager.getCache().getArchive(ArchiveType.MAPS)
+            val cache = CacheManager.getCache()
             for (rx in 0..99) {
                 for (ry in 0..255) {
-                    archive.findGroupByName("m" + rx + "_" + ry) ?: continue
+                    // works for named (rev 211) and region-id keyed (build 241) maps, without loading the group
+                    if (!mgi.tools.jagcached.MapFiles.hasRegion(cache, rx shl 8 or ry)) continue
                     set.add(rx shl 8 or ry)
                 }
             }

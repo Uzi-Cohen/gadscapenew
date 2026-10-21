@@ -70,6 +70,13 @@ public final class NPCDefinitions implements Definitions, Cloneable, Transmogrif
     public int height = -1;
 
     public int[] stats = {1, 1, 1, 1, 1, 1};
+    /**
+     * Build-241 cache extras (decoded so each definition stays aligned; not used by game logic yet).
+     * renderPriority: opcode 99 sets 1, opcode 111 sets 2 from rev 233 on (in rev 211, 111 meant "follower").
+     */
+    public int renderPriority;
+    public int footprintSize = -1;
+    public boolean lowPriorityFollowerOps;
 
     @Override
     public int defaultId() {
@@ -160,12 +167,35 @@ public final class NPCDefinitions implements Definitions, Cloneable, Transmogrif
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("npc", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
+    /*
+     * The build-241 opcodes (42, 61, 62, 111 as render priority, 122, 123, 126, 129, 130, 145-147, 251-253) were
+     * ported from RuneLite's NpcLoader (net.runelite.cache.definitions.loaders.NpcLoader, RuneLite master 330e650),
+     * Copyright (c) 2016-2017, Adam <Adam@sigterm.info>, BSD 2-Clause licence:
+     *
+     * Redistribution and use in source and binary forms, with or without modification, are permitted provided that
+     * the following conditions are met: 1. Redistributions of source code must retain the above copyright notice,
+     * this list of conditions and the following disclaimer. 2. Redistributions in binary form must reproduce the
+     * above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other
+     * materials provided with the distribution. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+     * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+     * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+     * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+     * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+     * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+     * THE POSSIBILITY OF SUCH DAMAGE.
+     */
     @Override
     public void decode(final ByteBuffer buffer, final int opcode) {
         switch (opcode) {
@@ -236,11 +266,30 @@ public final class NPCDefinitions implements Definitions, Cloneable, Transmogrif
                 }
                 return;
             }
+            case 42:
+                buffer.readUnsignedShort(); // full recolour
+                return;
             case 60: {
                 final int size = buffer.readUnsignedByte();
                 chatModels = new int[size];
                 for (int i = 0; i < size; i++) {
                     chatModels[i] = buffer.readUnsignedShort();
+                }
+                return;
+            }
+            case 61: { // build 241: 4-byte model ids (replaces 1)
+                final int size = buffer.readUnsignedByte();
+                models = new int[size];
+                for (int i = 0; i < size; i++) {
+                    models[i] = buffer.readInt();
+                }
+                return;
+            }
+            case 62: { // build 241: 4-byte chathead model ids (replaces 60)
+                final int size = buffer.readUnsignedByte();
+                chatModels = new int[size];
+                for (int i = 0; i < size; i++) {
+                    chatModels[i] = buffer.readInt();
                 }
                 return;
             }
@@ -264,6 +313,7 @@ public final class NPCDefinitions implements Definitions, Cloneable, Transmogrif
                 return;
             case 99:
                 visible = true;
+                renderPriority = 1;
                 return;
             case 100:
                 ambience = buffer.readByte();
@@ -324,7 +374,11 @@ public final class NPCDefinitions implements Definitions, Cloneable, Transmogrif
                 clickable = false;
                 return;
             case 111:
-                isFollower = true;
+                if (mgi.tools.jagcached.CacheFormat.npcOp111IsRenderPriority()) {
+                    renderPriority = 2; // rev 233+
+                } else {
+                    isFollower = true; // rev 211 (before 220)
+                }
                 return;
             case 114:
                 field2039 = buffer.readUnsignedShort();
@@ -374,14 +428,40 @@ public final class NPCDefinitions implements Definitions, Cloneable, Transmogrif
                     field2057 = -1;
                 }
                 return;
+            case 122:
+                isFollower = true;
+                return;
+            case 123:
+                lowPriorityFollowerOps = true;
+                return;
             case 124:
                 height = buffer.readUnsignedShort();
+                return;
+            case 126:
+                footprintSize = buffer.readUnsignedShort();
+                return;
+            case 129: // flag (RuneLite "unknown1")
+            case 130: // idle animation restarts
+            case 145: // can hide for overlap
+            case 147: // zbuf = false
+                return;
+            case 146:
+                buffer.readUnsignedShort(); // overlap tint HSL
                 return;
             case 249:
                 parameters = buffer.readParameters();
                 return;
-            //default:
-            //    throw new RuntimeException("UNKNOWN NPC OPCODE: " + opcode);
+            case 251:
+                mgi.types.config.items.ItemDefinitionsDecoding.readSubOp(buffer);
+                return;
+            case 252:
+                mgi.types.config.items.ItemDefinitionsDecoding.readConditionalOp(buffer);
+                return;
+            case 253:
+                mgi.types.config.items.ItemDefinitionsDecoding.readConditionalSubOp(buffer);
+                return;
+            default:
+                throw mgi.tools.jagcached.CacheFormat.unknownOpcode("npc", id, opcode);
         }
     }
 
