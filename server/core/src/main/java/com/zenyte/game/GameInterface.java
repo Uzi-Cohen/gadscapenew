@@ -5,6 +5,7 @@ import com.zenyte.game.model.ui.InterfacePosition;
 import com.zenyte.game.model.ui.NewInterfaceHandler;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
+import mgi.types.component.ComponentDefinitions;
 import mgi.utilities.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -297,6 +298,13 @@ public enum GameInterface {
     }
 
     public final void open(final Player player) {
+        if (!ComponentDefinitions.containsInterface(id)) {
+            // e.g. a custom GadScape interface on the vanilla 241 test cache: don't run its plugin, which would
+            // otherwise send scripts/varbits for components that do not exist (custom script ids 10001+ now
+            // collide with real 241 scripts).
+            player.log(LogLevel.INFO, "Not opening interface " + this + ": " + id + " is not in the cache.");
+            return;
+        }
         player.log(LogLevel.INFO, "Opening interface: " + this);
         final Interface plugin = NewInterfaceHandler.getInterface(id);
         if (plugin != null) {

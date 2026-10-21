@@ -29,7 +29,7 @@ public class CharacterSummaryInterface extends Interface {
 
     @Override
     public void open(Player player) {
-        player.getInterfaceHandler().sendInterface(getInterface().getId(), 33, PaneType.JOURNAL_TAB_HEADER, true);
+        player.getInterfaceHandler().sendInterface(getInterface().getId(), 43, PaneType.JOURNAL_TAB_HEADER, true); // 241 side_journal:tab_container (211: 33)
         player.getPacketDispatcher().sendClientScript(3954, getComponent("Component layer"), getComponent("Element layer"), player.getSkills().getCombatLevel());
         player.getPacketDispatcher().sendComponentSettings(getInterface(),
                 getComponent("Element layer"),

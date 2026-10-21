@@ -161,8 +161,8 @@ public final class CombatDefinitions {
 		varManager.sendBit(2668, defensiveAutocast ? 1 : 2);
 		varManager.sendBit(276, autocastSpell == null ? -1 : SpellDefinitions.autocastSlotMap.getInt(autocastSpell.getSpellName()));
 		varManager.sendVar(43, autocastSpell == null ? (attackStylesLength == 3 && style == 2 ? (typeVarbit == 6 ? 2 : 3) : style) : 5);
-		dispatcher.sendComponentText(593, 1, weapon == null ? "Unarmed" : weapon.getName());
-		dispatcher.sendComponentText(593, 2, "Category: " + styleDefinition.getPrettyName());
+		dispatcher.sendComponentText(593, 3, weapon == null ? "Unarmed" : weapon.getName()); // 241 combat_interface:title (211: 1)
+		dispatcher.sendComponentText(593, 5, "Category: " + styleDefinition.getPrettyName()); // 241 combat_interface:category (211: 2)
 		player.getVarManager().sendBit(13027, player.getSkills().getCombatLevel());
 	}
 

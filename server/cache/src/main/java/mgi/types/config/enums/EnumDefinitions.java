@@ -76,6 +76,39 @@ public final class EnumDefinitions implements Definitions, Cloneable {
         return (StringEnum) e;
     }
 
+    /**
+     * Like {@link #getIntEnum(int)}, but an enum that is absent or no longer an int enum (deleted or retyped
+     * between cache revisions, or a custom enum missing from a vanilla cache) yields an empty enum and a warning
+     * instead of an exception, so a static constant cannot break class initialisation.
+     */
+    public static IntEnum getIntEnumOrEmpty(final int id) {
+        final mgi.types.config.enums.Enum e = map == null ? null : map.get(id);
+        if (e instanceof IntEnum) {
+            return (IntEnum) e;
+        }
+        log.warn("Enum {} is missing or not an int enum in this cache; using an empty enum.", id);
+        return new IntEnum(id, 'i', 'i', -1, new HashMap<Integer, Integer>());
+    }
+
+    /**
+     * String counterpart of {@link #getIntEnumOrEmpty(int)}.
+     */
+    public static StringEnum getStringEnumOrEmpty(final int id) {
+        final mgi.types.config.enums.Enum e = map == null ? null : map.get(id);
+        if (e instanceof StringEnum) {
+            return (StringEnum) e;
+        }
+        log.warn("Enum {} is missing or not a string enum in this cache; using an empty enum.", id);
+        return new StringEnum(id, 'i', 's', "", new HashMap<Integer, String>());
+    }
+
+    /**
+     * Lower-case counterpart of {@link #getStringEnumOrEmpty(int)}.
+     */
+    public static StringEnumLC getStringEnumLowercaseOrEmpty(final int id) {
+        return new StringEnumLC(getStringEnumOrEmpty(id));
+    }
+
     public static Enum<?> getEnum(final int id) {
         return map.get(id);
     }
