@@ -174,4 +174,6 @@ tasks.register<JavaExec>("verifyCache") {
     System.getProperties().stringPropertyNames()
         .filter { it.startsWith("gadscape.") }
         .forEach { systemProperty(it, System.getProperty(it)) }
+    // lets the check be re-run without Gradle: java -cp "$(cat build/verify-cache-classpath.txt)" <main class>
+    doFirst { layout.buildDirectory.file("verify-cache-classpath.txt").get().asFile.writeText(classpath.asPath) }
 }

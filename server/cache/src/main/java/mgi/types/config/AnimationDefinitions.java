@@ -81,6 +81,7 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
     private boolean soundsCrossWorldView;
 
     private boolean oldFormat = true;
+    private transient int ignoredLegacySoundBytes = -1;
 
     public AnimationDefinitions(final int id, final ByteBuffer buffer) {
         this.id = id;
@@ -301,7 +302,12 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
-                mgi.tools.jagcached.CacheFormat.checkFullyRead("sequence", id, buffer);
+                // Rev 211 quirk: sequences with more than 255 frames store the opcode-13 sound count as one byte
+                // (count & 255) but still list a sound per frame; the client reads count & 255 sounds and ignores
+                // the rest (vanilla 211 sequence 8127: 291 frames, 35 sounds read, 768 bytes left).
+                if (buffer.getBuffer().length - buffer.getPosition() != ignoredLegacySoundBytes) {
+                    mgi.tools.jagcached.CacheFormat.checkFullyRead("sequence", id, buffer);
+                }
                 return;
             }
             try {
@@ -456,6 +462,9 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
         case 13:
             {
                 final int count = buffer.readUnsignedByte();
+                if (oldFormat && frameIds != null && frameIds.length > 255 && (frameIds.length & 0xFF) == count) {
+                    ignoredLegacySoundBytes = (frameIds.length - count) * 3;
+                }
                 soundEffects = new HashMap<>();
                 for (int index = 0; index < count; ++index) {
                     if(oldFormat) {

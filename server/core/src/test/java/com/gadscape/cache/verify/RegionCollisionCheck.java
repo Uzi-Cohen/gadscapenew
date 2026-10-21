@@ -27,6 +27,34 @@ import java.util.List;
  */
 public final class RegionCollisionCheck {
 
+    /**
+     * Level-1 settings bit 2 ("bridge") per tile, decoded exactly like Region.loadRegionMapOrThrow.
+     */
+    private static byte[][] bridgeFlags(final ByteBuffer terrain) {
+        final byte[][] out = new byte[64][64];
+        if (terrain == null) return out;
+        for (int plane = 0; plane < 4; plane++) {
+            for (int x = 0; x < 64; x++) {
+                for (int y = 0; y < 64; y++) {
+                    while (true) {
+                        final int value = terrain.readUnsignedShort();
+                        if (value == 0) {
+                            break;
+                        } else if (value == 1) {
+                            terrain.readByte();
+                            break;
+                        } else if (value <= 49) {
+                            terrain.readShort();
+                        } else if (value <= 81) {
+                            if (plane == 1 && ((value - 49) & 2) == 2) out[x][y] = 1;
+                        }
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
     public static void main(final String[] args) throws Exception {
         final String dir = args.length > 0 ? args[0] : System.getProperty(CacheManager.CACHE_DIR_PROPERTY);
         if (dir == null || dir.isBlank()) {
@@ -78,14 +106,16 @@ public final class RegionCollisionCheck {
             }
         }
 
-        // every blocking type 10/11 loc must have set the OBJECT flag on its own tile
-        long checkedLocs = 0, missingFlag = 0;
+        // every blocking type 10/11 loc must have set the OBJECT flag on the tile Region puts it on: its level, or
+        // one level lower when level 1 of that tile has the bridge flag (locs that end up below level 0 are dropped)
+        long checkedLocs = 0, missingFlag = 0, droppedUnderBridge = 0;
         final List<String> examples = new ArrayList<>();
         for (int id : regionIds) {
             final ByteBuffer locs = MapFiles.locs(cache, id);
             final RegionMap map = World.getRegion(id).getRegionMap(false);
             if (locs == null || map == null) continue;
             final int[][][] masks = map.getMasks();
+            final byte[][] bridge = bridgeFlags(MapFiles.terrain(cache, id));
             int objectId = -1;
             int incr;
             while ((incr = locs.readHugeSmart()) != 0) {
@@ -102,9 +132,13 @@ public final class RegionCollisionCheck {
                     if (plane > 3 || (type != 10 && type != 11)) continue;
                     final ObjectDefinitions def = ObjectDefinitions.get(objectId);
                     if (def == null || def.getClipType() == 0) continue;
+                    final int level = bridge[x][y] != 0 ? plane - 1 : plane;
+                    if (level < 0) {
+                        droppedUnderBridge++;
+                        continue;
+                    }
                     checkedLocs++;
-                    final boolean flagged = (masks[plane][x][y] & Flags.OBJECT) != 0
-                            || (plane > 0 && (masks[plane - 1][x][y] & Flags.OBJECT) != 0);
+                    final boolean flagged = (masks[level][x][y] & Flags.OBJECT) != 0;
                     if (!flagged) {
                         missingFlag++;
                         if (examples.size() < 10) {
@@ -119,12 +153,14 @@ public final class RegionCollisionCheck {
         final Region lumbridge = World.getRegion((3222 >> 6) << 8 | (3218 >> 6));
         final int spawnMask = lumbridge.getMask(0, 3222, 3218);
 
-        System.out.printf("Regions: %d with map files, %d loaded, %d failed%n", regionIds.size(), regionsWithMap, failed);
+        System.out.printf("Regions: %d with map files, %d failed, %d with collision flags%n", regionIds.size(), failed, regionsWithMap);
         System.out.printf("Tiles: %,d; blocked floor %,d; object-blocked %,d; with walls %,d%n", tiles, floorBlocked, objectTiles, wallTiles);
-        System.out.printf("Blocking type-10/11 locs checked: %,d, without OBJECT flag on their tile: %,d%n", checkedLocs, missingFlag);
+        System.out.printf("Blocking type-10/11 locs checked: %,d, without OBJECT flag on their tile: %,d (%,d under a bridge on level 0, dropped like the client does)%n",
+                checkedLocs, missingFlag, droppedUnderBridge);
         examples.forEach(e -> System.out.println("  " + e));
         System.out.printf("Lumbridge spawn (3222, 3218, 0) collision mask: 0x%x%n", spawnMask);
-        final boolean ok = failed == 0 && missingFlag == 0 && spawnMask == 0 && regionsWithMap == regionIds.size();
+        // squares without a single blocked tile or blocking loc never create a RegionMap (open sea, for example)
+        final boolean ok = failed == 0 && missingFlag == 0 && spawnMask == 0;
         System.out.printf("Finished in %.1f s%n", (System.nanoTime() - start) / 1e9);
         System.out.println(ok ? "RESULT: OK" : "RESULT: FAILED");
         System.exit(ok ? 0 : 1);
