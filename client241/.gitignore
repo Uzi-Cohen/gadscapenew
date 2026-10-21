@@ -1,0 +1,9 @@
+# build outputs (the scripts download/build these; nothing here is source)
+# build/ is build.sh's default --runelite-jars / --out folder: RuneLite's jars, Jagex's injected-client, the zip, the exe
+build/
+exe/payload/
+*.part
+# never commit downloaded or built binaries (the committed exe resource is rsrc_windows_amd64.syso)
+*.jar
+*.zip
+*.exe

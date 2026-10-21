@@ -1,0 +1,61 @@
+# RuneLite 1.13.3 artifact lock for the GadScape 241 test client.
+# Source: https://static.runelite.net/bootstrap.json (version 1.13.3).
+# Columns: sha256 size platform file url. platform = all | os[-arch]. Regenerate with tools/lock-from-bootstrap.py.
+version 1.13.3
+f8ebeb08802145cd1ab520a40274ac729819b73e4a47a92d3ec27beef52fd01d 5329304 all client-1.13.3.jar https://repo.runelite.net/net/runelite/client/1.13.3/client-1.13.3.jar
+a8ad877104af13cc27857e6ca1db63c34ce742a81513aeeae21bcd97ffe5721b 39142 all http-api-1.2.26.jar https://repo.runelite.net/net/runelite/arn/http-api/1.2.26/http-api-1.2.26.jar
+2570fab55515cbf881d7a4ceef49fc515490bc027057e666776a2832465aeca0 430488 all okhttp-3.14.9.jar https://repo.runelite.net/com/squareup/okhttp3/okhttp/3.14.9/okhttp-3.14.9.jar
+f80ce42d2ffac47ad4c47e1d6f980d604d247ceb1a886705cf4581ab0c9fe2b8 91980 all okio-1.17.2.jar https://repo.runelite.net/com/squareup/okio/okio/1.17.2/okio-1.17.2.jar
+6409723fd13496386dfb1335a9794dc0919db6132522f2b7486d6734fc5df6e5 681590 all discord-1.4.jar https://repo.runelite.net/net/runelite/discord/1.4/discord-1.4.jar
+24f9b6d77d8de814a8dacddf9c4e2227da70459375ca72cc961ae81d33eff75a 237113 all rlawt-1.8.jar https://repo.runelite.net/net/runelite/rlawt/1.8/rlawt-1.8.jar
+18c4a0095d5c1da6b817592e767bb23d29dd2f560ad74df75ff3961dbde25b79 41203 all slf4j-api-1.7.25.jar https://repo.runelite.net/org/slf4j/slf4j-api/1.7.25/slf4j-api-1.7.25.jar
+ad745cc243805800d1ebbf5b7deba03b37c95885e6bce71335a73f7d6d0f14ee 233855 all logback-classic-1.2.9.jar https://repo.runelite.net/ch/qos/logback/logback-classic/1.2.9/logback-classic-1.2.9.jar
+4a9ef7ed809b1fbc6992bf87d404087c247e7a9766e25bb84377b58ed5c9eb58 454201 all logback-core-1.2.9.jar https://repo.runelite.net/ch/qos/logback/logback-core/1.2.9/logback-core-1.2.9.jar
+9f0c8d50fa4b79b6ff1502dbec8502179d6b9497cacbe17a13074001aed537ec 78826 all jopt-simple-5.0.1.jar https://repo.runelite.net/net/sf/jopt-simple/jopt-simple/5.0.1/jopt-simple-5.0.1.jar
+5be9a7d05ba0ccd74708bc8018ae412255f85843c0b92302e9b9befa6ed52564 2649860 all guava-23.2-jre.jar https://repo.runelite.net/com/google/guava/guava/23.2-jre/guava-23.2-jre.jar
+9264c6931c431e928dc64adc842584d5f57d17b2f3aff29221f2b3fdea673dad 428603 all guice-4.1.0-no_aop.jar https://repo.runelite.net/com/google/inject/guice/4.1.0/guice-4.1.0-no_aop.jar
+91c77044a50c481636c32d916fd89c9118a72195390452c81065080f957de7ff 2497 all javax.inject-1.jar https://repo.runelite.net/javax/inject/javax.inject/1/javax.inject-1.jar
+0addec670fedcd3f113c5c8091d783280d23f75e3acb841b61a9cdb079376a08 4467 all aopalliance-1.0.jar https://repo.runelite.net/aopalliance/aopalliance/1.0/aopalliance-1.0.jar
+233a0149fc365c9f6edbd683cfe266b19bdc773be98eabdaf6b3c924b48e7d81 241622 all gson-2.8.5.jar https://repo.runelite.net/com/google/code/gson/gson/2.8.5/gson-2.8.5.jar
+c518fa0427c7f6029b115541c0dbcf633fc89a65467f8472c52bb71fe18b559c 792432 all flatlaf-3.2.5-rl4.jar https://repo.runelite.net/net/runelite/flatlaf/3.2.5-rl4/flatlaf-3.2.5-rl4.jar
+d4a57bbc1627da7c391308fd0fe910b83170fb66afd117236a5b111d2db1590b 136544 all commons-text-1.2.jar https://repo.runelite.net/org/apache/commons/commons-text/1.2/commons-text-1.2.jar
+6e8dc31e046508d9953c96534edf0c2e0bfe6f468966b5b842b3f87e43b6a847 499634 all commons-lang3-3.7.jar https://repo.runelite.net/org/apache/commons/commons-lang3/3.7/commons-lang3-3.7.jar
+eafcc780b445434d3c5ae7fa2fb6665de1a7560d537d2c408a8e80cd14d27161 1729586 all jna-5.9.0.jar https://repo.runelite.net/net/java/dev/jna/jna/5.9.0/jna-5.9.0.jar
+1903bc6d87f3ab92023957b91f45a9c8eb3515bad030356ce977201e5141b724 1343236 all jna-platform-5.9.0.jar https://repo.runelite.net/net/java/dev/jna/jna-platform/5.9.0/jna-platform-5.9.0.jar
+766ad2a0783f2687962c8ad74ceecc38a28b9f72a2d085ee438b7813e928d0c7 19936 all jsr305-3.0.2.jar https://repo.runelite.net/com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar
+cf678ab3fbc992f4b4654a86c03557c21904d635202b67688fcb2eca442c2d40 703181 all protobuf-javalite-3.21.12.jar https://repo.runelite.net/com/google/protobuf/protobuf-javalite/3.21.12/protobuf-javalite-3.21.12.jar
+f8016606e74f3cafd63eae07b1331f903f999c9f40726c838399a144c3809217 786196 all lwjgl-3.3.2.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2.jar
+0ebaaf92d306c946ce9d3db25496b9068b7aab782b15966be2544b6a24838038 928871 all lwjgl-opengl-3.3.2.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2.jar
+da0392abcea5121f5edd9042012600584ac628f4a18fcf5c1bce60f3f9f6a33a 238152 all lwjgl-opencl-3.3.2.jar https://repo.runelite.net/org/lwjgl/lwjgl-opencl/3.3.2/lwjgl-opencl-3.3.2.jar
+f4ba0a5c9f1e0fd57d201d2e9f8fc8b2a7a77d755d296c665a37c1c026b40019 4250501 all injected-client-1.13.3.jar https://repo.runelite.net/net/runelite/injected-client/1.13.3/injected-client-1.13.3.jar
+6c7627e53af6b1c56f3cff532fc9b9496d93e1cac655ec506c8f01e7608e69ef 168875 win rlicn-1.1-windows.jar https://repo.runelite.net/net/runelite/rlicn/1.1/rlicn-1.1-windows.jar
+055be110a570f9cda3eba8d70a006ff46c77a048bc67868524879211c48b330a 45944 all json-20090211.jar https://repo.runelite.net/org/json/json/20090211/json-20090211.jar
+89f53089a5f8a983db25140a1c94c72fe2a8f56feb6ddb597f55b8329ce5b400 114144 linux lwjgl-3.3.2-natives-linux.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-linux.jar
+8956bca64d2851dc14ec6bfbfc55ce35fdff89270b5f2a3c9f70aea77f6d1e17 80464 linux lwjgl-opengl-3.3.2-natives-linux.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-linux.jar
+f4f4c13cd70224ec443753837f6652ec7ed11c5857ffc3e7d03e216aef6e663b 90795 linux-aarch64 lwjgl-3.3.2-natives-linux-arm64.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-linux-arm64.jar
+836e5641627f7bf3c966c93946f400cb77cdf65b8a347763e55e069d313e6def 58627 linux-aarch64 lwjgl-opengl-3.3.2-natives-linux-arm64.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-linux-arm64.jar
+62603b9a92c789f0beb8ec25052f278d6f9ce02c6687c8f1afbc7483da54131a 60240 macos lwjgl-3.3.2-natives-macos.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-macos.jar
+0c6a78c4e696deaddefd8346b4c13883704b36a890003075a33ccba2d1a13c2d 41485 macos lwjgl-opengl-3.3.2-natives-macos.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-macos.jar
+ebb8474ad3c19b906649ac41cef62314fd9b355cea5509d9be0c8728db7a6c38 48270 macos-aarch64 lwjgl-3.3.2-natives-macos-arm64.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-macos-arm64.jar
+3120ecbcccf31f36064f260fa0127b4a359097a294ac5b3e7675d1867168f2e6 42490 macos-aarch64 lwjgl-opengl-3.3.2-natives-macos-arm64.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-macos-arm64.jar
+21e6f5c1c68a171398daf7785ffb2797da89242f90d19e24236563f7c0b1f7e0 139365 win-x86 lwjgl-3.3.2-natives-windows-x86.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows-x86.jar
+c3a32053bb4c042489f40936926487cdaf33089185b847fb298b84a62b5703ff 88610 win-x86 lwjgl-opengl-3.3.2-natives-windows-x86.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-windows-x86.jar
+ebc65354b64a33659cc642446dc15c6d62a4bd0ae15c9a6a4a3adbcd71f1f690 164993 win lwjgl-3.3.2-natives-windows.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows.jar
+0275a42f91c6bc5f08bdc1f7c7e263058cc99dbed7c710a025e4ad175e9a0edd 101530 win lwjgl-opengl-3.3.2-natives-windows.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-windows.jar
+1575d4e2e789b411b3a193ac04a2c2d53dbc504de80a560578191c1c7d79e5ee 133200 win-aarch64 lwjgl-3.3.2-natives-windows-arm64.jar https://repo.runelite.net/org/lwjgl/lwjgl/3.3.2/lwjgl-3.3.2-natives-windows-arm64.jar
+f8ab8ceac5a5b3e53f59ef4c717c3d4434cb7fa33969f240489d539f572c33b0 83132 win-aarch64 lwjgl-opengl-3.3.2-natives-windows-arm64.jar https://repo.runelite.net/org/lwjgl/lwjgl-opengl/3.3.2/lwjgl-opengl-3.3.2-natives-windows-arm64.jar
+4163d41e77862673266f0b7628b7fc4d52aaf11e8774f675e264acbf074ea2db 273308 all runelite-api-1.13.3-runtime.jar https://repo.runelite.net/net/runelite/runelite-api/1.13.3/runelite-api-1.13.3-runtime.jar
+jvm -XX:+DisableAttachMechanism
+jvm -Drunelite.launcher.blacklistedDlls=RTSSHooks.dll,RTSSHooks64.dll,NahimicOSD.dll,NahimicMSIOSD.dll,Nahimic2OSD.dll,Nahimic2DevProps.dll,k_fps32.dll,k_fps64.dll,SS2DevProps.dll,SS2OSD.dll,GTIII-OSD64-GL.dll,GTIII-OSD64-VK.dll,GTIII-OSD64.dll,OWExplorer.dll,OWClient.dll,OWUtils.dll
+jvm -Xmx768m
+jvm -Xss2m
+jvm -XX:CompileThreshold=1500
+jvm --add-opens=java.base/java.net=ALL-UNNAMED
+jvm --add-opens=java.base/java.io=ALL-UNNAMED
+jvm-mac -XX:+DisableAttachMechanism
+jvm-mac -Xmx768m
+jvm-mac -Xss2m
+jvm-mac -XX:CompileThreshold=1500
+jvm-mac --add-opens=java.base/java.net=ALL-UNNAMED
+jvm-mac --add-opens=java.base/java.io=ALL-UNNAMED
+jvm-mac --add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED

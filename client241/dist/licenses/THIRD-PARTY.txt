@@ -1,0 +1,46 @@
+GadScape build 241 TEST client: what is in this package and under which terms
+==============================================================================
+
+The GadScape launcher (lib/gadscape-launcher.jar) is GadScape's own code. Everything else is RuneLite 1.13.3
+and the libraries RuneLite ships with, redistributed unchanged except the game client (see the first row).
+The license texts are in this folder; the file name is given after each entry.
+
+lib/injected-client-1.13.3-gadscape.jar
+    RuneLite's injected-client 1.13.3: the Old School RuneScape game client (build 241), copyright Jagex Ltd.,
+    with RuneLite's injected code. Not open source. Changed by GadScape's patcher in two places (the login RSA
+    key and the server-address check) so it can connect to the GadScape TEST server. For testing only;
+    not affiliated with or endorsed by Jagex or RuneLite.
+
+RuneLite, BSD 2-Clause, Copyright (c) 2016-2017, Adam <Adam@sigterm.info>      RuneLite-BSD-2-Clause.txt
+    client-1.13.3.jar, runelite-api-1.13.3-runtime.jar, http-api-1.2.26.jar      https://github.com/runelite/runelite
+    rlicn-1.1-windows.jar (RuneLite's Windows icon helper; no license file in the jar, published by RuneLite)
+rlawt-1.8.jar, BSD 2-Clause, Copyright (c) 2022 Abex                            rlawt-BSD-2-Clause.txt
+    https://github.com/runelite/rlawt
+discord-1.4.jar, RuneLite's build of Java Discord RPC, Apache 2.0,              java-discord-rpc-Apache-2.0.txt
+    Copyright (c) 2017 Florian Spiess; https://github.com/runelite/java-discord-rpc
+    It contains Discord RPC (libdiscord-rpc), MIT, Copyright 2017 Discord, Inc.  discord-rpc-MIT.txt
+flatlaf-3.2.5-rl4.jar, FlatLaf (RuneLite build), Apache 2.0, FormDev Software   Apache-2.0.txt
+    https://github.com/JFormDesigner/FlatLaf
+LWJGL 3.3.2, BSD 3-Clause, Copyright (c) 2012-present Lightweight Java Game Library   LWJGL-BSD-3-Clause.txt
+    lwjgl-3.3.2.jar, lwjgl-opengl-3.3.2.jar, lwjgl-opencl-3.3.2.jar and their natives-*.jar   https://www.lwjgl.org
+Guava 23.2, Apache 2.0, Google                                                  Apache-2.0.txt
+Guice 4.1.0, Apache 2.0, Copyright 2006-2016 Google, Inc.                       Apache-2.0.txt, NOTICE.txt
+javax.inject 1, Apache 2.0, The JSR-330 Expert Group                            Apache-2.0.txt
+aopalliance 1.0, public domain (AOP Alliance)
+Gson 2.8.5, Apache 2.0, Google                                                  Apache-2.0.txt
+OkHttp 3.14.9 and Okio 1.17.2, Apache 2.0, Square, Inc.                         Apache-2.0.txt, NOTICE.txt
+    OkHttp contains the Public Suffix List, Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/)
+Apache Commons Lang 3.7 and Commons Text 1.2, Apache 2.0, The Apache Software Foundation   Apache-2.0.txt, NOTICE.txt
+JNA 5.9.0 and JNA Platform 5.9.0, Apache 2.0 (or LGPL 2.1, licensee's choice)    jna-LICENSE.txt, Apache-2.0.txt
+jsr305 3.0.2 (FindBugs annotations), Apache 2.0                                 Apache-2.0.txt
+Protocol Buffers (protobuf-javalite 3.21.12), BSD 3-Clause, Copyright 2008 Google Inc.   protobuf-BSD-3-Clause.txt
+jopt-simple 5.0.1, MIT, Copyright (c) 2004-2015 Paul R. Holser, Jr.             jopt-simple-MIT.txt
+SLF4J API 1.7.25, MIT, Copyright (c) 2004-2017 QOS.ch                           slf4j-MIT.txt
+Logback 1.2.9 (logback-classic, logback-core), Copyright (C) 1999-2015 QOS.ch,  logback-LICENSE.txt, EPL-1.0.txt
+    EPL 1.0 or LGPL 2.1 (licensee's choice; used here under EPL 1.0).
+    Source code: https://github.com/qos-ch/logback/tree/v_1.2.9
+org.json (json-20090211), the JSON License, Copyright (c) 2002 JSON.org         org.json-JSON-License.txt
+
+Source code of the open-source parts: the project links above (RuneLite's own jars also have -sources jars on
+https://repo.runelite.net). The exact jar addresses and SHA-256 hashes are in the GadScape repository,
+client241/runelite-1.13.3.lock.
