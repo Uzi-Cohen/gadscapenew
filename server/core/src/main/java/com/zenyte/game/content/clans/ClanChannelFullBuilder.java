@@ -2,10 +2,13 @@ package com.zenyte.game.content.clans;
 
 import com.zenyte.game.GameConstants;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.io.RSBuffer;
 import com.zenyte.utils.TextUtils;
+import net.rsprot.protocol.game.outgoing.friendchat.UpdateFriendChatChannelFull;
+import net.rsprot.protocol.game.outgoing.friendchat.UpdateFriendChatChannelFullV2;
+import net.rsprot.protocol.message.OutgoingGameMessage;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,24 +19,21 @@ import java.util.Set;
 public final class ClanChannelFullBuilder extends ClanChannelBuilder {
 
     ClanChannelFullBuilder(final ClanChannel channel, final Player clanOwner) {
-        super(ServerProt.UPDATE_FRIENDCHAT_CHANNEL_FULL, channel, clanOwner);
+        super(channel, clanOwner);
     }
 
     @Override
-    protected void build(ClanChannel channel, Player clanOwner, RSBuffer buffer) {
+    protected OutgoingGameMessage build(ClanChannel channel, Player clanOwner) {
         final Set<Player> members = channel.getMembers();
         final Map<String, ClanRank> rankedMembers = channel.getRankedMembers();
-        buffer.writeString(channel.getOwner());
-        buffer.writeLong(TextUtils.stringToLong(channel.getPrefix()));
-        buffer.writeByte(channel.getKickRank().getId() - 1);
-        final int size = members.size();
-        buffer.writeByte(size == 0 ? 255 : size);
+        final List<UpdateFriendChatChannelFull.FriendChatEntry> entries = new ArrayList<>(members.size());
         for (final Player member : members) {
-            buffer.writeString(member.getName());
-            buffer.writeShort(GameConstants.WORLD_PROFILE.getNumber());
-            buffer.writeByte(getRank(rankedMembers.get(member.getUsername()), member, clanOwner));
-            buffer.writeString("");
+            entries.add(new UpdateFriendChatChannelFull.FriendChatEntry(member.getName(),
+                    GameConstants.WORLD_PROFILE.getNumber(),
+                    getRank(rankedMembers.get(member.getUsername()), member, clanOwner), ""));
         }
+        return new UpdateFriendChatChannelFullV2(new UpdateFriendChatChannelFullV2.JoinUpdate(channel.getOwner(),
+                TextUtils.stringToLong(channel.getPrefix()), channel.getKickRank().getId() - 1, entries));
     }
 
 }

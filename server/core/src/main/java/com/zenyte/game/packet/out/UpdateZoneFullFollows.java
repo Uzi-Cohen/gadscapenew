@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.packet.GamePacketEncoderMode;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -16,6 +16,7 @@ public final class UpdateZoneFullFollows implements GamePacketEncoder {
 
 	private final int chunkX;
 	private final int chunkY;
+	private final int plane;
 
 	@Override
 	public void log(@NotNull final Player player) {
@@ -23,16 +24,19 @@ public final class UpdateZoneFullFollows implements GamePacketEncoder {
 	}
 
 	public UpdateZoneFullFollows(int chunkX, int chunkY) {
+		this(chunkX, chunkY, 0);
+	}
+
+	/** chunkX/chunkY: zone south-west tile relative to the build area (e.g. 48); plane: the zone's level (rev 241). */
+	public UpdateZoneFullFollows(int chunkX, int chunkY, int plane) {
+		this.plane = plane;
 		this.chunkX = chunkX;
 		this.chunkY = chunkY;
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.UPDATE_ZONE_FULL_FOLLOWS.gamePacketOut();
-		buffer.writeByte128(chunkX);
-		buffer.writeByte(chunkY);
-		return buffer;
+	public OutgoingGameMessage toMessage() {
+		return new net.rsprot.protocol.game.outgoing.zone.header.UpdateZoneFullFollows(chunkX, chunkY, plane);
 	}
 
 	@Override

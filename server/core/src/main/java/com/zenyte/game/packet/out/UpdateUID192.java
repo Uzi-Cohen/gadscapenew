@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -27,11 +27,8 @@ public final class UpdateUID192 implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.UPDATE_UID192.gamePacketOut();
-        buffer.writeInt(0);
-        buffer.writeBytes(uid);
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.misc.client.UpdateUid192(java.util.Arrays.copyOf(uid, 24));
     }
 
     @Override

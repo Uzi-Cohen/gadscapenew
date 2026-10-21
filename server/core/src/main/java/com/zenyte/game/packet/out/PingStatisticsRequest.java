@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.packet.GamePacketEncoderMode;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -20,11 +20,9 @@ public final class PingStatisticsRequest implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.SEND_PING.gamePacketOut();
+    public OutgoingGameMessage toMessage() {
         final long time = System.nanoTime();
-        buffer.writeLong(time);
-        return buffer;
+        return new net.rsprot.protocol.game.outgoing.misc.client.SendPing((int) (time >>> 32), (int) time);
     }
 
     @Override

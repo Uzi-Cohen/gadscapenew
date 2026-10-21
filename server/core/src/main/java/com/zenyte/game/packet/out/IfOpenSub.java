@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.model.ui.PaneType;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -32,12 +32,8 @@ public final class IfOpenSub implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.IF_OPENSUB.gamePacketOut();
-        buffer.writeShortLE(interfaceId);
-        buffer.writeByte128(overlay ? 1 : 0);
-        buffer.writeIntIME(pane.getId() << 16 | paneChildId);
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.interfaces.IfOpenSub(pane.getId(), paneChildId, interfaceId, overlay ? 1 : 0);
     }
 
     @Override

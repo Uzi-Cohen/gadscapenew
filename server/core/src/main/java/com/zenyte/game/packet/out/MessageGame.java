@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.MessageType;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -29,15 +29,8 @@ public final class MessageGame implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.MESSAGE_GAME.gamePacketOut();
-		buffer.writeSmart(type.getType());
-		buffer.writeByte(extension != null ? 1 : 0);
-		if (extension != null) {
-			buffer.writeString(extension);
-		}
-		buffer.writeString(message);
-		return buffer;
+	public OutgoingGameMessage toMessage() {
+		return new net.rsprot.protocol.game.outgoing.misc.player.MessageGame(type.getType(), extension, message);
 	}
 
 	@Override

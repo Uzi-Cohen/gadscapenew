@@ -113,7 +113,7 @@ public class SceneSynchronization {
                 final Short2ObjectMap<WorldObject> spawnedObjects = chunk.getSpawnedObjects();
                 final Short2ObjectMap<WorldObject> originalObjects = chunk.getOriginalObjects();
                 final Set<FloorItem> floorItems = chunk.getFloorItems();
-                player.send(new UpdateZoneFullFollows(x << 3, y << 3));
+                player.send(new UpdateZoneFullFollows(x << 3, y << 3, plane));
                 if (!originalObjects.isEmpty()) {
                     final ObjectCollection<WorldObject> objects = originalObjects.values();
                     for (final WorldObject removedObject : objects) {

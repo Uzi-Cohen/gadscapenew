@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.Setting;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -26,10 +26,8 @@ public final class SetPrivateChatFilter implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.CHAT_FILTER_SETTINGS_PRIVATECHAT.gamePacketOut();
-		buffer.writeByte(player.getNumericAttribute(Setting.PRIVATE_FILTER.toString()).intValue());
-		return buffer;
+	public OutgoingGameMessage toMessage() {
+		return new net.rsprot.protocol.game.outgoing.misc.player.ChatFilterSettingsPrivateChat(player.getNumericAttribute(Setting.PRIVATE_FILTER.toString()).intValue());
 	}
 
 	@Override

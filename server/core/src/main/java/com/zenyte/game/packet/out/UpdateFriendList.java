@@ -1,13 +1,13 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.GameConstants;
 import com.zenyte.game.content.clans.ClanManager;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import mgi.utilities.StringFormatUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,33 +34,27 @@ public final class UpdateFriendList implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.UPDATE_FRIENDLIST.gamePacketOut();
+    public OutgoingGameMessage toMessage() {
+        final java.util.ArrayList<net.rsprot.protocol.game.outgoing.social.UpdateFriendList.Friend> entries = new java.util.ArrayList<>(friends.size());
         for (final UpdateFriendList.FriendEntry entry : friends) {
             final String username = entry.username;
             final String displayname = StringFormatUtil.formatString(entry.username);
             final Optional<Player> friend = World.getPlayer(username);
             int world = 0;
             if (friend.isPresent()) {
-                Player friendPlayer = friend.get();
+                final Player friendPlayer = friend.get();
                 if (!friendPlayer.isFinished() && player.getSocialManager().isVisible(friendPlayer)) {
                     world = GameConstants.WORLD_PROFILE.getNumber();
                 }
             }
-            buffer.writeByte(entry.added ? 1 : 0);
-            buffer.writeString(displayname);
-            buffer.writeString("");
-            buffer.writeShort(world);
-            buffer.writeByte(ClanManager.getRank(player, username).getId());
-            buffer.writeByte(0);
+            final int rank = ClanManager.getRank(player, username).getId();
             if (world > 0) {
-                buffer.writeString("");
-                buffer.writeByte(0);
-                buffer.writeInt(0);
+                entries.add(new net.rsprot.protocol.game.outgoing.social.UpdateFriendList.OnlineFriend(entry.added, displayname, "", world, rank, 0, "", "", 0, 0));
+            } else {
+                entries.add(new net.rsprot.protocol.game.outgoing.social.UpdateFriendList.OfflineFriend(entry.added, displayname, "", rank, 0, ""));
             }
-            buffer.writeString("");
         }
-        return buffer;
+        return new net.rsprot.protocol.game.outgoing.social.UpdateFriendList(entries);
     }
 
 

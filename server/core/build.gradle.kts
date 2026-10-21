@@ -12,6 +12,9 @@ dependencies {
     api(projects.cache)
     api(projects.coreModel)
 
+    // rev 241 networking (MIT, https://github.com/blurite/rsprot)
+    api(libs.rsprot.osrs241.api)
+
     api(libs.kaml)
     api(libs.logback.classic)
     api(libs.fastutil)
@@ -27,6 +30,7 @@ dependencies {
 
     implementation(libs.apache.commons.lang3)
     implementation(libs.apache.commons.codec)
+    implementation(libs.apache.ant) // bzip2 containers in the rsprot JS5 reader (same decoder as jagcached)
     implementation(libs.jctools.core)
     implementation(libs.jackson.dataformat.yaml)
     implementation(libs.jackson.module.afterburner)

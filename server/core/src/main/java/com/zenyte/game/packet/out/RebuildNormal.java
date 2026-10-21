@@ -1,13 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.packet.GamePacketEncoderMode;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.game.world.region.XTEALoader;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
-import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -30,34 +28,10 @@ public final class RebuildNormal implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.REBUILD_NORMAL.gamePacketOut();
+    public OutgoingGameMessage toMessage() {
         player.getForceReloadMap().set(false);
-        if (init) {
-            player.getPlayerViewport().init(buffer);
-        }
-        final int chunkX = player.getLocation().getChunkX();
-        final int chunkY = player.getLocation().getChunkY();
-        buffer.writeShortLE(chunkY);
-        buffer.writeShortLE128(chunkX);
-        final ByteBuf xteasBuf = buffer.alloc().buffer();
-        try {
-            int regionCount = 0;
-            for (int xCalc = (chunkX - 6) / 8; xCalc <= (chunkX + 6) / 8; xCalc++) {
-                for (int yCalc = (chunkY - 6) / 8; yCalc <= (chunkY + 6) / 8; yCalc++) {
-                    final int regionID = yCalc + (xCalc << 8);
-                    for (int xtea : XTEALoader.getXTEAs(regionID)) {
-                        xteasBuf.writeInt(xtea);
-                    }
-                    regionCount++;
-                }
-            }
-            buffer.writeShort(regionCount);
-            buffer.writeBytes(xteasBuf);
-        } finally {
-            xteasBuf.release();
-        }
-        return buffer;
+        // rev 241: no XTEA keys; the login rebuild (with the GPI init block) is REBUILD_LOGIN, sent by the login code.
+        return com.gadscape.network.rsprot.RsprotOut.rebuildNormal(player);
     }
 
     @Override

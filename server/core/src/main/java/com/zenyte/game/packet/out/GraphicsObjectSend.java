@@ -1,12 +1,12 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.GraphicsObjectRS;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 
 public class GraphicsObjectSend implements GamePacketEncoder {
     private final GraphicsObjectRS gfx;
@@ -21,18 +21,10 @@ public class GraphicsObjectSend implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.GRAPHICSOBJECT_SPAWN.gamePacketOut();
+    public OutgoingGameMessage toMessage() {
         final Location lastTile = player.getLastLoadedMapRegionTile();
         final Location spawnLoc = gfx.getLocation();
-        final int chunkX = player.getLastLoadedMapRegionTile().getChunkX();
-        final int chunkY = player.getLastLoadedMapRegionTile().getChunkY();
-        final int srcHash = chunkX << 16 | chunkY << 8 & 255 | spawnLoc.getLocalHash(lastTile);
-        buffer.writeUnsignedShort(gfx.getDelay());
-        buffer.writeByte(0);
-        buffer.writeUnsignedShortAdd(gfx.getId());
-        buffer.write3UShort(srcHash);
-        return buffer;
+        return new net.rsprot.protocol.game.outgoing.specific.MapAnimSpecific(gfx.getId(), gfx.getDelay(), 0, spawnLoc.getLocalX(lastTile), spawnLoc.getLocalY(lastTile));
     }
 
     @Override

@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.object.WorldObject;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -30,13 +30,7 @@ public final class LocDel implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.LOC_DEL.gamePacketOut();
-        final int targetLocalX = object.getX() - ((object.getX() >> 3) << 3);
-        final int targetLocalY = object.getY() - ((object.getY() >> 3) << 3);
-        final int offsetHash = (targetLocalX & 7) << 4 | (targetLocalY & 7);
-        buffer.writeByte(offsetHash);
-        buffer.write128Byte((object.getType() << 2) + (object.getRotation() & 3));
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.zone.payload.LocDel(object.getX() & 7, object.getY() & 7, object.getType(), object.getRotation() & 3);
     }
 }

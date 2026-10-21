@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -45,20 +45,8 @@ public final class RunClientScript implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.RUNCLIENTSCRIPT.gamePacketOut();
-		buffer.writeString(blank ? "" : type);
-		if (!blank) {
-			for (int i = arguments.length - 1; i >= 0; i--) {
-				if (arguments[i] instanceof String) {
-					buffer.writeString((String) arguments[i]);
-				} else {
-					buffer.writeInt((Integer) arguments[i]);
-				}
-			}
-		}
-		buffer.writeInt(scriptId);
-		return buffer;
+	public OutgoingGameMessage toMessage() {
+		return com.gadscape.network.rsprot.RsprotOut.runClientScript(scriptId, blank ? null : arguments);
 	}
 
 	@Override

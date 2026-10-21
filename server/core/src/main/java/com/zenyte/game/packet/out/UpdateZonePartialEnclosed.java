@@ -1,12 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.packet.GamePacketEncoderMode;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
-import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,29 +45,11 @@ public final class UpdateZonePartialEnclosed implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.UPDATE_ZONE_PARTIAL_ENCLOSED.gamePacketOut();
-        final int localX = getLocal(((x >> 3) << 3), player.getLastLoadedMapRegionTile().getChunkX());
-        final int localY = getLocal(((y >> 3) << 3), player.getLastLoadedMapRegionTile().getChunkY());
-        buffer.writeByteC(localY);
-        buffer.writeByteC(localX);
-        for (int i = packets.size() - 1; i >= 0; i--) {
-            final GamePacketEncoder packet = packets.get(i);
-            final int arrayIndex = ArrayUtils.indexOf(ZONE_FOLLOW_TYPES, packet.getClass());
-            if (arrayIndex == -1) {
-                continue;
-            }
-            buffer.writeByte(arrayIndex);
-            try (GamePacketOut encode = packet.encode()) {
-                buffer.writeBytes(encode.content());
-            }
-            try {
-                packet.logChecked(player);
-            } catch (Exception e) {
-                logger.error("Failed to logChecked", e);
-            }
-        }
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        // the rev-211 encoder wrote the appended packets last-to-first
+        final List<GamePacketEncoder> ordered = new ArrayList<>(packets);
+        java.util.Collections.reverse(ordered);
+        return com.gadscape.network.rsprot.RsprotOut.zonePartialEnclosed(player, x, y, ordered);
     }
 
     private static final Class<?>[] ZONE_FOLLOW_TYPES = new Class<?>[]{

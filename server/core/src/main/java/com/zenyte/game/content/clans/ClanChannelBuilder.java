@@ -2,11 +2,12 @@ package com.zenyte.game.content.clans;
 
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.privilege.PlayerPrivilege;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
-import com.zenyte.net.io.RSBuffer;
+import net.rsprot.protocol.message.OutgoingGameMessage;
 
 /**
+ * Builds a friends-chat channel update. Since rev 241 the bytes are written by rsprot: {@link #build()}
+ * creates the rsprot message, {@link #toMessage()} returns it.
+ *
  * @author Kris | 28/01/2019 15:56
  * @author Jire
  */
@@ -14,14 +15,11 @@ public abstract class ClanChannelBuilder implements AutoCloseable {
 
     private final ClanChannel channel;
     private final Player clanOwner;
+    private OutgoingGameMessage message;
 
-    private final GamePacketOut buffer;
-
-    ClanChannelBuilder(final ServerProt prot, final ClanChannel channel, final Player clanOwner) {
+    ClanChannelBuilder(final ClanChannel channel, final Player clanOwner) {
         this.channel = channel;
         this.clanOwner = clanOwner;
-
-        this.buffer = prot.gamePacketOut();
     }
 
     protected int getRank(final ClanRank rank, final Player member, final Player owner) {
@@ -39,26 +37,29 @@ public abstract class ClanChannelBuilder implements AutoCloseable {
     }
 
     public final void build() {
-        build(channel, clanOwner, buffer);
+        message = build(channel, clanOwner);
     }
 
-    protected abstract void build(ClanChannel channel, Player clanOwner, RSBuffer buffer);
+    protected abstract OutgoingGameMessage build(ClanChannel channel, Player clanOwner);
 
-    public GamePacketOut encode() {
-        return buffer;
+    /** The rsprot message created by {@link #build()}. */
+    public OutgoingGameMessage toMessage() {
+        if (message == null) {
+            build();
+        }
+        return message;
     }
 
     public ClanChannel getChannel() {
         return channel;
     }
 
+    /** Kept for the call sites; rsprot messages are not reference counted. */
     public void retain() {
-        buffer.retain();
     }
 
     @Override
     public void close() {
-        buffer.release();
     }
 
 }

@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.content.grandexchange.ExchangeOffer;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -25,16 +25,10 @@ public final class GrandExchangeOffer implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.TRADING_POST_UPDATE.gamePacketOut();
-        buffer.writeByte(offer.getSlot());
-        buffer.writeByte(offer.getStage());
-        buffer.writeShort(offer.getItem().getId());
-        buffer.writeInt(offer.getPrice());
-        buffer.writeInt(offer.getItem().getAmount());
-        buffer.writeInt(offer.getAmount());
-        buffer.writeInt(offer.getTotalPrice());
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.misc.player.UpdateStockMarketSlotV2(offer.getSlot(),
+                new net.rsprot.protocol.game.outgoing.misc.player.UpdateStockMarketSlotV2.SetStockMarketSlot(offer.getStage(), offer.getItem().getId(),
+                        offer.getPrice(), offer.getItem().getAmount(), offer.getAmount(), offer.getTotalPrice()));
     }
 
     @Override

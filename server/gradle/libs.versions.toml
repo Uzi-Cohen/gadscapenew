@@ -10,7 +10,9 @@ exposed = "0.61.0"
 slf4j = "2.0.17"
 logback = "1.5.18"
 
-netty = "4.1.119.Final"
+netty = "4.2.2.Final"
+
+rsprot = "1.0.0-ALPHA-20261014"
 
 asm = "9.8"
 jackson = "2.18.3"
@@ -124,6 +126,8 @@ postgresql = { module = "org.postgresql:postgresql", version = "42.7.5" }
 mockk = { module = "io.mockk:mockk", version = "1.13.17" }
 
 toml4j = { module = "io.hotmoka:toml4j", version = "0.7.3" }
+
+rsprot-osrs241-api = { module = "net.rsprot:osrs-241-api", version.ref = "rsprot" }
 
 runelite-api = { module = "net.runelite:runelite-api", version.ref = "runelite" }
 runelite-cache = { module = "net.runelite:cache", version.ref = "runelite" }

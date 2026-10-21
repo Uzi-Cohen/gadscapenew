@@ -349,7 +349,7 @@ public class PacketDispatcher {
 	}
 
 	public void sendMapFlag(final int x, final int y) {
-		player.send(new SetMapFlag(x, y));
+		player.send(new SetMapFlag(player, x, y));
 	}
 
 	public void resetMapFlag() {
@@ -357,11 +357,11 @@ public class PacketDispatcher {
 	}
 
 	public void sendCameraLook(final int viewLocalX, final int viewLocalY, final int cameraHeight, final int speed, final int acceleration) {
-		player.send(new CamLookAt(viewLocalX, viewLocalY, cameraHeight, speed, acceleration));
+		player.send(new CamLookAt(player, viewLocalX, viewLocalY, cameraHeight, speed, acceleration));
 	}
 
 	public void sendCameraPosition(final int viewLocalX, final int viewLocalY, final int cameraHeight, final int speed, final int acceleration) {
-		player.send(new CamMoveTo(viewLocalX, viewLocalY, cameraHeight, speed, acceleration));
+		player.send(new CamMoveTo(player, viewLocalX, viewLocalY, cameraHeight, speed, acceleration));
 	}
 
 	public void sendCameraShake(final CameraShakeType type, final int shakeIntensity, final int movementIntensity, final int speed) {

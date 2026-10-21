@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 public class CamMoveTo implements GamePacketEncoder {
@@ -13,6 +13,8 @@ public class CamMoveTo implements GamePacketEncoder {
 	private final int cameraHeight;
 	private final int speed;
 	private final int acceleration;
+	/** Used to turn the build-area coordinates into the absolute ones rev 241 expects; null = already absolute. */
+	private final Player player;
 
 	@Override
 	public void log(@NotNull final Player player) {
@@ -20,6 +22,11 @@ public class CamMoveTo implements GamePacketEncoder {
 	}
 
 	public CamMoveTo(int localX, int localY, int cameraHeight, int speed, int acceleration) {
+		this(null, localX, localY, cameraHeight, speed, acceleration);
+	}
+
+	public CamMoveTo(Player player, int localX, int localY, int cameraHeight, int speed, int acceleration) {
+		this.player = player;
 		this.localX = localX;
 		this.localY = localY;
 		this.cameraHeight = cameraHeight;
@@ -28,14 +35,10 @@ public class CamMoveTo implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.CAM_MOVETO.gamePacketOut();
-		buffer.writeByte(localX);
-		buffer.writeByte(localY);
-		buffer.writeShort(cameraHeight);
-		buffer.writeByte(speed);
-		buffer.writeByte(acceleration);
-		return buffer;
+	public OutgoingGameMessage toMessage() {
+		final int baseX = player == null ? 0 : (player.getLastLoadedMapRegionTile().getChunkX() - 6) << 3;
+		final int baseY = player == null ? 0 : (player.getLastLoadedMapRegionTile().getChunkY() - 6) << 3;
+		return new net.rsprot.protocol.game.outgoing.camera.CamMoveToV3(baseX + localX, baseY + localY, cameraHeight, speed, acceleration, false);
 	}
 
 	@Override

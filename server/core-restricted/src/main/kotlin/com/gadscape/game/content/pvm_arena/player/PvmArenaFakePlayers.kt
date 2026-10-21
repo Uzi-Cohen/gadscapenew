@@ -14,7 +14,6 @@ import com.zenyte.game.item.ItemId
 import com.zenyte.game.packet.`in`.event.MoveGameClickEvent
 import com.zenyte.game.packet.`in`.event.OpHeldEvent
 import com.zenyte.game.packet.`in`.event.OpObjEvent
-import com.zenyte.game.packet.out.RebuildNormal
 import com.zenyte.game.task.WorldTask
 import com.zenyte.game.task.WorldTasksManager
 import com.zenyte.game.world.World
@@ -47,8 +46,6 @@ private fun spawn(player: Player, team: PvmArenaTeam, index: Int, location: Loca
     fake.lastLoadedMapRegionTile = location.copy()
     fake.afterLoadMapRegions()
     fake.putBooleanAttribute("registered", true)
-    val rebuildNormal = RebuildNormal(fake, true).encode()
-    rebuildNormal.release()
     WorldTasksManager.schedule(1) {
         fake.isInitialized = true
         fake.combatDefinitions.isAutoRetaliate = false
