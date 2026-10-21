@@ -36,7 +36,7 @@ public class GameShop {
         player.getTemporaryAttributes().put("Shop", this);
         player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, INTERFACE);
         player.getInterfaceHandler().sendInterface(InterfacePosition.SINGLE_TAB, INVENTORY_INTERFACE);
-        player.getPacketDispatcher().sendClientScript(1074, 3, name, -1, 0, 1); // 241 shop_main_init(inv, string, obj, int, boolean)
+        player.getPacketDispatcher().sendClientScript(1074, name, 3);
         player.getPacketDispatcher().sendClientScript(149, 19726336, 93, 4, 7, 0, -1, "Value<col=ff9040>", "Sell 1<col=ff9040>", "Sell 5<col=ff9040>", "Sell 10<col=ff9040>", "Sell 50<col=ff9040>");
 		player.getPacketDispatcher().sendComponentSettings(INTERFACE, 16, 0, 41, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2,
 				AccessMask.CLICK_OP3, AccessMask.CLICK_OP4, AccessMask.CLICK_OP5, AccessMask.CLICK_OP10);

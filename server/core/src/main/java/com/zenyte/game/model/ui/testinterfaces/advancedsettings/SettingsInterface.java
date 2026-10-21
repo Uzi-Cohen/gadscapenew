@@ -24,8 +24,8 @@ import static com.zenyte.game.world.entity.player.VarManager.appendPersistentVar
 public class SettingsInterface extends Interface {
 
     static final int SHOW_LESS_OR_MORE_INFORMATION_VARBIT = 9665;
-    public static final int SETTINGS_SEARCH_LEFT_VARBIT = 16073; // 241 floater_is_searching (211: 9638, now reused)
-    public static final int SETTINGS_SEARCH_RIGHT_VARBIT = 16074; // 241 floater_search_listen_for_keyboard (211: 9639, now reused)
+    public static final int SETTINGS_SEARCH_LEFT_VARBIT = 9638;
+    public static final int SETTINGS_SEARCH_RIGHT_VARBIT = 9639;
     static final int SETTINGS_CURRENT_CATEGORY_VARBIT = 9656;
     public static final int MUSIC_VOLUME_MUTED_VARBIT_ID = 9666;
     public static final int SOUND_EFFECT_VOLUME_MUTED_VARBIT_ID = 9674;
@@ -67,12 +67,12 @@ public class SettingsInterface extends Interface {
     protected void attach() {
         put(4, "Close");
         put(5, "Show less/more information");
-        put(11, "Search"); // 211: 10
-        put(20, "Setting"); // 211: 19
-        put(22, "Slider"); // 211: 21
-        put(24, "Category"); // 211: 23
-        put(26, "Cancel drop-down selection"); // 211: 25
-        put(29, "Drop-down menu"); // 211: 28
+        put(10, "Search");
+        put(19, "Setting");
+        put(21, "Slider");
+        put(23, "Category");
+        put(25, "Cancel drop-down selection");
+        put(28, "Drop-down menu");
     }
 
     @Override

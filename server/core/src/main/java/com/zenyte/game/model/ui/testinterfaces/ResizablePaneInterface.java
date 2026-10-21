@@ -15,10 +15,10 @@ public class ResizablePaneInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(21, "Gravestone info"); // 211: 20
-        put(44, "Open Game Noticeboard"); // 211: 43
-        put(61, "Character Summary"); // 211: 60
-        put(65, "Toggle spell filtering"); // 211: 64
+        put(20, "Gravestone info");
+        put(43, "Open Game Noticeboard");
+        put(60, "Character Summary");
+        put(64, "Toggle spell filtering");
     }
 
     @Override

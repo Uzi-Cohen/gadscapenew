@@ -13,17 +13,14 @@ import com.zenyte.game.world.entity.player.Player;
 public class CombatTabInterface extends Interface {
     @Override
     protected void attach() {
-        // Build 241 combat_interface (593) ids; 211 ids in the comments.
-        put(6, "Attack style 1"); // 211: 4
-        put(10, "Attack style 2"); // 211: 8
-        put(14, "Attack style 3"); // 211: 12
-        put(18, "Attack style 4"); // 211: 16
-        put(23, "Defensive autocast"); // 211: 21
-        put(28, "Autocast"); // 211: 26
-        put(32, "Auto retaliate"); // 211: 30
-        put(41, "Special attack"); // 211: 36 (special_attack, inside the hidden sp_attackbar)
-        put(57, "Special attack main hand"); // 241 special_attack_mainhand (new bar)
-        put(67, "Special attack off hand"); // 241 special_attack_offhand (new bar)
+        put(4, "Attack style 1");
+        put(8, "Attack style 2");
+        put(12, "Attack style 3");
+        put(16, "Attack style 4");
+        put(21, "Defensive autocast");
+        put(26, "Autocast");
+        put(30, "Auto retaliate");
+        put(36, "Special attack");
     }
 
     @Override
@@ -76,7 +73,7 @@ public class CombatTabInterface extends Interface {
             }
             player.getCombatDefinitions().setAutoRetaliate(!player.getCombatDefinitions().isAutoRetaliate());
         });
-        final BasicHandler special = player -> {
+        bind("Special attack", player -> {
             if (player.isLocked()) {
                 return;
             }
@@ -86,10 +83,7 @@ public class CombatTabInterface extends Interface {
                 return;
             }
             player.getCombatDefinitions().setSpecial(!player.getCombatDefinitions().isUsingSpecial(), false);
-        };
-        bind("Special attack", special);
-        bind("Special attack main hand", special);
-        bind("Special attack off hand", special);
+        });
     }
 
     @Override

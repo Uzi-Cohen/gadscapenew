@@ -34,8 +34,8 @@ public class BankInventoryInterface extends Interface implements SwitchPlugin {
     protected void attach() {
         put(3, "Interact with Item");
         put(4, "Wear");
-        put(6, "Empty Looting Bag"); // 211: 8
-        put(11, "Deposit Looting Bag Item"); // 211: 13
+        put(8, "Empty Looting Bag");
+        put(13, "Deposit Looting Bag Item");
     }
 
     @Override

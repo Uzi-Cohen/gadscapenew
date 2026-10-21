@@ -69,7 +69,7 @@ public class DualItemOptionMessage implements Message {
 	@Override
 	public final void display(final Player player) {
 		player.getPacketDispatcher().sendClientScript(2379);
-		player.getVarManager().sendBitInstant(10670, 0); // 241 chatmodal_unclamp (211 varbit 5983 is reused in 241)
+		player.getVarManager().sendBitInstant(5983, 0);
 		player.getInterfaceHandler().sendInterface(InterfacePosition.DIALOGUE, OPTION_INTERFACE);
 		player.getPacketDispatcher().sendComponentText(OPTION_INTERFACE, 2, option1);
 		player.getPacketDispatcher().sendComponentText(OPTION_INTERFACE, 3, option2);

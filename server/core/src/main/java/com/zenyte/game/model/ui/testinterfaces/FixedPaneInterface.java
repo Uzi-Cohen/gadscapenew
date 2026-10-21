@@ -15,10 +15,10 @@ public class FixedPaneInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(40, "Gravestone info"); // 211: 39
-        put(49, "Open Game Noticeboard"); // 211: 47
-        put(66, "Character Summary"); // 211: 64
-        put(70, "Toggle spell filtering"); // 211: 68
+        put(39, "Gravestone info");
+        put(47, "Open Game Noticeboard");
+        put(64, "Character Summary");
+        put(68, "Toggle spell filtering");
     }
 
     @Override

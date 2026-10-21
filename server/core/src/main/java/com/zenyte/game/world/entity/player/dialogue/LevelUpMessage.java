@@ -11,13 +11,8 @@ public class LevelUpMessage implements Message {
 		this.skill = skill;
 	}
 	
-	/**
-	 * Per skill: (icon layer component - 1) in build 241 levelup_display (233), taken from the 241 component names
-	 * (attack=6, defence=17, ..., sailing=57). 211 values: 5, 16, 46, 29, 37, 35, 31, 11, 50, 24, 22, 20, 13, 44, 33,
-	 * 27, 3, 48, 42, 18, 40, -1, 8 (magic pointed at the hunter layer there).
-	 */
-	private static final int[] SKILL_IDS = new int[] { 5, 16, 48, 29, 39, 37, 33, 11, 52, 24, 22, 20, 13, 46, 35, 27, 3, 50, 44, 18, 42,
-			-1, 8, 56 };
+	private static final int[] SKILL_IDS = new int[] { 5, 16, 46, 29, 37, 35, 31, 11, 50, 24, 22, 20, 13, 44, 33, 27, 3, 48, 42, 18, 40,
+			-1, 8 };
 	
 	private final int skill;
 
@@ -35,9 +30,7 @@ public class LevelUpMessage implements Message {
 				"<col=000080>Congratulations, you just advanced a " + Skills.getSkillName(skill) + " level.");
 		player.getPacketDispatcher().sendComponentText(233, 2,
 				"Your " + Skills.getSkillName(skill) + " level is now " + player.getSkills().getLevelForXp(skill) + ".");
-		if (skill >= 0 && skill < SKILL_IDS.length && SKILL_IDS[skill] >= 0) {
-			player.getPacketDispatcher().sendComponentVisibility(233, SKILL_IDS[skill] + 1, false);
-		}
+		player.getPacketDispatcher().sendComponentVisibility(233, SKILL_IDS[skill] + 1, false);
         player.getPacketDispatcher().sendComponentText(233, 3, continueMessage(player));
 	}
 

@@ -41,42 +41,41 @@ public class BankInterface extends Interface implements SwitchPlugin {
 
     @Override
     protected void attach() {
-        // Build 241 bankmain (12) ids, matched by component names, the bankmain_init argument order and the
-        // menu hook scripts (517/1428/1270/2207/2211); 211 ids in the comments. In 241 the separate
-        // Swap/Insert and Item/Note buttons became single toggles (swap_insert, note).
-        put(125, "Group storage"); // gim_storage (211: 8)
-        put(23, "Swap mode"); // swap_insert toggle (211: 17 "Swap", 19 "Insert")
-        put(25, "Withdraw as Note"); // note toggle (211: 24 "Note", 22 "Item")
-        put(29, "First option amount 1"); // quantity1 (211: 28)
-        put(31, "First option amount 5"); // quantity5 (211: 30)
-        put(33, "First option amount 10"); // quantity10 (211: 32)
-        put(35, "First option amount X"); // quantityx (211: 34)
-        put(37, "First option amount All"); // quantityall (211: 36)
-        put(40, "Always set placeholders"); // placeholder (211: 38)
-        put(42, "Search"); // search (211: 40)
-        put(47, "Deposit inventory"); // depositinv (211: 42)
-        put(49, "Deposit equipment"); // depositworn (211: 44)
-        put(10, "Interact with tab"); // tabs (211: 11)
-        put(129, "Tab display"); // tabdisplay_select_1, script517 (211: 50)
-        put(131, "Show bank tutorial"); // banktut_toggle (211: 52)
-        put(132, "Inventory item options"); // sideops_toggle (211: 51)
-        put(135, "Deposit worn items button"); // depositworn_toggle (211: 54)
-        put(134, "Deposit inventory button"); // depositinv_toggle (211: 55)
-        put(140, "Release all placeholders"); // release_placeholders, script1270 (211: 56)
-        put(143, "Set bank filler amount to 1"); // bank_filler_1 (211: 58)
-        put(145, "Set bank filler amount to 10"); // bank_filler_10 (211: 60)
-        put(147, "Set bank filler amount to 50"); // bank_filler_50 (211: 62)
-        put(149, "Set bank filler amount to X"); // bank_filler_x (211: 64)
-        put(151, "Set bank filler amount to All"); // bank_filler_all (211: 66)
-        put(153, "Add bank fillers"); // bank_filler_confirm, script2211 (211: 68)
-        put(130, "Toggle incinerator"); // incinerator_toggle, script1428 (211: 53)
-        put(8, "Bank size"); // capacity (211: 9)
-        put(7, "Bank size tooltip 1"); // capacity_layer
-        put(108, "Bank size tooltip 2"); // bank_highlight (211: 115)
-        put(12, "Interact with item"); // items (211: 13)
-        put(55, "Incinerate item"); // incinerator_confirm (211: 47)
-        put(4, "Show tutorial"); // bank_tut
-        put(9999, "Preset Manager"); // custom GadScape component (211 cache: 124); absent on the vanilla 241 cache, 241 124 is popup_button_in
+        put(8, "Group storage");
+        put(17, "Swap mode");
+        put(19, "Insert mode");
+        put(22, "Withdraw as Item");
+        put(24, "Withdraw as Note");
+        put(28, "First option amount 1");
+        put(30, "First option amount 5");
+        put(32, "First option amount 10");
+        put(34, "First option amount X");
+        put(36, "First option amount All");
+        put(38, "Always set placeholders");
+        put(40, "Search");
+        put(42, "Deposit inventory");
+        put(44, "Deposit equipment");
+        put(11, "Interact with tab");
+        put(50, "Tab display");
+        put(52, "Show bank tutorial");
+        put(51, "Inventory item options");
+        put(54, "Deposit worn items button");
+        put(55, "Deposit inventory button");
+        put(56, "Release all placeholders");
+        put(58, "Set bank filler amount to 1");
+        put(60, "Set bank filler amount to 10");
+        put(62, "Set bank filler amount to 50");
+        put(64, "Set bank filler amount to X");
+        put(66, "Set bank filler amount to All");
+        put(68, "Add bank fillers");
+        put(53, "Toggle incinerator");
+        put(9, "Bank size");
+        put(7, "Bank size tooltip 1");
+        put(115, "Bank size tooltip 2");
+        put(13, "Interact with item");
+        put(47, "Incinerate item");
+        put(4, "Show tutorial");
+        put(124, "Preset Manager");
         Enums.BANK_EQUIPMENT_TAB_SLOT_MAP.getValues().forEach((slot, component) -> put(component & 0xFFFF, "Unequip slot " + slot));
     }
 
@@ -112,9 +111,8 @@ public class BankInterface extends Interface implements SwitchPlugin {
         varManager.sendBit(VAR_LAST_DEPOSIT_AMOUNT, bank.getLastDepositAmount());
         dispatcher.sendClientScript(CAPACITY_TOOLTIP_SCRIPT, "Members' capacity: " + (bank.getContainer().getContainerSize()), getComponent("Bank size tooltip 1") | (interfaceId << 16), getComponent("Bank size tooltip 2") | (interfaceId << 16));
         dispatcher.sendComponentSettings(BANK, getComponent("Interact with item"), 0, bankSize, CLICK_OP1, CLICK_OP2, CLICK_OP3, CLICK_OP4, CLICK_OP5, CLICK_OP6, CLICK_OP7, CLICK_OP8, CLICK_OP9, CLICK_OP10, DRAG_DEPTH2, DRAG_TARGETABLE);
-        // Slots after the bank's capacity are the tab drop targets (211: 1209-1227 with 1200 slots; 241 has 1410).
-        dispatcher.sendComponentSettings(BANK, getComponent("Interact with item"), bankSize + 18, bankSize + 27, DRAG_TARGETABLE);
-        dispatcher.sendComponentSettings(BANK, getComponent("Interact with item"), bankSize + 9, bankSize + 17, CLICK_OP1);
+        dispatcher.sendComponentSettings(BANK, getComponent("Interact with item"), 1218, 1227, DRAG_TARGETABLE);
+        dispatcher.sendComponentSettings(BANK, getComponent("Interact with item"), 1209, 1217, CLICK_OP1);
         dispatcher.sendComponentSettings(BANK, getComponent("Tab display"), 0, 4, CLICK_OP1);
         dispatcher.sendComponentSettings(BANK, getComponent("Interact with tab"), 10, 10, CLICK_OP1, CLICK_OP7, DRAG_TARGETABLE);
         dispatcher.sendComponentSettings(BANK, getComponent("Interact with tab"), 11, 19, CLICK_OP1, CLICK_OP6, CLICK_OP7, DRAG_DEPTH1, DRAG_TARGETABLE);
@@ -150,9 +148,10 @@ public class BankInterface extends Interface implements SwitchPlugin {
         bind("Incinerate item", (player, slotId, itemId, option) -> player.getBank().incinerate(slotId, itemId));
         bind("Release all placeholders", player -> player.getBank().releasePlaceholders(-1));
         bind("Tab display", (player, slotId, itemId, option) -> player.getBank().setDisplayType(slotId));
-        // 241: one toggle button each (211 had separate Item/Note and Swap/Insert buttons).
-        bind("Withdraw as Note", player -> player.getBank().toggleSetting(BankSetting.WITHDRAW_MODE, player.getBank().getSetting(BankSetting.WITHDRAW_MODE) == 0));
-        bind("Swap mode", player -> player.getBank().toggleSetting(BankSetting.REARRANGE_MODE, player.getBank().getSetting(BankSetting.REARRANGE_MODE) == 0));
+        bind("Withdraw as Item", player -> player.getBank().toggleSetting(BankSetting.WITHDRAW_MODE, false));
+        bind("Withdraw as Note", player -> player.getBank().toggleSetting(BankSetting.WITHDRAW_MODE, true));
+        bind("Swap mode", player -> player.getBank().toggleSetting(BankSetting.REARRANGE_MODE, false));
+        bind("Insert mode", player -> player.getBank().toggleSetting(BankSetting.REARRANGE_MODE, true));
         bind("Search", player -> player.getBank().setCurrentTab(Bank.MAIN_TAB));
         bind("Set bank filler amount to 1", player -> player.getTemporaryAttributes().put("bankFillerAmount", 1));
         bind("Set bank filler amount to 10", player -> player.getTemporaryAttributes().put("bankFillerAmount", 10));

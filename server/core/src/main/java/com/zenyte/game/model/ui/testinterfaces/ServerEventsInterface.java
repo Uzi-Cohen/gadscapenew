@@ -19,7 +19,7 @@ public class ServerEventsInterface extends Interface {
 
 	@Override
 	public void open(Player player) {
-		player.getInterfaceHandler().sendInterface(getInterface().getId(), 43, PaneType.JOURNAL_TAB_HEADER, true); // 241 side_journal:tab_container (211: 33)
+		player.getInterfaceHandler().sendInterface(getInterface().getId(), 33, PaneType.JOURNAL_TAB_HEADER, true);
 		update(player);
 	}
 

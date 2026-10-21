@@ -17,14 +17,11 @@ public class MusicPlayerInterface extends Interface {
 
     @Override
     protected void attach() {
-        // Build 241 music (239) was redesigned (area/shuffle/single modes, playlists); ids matched by name.
-        // TODO rev241: the jukebox slot order now comes from the music dbtable, not enum 812 (empty in 241),
-        // so slotId -> song index below is only right while the server's music list matches the 241 order.
-        put(11, "Play song"); // jukebox (211: 5)
-        put(4, "Song name"); // now_playing_text (211: 8)
-        put(14, "Auto"); // area: "Area Mode" (211: 9 "Auto")
-        put(16, "Manual"); // single: "Single Mode" (211: 11 "Manual")
-        put(13, "Loop"); // TODO rev241: no loop button in 241 (13 is the controls layer); left on the 211 id
+        put(5, "Play song");
+        put(8, "Song name");
+        put(9, "Auto");
+        put(11, "Manual");
+        put(13, "Loop");
     }
 
     @Override

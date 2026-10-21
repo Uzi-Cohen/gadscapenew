@@ -15,10 +15,10 @@ public class SidePanelsResizablePaneInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(21, "Gravestone info"); // 211: 20
-        put(39, "Open Game Noticeboard"); // 211: 38
-        put(54, "Character Summary"); // 211: 53
-        put(58, "Toggle spell filtering"); // 211: 57
+        put(20, "Gravestone info");
+        put(38, "Open Game Noticeboard");
+        put(53, "Character Summary");
+        put(57, "Toggle spell filtering");
     }
 
     @Override

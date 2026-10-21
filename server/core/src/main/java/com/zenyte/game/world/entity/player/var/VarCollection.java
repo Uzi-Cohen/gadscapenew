@@ -77,7 +77,7 @@ public enum VarCollection {
     UNKNOWN_IRONMAN(VAR, 281, p -> 1000, POST_LOGIN),
     FOUNTAIN_OF_RUNE(VARBIT, 4145, p -> 1),
     ZEAH_FAIRY_RING(VARBIT, 4885, p -> 1, POST_LOGIN),
-    DIALOGUE_FULL_SIZE(VARBIT, 10670, p -> 1), // 241 chatmodal_unclamp (211: 5983, reused in 241)
+    DIALOGUE_FULL_SIZE(VARBIT, 5983, p -> 1),
     VYRE_WELL(VARBIT, 6455, p -> attribute(p, "vyre well charges"), POST_LOGIN),
     ACHIEVEMENT_DIARY_TAB(VARBIT, 3612, p -> 1),
     MINIGAMES_TAB(VARBIT, 3217, p -> 1),

@@ -14,7 +14,7 @@ import com.zenyte.game.world.entity.player.dialogue.Dialogue;
 public class MobilePaneInterface extends Interface {
     @Override
     protected void attach() {
-        put(111, "Function button"); // 211: 30
+        put(30, "Function button");
     }
 
     @Override

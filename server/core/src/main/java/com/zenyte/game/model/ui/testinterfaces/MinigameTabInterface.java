@@ -19,7 +19,7 @@ public class MinigameTabInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(28, "Teleport"); // 211: 26
+        put(26, "Teleport");
         put(18, "Select minigame");
     }
 

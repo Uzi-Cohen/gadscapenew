@@ -17,10 +17,6 @@ import java.util.List;
  */
 public class SkillMessage implements Message {
 	public static final int INTERFACE_ID = 270;
-	/** 241 skillmulti:a; 211 had 10 buttons from component 14, 241 has 18 (a..r) from 15. */
-	public static final int FIRST_ITEM_BUTTON = 15;
-	/** 241 skillmulti_setup takes 18 obj arguments (211: 10). */
-	public static final int ITEM_BUTTONS = 18;
 
 	public SkillMessage(final int maxQuantity, final boolean maxTen, final String message, final Item... items) {
 		final StringBuilder builder = new StringBuilder(message);
@@ -38,7 +34,7 @@ public class SkillMessage implements Message {
 		arguments.add(maxTen ? 1 : 0);
 		this.message = message;
 		arguments.add(maxQuantity);
-		for (int i = 0; i < ITEM_BUTTONS; i++) {
+		for (int i = 0; i < 10; i++) {
 			arguments.add(i < items.length ? items[i].getId() : -1);
 		}
 	}
@@ -64,7 +60,7 @@ public class SkillMessage implements Message {
 		}
 	}
 
-	private final List<Object> arguments = new ArrayList<Object>(22);
+	private final List<Object> arguments = new ArrayList<Object>(14);
 	private final String message;
 
 	@Override
@@ -77,8 +73,8 @@ public class SkillMessage implements Message {
 		player.getPacketDispatcher().sendClientScript(2046, arguments.toArray(new Object[0]));
 		// player.getPacketDispatcher().sendComponentText(INTERFACE_ID, 5, message);
 		VarCollection.DIALOGUE_FULL_SIZE.updateSingle(player);
-		for (int i = 0; i < ITEM_BUTTONS; i++) {
-			dispatcher.sendComponentSettings(INTERFACE_ID, FIRST_ITEM_BUTTON + i, 1, 7, AccessMask.CONTINUE);
+		for (int i = 0; i < amount; i++) {
+			dispatcher.sendComponentSettings(INTERFACE_ID, 14 + i, 1, 7, AccessMask.CONTINUE);
 		}
 	}
 }
