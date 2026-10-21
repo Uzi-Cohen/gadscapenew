@@ -2003,6 +2003,8 @@ public final class GameCommands {
             }
             p.getCombatDefinitions().setSpecialEnergy(amount);
         });
+        new Command(PlayerPrivilege.DEVELOPER, "qasweep", "TEST BUILD: steps through every interface, shop or special attack. " +
+                "Arguments: iface|shop|spec [from] | stop", (p, args) -> com.gadscape.qa.QaSweep.start(p, args));
         new Command(PlayerPrivilege.ADMINISTRATOR, "sound",
                 (p, args) -> p.getPacketDispatcher().sendSoundEffect(new SoundEffect(parseInt(args[0]), 1, 0, 0)));
         new Command(PlayerPrivilege.FORUM_MODERATOR, new String[]{"heal", "hitpoints", "hp"}, "Sets your health to your" +
