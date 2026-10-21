@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -383,7 +384,9 @@ public final class Patcher
 
 	/**
 	 * Finds the methods that return boolean and contain the constants "invalidhost", "192.168.1." and
-	 * ".runescape.com" (Jagex's codebase host whitelist). Exactly one of them must be called from somewhere.
+	 * ".runescape.com" (Jagex's codebase host whitelist). Exactly one of them must be called from somewhere, and
+	 * client.init must be one of its callers (in 1.13.3: to.ahl(B)Z, called from client.init, client.aba and client.abu;
+	 * to.ajp and to.aju are uncalled copies). Its body is replaced, so every caller gets "allowed".
 	 */
 	private static HostSite findHostCheck(Map<String, ClassNode> classes)
 	{
@@ -565,13 +568,13 @@ public final class Patcher
 		String pem = "-----BEGIN PRIVATE KEY-----\n"
 			+ Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII)).encodeToString(pk.getEncoded())
 			+ "\n-----END PRIVATE KEY-----\n";
-		Files.write(priv, pem.getBytes(StandardCharsets.US_ASCII));
+		writeSecret(priv, pem);
 		Files.write(dir.resolve("public-modulus.hex"), (pub.getModulus().toString(16) + "\n").getBytes(StandardCharsets.US_ASCII));
 		String yml = "# GadScape rev241 TEST key, same values as private.key, in the worlds.yml format the old server reads\n"
 			+ "# (com.gadscape.crypto.Rsa.init: base 36). For the TEST server only.\n"
 			+ "rsaPrivateExponent: \"" + pk.getPrivateExponent().toString(36) + "\"\n"
 			+ "rsaModulus: \"" + pk.getModulus().toString(36) + "\"\n";
-		Files.write(dir.resolve("worlds-test-rsa.yml"), yml.getBytes(StandardCharsets.US_ASCII));
+		writeSecret(dir.resolve("worlds-test-rsa.yml"), yml);
 		String readme = "GadScape rev241 TEST RSA key pair (1024-bit, public exponent 65537), made by client241/patcher genkey.\n"
 			+ "For the TEST server only. Never use it on the live server, never commit private.key.\n\n"
 			+ "private.key          PKCS#8 PEM (\"BEGIN PRIVATE KEY\"). Point the server at it with -Dgadscape.rsa.private=<path>.\n"
@@ -583,6 +586,21 @@ public final class Patcher
 		Files.write(dir.resolve("README.txt"), readme.getBytes(StandardCharsets.US_ASCII));
 		System.out.println("wrote " + priv + ", public-modulus.hex, worlds-test-rsa.yml, README.txt in " + dir);
 		System.out.println("public modulus " + abbrev(pub.getModulus().toString(16)));
+	}
+
+	/** Writes a file that holds the private key: owner read/write only (0600) where the file system has POSIX modes. */
+	private static void writeSecret(Path f, String text) throws IOException
+	{
+		Files.deleteIfExists(f);
+		try
+		{
+			Files.createFile(f, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+		}
+		catch (UnsupportedOperationException e)
+		{
+			Files.createFile(f); // Windows: the folder's ACL applies
+		}
+		Files.write(f, text.getBytes(StandardCharsets.US_ASCII));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------

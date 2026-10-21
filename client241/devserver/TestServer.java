@@ -364,6 +364,7 @@ public final class TestServer
 			indexCount = (int) (idx[255].length() / 6);
 			ByteArrayOutputStream b = new ByteArrayOutputStream();
 			DataOutputStream d = new DataOutputStream(b);
+			StringBuilder versions = new StringBuilder();
 			d.write(0);
 			d.writeInt(indexCount * 8);
 			for (int i = 0; i < indexCount; i++)
@@ -377,11 +378,14 @@ public final class TestServer
 				}
 				CRC32 crc = new CRC32();
 				crc.update(c);
+				int version = referenceTableVersion(c);
 				d.writeInt((int) crc.getValue());
-				d.writeInt(referenceTableVersion(c));
+				d.writeInt(version);
+				versions.append(versions.length() == 0 ? "" : " ").append(i).append('=').append(version);
 			}
 			d.flush();
 			masterIndex = b.toByteArray();
+			log("master index versions: " + versions);
 		}
 
 		static int referenceTableVersion(byte[] c) throws IOException
@@ -400,12 +404,53 @@ public final class TestServer
 					data = gz.readAllBytes();
 				}
 			}
+			else if (compression == 1)
+			{
+				// OSRS does use bzip2 for some reference tables (in 241: archives 0, 1, 2, 3, 17, 18, 24)
+				data = bunzip2(c, 9, len);
+				if (data == null)
+				{
+					log("WARNING: no bzip2 program, so the bzip2 reference table gets version 0 in the master index");
+					return 0;
+				}
+			}
 			else
 			{
-				return 0; // bzip2 reference tables are not used by OSRS
+				throw new IOException("unknown compression " + compression);
 			}
 			int protocol = data[0] & 0xFF;
 			return protocol >= 6 ? getInt(data, 1) : 0;
+		}
+
+		/**
+		 * Jagex's bzip2 is a bzip2 stream without the "BZh1" header. The JDK has no bzip2 decoder and this dev tool has
+		 * no dependencies, so it runs the bzip2 program; null if that is not installed or fails.
+		 */
+		static byte[] bunzip2(byte[] c, int off, int len)
+		{
+			try
+			{
+				Process p = new ProcessBuilder("bzip2", "-dc").redirectError(ProcessBuilder.Redirect.DISCARD).start();
+				Thread writer = new Thread(() ->
+				{
+					try (OutputStream o = p.getOutputStream())
+					{
+						o.write("BZh1".getBytes(StandardCharsets.US_ASCII));
+						o.write(c, off, len);
+					}
+					catch (IOException ignored)
+					{
+					}
+				});
+				writer.start();
+				byte[] out = p.getInputStream().readAllBytes();
+				writer.join();
+				return p.waitFor() == 0 ? out : null;
+			}
+			catch (IOException | InterruptedException e)
+			{
+				return null;
+			}
 		}
 
 		/** The group's container bytes without the 2-byte version trailer, or null if absent. */

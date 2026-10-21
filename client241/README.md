@@ -17,7 +17,7 @@ The old client in `client/` (build 211) is not used or changed by any of this.
 | `patcher/` | The patcher (plain Java + ASM 9.7.1 from Maven Central). Also makes TEST RSA keys. |
 | `test-rsa-public-modulus.hex` | The public half of the TEST RSA key. The patcher writes it into the client. |
 | `launcher/` | Starts RuneLite with the patched game client and serves its jav_config and world list. |
-| `dist/` | `run.sh`, `run.bat` and the `README.txt` that go into the portable folder. |
+| `dist/` | `run.sh`, `run.bat`, the `README.txt` and the `licenses/` folder that go into the portable folder. |
 | `exe/` | The Windows exe (Go): Java and the client packed into one file. |
 | `devserver/TestServer.java` | A tiny stand-in server for testing the client alone (JS5 cache + login check). Development only. |
 | `build.sh` | Builds all of the above. |
@@ -31,7 +31,8 @@ The old client in `client/` (build 211) is not used or changed by any of this.
    That hex number is replaced with our public key. The new key must be the same size (1024 bits).
 2. **Host check.** When the game starts it checks the server address and stops with the error `invalidhost`
    unless the address is jagex.com, *.runescape.com, 127.0.0.1 or 192.168.1.x. The one copy of that check the
-   game calls (`to.ahl`) now always says yes. (Two more copies exist that nothing calls; they are left alone.)
+   game calls (`to.ahl`, called from `client.init`, `client.aba` and `client.abu`) now always says yes, for every
+   caller. (Two more copies, `to.ajp` and `to.aju`, are never called; they are left alone.)
 
 The patched jar also gets a small file, `gadscape-patch.properties`, so the launcher can refuse a stock
 injected-client. The patcher also refuses an input jar whose SHA-256 differs from the lock.
@@ -42,7 +43,8 @@ address on *.runescape.com or *.jagex.com. The launcher handles that without cha
 
 ## Build
 
-Needs: Linux (or macOS) with a Java 17+ JDK (`javac`, `jar`), `curl`, `zip`, `unzip`; Go 1.21+ for the exe.
+Needs: Linux with a Java 17+ JDK (`javac`, `jar`), `curl`, `zip`, `unzip`; Go 1.21+ for the exe. The scripts
+avoid GNU-only tools (`shasum -a 256` is used when `sha256sum` is missing), so macOS should work, but it is untested.
 
 ```
 client241/build.sh --jre-zip <Windows x64 Java 17+ JRE zip>
@@ -58,7 +60,14 @@ Output in `--out`:
 - `GadScape-241-Test/` and `GadScape-241-Test.zip` - portable folder: `run.bat`, `run.sh`, `server.txt`, jars
 - `GadScape-241-Test.exe` - one file for Windows, Java inside (about 70 MB)
 
-Nothing downloaded or built goes into git (`.gitignore`).
+Nothing downloaded or built goes into git: `client241/.gitignore` ignores every `build/` folder (including the
+default `client241/build/`), `exe/payload/`, and all `*.jar`, `*.zip` and `*.exe` files.
+
+**Offline build.** The patcher needs ASM 9.7.1. `patcher/build.sh` takes it from `patcher/build/deps` (an earlier
+build), then `$ASM_DIR` (a folder with `asm-9.7.1.jar` and `asm-tree-9.7.1.jar`), then `~/.m2`, then the Gradle cache
+(`~/.gradle/caches/modules-2`), and downloads it from Maven Central only if none has it. Every copy is hash-checked.
+The RuneLite jars come from `--runelite-jars DIR` and are only downloaded if missing; a jar with a wrong hash or
+size is deleted, so the next run downloads it again.
 
 ## Run it against a server
 
@@ -68,7 +77,12 @@ that file that is not a comment is the server address (host name or IP). It star
 
 **Portable folder:** put the server address on the first line of `server.txt`, then `run.bat` (Windows, needs Java
 17+ in `java\` next to it or on PATH) or `./run.sh` (Linux). `./run.sh --host <address>` also works.
-RuneLite options go after `--`, for example `./run.sh -- --safe-mode --debug`.
+RuneLite options go after `--`, for example `./run.sh -- --safe-mode --debug`. `run.bat` keeps its window open with
+the client log, and pauses on an error so it can be read.
+
+**The address** can be a host name or an IPv4 address. The launcher also accepts `http://name/`, a path, a
+trailing `# comment` and `:port`; a port other than 43594 is ignored with a warning (the port cannot be changed, see
+below). The file may be UTF-8 (with or without BOM) or UTF-16 (Notepad's "Unicode"). Lines starting with `#` are skipped.
 
 The game connects to that address on **port 43594** (with a retry on 443, as Jagex's client does). The world
 list has one world: world 1, "GadScape 241 Test", at that address.
@@ -76,7 +90,11 @@ list has one world: world 1, "GadScape 241 Test", at that address.
 ### What the server needs
 
 - Build 241 protocol (rsprot `osrs-241`) on port 43594, JS5 included. The client sends revision 241,
-  sub-version 1, client type 1, platform 0.
+  sub-version 1, client type 1, platform 0. The RSA block arrives as 128 or 129 bytes (a leading zero byte).
+- The server must listen on **43594**: if the test world profile sets another port, no client can connect. The
+  jav_config says `param=15=0` (a live build), and for that the game always uses 43594 and then 443. If another port
+  is ever needed, `param=15=<non-zero>` makes the game use 40000+world without a bytecode patch, but it changes other
+  client behaviour too, so test it first.
 - The TEST private key, so it can read the login block: start the server with
   `-Dgadscape.rsa.private=<path to private.key>` (see the next section).
 
@@ -105,10 +123,16 @@ RuneLite keeps everything under `<home>/.runelite` and the game keeps its cache 
 - Portable folder on Windows: `%LOCALAPPDATA%\GadScape241Test\home`; on Linux: `~/.gadscape-241-test/home`
 - Another folder: `--home <dir>`
 
+`run.sh`, `run.bat` and the exe also start Java with `-Duser.home=<home>`, so what Java caches at startup (font
+cache, Java preferences) points at the test home too.
+
 Checked on Linux: after logging in, installing 117 HD and closing, `~/.runelite`, `~/jagexcache`,
-`~/jagex_cl_oldschool_LIVE.dat` and `~/random.dat` did not exist; all of those were inside the test home.
-(The only thing outside was the graphics driver's own shader cache, `~/.cache/mesa_shader_cache`.) The same
-was checked for the exe under Wine: nothing in the Windows profile folder, everything in `%LOCALAPPDATA%\GadScape241Test`.
+`~/jagex_cl_oldschool_LIVE.dat` and `~/random.dat` did not exist; all of those were inside the test home, and no
+other file in the real home was created or changed (apart from the graphics driver's own shader cache,
+`~/.cache/mesa_shader_cache`, which `XDG_CACHE_HOME` moves). RuneLite's Discord integration is turned off (see below);
+before that it registered a `discord-409416265891971072` URL handler outside the test home
+(`~/.local/share/applications` on Linux, `HKCU\Software\Classes` on Windows, replacing the one of a normal RuneLite).
+The exe was checked under Wine too: nothing in the Windows profile folder, everything in `%LOCALAPPDATA%\GadScape241Test`.
 
 ## How the launcher works
 
@@ -116,19 +140,46 @@ was checked for the exe under Wine: nothing in the Windows profile folder, every
 
 1. Sets `user.home` to the test home (above).
 2. Checks there is exactly one injected-client on the classpath and that it is the patched one.
-3. Writes RuneLite's runtime config to `<home>/gadscape/runelite-runtime-config.json` and points RuneLite at it
-   (`-Drunelite.rtconf`). It is RuneLite's live config minus `outdatedClientVersions` and the outage fields.
-   Without this, once RuneLite releases 1.13.4 it would list 1.13.3 as outdated and the game would refuse every
-   login with "RuneLite has been updated! Please restart your client."
-4. Serves `jav_config.ws` and `worldlist.ws` on 127.0.0.1 (a free port). The jav_config has the same keys and
+3. Serves `jav_config.ws` and `worldlist.ws` on 127.0.0.1 (a free port). The jav_config has the same keys and
    params as Jagex's (`https://oldschool.runescape.com/jav_config.ws`, build 241) with `codebase=http://<server>/`,
    `param=17` = our world list, `param=12` = world 1, `param=25=241`. `param=9` defaults to the value the old server
    used (`--session` changes it). The world list uses Jagex's binary `slr.ws` format.
-5. RuneLite 1.13.3 only takes a `--jav_config` on *.runescape.com / *.jagex.com, so it gets
+4. RuneLite 1.13.3 only takes a `--jav_config` on *.runescape.com / *.jagex.com, so it gets
    `http://jav-config.gadscape-test.runescape.com/jav_config.ws`. That name is never looked up in DNS: a proxy rule
-   inside this Java process sends requests for it to the local server from step 4. Nothing else is rerouted.
+   inside this Java process sends requests for it to the local server from step 3.
    `--jav-config <url>` makes the launcher download that jav_config and serve it the same way.
-6. Starts RuneLite with `--disable-telemetry`.
+5. Keeps private-server gameplay out of public services (see "What the client sends where" below).
+6. Writes RuneLite's runtime config to `<home>/gadscape/runelite-runtime-config.json` and points RuneLite at it
+   (`-Drunelite.rtconf`). It is RuneLite's live config minus the two login blocks, `outdatedClientVersions` and
+   `outdatedPluginVersions`, and the outage fields. Without this, once RuneLite releases 1.13.4 (or lists an
+   installed Plugin Hub plugin such as 117 HD as outdated) the game would refuse every login with "RuneLite has been
+   updated! Please restart your client." It also sets two RuneLite properties: `runelite.discord.enable=false` and
+   `runelite.api.base` (step 5). RuneLite logs the result at startup ("Using local runtime config: ...").
+7. Starts RuneLite with `--disable-telemetry`.
+
+## What the client sends where
+
+RuneLite and some of its default plugins send what happens in the game to public services. On this private
+server that data would be wrong for everyone else, so the launcher stops it:
+
+- **Blocked hosts** (`Launcher.BLOCKED_HOSTS`): `crowdsource.runescape.wiki` (the OSRS Wiki Crowdsourcing plugin,
+  on by default), `wiseoldman.net`, `templeosrs.com`, `crystalmathlabs.com` (the XP Updater plugin), and their
+  subdomains. The proxy rule sends them to a local dead end that answers 403, so nothing leaves the computer. The
+  launcher logs `blocked <host>` the first time.
+- **RuneLite's API** (`api.runelite.net/runelite-1.13.3`): RuneLite is pointed at `http://127.0.0.1:<port>/runelite-api`
+  on the launcher. Reads (GET/HEAD) are redirected to RuneLite, so item prices, the world list, Plugin Hub counts and
+  chat lookups keep working. Writes (POST/PUT/PATCH/DELETE) are refused with 403: `!kc`, `!pb`, `!qp`, `!gc`, pets,
+  `!task`, raid layouts and other chat-command submissions (which would overwrite the records of a real OSRS player
+  with the same name), loot tracker sync, RuneLite account config sync and Plugin Hub install statistics. The
+  launcher logs `api <METHOD> <path> refused`.
+- Not changed: the Plugin Hub itself (`repo.runelite.net`), RuneLite account login, hiscore lookups (Jagex), and
+  `static.runelite.net`. Plugin Hub plugins can talk to their own services; add a host to `BLOCKED_HOSTS` if one of
+  them sends gameplay somewhere.
+
+Checked: in the Xvfb run RuneLite logged `props={runelite.discord.enable=false, runelite.api.base=...}`, fetched
+item prices, worlds and Plugin Hub counts through the filter, and 117 HD installed and started. A test with
+RuneLite's own OkHttp 3.14.9 got `Unexpected response code for CONNECT: 403` for all four blocked hosts, HTTP 403 for
+`POST /chat/kc`, and HTTP 200 from `api.runelite.net` for `GET /item/prices.js` and `GET /pluginhub`.
 
 ## Testing without the real server
 
@@ -138,7 +189,9 @@ was checked for the exe under Wine: nothing in the Windows profile folder, every
 java client241/devserver/TestServer.java --cache <241 cache dir> --rsa <private.key> [--login probe|refuse]
 ```
 
-It serves the cache over JS5 so the client gets to its login screen. With `--login probe` it reads the login,
+It serves the cache over JS5 so the client gets to its login screen. The master index gets each reference
+table's real version; for the bzip2-compressed ones (in 241: archives 0, 1, 2, 3, 17, 18, 24) it runs the `bzip2`
+program, since the JDK has no bzip2 decoder (without `bzip2` those get version 0, which the client still accepts). With `--login probe` it reads the login,
 decrypts the RSA part with the TEST key, prints whether it is valid and the username, then answers
 "incorrect username or password". With `--login refuse` it stops listening once the client has its cache
 connection, which is the same as logging in with no server running.
@@ -153,8 +206,13 @@ connection, which is the same as logging in with no server running.
 - The login screen still shows Jagex's "Jagex Account / Download Launcher" screens; use **Existing User**, then **Login**.
 - Port 43594 is fixed (the game's own rule for live builds). Running the test server next to the live server on the
   same machine would need another address.
-- macOS: `run.sh` should work but was not tested.
+- macOS: `run.sh` uses `lib-macos` (x64 and Apple silicon) and `jvm-args-mac.txt` (RuneLite's macOS JVM options)
+  there, but it was not tested. ARM Linux gets LWJGL's arm64 natives in `lib-linux`, also untested.
 - The exe was tested under Wine on Linux, not on real Windows. Under Wine, Java crashed in `NetworkInterface`
   while seeding `SecureRandom` until Wine-only test settings were used (`-Djava.security.properties` putting
   SunMSCAPI first); that is a Wine gap, not something real Windows needs.
-- Shipping this means shipping RuneLite's injected-client (Jagex code) with changes. Keep it to testers.
+- Shipping this means shipping RuneLite's injected-client (Jagex code) with changes. Keep it to testers. (Downloading
+  the stock jar on the tester's computer and patching it there would avoid redistributing it; the lock, the hash check
+  and the patcher are ready for that, but it is not built yet.)
+- Licenses: the portable folder, the zip and the exe carry `licenses/`: RuneLite's BSD license, the license texts
+  and copyright lines of every library jar (`licenses/THIRD-PARTY.txt` lists them) and the Apache NOTICE files.
