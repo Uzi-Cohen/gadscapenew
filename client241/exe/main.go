@@ -209,7 +209,7 @@ func crashReport(dest, home string, err error, ran time.Duration) string {
 	if err != nil {
 		msg += " (" + err.Error() + ")"
 	}
-	msg += ".\n\nSend this to Claude (Ctrl+C copies this box):\n"
+	msg += ".\n\nSend this to the GadScape team (Ctrl+C copies this box):\n"
 	tail := func(path string, n int) {
 		b, e := os.ReadFile(path)
 		if e != nil {
