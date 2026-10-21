@@ -229,6 +229,7 @@ object LiveOsrs {
                 114 -> d.contrast = s8() and 0xFF
                 115 -> d.team = u8()
                 139, 140, 148, 149 -> u16() // bought / placeholder links: other items, not copied
+                161 -> { val n = u16(); repeat(n) { u16() } } // a list of ids the newer game uses (build 241+); nothing the 211 game reads
                 249 -> { val n = u8(); repeat(n) { val isStr = u8() == 1; val k = u24(); d.params[k] = if (isStr) str() else i32() } }
                 else -> error("it uses a setting ($o) this editor can't convert yet")
             }
