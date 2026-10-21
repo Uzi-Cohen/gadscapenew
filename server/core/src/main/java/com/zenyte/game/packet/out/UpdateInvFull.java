@@ -1,5 +1,8 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+import net.rsprot.protocol.common.game.outgoing.inv.InventoryObject;
+
 import com.zenyte.game.item.Item;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
@@ -7,8 +10,6 @@ import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.container.Container;
 import com.zenyte.game.world.entity.player.container.ItemContainer;
 import com.zenyte.game.world.entity.player.container.impl.ContainerType;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -57,45 +58,31 @@ public final class UpdateInvFull implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.UPDATE_INV_FULL.gamePacketOut();
+	public OutgoingGameMessage toMessage() {
 		if (newContainer != null) {
-			final ContainerType type = this.type == null ? newContainer.getType() : this.type;
-			if (key > 0) {
-				buffer.writeInt(interfaceId << 16 | componentId);
-				buffer.writeShort(key);
-			} else {
-				buffer.writeInt(type.getInterfaceId() << 16 | type.getComponentId());
-				buffer.writeShort(type.getId());
-			}
-			final int size = newContainer.getContainerSize();
-			buffer.writeShort(size);
-			for (int i = 0; i < size; i++) {
-				final Item item = newContainer.get(i);
-				final int amount = item == null ? 0 : item.getAmount();
-				buffer.writeByte(amount > 254 ? 255 : amount);
-				if (amount > 254) {
-					buffer.writeInt(amount);
-				}
-				buffer.writeShort128(item == null ? 0 : (item.getId() + 1));
-			}
-			Container.AWAITING_RESET_CONTAINERS.add(newContainer);
-			return buffer;
+		    final ContainerType type = this.type == null ? newContainer.getType() : this.type;
+		    final int combinedId;
+		    final int inventoryId;
+		    if (key > 0) {
+		        combinedId = interfaceId << 16 | componentId;
+		        inventoryId = key;
+		    } else {
+		        combinedId = type.getInterfaceId() << 16 | type.getComponentId();
+		        inventoryId = type.getId();
+		    }
+		    final Container items = newContainer;
+		    final net.rsprot.protocol.game.outgoing.inv.UpdateInvFull message = new net.rsprot.protocol.game.outgoing.inv.UpdateInvFull(combinedId, inventoryId, items.getContainerSize(), slot -> {
+		        final Item item = items.get(slot);
+		        return item == null ? InventoryObject.NULL : InventoryObject.pack(item.getId(), item.getAmount());
+		    });
+		    Container.AWAITING_RESET_CONTAINERS.add(newContainer);
+		    return message;
 		}
-		buffer.writeInt(interfaceId << 16 | componentId);
-		buffer.writeShort(key);
 		final Item[] items = container.getItems();
-		final int size = items.length;
-		buffer.writeShort(size);
-		for (final Item item : items) {
-			final int amount = item == null ? 0 : item.getAmount();
-			buffer.writeByte(amount > 254 ? 255 : amount);
-			if (amount > 254) {
-				buffer.writeIntIME(amount);
-			}
-			buffer.writeShortLE(item == null ? 0 : (item.getId() + 1));
-		}
-		return buffer;
+		return new net.rsprot.protocol.game.outgoing.inv.UpdateInvFull(interfaceId << 16 | componentId, key, items.length, slot -> {
+		    final Item item = items[slot];
+		    return item == null ? InventoryObject.NULL : InventoryObject.pack(item.getId(), item.getAmount());
+		});
 	}
 
 	@Override

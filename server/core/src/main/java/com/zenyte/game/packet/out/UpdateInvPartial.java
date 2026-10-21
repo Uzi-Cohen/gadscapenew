@@ -1,5 +1,8 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+import net.rsprot.protocol.common.game.outgoing.inv.InventoryObject;
+
 import com.zenyte.game.item.Item;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
@@ -7,8 +10,6 @@ import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.container.Container;
 import com.zenyte.game.world.entity.player.container.ItemContainer;
 import com.zenyte.game.world.entity.player.container.impl.ContainerType;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -45,57 +46,37 @@ public final class UpdateInvPartial implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.UPDATE_INV_PARTIAL.gamePacketOut();
+	public OutgoingGameMessage toMessage() {
 		if (container != null) {
-			final ContainerType type = container.getType();
-			buffer.writeInt(type.getInterfaceId() << 16 | type.getComponentId());
-			buffer.writeShort(type.getId());
-			for (final Integer slot : container.getModifiedSlots()) {
-				buffer.writeSmart(slot);
-				int id = -1;
-				int amount = 0;
-				final Item item = container.get(slot);
-				if (item != null) {
-					id = item.getId();
-					amount = item.getAmount();
-				}
-				buffer.writeShort(id + 1);
-				if (id != -1) {
-					final int count = Math.min(amount, 255);
-					buffer.writeByte(count);
-					if (amount >= 255) {
-						buffer.writeInt(amount);
-					}
-				}
-			}
-			Container.AWAITING_RESET_CONTAINERS.add(container);
-			return buffer;
+		    final ContainerType type = container.getType();
+		    final Container items = container;
+		    final java.util.List<Integer> modified = new java.util.ArrayList<>(container.getModifiedSlots());
+		    final net.rsprot.protocol.game.outgoing.inv.UpdateInvPartial message = new net.rsprot.protocol.game.outgoing.inv.UpdateInvPartial(type.getInterfaceId() << 16 | type.getComponentId(), type.getId(),
+		            new net.rsprot.protocol.game.outgoing.inv.UpdateInvPartial.IndexedObjectProvider(modified.iterator()) {
+		                @Override
+		                public long provide(final int slot) {
+		                    final Item item = items.get(slot);
+		                    return item == null ? InventoryObject.pack(slot, -1, 0) : InventoryObject.pack(slot, item.getId(), item.getAmount());
+		                }
+		            });
+		    Container.AWAITING_RESET_CONTAINERS.add(container);
+		    return message;
 		}
-		buffer.writeInt(interfaceId << 16 | componentId);
-		buffer.writeShort(key);
+		final Item[] array = items.getItems();
+		final java.util.List<Integer> valid = new java.util.ArrayList<>(slots.length);
 		for (final int slotId : slots) {
-			if (slotId >= items.getItems().length) {
-				continue;
-			}
-			buffer.writeSmart(slotId);
-			int id = -1;
-			int amount = 0;
-			final Item item = items.getItems()[slotId];
-			if (item != null) {
-				id = item.getId();
-				amount = item.getAmount();
-			}
-			buffer.writeShort(id + 1);
-			if (id != -1) {
-				final int count = Math.min(amount, 255);
-				buffer.writeByte(count);
-				if (amount >= 255) {
-					buffer.writeInt(amount);
-				}
-			}
+		    if (slotId >= 0 && slotId < array.length) {
+		        valid.add(slotId);
+		    }
 		}
-		return buffer;
+		return new net.rsprot.protocol.game.outgoing.inv.UpdateInvPartial(interfaceId << 16 | componentId, key,
+		        new net.rsprot.protocol.game.outgoing.inv.UpdateInvPartial.IndexedObjectProvider(valid.iterator()) {
+		            @Override
+		            public long provide(final int slot) {
+		                final Item item = array[slot];
+		                return item == null ? InventoryObject.pack(slot, -1, 0) : InventoryObject.pack(slot, item.getId(), item.getAmount());
+		            }
+		        });
 	}
 
 	@Override

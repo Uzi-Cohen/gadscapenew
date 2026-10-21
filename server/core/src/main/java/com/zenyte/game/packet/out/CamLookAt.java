@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -18,6 +18,8 @@ public final class CamLookAt implements GamePacketEncoder {
 	private final int cameraHeight;
 	private final int speed;
 	private final int acceleration;
+	/** Used to turn the build-area coordinates into the absolute ones rev 241 expects; null = already absolute. */
+	private final Player player;
 
 	@Override
 	public void log(@NotNull final Player player) {
@@ -25,14 +27,10 @@ public final class CamLookAt implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.CAM_LOOKAT.gamePacketOut();
-		buffer.writeByte(viewLocalX);
-		buffer.writeByte(viewLocalY);
-		buffer.writeShort(cameraHeight);
-		buffer.writeByte(speed);
-		buffer.writeByte(acceleration);
-		return buffer;
+	public OutgoingGameMessage toMessage() {
+		final int baseX = player == null ? 0 : (player.getLastLoadedMapRegionTile().getChunkX() - 6) << 3;
+		final int baseY = player == null ? 0 : (player.getLastLoadedMapRegionTile().getChunkY() - 6) << 3;
+		return new net.rsprot.protocol.game.outgoing.camera.CamLookAtV3(baseX + viewLocalX, baseY + viewLocalY, cameraHeight, speed, acceleration, false);
 	}
 
 	@Override
@@ -41,6 +39,11 @@ public final class CamLookAt implements GamePacketEncoder {
 	}
 
 	public CamLookAt(int viewLocalX, int viewLocalY, int cameraHeight, int speed, int acceleration) {
+		this(null, viewLocalX, viewLocalY, cameraHeight, speed, acceleration);
+	}
+
+	public CamLookAt(Player player, int viewLocalX, int viewLocalY, int cameraHeight, int speed, int acceleration) {
+		this.player = player;
 		this.viewLocalX = viewLocalX;
 		this.viewLocalY = viewLocalY;
 		this.cameraHeight = cameraHeight;

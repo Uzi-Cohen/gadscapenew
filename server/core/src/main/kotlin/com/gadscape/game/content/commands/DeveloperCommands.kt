@@ -23,7 +23,6 @@ import com.zenyte.game.content.xamphur.XamphurBoost
 import com.zenyte.game.content.xamphur.XamphurHandler
 import com.zenyte.game.item.Item
 import com.zenyte.game.model.shop.ShopCurrency
-import com.zenyte.game.packet.out.RebuildNormal
 import com.zenyte.game.task.WorldTasksManager
 import com.zenyte.game.util.Colour
 import com.zenyte.game.world.World
@@ -555,9 +554,7 @@ object DeveloperCommands {
                         fake.loadMapRegions(true)
                         fake.lastLoadedMapRegionTile = loc.copy()
                         fake.afterLoadMapRegions()
-                        val rebuildNormal = RebuildNormal(fake, true).encode()
                         World.addPlayer(fake)
-                        rebuildNormal.release()
                     }
                 }
             }

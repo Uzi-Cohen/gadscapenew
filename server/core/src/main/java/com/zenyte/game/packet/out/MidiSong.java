@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -29,10 +29,8 @@ public final class MidiSong implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.MIDI_SONG.gamePacketOut();
-        buffer.writeShort(song);
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return song < 0 || song == 65535 ? new net.rsprot.protocol.game.outgoing.sound.MidiSongStop(0, 0) : new net.rsprot.protocol.game.outgoing.sound.MidiSongV2(song, 0, 0, 0, 0);
     }
 
 }

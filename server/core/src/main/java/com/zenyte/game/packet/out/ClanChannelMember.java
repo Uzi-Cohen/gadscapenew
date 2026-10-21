@@ -1,11 +1,12 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.content.clans.ClanChannel;
 import com.zenyte.game.content.clans.ClanChannelBuilder;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -27,8 +28,8 @@ public class ClanChannelMember implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		return builder.encode();
+	public OutgoingGameMessage toMessage() {
+		return builder.toMessage();
 	}
 
 	@Override

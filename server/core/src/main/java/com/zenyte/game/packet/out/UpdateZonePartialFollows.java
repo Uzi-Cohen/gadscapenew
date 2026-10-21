@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -34,13 +34,10 @@ public final class UpdateZonePartialFollows implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.UPDATE_ZONE_PARTIAL_FOLLOWS.gamePacketOut();
+    public OutgoingGameMessage toMessage() {
         final int localX = getLocal(((x >> 3) << 3), player.getLastLoadedMapRegionTile().getChunkX());
         final int localY = getLocal(((y >> 3) << 3), player.getLastLoadedMapRegionTile().getChunkY());
-        buffer.writeByteC(localY);
-        buffer.writeByte(localX);
-        return buffer;
+        return new net.rsprot.protocol.game.outgoing.zone.header.UpdateZonePartialFollows(localX, localY, player.getPlane());
     }
 
     @Override

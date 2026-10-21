@@ -1,13 +1,11 @@
 package com.zenyte.game.packet.out;
 
-import com.gadscape.game.util.HuffmanManager;
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import com.zenyte.utils.TextUtils;
-import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -42,20 +40,8 @@ public final class MessageFriendChannel implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.MESSAGE_FRIENDCHANNEL.gamePacketOut();
-        buffer.writeString(senderName);
-        buffer.writeLong(TextUtils.stringToLong(channelName));
-        buffer.writeShort(1);
-        buffer.write24BitInteger(message_uid);
-        buffer.writeByte(0);
-        final ByteBuf huffmanBuf = HuffmanManager.encodeHuffmanBuf(message);
-        try {
-            buffer.writeBytes(huffmanBuf);
-        } finally {
-            huffmanBuf.release();
-        }
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.friendchat.MessageFriendChannel(senderName, TextUtils.stringToLong(channelName), 1, message_uid, 0, message);
     }
 
     @Override

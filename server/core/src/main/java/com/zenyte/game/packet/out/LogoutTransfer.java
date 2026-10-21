@@ -1,11 +1,11 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.info.WorldType;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -22,12 +22,8 @@ public final class LogoutTransfer implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.LOGOUT_TRANSFER.gamePacketOut();
-        buffer.writeString(world.getAddress());
-        buffer.writeShort(world.getWorldId());
-        buffer.writeInt(world.getFlag());
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.logout.LogoutTransfer(world.getAddress(), world.getWorldId(), world.getFlag());
     }
 
     @Override

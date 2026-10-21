@@ -1,12 +1,12 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.masks.Graphics;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -28,16 +28,8 @@ public final class MapAnim implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.MAP_ANIM.gamePacketOut();
-        final int targetLocalX = location.getX() - (location.getChunkX() << 4);
-        final int targetLocalY = location.getY() - (location.getChunkY() << 4);
-        final int offsetHash = (targetLocalX & 7) << 4 | (targetLocalY & 7);
-        buffer.writeByteC(offsetHash);
-        buffer.writeShortLE128(graphic.getDelay());
-        buffer.write128Byte(graphic.getHeight());
-        buffer.writeShort(graphic.getId());
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.zone.payload.MapAnim(graphic.getId(), graphic.getDelay(), graphic.getHeight(), location.getX() & 7, location.getY() & 7);
     }
 
     @Override

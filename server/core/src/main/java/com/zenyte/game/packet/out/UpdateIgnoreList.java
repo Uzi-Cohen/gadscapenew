@@ -1,10 +1,10 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import mgi.utilities.StringFormatUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,15 +27,12 @@ public final class UpdateIgnoreList implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.UPDATE_IGNORELIST.gamePacketOut();
+    public OutgoingGameMessage toMessage() {
+        final java.util.ArrayList<net.rsprot.protocol.game.outgoing.social.UpdateIgnoreList.IgnoredPlayer> entries = new java.util.ArrayList<>(list.size());
         for (final UpdateIgnoreList.IgnoreEntry entry : list) {
-            buffer.writeByte(entry.added ? 1 : 0);
-            buffer.writeString(StringFormatUtil.formatString(entry.username));
-            buffer.writeString("");
-            buffer.writeString("");
+            entries.add(new net.rsprot.protocol.game.outgoing.social.UpdateIgnoreList.AddedIgnoredEntry(StringFormatUtil.formatString(entry.username), "", "", entry.added));
         }
-        return buffer;
+        return new net.rsprot.protocol.game.outgoing.social.UpdateIgnoreList(entries);
     }
 
     @Override

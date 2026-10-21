@@ -1,14 +1,13 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+import com.zenyte.game.GameConstants;
+
 import com.gadscape.game.packet.out.chat_channel.ChatChannelType;
 import com.zenyte.game.packet.GamePacketEncoder;
-import com.zenyte.game.util.Utils;
 import com.zenyte.game.world.entity.masks.ChatMessage;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
-import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
 public final class MessageClanChannelSystem implements GamePacketEncoder {
@@ -28,16 +27,10 @@ public final class MessageClanChannelSystem implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
+    public OutgoingGameMessage toMessage() {
         try (message) {
-            final GamePacketOut buffer = ServerProt.MESSAGE_CLANCHANNEL_SYSTEM.gamePacketOut();
-            buffer.writeByte(type.getPacketIdentifier());
-            for (int i = 0; i < 5; i++) {
-                buffer.writeByte(Utils.random(255));
-            }
-            final ByteBuf huffmanBuf = message.content();
-            buffer.writeBytes(huffmanBuf, 0, huffmanBuf.readableBytes());
-            return buffer;
+            return new net.rsprot.protocol.game.outgoing.clan.MessageClanChannelSystem(type.getPacketIdentifier(), GameConstants.WORLD_PROFILE.getNumber(),
+                    com.gadscape.network.rsprot.RsprotOut.nextMessageCounter(), message.getChatText());
         }
     }
 

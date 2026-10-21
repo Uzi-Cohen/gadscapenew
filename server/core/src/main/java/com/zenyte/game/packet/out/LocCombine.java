@@ -1,13 +1,13 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.object.AttachedObject;
 import com.zenyte.game.world.object.WorldObject;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -26,20 +26,10 @@ public final class LocCombine implements GamePacketEncoder {
 	private final AttachedObject object;
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.LOC_COMBINE.gamePacketOut();
+	public OutgoingGameMessage toMessage() {
 		final WorldObject obj = object.getObject();
-		buffer.writeShort(obj.getId());
-		buffer.writeByte(object.getMinY());
-		buffer.writeByteC(object.getMaxY());
-		buffer.writeShort128(object.getStartTime());
-		buffer.writeByte128((obj.getType() << 2) | obj.getRotation());
-		buffer.writeByte(object.getMinX());
-		buffer.writeShort(object.getEndTime());
-		buffer.write128Byte(((obj.getX() & 7) << 4) | (obj.getY() & 7));
-		buffer.writeShort128(index);
-		buffer.writeByte128(object.getMaxX());
-		return buffer;
+		return new net.rsprot.protocol.game.outgoing.zone.payload.LocMerge(index, obj.getId(), obj.getX() & 7, obj.getY() & 7, obj.getType(), obj.getRotation(),
+		        object.getStartTime(), object.getEndTime(), object.getMinX(), object.getMinY(), object.getMaxX(), object.getMaxY());
 	}
 
 	public LocCombine(int index, AttachedObject object) {

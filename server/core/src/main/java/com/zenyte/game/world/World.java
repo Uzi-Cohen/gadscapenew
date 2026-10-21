@@ -4,8 +4,7 @@ import com.google.common.base.Preconditions;
 import com.gadscape.game.queue.GameQueueList;
 import com.gadscape.game.world.Boundary;
 import com.gadscape.game.world.WorldEvent;
-import com.gadscape.network.login.LoginRequest;
-import com.gadscape.network.login.packet.LoginPacketIn;
+import com.gadscape.network.rsprot.RsprotLoginRequest;
 import com.gadscape.tools.logging.GameLogMessage;
 import com.gadscape.tools.logging.GameLogger;
 import com.zenyte.cores.CoresManager;
@@ -89,7 +88,6 @@ import com.zenyte.plugins.events.FloorItemSpawnEvent;
 import com.zenyte.plugins.events.ServerShutdownEvent;
 import com.zenyte.plugins.item.Blowpipe;
 import com.zenyte.plugins.item.SeedBox;
-import io.netty.channel.ChannelHandlerContext;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -307,11 +305,9 @@ public final class World {
         }
     }
 
-    public static void addLoginRequest(final LoginPacketIn request,
-                                       final PlayerInformation info,
-                                       final ChannelHandlerContext ctx) {
+    public static void addLoginRequest(final RsprotLoginRequest loginRequest,
+                                       final PlayerInformation info) {
         final long time = System.currentTimeMillis();
-        final LoginRequest loginRequest = new LoginRequest(request, info, ctx);
         CoresManager.getLoginManager().load(time, info,
                 player -> loginRequest.loaded(player,
                         System.currentTimeMillis() - time >= 30_000));

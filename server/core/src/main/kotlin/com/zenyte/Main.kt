@@ -6,7 +6,7 @@ import com.google.common.base.Stopwatch
 import com.gadscape.api.GameDatabase
 import com.gadscape.crypto.Rsa
 import com.gadscape.game.world.info.WorldConfig
-import com.gadscape.network.NetworkService
+import com.gadscape.network.rsprot.Rsprot
 import com.gadscape.osrsbox_db.ItemDefinitionDatabase
 import com.gadscape.osrsbox_db.MonsterDefinitionDatabase
 import com.zenyte.cores.CoresManager
@@ -89,6 +89,15 @@ object Main {
 
         configureWorldProfile(*args)
 
+        // Rev 241: login, JS5 and game packets are handled by rsprot (com.gadscape.network.rsprot).
+        // Bound early so clients can download the cache while the world loads; game logins are
+        // answered "login server offline" until the world is ready (Rsprot.acceptLogins below).
+        // Listens on the world's port (43594); extra ports (e.g. 443) via -Dgadscape.net.ports=443.
+        logElapsed("Started network service.") {
+            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED) // XXX: in production, use DISABLED
+            Rsprot.start()
+        }
+
         GameDatabase.init(GameConstants.WORLD_PROFILE)
 //        UserLoginQueue.start()
 
@@ -116,30 +125,8 @@ object Main {
             PluginManager.post(serverLaunchEvent)
         }
 
-        val port = GameConstants.WORLD_PROFILE.port
-        logElapsed("Starting network service...") {
-            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED) // XXX: in production, use DISABLED
-
-            val networkService = NetworkService()
-            networkService.initialize()
-
-            // Primary client connection port (world-hopper ping, world list, docker-
-            // compose's own port mapping all agree: 43594). Public.
-            networkService.listen(port)
-
-            // Client.java's worldPort/js5Port logic (decompiled client) retries on
-            // this exact port when the primary connection on 43594 fails - real
-            // players on networks that block 43594 depend on it. Public alongside
-            // 43594.
-            networkService.listen(443)
-
-            // Client.java only uses these when gameBuild != 0; the shipped client
-            // config always sets gameBuild = 0 (param=15=0 in jav_config), so this
-            // pair is never dialed in practice. Loopback only, not exposed publicly.
-            val worldID = GameConstants.WORLD_PROFILE.number
-            networkService.listen(40000 + worldID, "127.0.0.1")
-            networkService.listen(50000 + worldID, "127.0.0.1")
-        }
+        Rsprot.acceptLogins = true
+        log.info("Accepting game logins.")
 
         val elapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS)
         log.info("${GameConstants.SERVER_NAME} took {} milliseconds to launch.", elapsed)
@@ -218,12 +205,17 @@ object Main {
         val worldProfile = worldConfig[key] ?: error("World profile '$key' not found.")
         GameConstants.WORLD_PROFILE = worldProfile
         CacheManager.DEVELOPMENT_MODE = worldProfile.isDevelopment()
-        Rsa.init(
-            worldProfile.rsaPrivateExponent
-                ?: error("worlds.yml world '$key' is missing rsaPrivateExponent - generate a keypair and set it plus rsaModulus."),
-            worldProfile.rsaModulus
-                ?: error("worlds.yml world '$key' is missing rsaModulus - generate a keypair and set it plus rsaPrivateExponent.")
-        )
+        // Rev 241: the login RSA key comes from -Dgadscape.rsa.private=<file> (see Rsprot) or, without it,
+        // from worlds.yml rsaPrivateExponent/rsaModulus as before.
+        val rsaKeyFile = System.getProperty("gadscape.rsa.private")?.takeIf { it.isNotBlank() }
+        if (rsaKeyFile == null) {
+            Rsa.init(
+                worldProfile.rsaPrivateExponent
+                    ?: error("worlds.yml world '$key' is missing rsaPrivateExponent - generate a keypair and set it plus rsaModulus (or use -Dgadscape.rsa.private=<file>)."),
+                worldProfile.rsaModulus
+                    ?: error("worlds.yml world '$key' is missing rsaModulus - generate a keypair and set it plus rsaPrivateExponent.")
+            )
+        }
         configureLogging()
     }
 

@@ -1,5 +1,7 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.Position;
 import com.zenyte.game.world.Projectile;
@@ -7,8 +9,6 @@ import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.npc.NPC;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -41,27 +41,16 @@ public final class MapProjAnim implements GamePacketEncoder {
 	}
 
 	@Override
-	public GamePacketOut encode() {
-		final GamePacketOut buffer = ServerProt.MAPPROJ_ANIM.gamePacketOut();
-		final Location lastTile = player.getLastLoadedMapRegionTile();
+	public OutgoingGameMessage toMessage() {
 		final Location from = fromPosition.getPosition();
 		final Location to = target.getPosition();
-		final int srcHash = ((from.getLocalX(lastTile) & 7) << 4) | (from.getLocalY(lastTile) & 7);
 		final int delay = projectile.getDelay();
 		final int projSpeed = duration != Integer.MIN_VALUE ? duration : projectile.getProjectileDuration(from, target);
 		final int index = target instanceof Player ? (-(((Player) target).getIndex() + 1)) : target instanceof NPC ? (((NPC) target).getIndex() + 1) : 0;
-		buffer.writeByte(projectile.getAngle());
-		buffer.write128Byte(srcHash);
-		buffer.writeShort128(projectile.getGraphicsId());
-		buffer.writeByte(offset);
-		buffer.writeByte128((to.getY() - from.getY()));
-		buffer.writeShortLE128(delay);
-		buffer.writeByteC(projectile.getEndHeight());
-		buffer.writeShortLE128(index);
-		buffer.writeByte128(projectile.getStartHeight());
-		buffer.writeShortLE(projSpeed);
-		buffer.write128Byte((to.getX() - from.getX()));
-		return buffer;
+		// rev 241: heights are no longer multiplied by 4 client-side and the end coord is absolute.
+		return new net.rsprot.protocol.game.outgoing.zone.payload.MapProjAnimV2(projectile.getGraphicsId(), projectile.getStartHeight() * 4, projectile.getEndHeight() * 4,
+		        delay, projSpeed, projectile.getAngle(), offset, 0, index, from.getX() & 7, from.getY() & 7,
+		        to.getX(), to.getY(), from.getPlane());
 	}
 
 	@Override

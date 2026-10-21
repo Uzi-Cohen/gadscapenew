@@ -1,10 +1,7 @@
 package com.zenyte.game;
 
 import com.gadscape.game.util.HuffmanManager;
-import com.gadscape.network.js5.JS5Responses;
 import com.zenyte.CacheManager;
-import com.zenyte.game.packet.ClientProtDecoder;
-import com.zenyte.game.packet.ClientProtLoader;
 import com.zenyte.game.util.ZenyteHuffman;
 import mgi.tools.jagcached.cache.Cache;
 
@@ -17,12 +14,6 @@ import java.util.concurrent.ForkJoinPool;
  */
 public final class GameLoader {
 
-    private static final ClientProtDecoder<?>[] decoders = new ClientProtDecoder[256];
-
-    public static ClientProtDecoder<?>[] getDecoders() {
-        return decoders;
-    }
-
     public static void load() {
         load(ForkJoinPool.commonPool());
     }
@@ -31,9 +22,7 @@ public final class GameLoader {
         Cache cache = CacheManager.loadCacheFiles("./cache/data/cache/", true);
         HuffmanManager.load(cache);
         ZenyteHuffman.load(cache);
-        JS5Responses.preload(cache);
-
-        ClientProtLoader.load();
+        // rev 241: JS5 and the client packet decoders are served by rsprot (com.gadscape.network.rsprot).
         CacheManager.loadDefinitions(pool, false);
     }
 }

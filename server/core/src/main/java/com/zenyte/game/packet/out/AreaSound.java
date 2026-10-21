@@ -1,12 +1,12 @@
 package com.zenyte.game.packet.out;
 
+import net.rsprot.protocol.message.OutgoingGameMessage;
+
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.SoundEffect;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
-import com.zenyte.net.game.ServerProt;
-import com.zenyte.net.game.packet.GamePacketOut;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -31,13 +31,8 @@ public final class AreaSound implements GamePacketEncoder {
     }
 
     @Override
-    public GamePacketOut encode() {
-        final GamePacketOut buffer = ServerProt.AREA_SOUND.gamePacketOut();
-        buffer.writeShortLE(sound.getId());
-        buffer.writeByteC((sound.getRadius() << 4) | (sound.getRepetitions() & 15));
-        buffer.writeByte128(sound.getDelay());
-        buffer.writeByte128(tile.getLocalHash(player.getLastLoadedMapRegionTile()));
-        return buffer;
+    public OutgoingGameMessage toMessage() {
+        return new net.rsprot.protocol.game.outgoing.zone.payload.SoundArea(sound.getId(), sound.getDelay(), sound.getRepetitions(), sound.getRadius(), 0, tile.getX() & 7, tile.getY() & 7);
     }
 
     @Override
