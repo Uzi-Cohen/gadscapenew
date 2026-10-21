@@ -644,11 +644,18 @@ class ItemsTab(
                 // models are downloaded here (not on the window's thread); textures this cache doesn't have are named
                 val missingTex = sortedSetOf<Int>()
                 val problems = ArrayList<String>()
+                // weapons bring their own animations (stand, walk, attacks...) when the live cache has them
+                val anims = LinkedHashMap<Int, LiveAnims.Prepared>(); val animNotes = ArrayList<String>()
                 try {
                     val l = lib()
                     val haveTex = l?.index(9)?.archive(0)?.fileIds()?.toSet() ?: emptySet()
                     for (e in picked) {
                         val it = try { src.item(e.id) } catch (x: Exception) { problems.add("${e.name}: ${x.message}"); null } ?: continue
+                        if (it.wearPos1 == 3) try {
+                            javafx.application.Platform.runLater { status.text = "Getting ${e.name}'s animations..." }
+                            LiveAnims.prepare(c, e.name, src.conv(e.id)?.animations)?.let { p -> anims[e.id] = p }
+                                ?: animNotes.add("${e.name} has no animations of its own in the live cache, so it got the usual ones for its weapon type")
+                        } catch (x: Exception) { animNotes.add("${e.name}'s animations couldn't be brought (${x.message}), so it got the usual ones for its weapon type") }
                         for (m in listOf(it.inventoryModel, it.maleModel0, it.maleModel1, it.maleModel2, it.femaleModel0, it.femaleModel1, it.femaleModel2,
                                 it.maleHead, it.maleHead2, it.femaleHead, it.femaleHead2).filter { m -> m >= 0 }) {
                             val b = src.model(m) ?: continue
@@ -662,10 +669,15 @@ class ItemsTab(
                     try {
                         val ok = picked.filter { e -> problems.none { it.startsWith(e.name + ":") } }
                         if (ok.isEmpty()) { status.text = "Couldn't import: " + problems.joinToString("; "); go.isDisable = false; return@runLater }
+                        for ((id, p) in anims) if (ok.any { it.id == id }) try { src.animations[id] = LiveAnims.apply(p) }
+                            catch (x: Exception) { animNotes.add("${ok.first { it.id == id }.name}'s animations couldn't be imported (${x.message})") }
                         val r = ItemCopy.copy(src, ok.map { it.id }, keep)
                         afterWrite(r.newIds.firstOrNull())
                         val warn = (if (missingTex.isNotEmpty()) " Its models use texture(s) ${missingTex.joinToString(", ")}, which this cache doesn't have: those parts may look wrong in game." else "") +
-                                (if (problems.isNotEmpty()) " Not imported: " + problems.joinToString("; ") + "." else "")
+                                (if (problems.isNotEmpty()) " Not imported: " + problems.joinToString("; ") + "." else "") +
+                                (if (src.animations.isNotEmpty()) " Brought their own animations: " + src.animations.entries.joinToString("; ") { (id, a) ->
+                                    "${ok.first { it.id == id }.name} (stand ${a["standAnimation"] ?: "-"}, walk ${a["walkAnimation"] ?: "-"}, attack ${a["accurateAnimation"] ?: "-"})" } + "." else "") +
+                                (if (animNotes.isNotEmpty()) " " + animNotes.joinToString(". ") + "." else "")
                         status.text = r.message + warn
                         say(r.message + warn + " Undo last change puts the cache back.")
                         results.refresh()

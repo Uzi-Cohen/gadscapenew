@@ -123,7 +123,7 @@ object LiveOsrs {
     }
 
     /** The files of one group, split. */
-    private fun groupFiles(cacheId: Int, archive: Int, group: Int): Map<Int, ByteArray> {
+    fun groupFiles(cacheId: Int, archive: Int, group: Int): Map<Int, ByteArray> {
         val fileIds = table(cacheId, archive)[group] ?: error("group $group isn't in archive $archive")
         val d = group(cacheId, archive, group)
         if (fileIds.size == 1) return mapOf(fileIds[0] to d)
@@ -147,7 +147,8 @@ object LiveOsrs {
         Peek(it.name, it.noteTemplate >= 0)
     } catch (e: Exception) { Peek(null, false) }
 
-    class Converted(val item: ItemFull, val examine: String?)
+    /** [animations]: the item's own animation list (setting 161, build 241 on), when it has one. */
+    class Converted(val item: ItemFull, val examine: String?, val animations: IntArray? = null)
 
     /**
      * A newer item as a 211 item. Model ids are kept as they are (ints: [ItemCopy] gives one over 65535 a free id),
@@ -156,6 +157,7 @@ object LiveOsrs {
     fun convert(id: Int, b: ByteArray): Converted {
         val d = ItemFull(id)
         var examine: String? = null
+        var animations: IntArray? = null
         var p = 0
         fun u8() = b[p++].toInt() and 0xFF
         fun s8() = b[p++].toInt()
@@ -229,12 +231,12 @@ object LiveOsrs {
                 114 -> d.contrast = s8() and 0xFF
                 115 -> d.team = u8()
                 139, 140, 148, 149 -> u16() // bought / placeholder links: other items, not copied
-                161 -> { val n = u16(); repeat(n) { u16() } } // a list of ids the newer game uses (build 241+); nothing the 211 game reads
+                161 -> { val n = u16(); animations = IntArray(n) { u16() } } // the item's own animations (build 241 on); kept for LiveAnims
                 249 -> { val n = u8(); repeat(n) { val isStr = u8() == 1; val k = u24(); d.params[k] = if (isStr) str() else i32() } }
                 else -> error("it uses a setting ($o) this editor can't convert yet")
             }
         }
-        return Converted(d, examine)
+        return Converted(d, examine, animations)
     }
 
     // ---------------- server stats from the item's params ----------------
@@ -273,7 +275,7 @@ object LiveOsrs {
      * The item's server stats entry (ItemDefinitions.json), from its params: bonuses, requirements, attack speed,
      * weight and slot. A weapon's animations are copied from a weapon of the same style on this server, if it has one.
      */
-    fun stats(c: Converted, server: File?): JsonObject? {
+    fun stats(c: Converted, server: File?, animations: Map<String, Int>? = null): JsonObject? {
         val it = c.item
         val p = it.params
         fun param(k: Int) = (p[k] as? Int) ?: 0
@@ -306,6 +308,8 @@ object LiveOsrs {
                     "accurate" to "accurateAnimation", "aggressive" to "aggressiveAnimation", "controlled" to "controlledAnimation", "defensive" to "defensiveAnimation")
                 for ((k, v) in ServerItemStats.Weapon().animations()) addProperty(keys[k] ?: continue, v)
             }
+            // the item's own animations, brought in with it (LiveAnims), over the guessed ones
+            animations?.forEach { (k, v) -> w.addProperty(k, v) }
             w.addProperty("twoHanded", it.wearPos2 == 5)
             w.addProperty("attackSpeed", ItemStats.stored(param(14).takeIf { it > 0 } ?: 4))
             w.addProperty("interfaceVarbit", category)
@@ -335,9 +339,11 @@ object LiveOsrs {
     /** Everything [ItemCopy] needs to copy items from the newest cache. */
     class Source(private val cat: Catalog, private val server: File?) : ItemCopy.Source {
         private val converted = HashMap<Int, Converted?>()
-        private fun conv(id: Int) = converted.getOrPut(id) { cat.raw[id]?.let { convert(id, it) } }
+        /** Live item id -> its own animations, already in this cache (LiveAnims.importFor). */
+        val animations = HashMap<Int, Map<String, Int>>()
+        fun conv(id: Int) = converted.getOrPut(id) { cat.raw[id]?.let { convert(id, it) } }
         override fun item(id: Int): ItemFull? = conv(id)?.item
         override fun model(id: Int): ByteArray? = cat.model(id)
-        override fun stats(id: Int): String? = conv(id)?.let { stats(it, server)?.toString() }
+        override fun stats(id: Int): String? = conv(id)?.let { stats(it, server, animations[id])?.toString() }
     }
 }
