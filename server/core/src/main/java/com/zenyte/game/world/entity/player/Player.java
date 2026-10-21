@@ -180,8 +180,6 @@ import com.zenyte.game.world.entity.player.privilege.MemberRank;
 import com.zenyte.game.world.entity.player.privilege.PlayerPrivilege;
 import com.zenyte.game.world.entity.player.teleports.TeleportsManager;
 import com.zenyte.game.world.entity.player.teleportsystem.TeleportManager;
-import com.zenyte.game.world.entity.player.update.NPCInfo;
-import com.zenyte.game.world.entity.player.update.PlayerInfo;
 import com.zenyte.game.world.entity.player.var.EventType;
 import com.zenyte.game.world.entity.player.var.VarCollection;
 import com.zenyte.game.world.entity.player.variables.PlayerVariables;
@@ -450,8 +448,6 @@ public class Player extends AbstractEntity implements UsernameProvider {
     @Expose
     private TeleportManager teleportManager = new TeleportManager(this);
     private VarManager varManager = new VarManager(this);
-    private transient PlayerInfo playerViewport = new PlayerInfo(this);
-    private transient NPCInfo npcViewport = new NPCInfo(this);
     @Expose
     private PlayerVariables variables = new PlayerVariables(this);
     private transient WorldMap worldMap = new WorldMap(this);
@@ -2043,10 +2039,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
         receivedHits.clear();
         nextHits.clear();
         hitBars.clear();
-        npcViewport.reset();
-        playerViewport.reset();
         chatMessage.close();
-        appearance.close();
 
         getBankPin().loggedOut(this);
 
@@ -2113,7 +2106,6 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (regionUpdate) {
             loadMapRegions(false);
         }
-        send(playerViewport.cache());
         if (!pendingVars.isEmpty()) {
             IntIterator it = pendingVars.intIterator();
             while (it.hasNext()) {
@@ -2152,7 +2144,9 @@ public class Player extends AbstractEntity implements UsernameProvider {
             }
             zoneFollowPackets.clear();
         }
-        send(npcViewport.cache());
+        // Player info and NPC info (rev 241, rsprot) are built for every player at once by RsprotInfo.tick(),
+        // which WorldThread runs after this method has run for everyone, so they follow the rebuild, var and
+        // zone packets queued above.
         if (regionUpdate) {
             setNeedRegionUpdate(false);
         }
@@ -2650,10 +2644,6 @@ public class Player extends AbstractEntity implements UsernameProvider {
             nextHits.clear();
         }
         this.updateNPCOptions = false;
-        RSBuffer buffer = appearance.getBuffer();
-        if (buffer != null) {
-            buffer.clear();
-        }
         if (isCrawling()) {
             this.crawlInterval++;
         }
@@ -4447,14 +4437,6 @@ public class Player extends AbstractEntity implements UsernameProvider {
 
     public VarManager getVarManager() {
         return varManager;
-    }
-
-    public PlayerInfo getPlayerViewport() {
-        return playerViewport;
-    }
-
-    public NPCInfo getNpcViewport() {
-        return npcViewport;
     }
 
     public PlayerVariables getVariables() {

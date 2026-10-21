@@ -54,11 +54,11 @@ public class UpdateFlags {
      */
     public synchronized void set(final UpdateFlag flag, final boolean value) {
     	if (entity instanceof Player) {
-    		if (flag.getPlayerMask() == -1) {
+    		if (!flag.appliesToPlayers()) {
 				return;
 			}
     	} else {
-    		if (flag.getNpcMask() == -1) {
+    		if (!flag.appliesToNpcs()) {
 				return;
 			}
     	}

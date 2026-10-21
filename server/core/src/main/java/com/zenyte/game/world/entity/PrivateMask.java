@@ -21,4 +21,11 @@ public class PrivateMask {
     public void setViewers(Player... players) {
         this.viewers = players;
     }
+
+    /**
+     * @return the only players allowed to see this mask, or null if everyone may see it.
+     */
+    public Player[] getViewers() {
+        return viewers;
+    }
 }

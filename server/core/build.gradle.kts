@@ -67,4 +67,12 @@ dependencies {
     implementation(libs.netty.codec.haproxy)
 
     implementation(libs.mockk)
+
+    // rev 241 info tests (RsprotInfoTest): JUnit 5 through kotlin-test
+    testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

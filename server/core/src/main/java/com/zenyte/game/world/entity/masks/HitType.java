@@ -1,7 +1,5 @@
 package com.zenyte.game.world.entity.masks;
 
-import com.zenyte.net.io.RSBuffer;
-
 /**
  * @author Kris | 28. march 2018 : 0:37.40
  * @see <a href="https://www.rune-server.ee/members/kris/">Rune-Server profile</a>}
@@ -57,8 +55,18 @@ public enum HitType {
         this(id, id);
     }
 
-    public void writeMask(RSBuffer buffer, boolean useDynamic) {
-        buffer.writeSmart(useDynamic ? dynamicID : id);
+    /**
+     * The hitsplat shown to the receiver and to whoever dealt the hit.
+     */
+    public int getId() {
+        return id;
+    }
+
+    /**
+     * The (darker) hitsplat shown to everyone else.
+     */
+    public int getDynamicId() {
+        return dynamicID;
     }
 
 }
