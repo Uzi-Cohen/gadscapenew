@@ -1,0 +1,6 @@
+# build outputs (the scripts download/build these; nothing here is source)
+patcher/build/
+launcher/build/
+exe/payload/
+exe/build/
+*.part
