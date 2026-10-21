@@ -52,3 +52,10 @@ jvm -Xss2m
 jvm -XX:CompileThreshold=1500
 jvm --add-opens=java.base/java.net=ALL-UNNAMED
 jvm --add-opens=java.base/java.io=ALL-UNNAMED
+jvm-mac -XX:+DisableAttachMechanism
+jvm-mac -Xmx768m
+jvm-mac -Xss2m
+jvm-mac -XX:CompileThreshold=1500
+jvm-mac --add-opens=java.base/java.net=ALL-UNNAMED
+jvm-mac --add-opens=java.base/java.io=ALL-UNNAMED
+jvm-mac --add-opens=java.desktop/com.apple.eawt=ALL-UNNAMED

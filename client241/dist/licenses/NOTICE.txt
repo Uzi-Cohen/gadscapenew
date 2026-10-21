@@ -1,0 +1,36 @@
+NOTICE files of the Apache-2.0 libraries in this package (also inside their jars)
+
+==== commons-lang3-3.7.jar (META-INF/NOTICE.txt)
+Apache Commons Lang
+Copyright 2001-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+This product includes software from the Spring Framework,
+under the Apache License 2.0 (see: StringUtils.containsWhitespace())
+
+==== commons-text-1.2.jar (META-INF/NOTICE.txt)
+Apache Commons Text
+Copyright 2001-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+==== guice-4.1.0-no_aop.jar (META-INF/NOTICE)
+
+Google Guice - Core Library
+Copyright 2006-2016 Google, Inc.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+
+==== okhttp-3.14.9.jar (okhttp3/internal/publicsuffix/NOTICE)
+Note that publicsuffixes.gz is compiled from The Public Suffix List:
+https://publicsuffix.org/list/public_suffix_list.dat
+
+It is subject to the terms of the Mozilla Public License, v. 2.0:
+https://mozilla.org/MPL/2.0/
+

@@ -52,22 +52,31 @@ rm -rf "$dist" "$out/GadScape-241-Test.zip"
 mkdir -p "$dist/lib" "$dist/lib-win" "$dist/lib-linux" "$dist/lib-macos"
 cp "$here/launcher/build/gadscape-launcher.jar" "$dist/lib/"
 cp "$patched" "$dist/lib/"
-while read -r sha size plat name url; do
-  case "$sha" in ''|'#'*|version|jvm) continue;; esac
+while read -r sha size plats name url; do
+  case "$sha" in ''|'#'*|version|jvm|jvm-mac) continue;; esac
   case "$name" in injected-client-*) continue;; esac   # the stock game client never goes in
-  case "$plat" in
-    all) d=lib;;
-    win|win-x86|win-aarch64) [ "$plat" = win ] || continue; d=lib-win;;   # x64 Windows only
-    linux) d=lib-linux;;
-    macos|macos-aarch64) d=lib-macos;;
-    *) continue;;
-  esac
-  cp "$rl/$name" "$dist/$d/"
+  # one jar can be listed for several platforms ("linux,linux-aarch64"); LWJGL keeps each os/arch in its own
+  # folder inside the jar, so x64 and arm64 natives can share lib-linux / lib-macos
+  for plat in ${plats//,/ }; do
+    case "$plat" in
+      all) d=lib;;
+      win) d=lib-win;;
+      win-x86|win-aarch64) continue;;   # Windows: x64 only (the exe ships an x64 Java)
+      linux|linux-aarch64) d=lib-linux;;
+      macos|macos-aarch64) d=lib-macos;;
+      *) echo "unknown platform '$plat' for $name in $lock: add it to build.sh" >&2; exit 1;;
+    esac
+    cp "$rl/$name" "$dist/$d/"
+  done
 done < "$lock"
-# JVM options RuneLite's own launcher uses for this version (java @jvm-args.txt reads them)
+# JVM options RuneLite's own launcher uses for this version (java @jvm-args.txt reads them); macOS has its own list
 awk '$1 == "jvm" {sub(/^jvm /, ""); print}' "$lock" > "$dist/jvm-args.txt"
+awk '$1 == "jvm-mac" {sub(/^jvm-mac /, ""); print}' "$lock" > "$dist/jvm-args-mac.txt"
+[ -s "$dist/jvm-args-mac.txt" ] || cp "$dist/jvm-args.txt" "$dist/jvm-args-mac.txt"
 printf '127.0.0.1\n' > "$dist/server.txt"
 cp "$here/dist/run.sh" "$here/dist/run.bat" "$here/dist/README.txt" "$dist/"
+# license and copyright notices of RuneLite and the libraries it ships with (BSD, MIT and Apache need them)
+cp -R "$here/dist/licenses" "$dist/licenses"
 chmod +x "$dist/run.sh"
 (cd "$out" && zip -qr GadScape-241-Test.zip GadScape-241-Test)
 echo "portable folder: $dist"

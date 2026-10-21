@@ -12,7 +12,8 @@ if [ -n "$rel" ] && [ "$rel" -lt 17 ]; then echo "JRE is Java $rel; RuneLite 1.1
 mkdir -p "$here/payload"
 ln -f "$jre" "$here/payload/jre.zip" 2>/dev/null || cp "$jre" "$here/payload/jre.zip"
 ln -f "$client" "$here/payload/client.zip" 2>/dev/null || cp "$client" "$here/payload/client.zip"
-id=$(cat "$here/payload/jre.zip" "$here/payload/client.zip" | sha256sum | cut -c1-16)
+if command -v sha256sum > /dev/null; then sum=sha256sum; else sum="shasum -a 256"; fi
+id=$(cat "$here/payload/jre.zip" "$here/payload/client.zip" | $sum | cut -c1-16)
 (cd "$here" && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath \
   -ldflags "-s -w -H windowsgui -X main.build=241-$id" -o "$out" .)
 rm -f "$here/payload/jre.zip" "$here/payload/client.zip"
