@@ -89,6 +89,15 @@ object Main {
 
         configureWorldProfile(*args)
 
+        // Rev 241: login, JS5 and game packets are handled by rsprot (com.gadscape.network.rsprot).
+        // Bound early so clients can download the cache while the world loads; game logins are
+        // answered "login server offline" until the world is ready (Rsprot.acceptLogins below).
+        // Listens on the world's port (43594); extra ports (e.g. 443) via -Dgadscape.net.ports=443.
+        logElapsed("Started network service.") {
+            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED) // XXX: in production, use DISABLED
+            Rsprot.start()
+        }
+
         GameDatabase.init(GameConstants.WORLD_PROFILE)
 //        UserLoginQueue.start()
 
@@ -116,13 +125,8 @@ object Main {
             PluginManager.post(serverLaunchEvent)
         }
 
-        logElapsed("Starting network service...") {
-            ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED) // XXX: in production, use DISABLED
-
-            // Rev 241: login, JS5 and game packets are handled by rsprot (com.gadscape.network.rsprot).
-            // Listens on the world's port (43594); extra ports (e.g. 443) via -Dgadscape.net.ports=443.
-            Rsprot.start()
-        }
+        Rsprot.acceptLogins = true
+        log.info("Accepting game logins.")
 
         val elapsed = stopwatch.elapsed(TimeUnit.MILLISECONDS)
         log.info("${GameConstants.SERVER_NAME} took {} milliseconds to launch.", elapsed)

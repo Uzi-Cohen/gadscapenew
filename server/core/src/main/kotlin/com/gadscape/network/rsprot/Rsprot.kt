@@ -50,6 +50,11 @@ object Rsprot {
     var js5: RsprotJs5? = null
         private set
 
+    /** False until the world has finished loading; logins before that get LoginServerOffline. */
+    @JvmStatic
+    @Volatile
+    var acceptLogins: Boolean = false
+
     @JvmStatic
     val isStarted: Boolean
         get() = ::service.isInitialized

@@ -2,6 +2,7 @@ package com.gadscape.network.rsprot
 
 import com.zenyte.game.packet.GamePacketEncoder
 import com.zenyte.game.packet.GamePacketEncoderMode
+import com.zenyte.game.packet.out.UpdateZonePartialEnclosed
 import com.zenyte.game.world.WorldThread
 import com.zenyte.game.world.entity.player.LogoutType
 import com.zenyte.game.world.entity.player.Player
@@ -76,7 +77,8 @@ class RsprotSession(
             return false
         }
         if (message == null) {
-            RsprotDrops.dropped(event.javaClass.simpleName)
+            // an enclosed zone update with nothing (left) to send, or outside the build area: nothing to drop
+            if (event !is UpdateZonePartialEnclosed) RsprotDrops.dropped(event.javaClass.simpleName)
             return false
         }
         queue(message)

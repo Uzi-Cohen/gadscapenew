@@ -53,6 +53,10 @@ class RsprotConnectionHandler : GameConnectionHandler<Player> {
         responseHandler: GameLoginResponseHandler<Player>,
         block: LoginBlock<AuthenticationType>,
     ) {
+        if (!Rsprot.acceptLogins) {
+            responseHandler.writeFailedResponse(LoginResponse.LoginServerOffline)
+            return
+        }
         val auth = block.authentication
         if (auth !is AuthenticationType.PasswordAuthentication) {
             // Token (Jagex account) logins are not supported by this server.
@@ -290,7 +294,17 @@ class RsprotLoginRequest(
         val session = RsprotSession(player, rsprotSession)
         player.session = session
         rsprotSession.setDisconnectionHook { session.onDisconnected() }
+        try {
+            enterGame(player, session)
+        } catch (e: Throwable) {
+            // The client already got LoginResponse.Ok, so no login error code can be sent any more.
+            logger.error("Failed to bring '{}' into the game; closing the connection.", info.username, e)
+            session.close()
+            World.removePlayer(player)
+        }
+    }
 
+    private fun enterGame(player: Player, session: RsprotSession) {
         player.areaManager.onLogin(player)
         player.loadMapRegions(true)
 
