@@ -2,6 +2,7 @@ package mgi.tools.jagcached.cache;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import mgi.tools.jagcached.CacheFormat;
 import mgi.tools.jagcached.GroupType;
 import mgi.tools.jagcached.Helper;
 import mgi.utilities.ByteBuffer;
@@ -38,6 +39,19 @@ public class Archive {
      */
     private boolean useNames;
     /**
+     * Reference-table flag 0x4: each group also stores its compressed and uncompressed length.
+     * Every archive of the build-241 cache sets it.
+     */
+    private boolean useSizes;
+    /**
+     * Reference-table flag 0x8: each group also stores the CRC32 of its uncompressed data.
+     */
+    private boolean useUncompressedCrcs;
+    /**
+     * Protocol of the reference table as it was read (5, 6 or 7; build 241 uses 7 everywhere).
+     */
+    private int protocol = -1;
+    /**
      * Version of this archive.
      */
     private int version;
@@ -67,6 +81,11 @@ public class Archive {
 
     private final Object $lock = new Object();
 
+    public static final int FLAG_NAMES = 0x1;
+    public static final int FLAG_DIGESTS = 0x2;
+    public static final int FLAG_SIZES = 0x4;
+    public static final int FLAG_UNCOMPRESSED_CRCS = 0x8;
+
     public Archive(int id, Cache cache) {
         this.id = id;
         this.cache = cache;
@@ -85,10 +104,16 @@ public class Archive {
         ByteBuffer unpacked = Helper.decodeFITContainer(buffer);
         unpacked.setPosition(0);
         int protocol = unpacked.readUnsignedByte();
+        if (protocol < 5 || protocol > 7) throw new RuntimeException("Unsupported reference table protocol " + protocol + " in archive " + id);
+        this.protocol = protocol;
         if (protocol >= 6) version = unpacked.readInt();
         int properties = unpacked.readUnsignedByte();
-        useNames = (properties & 1) != 0;
-        useWhirlpool = (properties & 2) != 0;
+        if ((properties & ~(FLAG_NAMES | FLAG_DIGESTS | FLAG_SIZES | FLAG_UNCOMPRESSED_CRCS)) != 0)
+            throw new RuntimeException("Unknown reference table flags 0x" + Integer.toHexString(properties) + " in archive " + id);
+        useNames = (properties & FLAG_NAMES) != 0;
+        useWhirlpool = (properties & FLAG_DIGESTS) != 0;
+        useSizes = (properties & FLAG_SIZES) != 0;
+        useUncompressedCrcs = (properties & FLAG_UNCOMPRESSED_CRCS) != 0;
         groups = new Group[protocol >= 7 ? unpacked.readSmartInt() : unpacked.readUnsignedShort()];
         int[] groupIDS = new int[groups.length];
         int[] groupNames = new int[groups.length];
@@ -113,7 +138,20 @@ public class Archive {
         this.highestGroupId = highest == 0 ? 0 : (highest + 1);
         for (int i = 0; i < groups.length; i++) groupNames[i] = useNames ? unpacked.readInt() : -1;
         for (int i = 0; i < groups.length; i++) groupCRCS[i] = unpacked.readInt();
+        // Field order of a reference table (matches the client and OpenRS2's Js5Index): ids, names, crcs,
+        // uncompressed crcs (0x8), whirlpool digests (0x2), compressed + uncompressed sizes (0x4), versions,
+        // file counts, file ids, file names.
+        final int[] groupUncompressedCrcs = new int[groups.length];
+        if (useUncompressedCrcs) for (int i = 0; i < groups.length; i++) groupUncompressedCrcs[i] = unpacked.readInt();
         if (useWhirlpool) for (int i = 0; i < groups.length; i++) unpacked.readBytes(groupDigests[i], 0, 64);
+        final int[] groupCompressedSizes = new int[groups.length];
+        final int[] groupUncompressedSizes = new int[groups.length];
+        if (useSizes) {
+            for (int i = 0; i < groups.length; i++) {
+                groupCompressedSizes[i] = unpacked.readInt();
+                groupUncompressedSizes[i] = unpacked.readInt();
+            }
+        }
         for (int i = 0; i < groups.length; i++) groupVersions[i] = unpacked.readInt();
         for (int i = 0; i < groups.length; i++) {
             int filesCount = protocol >= 7 ? unpacked.readSmartInt() : unpacked.readUnsignedShort();
@@ -134,12 +172,18 @@ public class Archive {
             int groupName = groupNames[i];
             Group group = new Group(groupID, groupName, groupVersions[i], groupCRCS[i], groupDigests[i],
                     groupFilesIDS[i], groupFilesNames[i], readOnly);
+            group.setReferenceSizes(groupCompressedSizes[i], groupUncompressedSizes[i], groupUncompressedCrcs[i]);
             groups[i] = group;
             if (readOnly) {
                 idToGroup.put(groupID, group);
                 if (groupName >= 0)
                     nameToGroup.put(groupName, group);
             }
+        }
+        if (unpacked.getPosition() != unpacked.getBuffer().length) {
+            // GadScape's own packer over-allocates reference tables, so trailing bytes are only an error in strict mode.
+            CacheFormat.problem("reftable:" + id, "Reference table of archive " + id + " has "
+                    + (unpacked.getBuffer().length - unpacked.getPosition()) + " unread bytes");
         }
         updateHashes(buffer);
         packed = buffer;
@@ -199,7 +243,8 @@ public class Archive {
         ByteBuffer pack = new ByteBuffer(calculatePackedAllocSize(protocol));
         pack.writeByte(protocol);
         if (protocol >= 6) pack.writeInt(version);
-        pack.writeByte((useNames ? 1 : 0) | (useWhirlpool ? 2 : 0));
+        pack.writeByte((useNames ? FLAG_NAMES : 0) | (useWhirlpool ? FLAG_DIGESTS : 0)
+                | (useSizes ? FLAG_SIZES : 0) | (useUncompressedCrcs ? FLAG_UNCOMPRESSED_CRCS : 0));
         if (protocol >= 7) pack.writeSmart32(groups.length);
         else pack.writeShort(groups.length);
         for (int delta = 0, i = 0; i < groups.length; i++) {
@@ -209,7 +254,12 @@ public class Archive {
         }
         if (useNames) for (Group group : groups) pack.writeInt(group.getName());
         for (Group group : groups) pack.writeInt(group.getCrc());
+        if (useUncompressedCrcs) for (Group group : groups) pack.writeInt(group.getUncompressedCrc());
         if (useWhirlpool) for (Group group : groups) pack.writeBytes(group.getDigest(), 0, 64);
+        if (useSizes) for (Group group : groups) {
+            pack.writeInt(group.getCompressedSize());
+            pack.writeInt(group.getUncompressedSize());
+        }
         for (Group group : groups) pack.writeInt(group.getVersion());
         for (Group group : groups)
             if (protocol >= 7) pack.writeSmart32(group.fileCount());
@@ -240,7 +290,9 @@ public class Archive {
         }
         if (useNames) size += groups.length * 4; // names
         size += groups.length * 4; // crcs
+        if (useUncompressedCrcs) size += groups.length * 4; // uncompressed crcs
         if (useWhirlpool) size += groups.length * 64; // whirlpool
+        if (useSizes) size += groups.length * 8; // compressed + uncompressed sizes
         size += groups.length * 4; // versions
         for (Group group : groups) size += protocol >= 7 ? (group.fileCount() > 32767 ? 4 : 2) : 2;
         for (Group group : groups) {
@@ -259,6 +311,7 @@ public class Archive {
      * this archive.
      */
     private int decideProtocol() {
+        if (protocol >= 7) return 7; // never downgrade a smart-int reference table (build 241 uses protocol 7)
         if (groups.length > 65535) return 7;
         for (Group group : groups) {
             if (group.getID() > 65535) return 7;
@@ -313,12 +366,16 @@ public class Archive {
             final Group group = idToGroup.get(id);
             if (group != null) {
                 if (!group.isLoaded()) {
-                    final ByteBuffer data = cache.getIndex(this.id).get(id);
-                    if (data == null) {
-                        if (throwException) throw new RuntimeException("Missing group:" + id);
-                        return null;
+                    synchronized ($lock) {
+                        if (!group.isLoaded()) {
+                            final ByteBuffer data = cache.getIndex(this.id).get(id);
+                            if (data == null) {
+                                if (throwException) throw new RuntimeException("Missing group:" + id);
+                                return null;
+                            }
+                            group.load(data, xtea, unpack);
+                        }
                     }
-                    group.load(data, xtea, unpack);
                 }
                 return group;
             }
@@ -339,6 +396,27 @@ public class Archive {
             }
         }
         return null;
+    }
+
+    /**
+     * Whether a group with this id exists, without loading it.
+     */
+    public boolean containsGroup(int id) {
+        if (!isLoaded()) throw new RuntimeException("Using nonloaded archive.");
+        if (idToGroup != null && idToGroup.containsKey(id)) return true;
+        for (Group group : groups) if (group.getID() == id) return true;
+        return false;
+    }
+
+    /**
+     * Whether a group with this name exists, without loading it.
+     */
+    public boolean containsGroupNamed(String name) {
+        if (!isLoaded()) throw new RuntimeException("Using nonloaded archive.");
+        final int hash = Helper.strToI(name);
+        if (nameToGroup != null && nameToGroup.containsKey(hash)) return true;
+        for (Group group : groups) if (group.getName() == hash) return true;
+        return false;
     }
 
     /**
@@ -558,6 +636,29 @@ public class Archive {
     public boolean usesNames() {
         if (!isLoaded()) throw new RuntimeException("Using nonloaded archive.");
         return useNames;
+    }
+
+    /**
+     * Whether groups carry compressed/uncompressed sizes (reference-table flag 0x4).
+     */
+    public boolean usesSizes() {
+        if (!isLoaded()) throw new RuntimeException("Using nonloaded archive.");
+        return useSizes;
+    }
+
+    /**
+     * Whether groups carry the CRC32 of their uncompressed data (reference-table flag 0x8).
+     */
+    public boolean usesUncompressedCrcs() {
+        if (!isLoaded()) throw new RuntimeException("Using nonloaded archive.");
+        return useUncompressedCrcs;
+    }
+
+    /**
+     * Reference table protocol as read from the cache (-1 if the archive was never loaded).
+     */
+    public int getProtocol() {
+        return protocol;
     }
 
     /**

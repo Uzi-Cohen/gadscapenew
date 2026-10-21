@@ -14,8 +14,6 @@ import java.util.zip.GZIPOutputStream;
 
 public class Helper {
 
-    private static final CRC32 crc32 = new CRC32();
-
     public static final int COMPRESSION_NONE = 0;
     public static final int COMPRESSION_BZIP2 = 1;
     public static final int COMPRESSION_GZIP = 2;
@@ -224,10 +222,10 @@ public class Helper {
     }
 
     public static int crc32(ByteBuffer data, int offset, int length) {
+        // a new CRC32 per call: the old shared instance was not thread-safe (archives/groups load on several threads)
+        final CRC32 crc32 = new CRC32();
         crc32.update(data.getBuffer(), offset, length);
-        int v = (int) crc32.getValue();
-        crc32.reset();
-        return v;
+        return (int) crc32.getValue();
     }
 
     public static int strToI(String str) {

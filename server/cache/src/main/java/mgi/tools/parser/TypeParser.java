@@ -167,6 +167,12 @@ public class TypeParser {
     }
 
     public static void main(final String[] args) throws Exception, FileNotFoundException {
+        if (CacheManager.isExternalCache()) {
+            // The server is pointed at an external cache (e.g. the vanilla build-241 test cache): GadScape's
+            // cache build (211 base + migrations + custom packers) must not run and must not touch that cache.
+            log.info("-D{}={} is set: skipping cache generation.", CacheManager.CACHE_DIR_PROPERTY, CacheManager.externalCacheDir());
+            return;
+        }
         String targetCacheDirectory = "data/cache";
         String targetPortDirectory = "data/" + basePortCache;
 

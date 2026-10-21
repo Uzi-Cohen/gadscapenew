@@ -571,9 +571,17 @@ public fun ByteBuf.writeUnsignedIntSmart(v: Int): ByteBuf {
         final int length = readUnsignedByte();
         final Int2ObjectMap<Object> parameters = new Int2ObjectOpenHashMap<>(length);
         for (int index = 0; index < length; index++) {
-            final boolean stringInstance = readUnsignedByte() == 1;
+            // value type: 0 = int, 1 = string, 2 = long (build 241, e.g. long-typed params; RuneLite readParams)
+            final int valueType = readUnsignedByte();
             final int key = readMedium();
-            Object value = stringInstance ? readString() : readInt();
+            final Object value;
+            if (valueType == 1) {
+                value = readString();
+            } else if (valueType == 2) {
+                value = readLong();
+            } else {
+                value = readInt();
+            }
             parameters.put(key, value);
         }
         return parameters;
@@ -584,10 +592,12 @@ public fun ByteBuf.writeUnsignedIntSmart(v: Int): ByteBuf {
         for (final Int2ObjectMap.Entry<Object> parameter : parameters.int2ObjectEntrySet()) {
             final int key = parameter.getIntKey();
             final Object value = parameter.getValue();
-            writeByte(value instanceof String ? 1 : 0);
+            writeByte(value instanceof String ? 1 : value instanceof Long ? 2 : 0);
             writeMedium(key);
             if (value instanceof String) {
                 writeString((String) value);
+            } else if (value instanceof Long) {
+                writeLong((Long) value);
             } else {
                 writeInt(((Number) value).intValue());
             }

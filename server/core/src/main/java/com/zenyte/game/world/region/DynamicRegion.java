@@ -177,13 +177,10 @@ public final class DynamicRegion extends Region {
 
     private void cacheRegionAsChunks(final int regionId) {
         try {
-            final int[] xteas = XTEALoader.getXTEAs(regionId);
             final Cache cache = CacheManager.getCache();
-            final Archive archive = cache.getArchive(ArchiveType.MAPS);
-            final Group mapGroup = archive.findGroupByName("m" + (regionId >> 8) + "_" + (regionId & 255));
-            final Group landGroup = archive.findGroupByName("l" + (regionId >> 8) + "_" + (regionId & 255), xteas);
-            final ByteBuffer mapBuffer = mapGroup == null ? null : mapGroup.findFileByID(0).getData();
-            final ByteBuffer landBuffer = landGroup == null ? null : landGroup.findFileByID(0).getData();
+            // rev 211: named + XTEA groups; build 241: group = region id, file 0 terrain, file 1 locs (MapFiles)
+            final ByteBuffer mapBuffer = mgi.tools.jagcached.MapFiles.terrain(cache, regionId);
+            final ByteBuffer landBuffer = mgi.tools.jagcached.MapFiles.locs(cache, regionId);
             if (mapBuffer != null) {
                 mapBuffer.setPosition(0);
                 splitRegionClipSettingsIntoChunks(regionId, mapBuffer);
@@ -211,6 +208,9 @@ public final class DynamicRegion extends Region {
                 final int hash = buffer.readUnsignedByte();
                 final int x = (location >> 6 & 63);
                 final int y = (location & 63);
+                if ((location >> 12) > 3) {
+                    continue; // build 241: level-4 ("underwater") locs; the server has no such plane
+                }
                 final int z = location >> 12 & 3;
                 final int type = hash >> 2;
                 final int rotation = hash & 3;

@@ -9,6 +9,8 @@ import mgi.tools.jagcached.cache.File;
 import mgi.tools.jagcached.cache.Group;
 import mgi.types.Definitions;
 import mgi.utilities.ByteBuffer;
+import mgi.types.config.db.Column;
+import mgi.types.config.db.ColumnValue;
 import net.runelite.cache.util.ScriptVarType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,10 @@ public class DBTableDefinition implements Definitions, Cloneable {
 	private static DBTableDefinition[] definitions;
 	private int numColumns = -1;
 	private final LinkedHashMap<Integer, Integer> typeCountMap = new LinkedHashMap<>();
+	/**
+	 * Raw var type ids per column (ScriptVarType.forId returns null for ids the bundled RuneLite 1.9.8 enum lacks).
+	 */
+	private final LinkedHashMap<Integer, int[]> typeIdMap = new LinkedHashMap<>();
 	private final LinkedHashMap<Integer, Integer> settingMap = new LinkedHashMap<>();
 	private final LinkedHashMap<Integer, Integer> fieldCountMap = new LinkedHashMap<>();
 	private final LinkedHashMap<Integer, Boolean> defaultValueMap = new LinkedHashMap<>();
@@ -61,45 +67,6 @@ public class DBTableDefinition implements Definitions, Cloneable {
 		}
 	}
 
-	static class Column {
-		int columnId;
-		LinkedHashMap<Integer, ColumnValue> values;
-		Column(int id) {
-			this.columnId = id;
-			values = new LinkedHashMap<>();
-		}
-
-		public void addValue(int valueIndex, ColumnValue value) {
-			values.put(valueIndex, value);
-		}
-
-		public ColumnValue getForIdx(int idx) {
-			return values.get(idx);
-		}
-
-		public Integer getId() {
-			return this.columnId;
-		}
-	}
-
-	static class ColumnValue {
-		ScriptVarType type;
-		int defaultInt = -1;
-		String defaultString = "";
-
-		ColumnValue(ScriptVarType type, int defaultInt) {
-			this.type = type;
-			this.defaultInt = defaultInt;
-		}
-
-		ColumnValue(ScriptVarType type, String defaultString) {
-			this.type = type;
-			this.defaultString = defaultString;
-		}
-
-
-	}
-
 	public DBTableDefinition clone() throws CloneNotSupportedException {
 		return (DBTableDefinition) super.clone();
 	}
@@ -109,9 +76,14 @@ public class DBTableDefinition implements Definitions, Cloneable {
 		while (true) {
 			final int opcode = buffer.readUnsignedByte();
 			if (opcode == 0) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("dbtable", id, buffer);
 				return;
 			}
-			decode(buffer, opcode);
+			try {
+				decode(buffer, opcode);
+			} catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+				mgi.tools.jagcached.CacheFormat.handle(e);
+			}
 		}
 	}
 
@@ -136,11 +108,14 @@ public class DBTableDefinition implements Definitions, Cloneable {
 				typeCountMap.put(columnId, numTypes);
 				ScriptVarType[] columnTypes = new ScriptVarType[numTypes];
 
+				final int[] typeIds = new int[numTypes];
 				for(int i = 0; i < columnTypes.length; ++i) {
-					columnTypes[i] = ScriptVarType.forId(buffer.readUnsignedSmart());
+					typeIds[i] = buffer.readUnsignedSmart();
+					columnTypes[i] = ScriptVarType.forId(typeIds[i]);
 				}
 
 				types[columnId] = columnTypes;
+				typeIdMap.put(columnId, typeIds);
 				if (hasDefault) {
 					if (defaultColumnValues == null) {
 						defaultColumnValues = new Column[types.length];
@@ -155,23 +130,18 @@ public class DBTableDefinition implements Definitions, Cloneable {
 				}
 			}
 		}
-		throw new IllegalStateException("Opcode: " + opcode);
+		throw mgi.tools.jagcached.CacheFormat.unknownOpcode("dbtable", id, opcode);
 	}
 
 	private void decodeColumnDefaults(Column column, ByteBuffer stream) {
 		int fieldCount = fieldCountMap.getOrDefault(column.getId(), 0);
-		ScriptVarType[] scriptTypes = types[column.getId()];
-		int typesCount = scriptTypes.length;
+		final int[] typeIds = typeIdMap.get(column.getId());
+		int typesCount = typeIds.length;
 
 		for(int fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex) {
 			for(int typeIndex = 0; typeIndex < typesCount; ++typeIndex) {
-				ScriptVarType type = scriptTypes[typeIndex];
 				int valuesIndex = fieldIndex * typesCount + typeIndex;
-				if (type == ScriptVarType.STRING) {
-					column.addValue(valuesIndex, new ColumnValue(type, stream.readString()));
-				} else {
-					column.addValue(valuesIndex, new ColumnValue(type, stream.readInt()));
-				}
+				column.addValue(valuesIndex, ColumnValue.read(typeIds[typeIndex], stream));
 			}
 		}
 	}
@@ -185,17 +155,10 @@ public class DBTableDefinition implements Definitions, Cloneable {
 			for(int typeIndex = 0; typeIndex < typesCount; ++typeIndex) {
 				ScriptVarType type = scriptTypes[typeIndex];
 				int valuesIndex = fieldIndex * typesCount + typeIndex;
-				if (type == ScriptVarType.STRING) {
-					ColumnValue value = column.getForIdx(valuesIndex);
-					if(value.type != type)
-						throw new IllegalStateException();
-					stream.writeString(value.defaultString);
-				} else {
-					ColumnValue value = column.getForIdx(valuesIndex);
-					if(value.type != type)
-						throw new IllegalStateException();
-					stream.writeInt(value.defaultInt);
-				}
+				ColumnValue value = column.getForIdx(valuesIndex);
+				if(value.type != type)
+					throw new IllegalStateException();
+				value.write(stream); // string, long or int by base type
 			}
 		}
 	}

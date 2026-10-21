@@ -34,6 +34,14 @@ public class Group {
 	 * Contains crc of packed group file.
 	 */
 	private int crc;
+	/**
+	 * Reference-table extras (flags 0x4 and 0x8, used by the build-241 cache): length of the packed container
+	 * without its version trailer, length of the uncompressed group data, and the CRC32 of the uncompressed data.
+	 * Recomputed whenever the group is repacked.
+	 */
+	private int compressedSize;
+	private int uncompressedSize;
+	private int uncompressedCrc;
 	private int highestFileId;
 	/**
 	 * Contains 64-byte whirlpool digest.
@@ -171,6 +179,9 @@ public class Group {
 		copy.name = name;
 		copy.version = version;
 		copy.crc = crc;
+		copy.compressedSize = compressedSize;
+		copy.uncompressedSize = uncompressedSize;
+		copy.uncompressedCrc = uncompressedCrc;
 		if (digest != null) {
 			copy.digest = new byte[64];
 			System.arraycopy(digest, 0, copy.digest, 0, 64);
@@ -350,6 +361,7 @@ public class Group {
 		if (fileCount() <= 1) {
 			if (fileCount() <= 0) {
 				ByteBuffer container = Helper.encodeFilesContainer(new ByteBuffer(new byte[0]), version);
+				recordSizes(new byte[0], 0, container);
 				if (xtea != null && xtea[0] != 0 && xtea[1] != 0 && xtea[2] != 0 && xtea[3] != 0) {
 					Helper.encryptContainer(container, xtea);
 				}
@@ -358,6 +370,7 @@ public class Group {
 			ByteBuffer packed = new ByteBuffer(files[0].getData().getBuffer().length);
 			packed.writeBytes(files[0].getData().getBuffer(), 0, files[0].getData().getBuffer().length);
 			ByteBuffer container = Helper.encodeFilesContainer(packed, version);
+			recordSizes(packed.getBuffer(), packed.getBuffer().length, container);
 			if (xtea != null && xtea[0] != 0 && xtea[1] != 0 && xtea[2] != 0 && xtea[3] != 0) {
 				Helper.encryptContainer(container, xtea);
 			}
@@ -370,10 +383,38 @@ public class Group {
 		for (int i = 0, v = 0; i < files.length; i++, v += (files[i - 1].getData().getBuffer().length - v)) packed.writeInt(files[i].getData().getBuffer().length - v);
 		packed.writeByte(1); // 1 sector
 		ByteBuffer container = Helper.encodeFilesContainer(packed, version);
+		recordSizes(packed.getBuffer(), packed.getBuffer().length, container);
 		if (xtea != null && xtea[0] != 0 && xtea[1] != 0 && xtea[2] != 0 && xtea[3] != 0) {
 			Helper.encryptContainer(container, xtea);
 		}
 		return container;
+	}
+
+	private void recordSizes(byte[] raw, int rawLength, ByteBuffer container) {
+		uncompressedSize = rawLength;
+		uncompressedCrc = Helper.crc32(raw, 0, rawLength);
+		compressedSize = container.getBuffer().length - 2; // without the version trailer
+	}
+
+	/**
+	 * Sets the extra reference-table values read from the cache (flags 0x4 and 0x8).
+	 */
+	public void setReferenceSizes(int compressedSize, int uncompressedSize, int uncompressedCrc) {
+		this.compressedSize = compressedSize;
+		this.uncompressedSize = uncompressedSize;
+		this.uncompressedCrc = uncompressedCrc;
+	}
+
+	public int getCompressedSize() {
+		return compressedSize;
+	}
+
+	public int getUncompressedSize() {
+		return uncompressedSize;
+	}
+
+	public int getUncompressedCrc() {
+		return uncompressedCrc;
 	}
 
 	/**

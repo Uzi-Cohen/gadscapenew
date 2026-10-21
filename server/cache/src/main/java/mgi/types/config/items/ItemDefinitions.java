@@ -150,6 +150,15 @@ public final class ItemDefinitions implements Definitions, Cloneable {
         return wearPos2 == part || wearPos3 == part;
     }
     int cacheWeight;
+    /**
+     * Build-241 cache extras, decoded so the rest of each definition stays aligned; not used by game logic yet.
+     * Opcode 15 clears {@code cacheTradeable}; opcode 161 is a list of item ids this item can hold; opcode 251 is
+     * a flag RuneLite calls "bronzeman". Opcode 160 sets {@code isStackable = 2} (seen on untradeable/charged items
+     * such as the Abyssal tentacle and Old school bond), which {@link #isStackable()} treats as not stackable.
+     */
+    boolean cacheTradeable = true;
+    int[] holdingWhitelist;
+    boolean bronzeman;
     int category;
     Int2ObjectMap<Object> parameters;
     private String examine;
@@ -379,9 +388,14 @@ public final class ItemDefinitions implements Definitions, Cloneable {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("item", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
@@ -389,6 +403,18 @@ public final class ItemDefinitions implements Definitions, Cloneable {
     @Override
     public void decode(final ByteBuffer buffer, final int opcode) {
         ItemDefinitionsDecoding.decodeOpcode(this, buffer, opcode);
+    }
+
+    public boolean isCacheTradeable() {
+        return cacheTradeable;
+    }
+
+    public int[] getHoldingWhitelist() {
+        return holdingWhitelist;
+    }
+
+    public boolean isBronzeman() {
+        return bronzeman;
     }
 
     private void setDefaults() {

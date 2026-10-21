@@ -72,9 +72,14 @@ public class StructDefinitions implements Definitions, Cloneable {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("struct", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
@@ -130,7 +135,7 @@ public class StructDefinitions implements Definitions, Cloneable {
             parameters = buffer.readParameters();
             return;
         }
-        throw new IllegalStateException("Opcode: " + opcode);
+        throw mgi.tools.jagcached.CacheFormat.unknownOpcode("struct", id, opcode);
     }
 
     @Override

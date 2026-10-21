@@ -235,15 +235,23 @@ public class ObjectDefinitions implements Definitions, Cloneable, Transmogrifiab
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("object", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
     @Override
     public void decode(final ByteBuffer buffer, final int opcode) {
-        decodeOpcode(this, buffer, opcode, this.id <= 47337);
+        // Opcodes 78/79 gained a "retain" byte in rev 220. GadScape's 211 cache mixes vanilla 211 objects
+        // (ids <= 47337, old format) with objects copied from newer caches (new format); build 241 is all new format.
+        final boolean oldSoundFormat = !mgi.tools.jagcached.CacheFormat.objectSoundRetain() && this.id <= 47337;
+        decodeOpcode(this, buffer, opcode, oldSoundFormat);
     }
 
     public String getOption(final int option) {

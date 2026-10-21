@@ -96,9 +96,14 @@ public final class IdentityKitDefinitions implements Definitions {
         while (true) {
             final int opcode = buffer.readUnsignedByte();
             if (opcode == 0) {
+                mgi.tools.jagcached.CacheFormat.checkFullyRead("identkit", id, buffer);
                 return;
             }
-            decode(buffer, opcode);
+            try {
+                decode(buffer, opcode);
+            } catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+                mgi.tools.jagcached.CacheFormat.handle(e);
+            }
         }
     }
 
@@ -116,6 +121,12 @@ public final class IdentityKitDefinitions implements Definitions {
                 return;
             case 3:
                 selectable = false;
+                return;
+            case 5: // build 241: 4-byte model ids (RuneLite KitLoader)
+                modelIds = new int[buffer.readUnsignedByte()];
+                for (int i = 0; i < modelIds.length; i++) {
+                    modelIds[i] = buffer.readInt();
+                }
                 return;
             case 40: {
                 final int length = buffer.readUnsignedByte();
@@ -144,6 +155,29 @@ public final class IdentityKitDefinitions implements Definitions {
             case 64:
                 headModels[opcode - 60] = buffer.readUnsignedShort();
                 return;
+            case 65:
+            case 66:
+            case 67:
+            case 68:
+            case 69:
+                buffer.readUnsignedShort(); // chathead models 5-9 (the server keeps 5)
+                return;
+            case 70:
+            case 71:
+            case 72:
+            case 73:
+            case 74:
+                headModels[opcode - 70] = buffer.readInt(); // build 241: 4-byte chathead model ids
+                return;
+            case 75:
+            case 76:
+            case 77:
+            case 78:
+            case 79:
+                buffer.readInt();
+                return;
+            default:
+                throw mgi.tools.jagcached.CacheFormat.unknownOpcode("identkit", id, opcode);
         }
     }
 

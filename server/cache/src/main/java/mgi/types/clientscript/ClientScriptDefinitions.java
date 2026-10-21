@@ -56,10 +56,20 @@ public final class ClientScriptDefinitions implements Definitions {
         try {
             decode(buffer);
         } catch (Exception e){
+            if (mgi.tools.jagcached.CacheFormat.isStrict()) {
+                throw new IllegalStateException("Failed to decode client script " + id, e);
+            }
             System.err.println("Failed to decode client script "+id);
             e.printStackTrace();
         }
     }
+
+    /**
+     * Build 241 (rev 237+): long locals and long arguments, and long constants in the code.
+     */
+    private int localLongCount;
+    private int longArgumentCount;
+    public long[] longArgs;
 
     public static ClientScriptDefinitions get(final int id) {
         return definitions[id];
@@ -68,17 +78,37 @@ public final class ClientScriptDefinitions implements Definitions {
     public ClientScriptDefinitions() {
     }
 
+    /*
+     * The rev-237 trailer (long local/argument counts, 16 bytes instead of 12) and the LCONST (61, 8-byte operand)
+     * and PUSH_NULL (63, 1-byte operand) instructions follow RuneLite's ScriptLoader (RuneLite master 330e650,
+     * Copyright (c) 2017, Adam <Adam@sigterm.info>, BSD 2-Clause licence; see ItemDefinitionsDecoding.kt for the
+     * full licence text).
+     */
     @Override
     public void decode(final ByteBuffer buffer) {
+        final boolean rev237 = mgi.tools.jagcached.CacheFormat.rev237Scripts();
+        if (buffer.getBuffer().length < 2 + 1 + (rev237 ? 16 : 12)) {
+            // too short to hold a trailer: a placeholder (script 0 of build 241 is the two bytes 00 0a), no code
+            instructions = new int[0];
+            intArgs = new int[0];
+            stringArgs = new String[0];
+            return;
+        }
         buffer.setPosition(buffer.getBuffer().length - 2);
         int switchBlocksSize = buffer.readUnsignedShort();
-        int codeBlockEnd = buffer.getBuffer().length - 2 - switchBlocksSize - 12;
+        int codeBlockEnd = buffer.getBuffer().length - 2 - switchBlocksSize - (rev237 ? 16 : 12);
         buffer.setPosition(codeBlockEnd);
         int codeSize = buffer.readInt();
         intArgumentCount = buffer.readUnsignedShort();
         stringArgumentCount = buffer.readUnsignedShort();
+        if (rev237) {
+            localLongCount = buffer.readUnsignedShort();
+        }
         intArgsCount = buffer.readUnsignedShort();
         stringArgsCount = buffer.readUnsignedShort();
+        if (rev237) {
+            longArgumentCount = buffer.readUnsignedShort();
+        }
         int someCount = buffer.readUnsignedByte();
         if (someCount > 0) {
             for (int i = 0; i < someCount; i++) {
@@ -89,8 +119,13 @@ public final class ClientScriptDefinitions implements Definitions {
                 }
             }
         }
+        if (buffer.getPosition() != buffer.getBuffer().length - 2) {
+            mgi.tools.jagcached.CacheFormat.problem("cs2-switch:" + id, "Client script " + id
+                    + ": switch tables end at " + buffer.getPosition() + ", expected " + (buffer.getBuffer().length - 2));
+        }
         buffer.setPosition(0);
-        String scriptName = buffer.readString();
+        String scriptName = buffer.getBuffer()[0] == 0 ? null : buffer.readString();
+        if (scriptName == null) buffer.readByte(); // readStringOrNull
         instructions = new int[codeSize];
         intArgs = new int[codeSize];
         stringArgs = new String[codeSize];
@@ -98,10 +133,26 @@ public final class ClientScriptDefinitions implements Definitions {
         while (buffer.getPosition() < codeBlockEnd) {
             int opcode = buffer.readUnsignedShort();
             if (opcode == 3) stringArgs[i_33_] = buffer.readString();
-            else if (opcode < 100 && opcode != 21 && opcode != 38 && opcode != 39) intArgs[i_33_] = buffer.readInt();
+            else if (opcode == 61) { // LCONST
+                if (longArgs == null) longArgs = new long[codeSize];
+                longArgs[i_33_] = buffer.readLong();
+            }
+            else if (opcode < 100 && opcode != 21 && opcode != 38 && opcode != 39 && opcode != 63) intArgs[i_33_] = buffer.readInt();
             else intArgs[i_33_] = buffer.readUnsignedByte();
             instructions[i_33_++] = opcode;
         }
+        if (buffer.getPosition() != codeBlockEnd || i_33_ != codeSize) {
+            mgi.tools.jagcached.CacheFormat.problem("cs2-code:" + id, "Client script " + id + ": code ended at "
+                    + buffer.getPosition() + " (expected " + codeBlockEnd + ") after " + i_33_ + " of " + codeSize + " instructions");
+        }
+    }
+
+    public int getLocalLongCount() {
+        return localLongCount;
+    }
+
+    public int getLongArgumentCount() {
+        return longArgumentCount;
     }
 
     public int getId() {

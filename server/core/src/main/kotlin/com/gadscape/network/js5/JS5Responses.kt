@@ -44,13 +44,14 @@ object JS5Responses {
 
     @JvmStatic
     fun preload(cache: Cache) {
-        /* build regular responses */
-        for (archiveType in ArchiveType.entries) {
+        /* build regular responses: every archive the cache has (0..24 in build 241, which lacks 16 and 23), plus 255 */
+        val indexIDs = (0 until cache.archiveCount) + ArchiveType.REFERENCE.id
+        for (indexID in indexIDs) {
             // disable these giant files that are disabled anyways.
-            if (archiveType == ArchiveType.WORLDMAPDATA_LEGACY) continue
+            if (indexID == ArchiveType.WORLDMAPDATA_LEGACY.id) continue
 
-            val indexID = archiveType.id
-            val index = cache.getIndex(indexID)
+            val index = cache.getIndex(indexID) ?: continue
+            if (indexID != ArchiveType.REFERENCE.id && !index.exists()) continue
             for (fileID in 0..index.groupCount()) {
                 if (indexID == 255 && fileID == 255) continue
                 val data = index.get(fileID)?.buffer ?: continue

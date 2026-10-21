@@ -21,13 +21,10 @@ public final class WorldMapUtils {
 
     public static WorldMapGameObject[][][][] getWorldMapObjects(final int regionId, int plane) throws IOException {
         final Cache cache = CacheManager.getCache();
-        final Archive archive = cache.getArchive(ArchiveType.MAPS);
-        final int[] xteas = XTEALoader.getXTEAs(regionId);
-        final Group landGroup = archive.findGroupByName("l" + (regionId >> 8) + "_" + (regionId & 255), xteas);
-        if (landGroup == null) {
+        final ByteBuffer buffer = mgi.tools.jagcached.MapFiles.locs(cache, regionId);
+        if (buffer == null) {
             throw new RuntimeException("Map file is null!");
         }
-        final ByteBuffer buffer = landGroup.findFileByID(0).getData();
         final WorldMapGameObject[][][][] objects = new WorldMapGameObject[4][64][64][];
         int lastX = 0;
         int lastY = 0;
@@ -81,12 +78,10 @@ public final class WorldMapUtils {
 
     public static OverlayInformation getOverlays(final int regionId, int baseHeight) throws IOException {
         final Cache cache = CacheManager.getCache();
-        final Archive archive = cache.getArchive(ArchiveType.MAPS);
-        final Group mapGroup = archive.findGroupByName("m" + (regionId >> 8) + "_" + (regionId & 255));
-        if (mapGroup == null) {
+        final ByteBuffer buffer = mgi.tools.jagcached.MapFiles.terrain(cache, regionId);
+        if (buffer == null) {
             throw new RuntimeException("Map file is null!");
         }
-        final ByteBuffer buffer = mapGroup.findFileByID(0).getData();
         buffer.setPosition(0);
         short[][][] ids = new short[4 - baseHeight][64][64];
         byte[][][] rotations = new byte[4 - baseHeight][64][64];
@@ -134,19 +129,17 @@ public final class WorldMapUtils {
 
     public static int[][][] getClipSettings(final int regionId) throws IOException {
         final Cache cache = CacheManager.getCache();
-        final Archive archive = cache.getArchive(ArchiveType.MAPS);
-        final Group mapGroup = archive.findGroupByName("m" + (regionId >> 8) + "_" + (regionId & 255));
-        if (mapGroup == null) {
+        final ByteBuffer buffer = mgi.tools.jagcached.MapFiles.terrain(cache, regionId);
+        if (buffer == null) {
             throw new RuntimeException("Map file is null!");
         }
-        final ByteBuffer buffer = mapGroup.findFileByID(0).getData();
         buffer.setPosition(0);
         final int[][][] settings = new int[4][64][64];
         for (int z = 0; z < 4; z++) {
             for (int x = 0; x < 64; x++) {
                 for (int y = 0; y < 64; y++) {
                     while (true) {
-                        final int attribute = buffer.readUnsignedByte();
+                        final int attribute = buffer.readUnsignedShort(); // u16 since rev 209 (was readUnsignedByte)
                         if (attribute == 0) {
                             break;
                         } else if (attribute == 1) {
@@ -168,12 +161,10 @@ public final class WorldMapUtils {
 
     public static short[][][] getUnderlays(final int regionId, int baseHeight) throws IOException {
         final Cache cache = CacheManager.getCache();
-        final Archive archive = cache.getArchive(ArchiveType.MAPS);
-        final Group mapGroup = archive.findGroupByName("m" + (regionId >> 8) + "_" + (regionId & 255));
-        if (mapGroup == null) {
+        final ByteBuffer buffer = mgi.tools.jagcached.MapFiles.terrain(cache, regionId);
+        if (buffer == null) {
             throw new RuntimeException("Map file is null!");
         }
-        final ByteBuffer buffer = mapGroup.findFileByID(0).getData();
         buffer.setPosition(0);
         final int increment = 1;
         final short[][][] underlays = new short[4 - baseHeight][64][64];

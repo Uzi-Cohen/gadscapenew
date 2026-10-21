@@ -360,3 +360,19 @@ tasks.named<Zip>("distZip").configure {
 tasks.named<Tar>("distTar").configure {
     enabled = false
 }
+
+/*
+ * Rev 241 test build: `./gradlew :app:runDev -Dgadscape.cache.dir=/path/to/cache241 ...` runs the server on that
+ * cache. Every -Dgadscape.* property given to Gradle is passed on to the server JVMs, and GadScape's own cache
+ * generation (TypeParser) is skipped while gadscape.cache.dir is set, so the external cache is never repacked.
+ */
+tasks.withType<JavaExec>().configureEach {
+    System.getProperties().stringPropertyNames()
+        .filter { it.startsWith("gadscape.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
+}
+listOf("generateCache", "generateCacheProd").forEach { name ->
+    tasks.named(name) {
+        onlyIf("no external cache (-Dgadscape.cache.dir)") { System.getProperty("gadscape.cache.dir").isNullOrBlank() }
+    }
+}

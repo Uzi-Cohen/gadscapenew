@@ -6,6 +6,22 @@ plugins {
 group = "com.gadscape"
 version = "0.1.0"
 
+/*
+ * Rev 241 test build: builds collision for every map square of -Dgadscape.cache.dir with the server's Region code
+ * (src/test/java/com/gadscape/cache/verify/RegionCollisionCheck.java):
+ *   ./gradlew :core:verifyRegions --offline -Dgadscape.cache.dir=/path/to/cache241
+ */
+tasks.register<JavaExec>("verifyRegions") {
+    group = "verification"
+    description = "Loads every map square of -Dgadscape.cache.dir through Region and checks the collision flags."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.gadscape.cache.verify.RegionCollisionCheck")
+    maxHeapSize = "4g"
+    System.getProperties().stringPropertyNames()
+        .filter { it.startsWith("gadscape.") }
+        .forEach { systemProperty(it, System.getProperty(it)) }
+}
+
 dependencies {
     api(projects.threads)
     api(projects.net)

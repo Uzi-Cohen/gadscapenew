@@ -27,6 +27,10 @@ public class DBRowDefinition implements Definitions, Cloneable {
 	public static LinkedHashMap<Integer, List<DBRowDefinition>> tableRows = new LinkedHashMap<>();
 
 	public final LinkedHashMap<Integer, Integer> typeCountMap = new LinkedHashMap<>();
+	/**
+	 * Raw var type ids per column (ScriptVarType.forId returns null for ids the bundled RuneLite 1.9.8 enum lacks).
+	 */
+	public final LinkedHashMap<Integer, int[]> typeIdMap = new LinkedHashMap<>();
 	public final LinkedHashMap<Integer, Integer> fieldCountMap = new LinkedHashMap<>();
 	public final LinkedHashMap<Integer, Boolean> defaultValueMap = new LinkedHashMap<>();
 	public final LinkedHashMap<Integer, Column> columns = new LinkedHashMap<>();
@@ -91,12 +95,17 @@ public class DBRowDefinition implements Definitions, Cloneable {
 		while (true) {
 			final int opcode = buffer.readUnsignedByte();
 			if (opcode == 0) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("dbrow", id, buffer);
 				if(tableId != -1) {
 					insertRow(this);
 				}
 				return;
 			}
-			decode(buffer, opcode);
+			try {
+				decode(buffer, opcode);
+			} catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+				mgi.tools.jagcached.CacheFormat.handle(e);
+			}
 		}
 	}
 
@@ -125,11 +134,14 @@ public class DBRowDefinition implements Definitions, Cloneable {
 					typeCountMap.put(columnId, numTypes);
 					ScriptVarType[] scriptVarTypes = new ScriptVarType[numTypes];
 
+					final int[] typeIds = new int[numTypes];
 					for (int i = 0; i < scriptVarTypes.length; ++i) {
-						scriptVarTypes[i] = ScriptVarType.forId(buffer.readUnsignedSmart());
+						typeIds[i] = buffer.readUnsignedSmart();
+						scriptVarTypes[i] = ScriptVarType.forId(typeIds[i]);
 					}
 
 					types[columnId] = scriptVarTypes;
+					typeIdMap.put(columnId, typeIds);
 					int fieldCount = buffer.readUnsignedSmart();
 					fieldCountMap.put(columnId, fieldCount);
 					Column column = new Column(columnId);
@@ -142,7 +154,7 @@ public class DBRowDefinition implements Definitions, Cloneable {
 				rowCounts.put(this.tableId, rowCounts.getOrDefault(this.tableId, 0) + 1);
 				break;
 			default:
-				throw new IllegalStateException("Opcode: " + opcode);
+				throw mgi.tools.jagcached.CacheFormat.unknownOpcode("dbrow", id, opcode);
 		}
 	}
 
@@ -176,18 +188,13 @@ public class DBRowDefinition implements Definitions, Cloneable {
 
 	private void decodeColumnFields(Column column, ByteBuffer stream) {
 		int fieldCount = fieldCountMap.getOrDefault(column.getId(), 0);
-		ScriptVarType[] scriptTypes = types[column.getId()];
-		int typesCount = scriptTypes.length;
+		final int[] typeIds = typeIdMap.get(column.getId());
+		int typesCount = typeIds.length;
 
 		for(int fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex) {
 			for(int typeIndex = 0; typeIndex < typesCount; ++typeIndex) {
-				ScriptVarType type = scriptTypes[typeIndex];
 				int valuesIndex = fieldIndex * typesCount + typeIndex;
-				if (type == ScriptVarType.STRING) {
-					column.addValue(valuesIndex, new ColumnValue(type, stream.readString()));
-				} else {
-					column.addValue(valuesIndex, new ColumnValue(type, stream.readInt()));
-				}
+				column.addValue(valuesIndex, ColumnValue.read(typeIds[typeIndex], stream));
 			}
 		}
 	}
@@ -201,17 +208,10 @@ public class DBRowDefinition implements Definitions, Cloneable {
 			for(int typeIndex = 0; typeIndex < typesCount; ++typeIndex) {
 				ScriptVarType type = scriptTypes[typeIndex];
 				int valuesIndex = fieldIndex * typesCount + typeIndex;
-				if (type == ScriptVarType.STRING) {
-					ColumnValue value = column.getForIdx(valuesIndex);
-					if(value.type != type)
-						throw new IllegalStateException();
-					stream.writeString(value.defaultString);
-				} else {
-					ColumnValue value = column.getForIdx(valuesIndex);
-					if(value.type != type)
-						throw new IllegalStateException();
-					stream.writeInt(value.defaultInt);
-				}
+				ColumnValue value = column.getForIdx(valuesIndex);
+				if(value.type != type)
+					throw new IllegalStateException();
+				value.write(stream); // string, long or int by base type
 			}
 		}
 	}

@@ -153,6 +153,14 @@ public class ComponentDefinitions implements Definitions, Cloneable {
 			} else {
 				decode(buffer);
 			}
+			// IF3 model components with exactly one of widthMode/heightMode set: the cache tool writes both the obj
+			// width and height shorts, the client reads only the one whose mode is set (zwyz's osrs-cache notes this
+			// "client has bug in decoding"). We decode exactly like the client, so those components end 2 bytes early.
+			final boolean clientQuirk = isIf3 && type == 6 && (widthMode != 0) != (heightMode != 0)
+					&& buffer.getBuffer().length - buffer.getPosition() == 2;
+			if (!clientQuirk) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("component", id, buffer);
+			}
 		}
 	}
 
@@ -483,14 +491,21 @@ public class ComponentDefinitions implements Definitions, Cloneable {
 		}
 		if (type == 6) {
 			modelType = 1;
-			modelId = buffer.readUnsignedShort();
-			if (modelId == 65535) {
-				modelId = -1;
-			}
-			field2840 = 1;
-			alternateModelId = buffer.readUnsignedShort();
-			if (alternateModelId == 65535) {
-				alternateModelId = -1;
+			if (mgi.tools.jagcached.CacheFormat.rev237Interfaces()) {
+				// rev 237+ (build 241): 4-byte model ids (RuneLite InterfaceLoader)
+				modelId = buffer.readInt();
+				field2840 = 1;
+				alternateModelId = buffer.readInt();
+			} else {
+				modelId = buffer.readUnsignedShort();
+				if (modelId == 65535) {
+					modelId = -1;
+				}
+				field2840 = 1;
+				alternateModelId = buffer.readUnsignedShort();
+				if (alternateModelId == 65535) {
+					alternateModelId = -1;
+				}
 			}
 			animation = buffer.readUnsignedShort();
 			if (animation == 65535) {
@@ -607,9 +622,13 @@ public class ComponentDefinitions implements Definitions, Cloneable {
 		}
 		if (type == 6) {
 			modelType = 1;
-			modelId = buffer.readUnsignedShort();
-			if (modelId == 65535) {
-				modelId = -1;
+			if (mgi.tools.jagcached.CacheFormat.rev237Interfaces()) {
+				modelId = buffer.readInt(); // rev 237+ (build 241): 4-byte model id (RuneLite InterfaceLoader)
+			} else {
+				modelId = buffer.readUnsignedShort();
+				if (modelId == 65535) {
+					modelId = -1;
+				}
 			}
 			offsetX2d = buffer.readShort();
 			offsetY2d = buffer.readShort();
@@ -700,6 +719,9 @@ public class ComponentDefinitions implements Definitions, Cloneable {
 					objects_0[int_1] = buffer.readInt();
 				} else if (int_2 == 1) {
 					objects_0[int_1] = buffer.readString();
+				} else {
+					mgi.tools.jagcached.CacheFormat.problem("component-listener-arg:" + int_2,
+							"Unknown interface listener argument type " + int_2 + " in component " + interfaceId + ":" + componentId);
 				}
 			}
 			return objects_0;

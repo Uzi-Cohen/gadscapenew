@@ -58,9 +58,14 @@ public final class VarbitDefinitions implements Definitions {
 		while (true) {
 			final int opcode = buffer.readUnsignedByte();
 			if (opcode == 0) {
+				mgi.tools.jagcached.CacheFormat.checkFullyRead("varbit", id, buffer);
 				return;
 			}
-			decode(buffer, opcode);
+			try {
+				decode(buffer, opcode);
+			} catch (final mgi.tools.jagcached.CacheFormat.UnknownOpcodeException e) {
+				mgi.tools.jagcached.CacheFormat.handle(e);
+			}
 		}
 	}
 
@@ -70,6 +75,8 @@ public final class VarbitDefinitions implements Definitions {
 			baseVar = buffer.readUnsignedShort();
 			startBit = buffer.readUnsignedByte();
 			endBit = buffer.readUnsignedByte();
+		} else {
+			throw mgi.tools.jagcached.CacheFormat.unknownOpcode("varbit", id, opcode);
 		}
 	}
 
