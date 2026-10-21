@@ -1,5 +1,6 @@
 package com.zenyte.game.packet.out;
 
+import com.gadscape.network.rsprot.RsprotInfo;
 import com.zenyte.game.packet.GamePacketEncoder;
 import com.zenyte.game.packet.GamePacketEncoderMode;
 import com.zenyte.game.world.entity.player.LogLevel;
@@ -34,7 +35,8 @@ public final class RebuildNormal implements GamePacketEncoder {
         final GamePacketOut buffer = ServerProt.REBUILD_NORMAL.gamePacketOut();
         player.getForceReloadMap().set(false);
         if (init) {
-            player.getPlayerViewport().init(buffer);
+            // GPI init block (rev 241 player info is built by rsprot, see RsprotInfo)
+            RsprotInfo.INSTANCE.writeAbsolutePlayerPositions(player, buffer.content());
         }
         final int chunkX = player.getLocation().getChunkX();
         final int chunkY = player.getLocation().getChunkY();

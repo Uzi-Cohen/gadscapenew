@@ -12,6 +12,9 @@ dependencies {
     api(projects.cache)
     api(projects.coreModel)
 
+    // rev 241 networking (MIT, https://github.com/blurite/rsprot)
+    api(libs.rsprot.osrs241.api)
+
     api(libs.kaml)
     api(libs.logback.classic)
     api(libs.fastutil)
@@ -45,4 +48,12 @@ dependencies {
     implementation(libs.netty.codec.haproxy)
 
     implementation(libs.mockk)
+
+    // rev 241 info tests (RsprotInfoTest): JUnit 5 through kotlin-test
+    testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

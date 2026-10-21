@@ -1,5 +1,6 @@
 package com.gadscape.game.content.commands
 
+import com.gadscape.network.rsprot.RsprotInfo
 import com.gadscape.game.content.shop.ShopCurrencyHandler
 import com.gadscape.game.model.ui.credit_store.CreditStoreModel
 import com.gadscape.game.model.ui.credit_store.coinbaseEnabled
@@ -390,7 +391,7 @@ object DeveloperCommands {
                         Diary.sendJournal(player, "NPCs: " + npcStrings.size, npcStrings)
                     }
                     "view local" {
-                        val npcStrings = player.npcViewport.localNPCs.map { target ->
+                        val npcStrings = RsprotInfo.localNpcs(player).map { target ->
                             toString(target)
                         }
                         Diary.sendJournal(player, "NPCs: " + npcStrings.size, npcStrings)

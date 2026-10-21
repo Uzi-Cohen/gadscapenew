@@ -5,6 +5,7 @@ import com.gadscape.game.content.commands.DeveloperCommands;
 import com.gadscape.game.world.PlayerEvent;
 import com.gadscape.game.world.WorldEvent;
 import com.gadscape.game.world.WorldHooks;
+import com.gadscape.network.rsprot.RsprotInfo;
 import com.gadscape.threads.MainThread;
 import com.zenyte.cores.CoresManager;
 import com.zenyte.game.GameClock;
@@ -404,6 +405,13 @@ public final class WorldThread extends MainThread {
             }
         } catch (final Throwable e) {
             log.error("Failed to perform entity update for players", e);
+        }
+        // Rev 241 player info / NPC info (rsprot): computed for everyone at once, then sent after the
+        // rebuild, var and zone packets that processEntityUpdate queued above.
+        try {
+            RsprotInfo.INSTANCE.tick();
+        } catch (final Throwable e) {
+            log.error("Failed to build player/npc info", e);
         }
     }
 
