@@ -152,7 +152,8 @@ object RsprotOut {
         return RsHintArrow(RsHintArrow.TileHintArrow(arrow.x, arrow.y, arrow.height.toInt() and 0xFF, arrow.position.positionHash))
     }
 
-    private val messageCounter = java.util.concurrent.atomic.AtomicInteger()
+    // Seeded per boot (211 sent random ids): the client drops a (world, counter) it saw in its last 100 messages, even from a previous boot.
+    private val messageCounter = java.util.concurrent.atomic.AtomicInteger((System.currentTimeMillis() / 1000).toInt())
 
     /** Per-world chat message counter (the client uses world id + counter to drop duplicate messages). */
     @JvmStatic

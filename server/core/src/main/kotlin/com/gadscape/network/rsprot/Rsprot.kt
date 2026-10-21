@@ -12,7 +12,9 @@ import net.rsprot.protocol.api.AbstractNetworkServiceFactory
 import net.rsprot.protocol.api.GameConnectionHandler
 import net.rsprot.protocol.api.NetworkService
 import net.rsprot.protocol.api.handlers.ExceptionHandlers
+import net.rsprot.protocol.api.handlers.GameMessageHandlers
 import net.rsprot.protocol.api.handlers.LoginHandlers
+import net.rsprot.protocol.api.implementation.DefaultGameMessageCounter
 import net.rsprot.protocol.api.js5.Js5GroupProvider
 import net.rsprot.protocol.common.client.OldSchoolClientType
 import net.rsprot.protocol.loginprot.incoming.pow.challenges.sha256.DefaultSha256ProofOfWorkProvider
@@ -142,6 +144,10 @@ class GadScapeNetworkServiceFactory(
         RsprotIncoming.provider()
 
     override fun getGameConnectionHandler(): GameConnectionHandler<Player> = RsprotConnectionHandler()
+
+    // 211 processed up to 32 inbound packets per tick (NetworkConstants.MAX_INBOUND_PACKETS_PER_TICK); rsprot defaults to 10 user events.
+    override fun getGameMessageHandlers(): GameMessageHandlers =
+        GameMessageHandlers(gameMessageCounterProvider = { DefaultGameMessageCounter(clientEventLimit = 50, userEventLimit = 32) })
 
     override fun getLoginHandlers(): LoginHandlers {
         val world = GameConstants.WORLD_PROFILE?.number ?: 1

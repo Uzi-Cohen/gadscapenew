@@ -9,6 +9,7 @@ import net.rsprot.protocol.game.incoming.buttons.If1Button
 import net.rsprot.protocol.game.incoming.buttons.If3Button
 import net.rsprot.protocol.game.incoming.buttons.IfButtonD
 import net.rsprot.protocol.game.incoming.buttons.IfButtonT
+import net.rsprot.protocol.game.incoming.buttons.IfScriptTrigger
 import net.rsprot.protocol.game.incoming.buttons.IfSubOp
 import net.rsprot.protocol.game.incoming.events.EventAppletFocus
 import net.rsprot.protocol.game.incoming.events.EventCameraPosition
@@ -16,6 +17,7 @@ import net.rsprot.protocol.game.incoming.events.EventKeyboard
 import net.rsprot.protocol.game.incoming.events.EventMouseClickV1
 import net.rsprot.protocol.game.incoming.events.EventMouseClickV2
 import net.rsprot.protocol.game.incoming.events.EventMouseMove
+import net.rsprot.protocol.game.incoming.events.EventMouseScroll
 import net.rsprot.protocol.game.incoming.events.EventNativeMouseMove
 import net.rsprot.protocol.game.incoming.friendchat.FriendChatJoinLeave
 import net.rsprot.protocol.game.incoming.friendchat.FriendChatKick
@@ -141,12 +143,26 @@ object RsprotIncoming {
                 m.selectedSub, m.targetSub, m.selectedObj, m.targetObj,
             )
         }
+        // Newer than 211 (no server handler existed): logged and dropped.
+        builder.on<IfScriptTrigger> { _, m ->
+            try {
+                logger.debug("IF_SCRIPT_TRIGGER {}:{} sub {} obj {}", m.interfaceId, m.componentId, m.sub, m.obj)
+            } finally {
+                m.release()
+            }
+            null
+        }
+        builder.on<EventMouseScroll> { _, m ->
+            logger.debug("EVENT_MOUSE_SCROLL {}", m.mouseWheelRotation)
+            null
+        }
         builder.on<CloseModal> { _, _ -> CloseModalEvent() }
         builder.on<ResumePauseButton> { _, m -> ResumePauseButtonEvent(m.interfaceId, m.componentId, m.sub) }
         builder.on<ResumePCountDialog> { _, m -> ResumePCountDialogEvent(m.count) }
         builder.on<ResumePNameDialog> { _, m -> ResumePNameDialogEvent(m.name) }
         builder.on<ResumePStringDialog> { _, m -> ResumePStringDialogEvent(m.string) }
-        builder.on<ResumePObjDialog> { _, m -> ResumePObjDialogEvent(m.obj) }
+        // 241 decodes the item unsigned; 211 read -1 (Escape / cancelled) signed
+        builder.on<ResumePObjDialog> { _, m -> ResumePObjDialogEvent(if (m.obj == 0xFFFF) -1 else m.obj) }
 
         // --- movement / world map ----------------------------------------------------------------------
         builder.on<MoveGameClick> { _, m -> MoveGameClickEvent(m.keyCombination, m.x, m.z) }

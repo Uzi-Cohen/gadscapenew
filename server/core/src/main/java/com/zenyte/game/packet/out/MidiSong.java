@@ -30,7 +30,8 @@ public final class MidiSong implements GamePacketEncoder {
 
     @Override
     public OutgoingGameMessage toMessage() {
-        return song < 0 || song == 65535 ? new net.rsprot.protocol.game.outgoing.sound.MidiSongStop(0, 0) : new net.rsprot.protocol.game.outgoing.sound.MidiSongV2(song, 0, 0, 0, 0);
+        // The 211 MIDI_SONG packet played as (id, 0, 60, 60, 0): fade the old song out and the new one in.
+		return song < 0 || song == 65535 ? new net.rsprot.protocol.game.outgoing.sound.MidiSongStop(0, 60) : new net.rsprot.protocol.game.outgoing.sound.MidiSongV2(song, 0, 60, 60, 0);
     }
 
 }

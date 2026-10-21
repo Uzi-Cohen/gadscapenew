@@ -33,7 +33,8 @@ public class IfSetEvents implements GamePacketEncoder {
 
 	@Override
 	public OutgoingGameMessage toMessage() {
-		return new net.rsprot.protocol.game.outgoing.interfaces.IfSetEventsV2(interfaceId, componentId, start, end, set, 0);
+		// 241 reads the transmit bits for ops 1-10 from events2 (op n = bit n-1); bits 1-10 of events1 are ignored.
+		return new net.rsprot.protocol.game.outgoing.interfaces.IfSetEventsV2(interfaceId, componentId, start, end, set, (set >>> 1) & 0x3FF);
 	}
 
 	@Override

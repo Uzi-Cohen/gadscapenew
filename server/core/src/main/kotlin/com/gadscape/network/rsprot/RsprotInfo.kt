@@ -31,6 +31,7 @@ import net.rsprot.protocol.game.outgoing.info.playerinfo.PlayerInfo
 import net.rsprot.protocol.game.outgoing.info.util.PacketResult
 import net.rsprot.protocol.game.outgoing.info.util.isEmpty
 import net.rsprot.protocol.game.outgoing.map.RebuildLoginV2
+import net.rsprot.protocol.game.outgoing.misc.client.ServerTickEnd
 import net.rsprot.protocol.message.OutgoingGameMessage
 import org.slf4j.LoggerFactory
 import kotlin.math.abs
@@ -123,6 +124,7 @@ object RsprotInfo {
         var overheadGroup = -1
         var overheadIndex = -1
         var faceEntity = -1
+        var direction = -1
     }
 
     private val players = arrayOfNulls<PlayerState>(PLAYER_CAPACITY)
@@ -509,6 +511,8 @@ object RsprotInfo {
         }
         val player = state.player
         sendInfoPackets(packets) { message -> send(sink, player, message) }
+        // Last packet of the cycle, as OSRS: the 241 client counts ground item timers on it and RuneLite fires GameTick.
+        send(sink, player, ServerTickEnd)
     }
 
     /**
@@ -796,6 +800,13 @@ object RsprotInfo {
             state.inaccessible = inaccessible
         }
         moveNpc(state)
+
+        // New observers (and re-adds after a teleport) get the avatar's direction; 211 wrote the NPC's current direction on every add.
+        val direction = npc.roundedDirection.coerceIn(0, 7)
+        if (direction != state.direction) {
+            avatar.setDirection(direction)
+            state.direction = direction
+        }
 
         val flags = npc.updateFlags
         if (flags.get(UpdateFlag.TRANSFORMATION)) {
