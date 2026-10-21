@@ -30,7 +30,13 @@ public final class SettingCategory {
         final List<Setting> list = new ArrayList<>(settingsEnum.getSize());
         for (final int element : settingsEnum.getValues().values()) {
             final StructDefinitions struct = StructDefinitions.get(element);
-            list.add(new Setting(struct));
+            // Newer caches (rev 241) have setting kinds this server doesn't know yet: leave those out instead of
+            // failing every login.
+            try {
+                list.add(new Setting(struct));
+            } catch (NullPointerException e) {
+                continue;
+            }
         }
         return list;
     }
