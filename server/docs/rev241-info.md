@@ -141,3 +141,22 @@ gbuild.sh <worktree>/server classes testClasses --offline
   - the NPC teleports away and leaves the view.
 - NPC step decomposition, including crawl, a level change, a teleport and an out-of-map coordinate.
 - Out-of-range values are clamped instead of throwing.
+
+## Merging with NET
+
+A trial merge with `claude/rev241-net` (commit dd9118e) has three conflicts:
+
+- **`network/rsprot/Rsprot.kt`** (add/add): take NET's version. INFO's is a stub.
+- **`network/rsprot/RsprotInfo.kt`** (add/add): take INFO's version. NET's is a stub with the same `Sink`, `sink`, `login`, `logout`, `tick` and `rebuildLogin`.
+- **`packet/out/RebuildNormal.java`**: take NET's version. The GPI init now travels in REBUILD_LOGIN.
+
+`build.gradle.kts`, `libs.versions.toml` and `DeveloperCommands.kt` merge without conflicts.
+
+The merged tree was checked as follows:
+
+- `:core:classes` compiled.
+- `RsprotInfoTest` passed 5/5.
+
+NET's later commit c7b25b8 gives the same three conflicts. It uses only `RsprotInfo.login`, `logout`, `rebuildLogin`, `sink` and `Sink`.
+
+NET's stub declares `rebuildLogin` as nullable. INFO's version returns a non-null value, so NET's null check only produces a compiler warning.
