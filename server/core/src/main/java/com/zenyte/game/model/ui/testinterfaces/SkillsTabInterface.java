@@ -25,6 +25,10 @@ public class SkillsTabInterface extends Interface {
                 player.sendMessage("You can't do this while in combat.");
                 return;
             }
+            // stats (320) components 1..23 are unchanged in build 241; 24 (sailing) has no skill guide here.
+            if (componentId < 0 || componentId >= SKILL_BUTTON_VARPS.length) {
+                return;
+            }
             player.getSkills().sendSkillMenu(SKILL_BUTTON_VARPS[componentId], 0);
         };
     }

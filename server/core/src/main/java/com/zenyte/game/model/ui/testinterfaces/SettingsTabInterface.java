@@ -20,24 +20,25 @@ public class SettingsTabInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(5, "PK Skull Prevention");
-        put(55, "Sound Effect Volume");
-        put(23, "Brightness");
-        put(84, "Game Client Layout");
-        put(82, "NPC attack options");
-        put(81, "Player attack options");
-        put(69, "Area Sound Volume");
-        put(41, "Music Volume");
-        put(72, "Accept aid");
-        put(73, "Toggle run");
-        put(74, "House options");
-        put(76, "Open bond pouch");
-        put(75, "All Settings");
-        put(30, "Mute Music");
-        put(44, "Mute Sound Effects");
-        put(58, "Mute Area Sounds");
-        put(71, "Music unlock message");
-        put(87, "Disable zooming with scroll wheel");
+        // Build 241 settings_side (116) ids, matched by component names and hook-script arguments; 211 ids in comments.
+        put(5, "PK Skull Prevention"); // skull_prevention
+        put(122, "Sound Effect Volume"); // sound_bobble_container (211: 55)
+        put(23, "Brightness"); // brightness_bobble_container
+        put(84, "Game Client Layout"); // TODO rev241: the layout dropdown became display_dynamic_setting_1 (40?); unverified, left on the 211 id
+        put(39, "NPC attack options"); // attack_priority_npc_buttons (211: 82)
+        put(38, "Player attack options"); // attack_priority_player_buttons (211: 81)
+        put(136, "Area Sound Volume"); // areasounds_bobble_container (211: 69)
+        put(108, "Music Volume"); // music_bobble_container (211: 41)
+        put(29, "Accept aid"); // acceptaid (211: 72)
+        put(30, "Toggle run"); // runmode (211: 73)
+        put(31, "House options"); // houseoptions (211: 74)
+        put(33, "Open bond pouch"); // bondoptions (211: 76)
+        put(32, "All Settings"); // settings_open (211: 75)
+        put(110, "Mute Music"); // music_icon (211: 30)
+        put(124, "Mute Sound Effects"); // sound_icon (211: 44)
+        put(138, "Mute Area Sounds"); // areasound_icon (211: 58)
+        put(71, "Music unlock message"); // TODO rev241: no counterpart in 241 settings_side (moved to the settings interface 134)
+        put(43, "Disable zooming with scroll wheel"); // zoom_toggle (211: 87)
     }
 
     @Override

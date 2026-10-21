@@ -142,23 +142,27 @@ public class Bonuses {
     }
 
 
+    /*
+     * childId: equipment (84) stat texts, unchanged in build 241.
+     * bankChildId: the bank (12) worn-items stat texts; build 241 ids (211 ids were 8 higher: 90-108).
+     */
     public enum Bonus {
-        ATT_STAB(0, 24, "Stab", 90),
-        ATT_SLASH(1, 25, "Slash", 91),
-        ATT_CRUSH(2, 26, "Crush", 92),
-        ATT_MAGIC(3, 27, "Magic", 93),
-        ATT_RANGED(4, 28, "Range", 94),
-        DEF_STAB(5, 30, "Stab", 96),
-        DEF_SLASH(6, 31, "Slash", 97),
-        DEF_CRUSH(7, 32, "Crush", 98),
-        DEF_MAGIC(8, 33, "Magic", 99),
-        DEF_RANGE(9, 34, "Range", 100),
-        STRENGTH(10, 36, "Melee strength", 102),
-        RANGE_STRENGTH(11, 37, "Ranged strength", 103),
-        MAGIC_DAMAGE(12, 38, "Magic damage", 104),
-        PRAYER(13, 39, "Prayer", 105),
-        UNDEAD(14, 41, "Undead", 107),
-        SLAYER(15, 42, "Slayer", 108);
+        ATT_STAB(0, 24, "Stab", 82),
+        ATT_SLASH(1, 25, "Slash", 83),
+        ATT_CRUSH(2, 26, "Crush", 84),
+        ATT_MAGIC(3, 27, "Magic", 85),
+        ATT_RANGED(4, 28, "Range", 86),
+        DEF_STAB(5, 30, "Stab", 88),
+        DEF_SLASH(6, 31, "Slash", 89),
+        DEF_CRUSH(7, 32, "Crush", 90),
+        DEF_MAGIC(8, 33, "Magic", 91),
+        DEF_RANGE(9, 34, "Range", 92),
+        STRENGTH(10, 36, "Melee strength", 94),
+        RANGE_STRENGTH(11, 37, "Ranged strength", 95),
+        MAGIC_DAMAGE(12, 38, "Magic damage", 96),
+        PRAYER(13, 39, "Prayer", 97),
+        UNDEAD(14, 41, "Undead", 99),
+        SLAYER(15, 42, "Slayer", 100);
 
         private final int bonusIndex;
         private final int childId;

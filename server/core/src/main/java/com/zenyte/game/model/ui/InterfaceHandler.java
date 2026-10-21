@@ -125,11 +125,16 @@ public class InterfaceHandler {
 			if (position.getGameframeInterfaceId() == -1 || position.equals(InterfacePosition.FRIENDS_TAB) || position.equals(InterfacePosition.JOURNAL_TAB_HEADER)) {
 				continue;
 			}
-			final Optional<GameInterface> gameInter = GameInterface.get(position.getGameframeInterfaceId());
+			int gameframeInterfaceId = position.getGameframeInterfaceId();
+			if (position == InterfacePosition.ACCOUNT_MANAGEMENT && !ComponentDefinitions.containsInterface(gameframeInterfaceId)) {
+				// custom GadScape tab (1702) absent, e.g. on the vanilla 241 test cache: use the vanilla account tab (109)
+				gameframeInterfaceId = GameInterface.ACCOUNT_MANAGEMENT.getId();
+			}
+			final Optional<GameInterface> gameInter = GameInterface.get(gameframeInterfaceId);
 			if (gameInter.isPresent()) {
 				gameInter.get().open(player);
 			} else {
-				sendInterface(position, position.getGameframeInterfaceId());
+				sendInterface(position, gameframeInterfaceId);
 			}
 		}
 		player.getSettings().refreshSetting(Setting.FRIEND_LIST_TOGGLE);

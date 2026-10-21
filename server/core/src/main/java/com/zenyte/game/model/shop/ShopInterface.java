@@ -42,7 +42,9 @@ public class ShopInterface extends Interface {
         final Shop.ShopContainer container = shop.getContainer();
         player.getInterfaceHandler().sendInterface(getInterface());
         GameInterface.SHOP_INVENTORY.open(player);
-        dispatcher.sendClientScript(1074, shop.getName(), container.getType().getId());
+        // 241 shop_main_init(inv, string title, obj customBuyObj, int customBuyAmount, boolean enableBuy50).
+        // The 211 GadScape cache replaced 1074 with a custom (string, inv) script; the vanilla 241 one takes these args.
+        dispatcher.sendClientScript(1074, container.getType().getId(), shop.getName(), -1, 0, 1);
         dispatcher.sendClientScript(149, params);
         dispatcher.sendComponentSettings(getInterface(), getComponent("Interact with item"), 0, container.getContainerSize(), CLICK_OP1, CLICK_OP2, CLICK_OP3, CLICK_OP4, CLICK_OP5, CLICK_OP6, CLICK_OP7, CLICK_OP10);
         shop.getPlayers().add(player);

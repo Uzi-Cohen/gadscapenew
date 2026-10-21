@@ -49,7 +49,7 @@ public abstract class SkillDialogue extends Dialogue {
 		}
         run(slotId, componentId);
 		if (closeOnRun()) {
-			player.getVarManager().sendBit(5983, 0);
+			player.getVarManager().sendBit(10670, 0); // 241 chatmodal_unclamp (211: 5983)
 		}
 		player.getVarManager().sendVar(LAST_SLOT_VAR, slotId);
         player.getTemporaryAttributes().put("lastSkillDialogueAmount", componentId);

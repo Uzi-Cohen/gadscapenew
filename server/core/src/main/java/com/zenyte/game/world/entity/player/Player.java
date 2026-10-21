@@ -2609,7 +2609,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (getFaceEntity() >= 0) {
             setFaceEntity(null);
         }
-        varManager.sendBit(5983, 0);
+        varManager.sendBit(10670, 0); // 241 chatmodal_unclamp (211: 5983)
         if (getTemporaryAttributes().get("CreatingRoom") != null) {
             construction.roomPreview((RoomReference) getTemporaryAttributes().get("CreatingRoom"), true);
             getTemporaryAttributes().remove("CreatingRoom");
@@ -2666,8 +2666,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
 
     public void stopAllExclWorldMap() {
         setRouteEvent(null);
-        if (varManager.getBitValue(5983) != 0) {
-            varManager.sendBit(5983, 0);
+        if (varManager.getBitValue(10670) != 0) { // 241 chatmodal_unclamp (211: 5983)
+            varManager.sendBit(10670, 0); // 241 chatmodal_unclamp (211: 5983)
         }
         if (getTemporaryAttributes().get("CreatingRoom") != null) {
             construction.roomPreview((RoomReference) getTemporaryAttributes().get("CreatingRoom"), true);
