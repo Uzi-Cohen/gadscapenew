@@ -27,6 +27,10 @@ final class HeadCapture
 	private final File dir;
 	private volatile String pending;
 	private int ticks;
+	/** The account logged in now, the look its face was last drawn with, and how long a new look has held. */
+	private String account;
+	private int[] drawnLook;
+	private int changed;
 
 	HeadCapture(Client client, File dir)
 	{
@@ -42,7 +46,34 @@ final class HeadCapture
 	void start(String username)
 	{
 		pending = username;
+		account = username;
+		drawnLook = null;
 		ticks = 0;
+	}
+
+	/** Back on the login screen: stop watching for look changes. */
+	void stop()
+	{
+		pending = null;
+		account = null;
+		drawnLook = null;
+	}
+
+	/** Equipment, colours and gender: what the chathead is drawn from. */
+	private static int[] look(PlayerComposition pc)
+	{
+		if (pc == null)
+		{
+			return null;
+		}
+		int[] eq = pc.getEquipmentIds(), c = pc.getColors();
+		int[] out = new int[(eq == null ? 0 : eq.length) + (c == null ? 0 : c.length) + 2];
+		int i = 0;
+		if (eq != null) for (int v : eq) out[i++] = v;
+		if (c != null) for (int v : c) out[i++] = v;
+		out[i++] = pc.getGender();
+		out[i] = pc.getTransformedNpcId();
+		return out;
 	}
 
 	/** Called on the game thread every tick. */
@@ -51,7 +82,21 @@ final class HeadCapture
 		String user = pending;
 		if (user == null)
 		{
-			return;
+			// logged in with a face already drawn: draw it again when the look changes (a new helmet, a makeover)
+			Player me = client.getLocalPlayer();
+			int[] now = me == null ? null : look(me.getPlayerComposition());
+			if (account == null || drawnLook == null || now == null || Arrays.equals(now, drawnLook))
+			{
+				changed = 0;
+				return;
+			}
+			if (++changed < 2)
+			{
+				return; // let the change settle (swapping several items at once)
+			}
+			changed = 0;
+			pending = user = account;
+			ticks = 3;
 		}
 		if (++ticks > 300)
 		{
@@ -98,8 +143,10 @@ final class HeadCapture
 			return; // try again next tick
 		}
 		pending = null;
+		drawnLook = look(p.getPlayerComposition());
 		final HeadRenderer.Mesh fm = mesh;
 		final double fpart = part;
+		final String name = user;
 		Thread t = new Thread(() ->
 		{
 			try
@@ -108,9 +155,9 @@ final class HeadCapture
 				if (strip != null)
 				{
 					dir.mkdirs();
-					File tmp = new File(dir, fileName(user) + ".tmp");
+					File tmp = new File(dir, fileName(name) + ".tmp");
 					ImageIO.write(strip, "png", tmp);
-					java.nio.file.Files.move(tmp.toPath(), new File(dir, fileName(user)).toPath(),
+					java.nio.file.Files.move(tmp.toPath(), new File(dir, fileName(name)).toPath(),
 						java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 				}
 			}

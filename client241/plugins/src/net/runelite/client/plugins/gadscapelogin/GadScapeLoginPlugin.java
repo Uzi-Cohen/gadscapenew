@@ -103,6 +103,7 @@ public class GadScapeLoginPlugin extends Plugin
 		else if (e.getGameState() == GameState.LOGIN_SCREEN)
 		{
 			client.setShouldRenderLoginScreenFire(false);
+			faces.stop();
 		}
 	}
 
