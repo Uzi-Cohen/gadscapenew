@@ -923,6 +923,8 @@ final class LoginScreen implements KeyListener, MouseListener
 
 	private void login(String user, String pass)
 	{
+		user = user == null ? "" : user;
+		pass = pass == null ? "" : pass;
 		if (attempting || client.getGameState() == GameState.LOGGING_IN)
 		{
 			return;
