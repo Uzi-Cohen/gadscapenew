@@ -159,6 +159,7 @@ public class AutocastInterface extends Interface {
                         name.equals("Master wand") ||
                         name.equals("Kodai wand") ||
                         name.equals("Ancient staff") ||
+                        name.equalsIgnoreCase("Blue moon spear") ||
                         player.getCombatDefinitions().hasFullAhrimsAndDamned())),
 
         ARCEUUS(9013, new EnumBuilder<CombatSpell>()

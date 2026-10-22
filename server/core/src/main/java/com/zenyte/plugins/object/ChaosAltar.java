@@ -122,7 +122,10 @@ public class ChaosAltar implements ItemOnObjectAction {
                     player.sendFilteredMessage("You sacrifice the " + bone.getName() + ".");
                     player.sendFilteredMessage(Colour.RS_GREEN.wrap("Your Bone Cruncher boon has saved your resources"));
                 } else {
-                    player.getInventory().deleteItem(item);
+                    // Zealot's robes (sets-prayers): 1.25% per piece that the bones are not used up.
+                    if (!com.zenyte.game.content.sets.SetEffects.zealotSavesRemains(player)) {
+                        player.getInventory().deleteItem(item);
+                    }
                     player.sendFilteredMessage("You sacrifice the " + bone.getName() + ".");
                 }
             }

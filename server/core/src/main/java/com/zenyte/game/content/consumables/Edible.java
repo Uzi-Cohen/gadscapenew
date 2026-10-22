@@ -50,7 +50,7 @@ public interface Edible extends Consumable {
         if (delay > 0) {
             final ActionManager actionManager = player.getActionManager();
             if (actionManager.getActionDelay() > 0 || actionManager.wasInCombatThisTick()) {
-                actionManager.setActionDelay(actionManager.getActionDelay() + delay);
+                actionManager.setActionDelay(actionManager.getActionDelay() + com.zenyte.game.content.skills.prayer.RuinousPowers.adjustFoodDelay(player, delay));
             }
             player.getVariables().setFoodDelay(delay);
         }

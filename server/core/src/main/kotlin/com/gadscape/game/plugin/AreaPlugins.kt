@@ -57,7 +57,8 @@ fun prayersDisabled(
     vararg disabledPrayers: Prayer,
 ) = object : PrayerPlugin {
     override fun activatePrayer(player: Player?, prayer: Prayer?): Boolean {
-        if (disabledPrayers.contains(prayer)) {
+        // an alternate prayer (Deadeye, Mystic Vigour, Zeal) is disabled with the prayer it replaces
+        if (disabledPrayers.contains(prayer) || (prayer?.base != null && disabledPrayers.contains(prayer.base))) {
             player?.sendMessage(Colour.RS_RED.wrap("You may not use this prayer here."))
             return false
         }

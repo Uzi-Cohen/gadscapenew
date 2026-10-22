@@ -459,9 +459,17 @@ public final class Skills extends SkillConstants implements TempPlayerStatePlugi
 
 
 	public enum ExperienceBoost {
-		LUMBERJACK(SkillConstants.WOODCUTTING, 0.005F, new BoostItem(0.004F, 10941), new BoostItem(0.008F, 10939), new BoostItem(0.006F, 10940), new BoostItem(0.002F, 10933)),
+		// Skilling outfits (sets-prayers area). Recoloured copies count as the outfit (OSRS): Forestry = Lumberjack,
+		// Golden prospector and the 29472-29478 Prospector copies = Prospector, Spirit angler = Angler.
+		LUMBERJACK(SkillConstants.WOODCUTTING, 0.005F, new BoostItem(0.004F, 10941, 28173), new BoostItem(0.008F, 10939, 28169), new BoostItem(0.006F, 10940, 28171), new BoostItem(0.002F, 10933, 28175)),
+		/** Kept for hasFull(); the XP boost comes from PROSPECTOR (which lists the golden pieces too, so mixing counts). */
 		GOLDEN_PROSPECTOR(SkillConstants.MINING, 0.005F, new BoostItem(0.004F, ItemId.GOLDEN_PROSPECTOR_HELMET), new BoostItem(0.008F, ItemId.GOLDEN_PROSPECTOR_JACKET), new BoostItem(0.006F, ItemId.GOLDEN_PROSPECTOR_LEGS), new BoostItem(0.002F, ItemId.GOLDEN_PROSPECTOR_BOOTS)),
-		PROSPECTOR(SkillConstants.MINING, 0.005F, new BoostItem(0.004F, 12013), new BoostItem(0.008F, 12014, ItemId.VARROCK_ARMOUR_4), new BoostItem(0.006F, 12015), new BoostItem(0.002F, 12016)), ANGLER(SkillConstants.FISHING, 0.005F, new BoostItem(0.004F, 13258), new BoostItem(0.008F, 13259), new BoostItem(0.006F, 13260), new BoostItem(0.002F, 13261)), FARMER(SkillConstants.FARMING, 0.005F, new BoostItem(0.004F, 13646, 13647, 21253, 21254), new BoostItem(0.008F, 13642, 13643), new BoostItem(0.006F, 13640, 13641), new BoostItem(0.002F, 13644, 13645)), PYROMANCER(SkillConstants.FIREMAKING, 0.005F, new BoostItem(0.004F, RewardCrate.PYROMANCER_HOOD), new BoostItem(0.008F, RewardCrate.PYROMANCER_GARB), new BoostItem(0.006F, RewardCrate.PYROMANCER_ROBE), new BoostItem(0.002F, RewardCrate.PYROMANCER_BOOTS));
+		PROSPECTOR(SkillConstants.MINING, 0.005F, new BoostItem(0.004F, 12013, ItemId.GOLDEN_PROSPECTOR_HELMET, 29472), new BoostItem(0.008F, 12014, ItemId.VARROCK_ARMOUR_4, ItemId.GOLDEN_PROSPECTOR_JACKET, 29474), new BoostItem(0.006F, 12015, ItemId.GOLDEN_PROSPECTOR_LEGS, 29476), new BoostItem(0.002F, 12016, ItemId.GOLDEN_PROSPECTOR_BOOTS, 29478)),
+		ANGLER(SkillConstants.FISHING, 0.005F, new BoostItem(0.004F, 13258, 25592), new BoostItem(0.008F, 13259, 25594), new BoostItem(0.006F, 13260, 25596), new BoostItem(0.002F, 13261, 25598)),
+		FARMER(SkillConstants.FARMING, 0.005F, new BoostItem(0.004F, 13646, 13647, 21253, 21254), new BoostItem(0.008F, 13642, 13643), new BoostItem(0.006F, 13640, 13641), new BoostItem(0.002F, 13644, 13645)),
+		PYROMANCER(SkillConstants.FIREMAKING, 0.005F, new BoostItem(0.004F, RewardCrate.PYROMANCER_HOOD), new BoostItem(0.008F, RewardCrate.PYROMANCER_GARB), new BoostItem(0.006F, RewardCrate.PYROMANCER_ROBE), new BoostItem(0.002F, RewardCrate.PYROMANCER_BOOTS)),
+		/** Carpenter's outfit (Mahogany Homes): 0.4/0.8/0.6/0.2% + 0.5% for the set. */
+		CARPENTER(SkillConstants.CONSTRUCTION, 0.005F, new BoostItem(0.004F, 24872), new BoostItem(0.008F, 24874), new BoostItem(0.006F, 24876), new BoostItem(0.002F, 24878));
 		private static final ExperienceBoost[] values = values();
 
 		ExperienceBoost(final int skillId, final float setBoost, final BoostItem... items) {

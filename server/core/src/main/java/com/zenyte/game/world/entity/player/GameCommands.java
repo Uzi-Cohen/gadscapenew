@@ -271,16 +271,19 @@ public final class GameCommands {
         new Command(PlayerPrivilege.ADMINISTRATOR, "lt-1", (p, args) -> {
             LootkeySettings.clear(p);
         });
-        new Command(PlayerPrivilege.ADMINISTRATOR, "lt-n", (p, args) -> {
-            Item item = new Item(LootkeyConstants.LOOT_KEY_ITEM_ID);
-
-            Container container = new Container(ContainerPolicy.NORMAL, ContainerType.WILDERNESS_LOOT_KEY,
-                    Optional.of(p));
-            container.setItems(p.getInventory().getContainer().getItems());
-
-            item.setAttribute(LootkeyConstants.LOOT_KEY_ITEM_LOOT_ITEMS_ATTR,
-                    LoginManager.gson.get().toJson(container.getItems()));
-            p.getInventory().addItem(item);
+        new Command(PlayerPrivilege.ADMINISTRATOR, "lt-n", "Test loot key holding a copy of your inventory (max 5 keys).", (p, args) -> {
+            // Copies the inventory (keys excluded) into a new key with its value, using the next free key id.
+            final Container contents = com.zenyte.game.content.lootkeys.LootKeys.newContainer();
+            for (final Item invItem : p.getInventory().getContainer().getItems().values()) {
+                if (invItem != null && !LootkeyConstants.isLootKey(invItem.getId())) {
+                    contents.add(new Item(invItem.getId(), invItem.getAmount(), invItem.getAttributesCopy()));
+                }
+            }
+            final Item key = new Item(LootkeyConstants.LOOT_KEY_ITEM_ID);
+            com.zenyte.game.content.lootkeys.LootKeys.writeContents(key, contents);
+            if (!com.zenyte.game.content.lootkeys.LootKeys.give(p, key, null)) {
+                p.sendMessage("You already hold " + LootkeyConstants.MAX_KEYS + " loot keys.");
+            }
         });
         new Command(PlayerPrivilege.ADMINISTRATOR, "addspins", (p, args) -> {
             p.getWheelOfFortune().setSpins(p.getWheelOfFortune().getSpins() + parseInt(args[0]));
@@ -537,7 +540,7 @@ public final class GameCommands {
                 "player_name", (p, args) -> {
             final String name = StringFormatUtil.formatUsername(StringUtilities.compile(args, 0, args.length, '_'));
             if (name.length() >= 1 && name.length() <= 12) {
-                if (ArrayUtils.contains(GameConstants.owners, name)) {
+                if (GameConstants.isOwnerName(name)) {
                     p.sendMessage("You cannot uninvite owners.");
                     return;
                 }
@@ -697,13 +700,10 @@ public final class GameCommands {
             p.sendMessage("Checking hunter trap quantity: " + GameConstants.CHECK_HUNTER_TRAPS_QUANTITY);
         });
 
-        new Command(PlayerPrivilege.DEVELOPER, "whitelisting", (p, args) -> {
-            GameConstants.WHITELISTING = !GameConstants.WHITELISTING;
-            p.sendMessage("Whitelisting: " + GameConstants.WHITELISTING);
-        });
-        new Command(PlayerPrivilege.DEVELOPER, "whitelist", (p, args) -> {
-            GameConstants.whitelistedUsernames.add(StringFormatUtil.formatUsername(StringUtilities.compile(args, 0,
-                    args.length, ' ')));
+        new Command(PlayerPrivilege.DEVELOPER, new String[]{"whitelisting", "whitelist"}, (p, args) -> {
+            // The old runtime whitelist was never read by the login; the login reads the world's worlds.yml entry.
+            p.sendMessage("Login whitelist: " + (GameConstants.WORLD_PROFILE.getUseWhitelist() ? "on" : "off")
+                    + ". Set it with useWhitelist / whitelistedUsernames in worlds.yml; ::invite gives beta access.");
         });
         new Command(PlayerPrivilege.DEVELOPER, "teleparty", (p, args) -> {
             if (!isOwner(p)) {
@@ -2459,7 +2459,12 @@ public final class GameCommands {
             p.getSettings().setSetting(Setting.RIGOUR, 1);
             p.getSettings().setSetting(Setting.AUGURY, 1);
             p.getSettings().setSetting(Setting.PRESERVE, 1);
+            p.getPrayerManager().unlock(com.zenyte.game.content.skills.prayer.Prayer.DEADEYE);
+            p.getPrayerManager().unlock(com.zenyte.game.content.skills.prayer.Prayer.MYSTIC_VIGOUR);
+            p.getPrayerManager().unlock(com.zenyte.game.content.skills.prayer.Prayer.ZEAL);
         });
+        new Command(PlayerPrivilege.DEVELOPER, "prayerbook", "Switches between the standard and Ruinous Powers prayer books.",
+                (p, args) -> com.zenyte.game.content.skills.prayer.RuinousPowers.toggleBook(p));
 
         new Command(PlayerPrivilege.PLAYER, new String[]{"coords", "mypos", "coord"}, "Informs the player about their" + " " + "coordinates. (Used for debugging)", (p, args) -> {
             final String coordsPrint = "Coords: " + p.getX() + ", " + p.getY() + "," + " " + p.getPlane() + ", region:" + p.getLocation().getRegionId();
@@ -2600,16 +2605,17 @@ public final class GameCommands {
             GameInterface.HISCORES.open(p);
         });
         new Command(PlayerPrivilege.PLAYER, "advent", (p, args) -> {
+            if (!com.zenyte.game.content.advent.AdventCalendarManager.adventEnabled()) {
+                p.sendMessage("The Advent Calendar opens on 30 November and runs until Christmas.");
+                return;
+            }
             GameInterface.ADVENT_CALENDAR.open(p);
         });
         new Command(PlayerPrivilege.PLAYER, "discord", (p, args) -> {
             p.getPacketDispatcher().sendURL(GameConstants.DISCORD_INVITE);
         });
         new Command(PlayerPrivilege.PLAYER, "2fa", (p, args) -> {
-            p.getPacketDispatcher().sendURL("https://GadScape.com/account");
-        });
-        new Command(PlayerPrivilege.PLAYER, "youtube", (p, args) -> {
-            p.getPacketDispatcher().sendURL(GameConstants.DISCORD_INVITE);
+            p.getPacketDispatcher().sendURL(GameConstants.SERVER_ACCOUNT_URL);
         });
         new Command(PlayerPrivilege.PLAYER, "yell", "Sends a global message across the game.", (p, args) -> {
             if (SanctionPlayerExtKt.isMuted(p)) {

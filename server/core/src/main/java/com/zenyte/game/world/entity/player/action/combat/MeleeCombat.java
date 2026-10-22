@@ -69,7 +69,8 @@ public class MeleeCombat extends PlayerCombat {
     public int getMaxHit(final Player player, final double passiveModifier, double activeModifier, final boolean ignorePrayers) {
         final AttackStyle.AttackExperienceType attackExperienceType = player.getCombatDefinitions().getAttackExperienceType();
         final AttackType attackType = player.getCombatDefinitions().isUsingSpecial() ? getSpecialType() : player.getCombatDefinitions().getAttackType();
-        float boost = CombatUtilities.hasFullMeleeVoid(player, true) ? 1.12F : CombatUtilities.hasFullMeleeVoid(player, false) ? 1.1F : 1;
+        // Void melee: +10% accuracy and damage; the elite pieces add nothing for melee (OSRS). Normal checks accept elite pieces.
+        float boost = CombatUtilities.hasFullMeleeVoid(player, false) ? 1.1F : 1;
         final int weaponId = player.getEquipment().getId(EquipmentSlot.WEAPON);
         if (CombatUtilities.lanceEquipped(weaponId) && CombatUtilities.isDraconic(target))
             boost += 0.3F;
@@ -197,7 +198,7 @@ public class MeleeCombat extends PlayerCombat {
     public int getAccuracy(final Player player, final Entity target, final double resultModifier) {
         final AttackStyle.AttackExperienceType type = player.getCombatDefinitions().getAttackExperienceType();
         final AttackType attackType = player.getCombatDefinitions().isUsingSpecial() ? getSpecialType() : player.getCombatDefinitions().getAttackType();
-        float boost = CombatUtilities.hasFullMeleeVoid(player, true) ? 1.125F : CombatUtilities.hasFullMeleeVoid(player, false) ? 1.1F : 1.0F;
+        float boost = CombatUtilities.hasFullMeleeVoid(player, false) ? 1.1F : 1.0F;
         final int weaponId = player.getEquipment().getId(EquipmentSlot.WEAPON);
         if (CombatUtilities.lanceEquipped(weaponId) && CombatUtilities.isDraconic(target))
             boost += 0.3F;

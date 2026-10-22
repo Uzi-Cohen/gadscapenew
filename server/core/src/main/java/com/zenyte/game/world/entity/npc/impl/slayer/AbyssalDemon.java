@@ -42,7 +42,7 @@ public class AbyssalDemon extends NPC implements Spawnable, CombatScript {
 		final Player player = (Player) target;
 		setAnimation(getCombatDefinitions().getAttackAnim());
 		delayHit(this, 0, target, new Hit(this, getRandomMaxHit(this, getCombatDefinitions().getMaxHit(), MELEE, target), HitType.MELEE));
-		if(TELEPORT_ENABLED) {
+		if(TELEPORT_ENABLED && !com.zenyte.plugins.item.TeleportAnchoringScroll.isAnchored(player)) {
 			if (Utils.random(4) == 0) {
 				Location tile = null;
 				for (int tryCount = 0; tryCount <= 20; tryCount++) {

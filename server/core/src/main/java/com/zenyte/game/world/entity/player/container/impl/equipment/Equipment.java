@@ -94,7 +94,8 @@ public class Equipment extends ContainerWrapper implements TempPlayerStatePlugin
 	private final transient Item torvaLegs = new Item(ItemId.TORVA_PLATELEGS);
 
 	public boolean wearingFullTorva() {
-		return isWearing(torvaHelm) && isWearing(torvaPlate) && isWearing(torvaLegs);
+		// Sanguine torva (and GadScape's Torva primordial kit pieces) count as Torva.
+		return com.zenyte.game.content.sets.SetEffects.wearingFullTorva(this);
 	}
 
 	@Override

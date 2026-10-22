@@ -51,6 +51,6 @@ public class DonatorScrollItemOnPlayerPlugin implements ItemOnPlayerPlugin {
 
     @Override
     public int[] getItems() {
-        return new int[] {13190, 30017, 30018};
+        return new int[] {13190, 30017, 30018, 30051}; // $50, $100, $200, $10 donator scrolls
     }
 }

@@ -34,7 +34,8 @@ public class ElderChaosDruid extends NPC implements CombatScript, Spawnable {
 		}
 		if (Utils.random(15) == 0) {
 			final Entity target = getCombat().getTarget();
-			if (target == null || !target.hasWalkSteps() || getLocation().withinDistance(target.getLocation(), 5) || target instanceof Player && ((Player) target).inArea("Wilderness: Chaos Temple")) {
+			if (target == null || !target.hasWalkSteps() || getLocation().withinDistance(target.getLocation(), 5) || target instanceof Player && ((Player) target).inArea("Wilderness: Chaos Temple")
+					|| target instanceof Player && com.zenyte.plugins.item.TeleportAnchoringScroll.isAnchored((Player) target)) {
 				return;
 			}
 			final Location location = new Location(getLocation());

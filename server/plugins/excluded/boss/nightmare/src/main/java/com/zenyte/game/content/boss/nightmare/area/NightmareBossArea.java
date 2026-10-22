@@ -31,9 +31,10 @@ public class NightmareBossArea extends PolygonRegionArea implements DeathPlugin,
 	public static final Animation ENTER_ANIMATION = new Animation(8584);
 	public static final Animation ENTER_ANIMATION_END = new Animation(8583);
 
-	public static final int PROTECT_FROM_MAGIC_BUTTON = Interface.encode(17, -1);
-	public static final int PROTECT_FROM_MISSILES_BUTTON = Interface.encode(18, -1);
-	public static final int PROTECT_FROM_MELEE_BUTTON = Interface.encode(19, -1);
+	// 241 prayer book buttons (541:21/22/23; were the 211 book's 17/18/19, now Protect Item/Steel Skin/Ultimate Strength)
+	public static final int PROTECT_FROM_MAGIC_BUTTON = Interface.encode(com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MAGIC), -1);
+	public static final int PROTECT_FROM_MISSILES_BUTTON = Interface.encode(com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MISSILES), -1);
+	public static final int PROTECT_FROM_MELEE_BUTTON = Interface.encode(com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MELEE), -1);
 
 	public static NightmareNPC boss;
 	public static NightmareTotemNE totemNE;

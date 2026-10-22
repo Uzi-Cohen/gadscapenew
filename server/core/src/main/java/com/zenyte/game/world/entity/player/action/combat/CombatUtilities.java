@@ -81,21 +81,23 @@ public class CombatUtilities {
     public static final List<String> SALVE_AFFECTED_NPCS = Arrays.asList(SALVE_NPCS);
     private static final String[] BARROWS_NAMES = {"Verac's", "Ahrim's", "Karil's", "Dharok's", "Guthan's", "Torag's"};
 
+    /**
+     * Inquisitor's armour crush accuracy and damage bonus (OSRS, 22 July 2026): great helm +0.5%, hauberk +1%,
+     * plateskirt +1% (2.5% for the set, as before). The Inquisitor's mace no longer multiplies it; the mace got the
+     * bonus as +7 crush / +7 strength in its own stats instead (gadscape/items/sets.json).
+     */
     public static final float getInquisitorSetBoost(final Player player) {
-        final int helm = player.getEquipment().getId(EquipmentSlot.HELMET);
-        final int body = player.getEquipment().getId(EquipmentSlot.PLATE);
-        final int legs = player.getEquipment().getId(EquipmentSlot.LEGS);
-        int count = 0;
-        if (helm == ItemId.INQUISITORS_GREAT_HELM) {
-            count++;
+        float boost = 0;
+        if (player.getEquipment().getId(EquipmentSlot.HELMET) == ItemId.INQUISITORS_GREAT_HELM) {
+            boost += 0.005F;
         }
-        if (body == ItemId.INQUISITORS_HAUBERK) {
-            count++;
+        if (player.getEquipment().getId(EquipmentSlot.PLATE) == ItemId.INQUISITORS_HAUBERK) {
+            boost += 0.01F;
         }
-        if (legs == ItemId.INQUISITORS_PLATESKIRT) {
-            count++;
+        if (player.getEquipment().getId(EquipmentSlot.LEGS) == ItemId.INQUISITORS_PLATESKIRT) {
+            boost += 0.01F;
         }
-        return count * 0.005f + (count == 3 ? 0.01f : 0.0f);
+        return boost;
     }
 
     public static boolean dragonSlayerGlovesEquipped(Player player) {
@@ -176,55 +178,45 @@ public class CombatUtilities {
         return name.contains("hydra");
     }
 
-    public static boolean hasFullMeleeVoid(final Player player, final boolean eliteOnly) {
-        final int helm = player.getEquipment().getId(EquipmentSlot.HELMET);
-        if (helm != ItemId.VOID_MELEE_HELM && helm != 26477) {
+    /*
+     * Void Knight equipment (sets-prayers area): normal, (or), Trouver-protected (l) and (l)(or) copies of every piece.
+     * A full set is a helm of the style, gloves, top and robe; the top and robe may be normal or elite (mixed is fine).
+     * The elite effect needs an elite top and an elite robe.
+     */
+    private static final it.unimi.dsi.fastutil.ints.IntSet VOID_MELEE_HELMS = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.VOID_MELEE_HELM, 26477, 24185, 27007});
+    private static final it.unimi.dsi.fastutil.ints.IntSet VOID_RANGER_HELMS = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.VOID_RANGER_HELM, 26475, 24184, 27006});
+    private static final it.unimi.dsi.fastutil.ints.IntSet VOID_MAGE_HELMS = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.VOID_MAGE_HELM, 26473, 24183, 27005});
+    private static final it.unimi.dsi.fastutil.ints.IntSet VOID_GLOVES = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.VOID_KNIGHT_GLOVES, 26467, 24182, 27002});
+    private static final it.unimi.dsi.fastutil.ints.IntSet VOID_TOPS = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.VOID_KNIGHT_TOP, 26463, 24177, 27000});
+    private static final it.unimi.dsi.fastutil.ints.IntSet VOID_ROBES = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.VOID_KNIGHT_ROBE, 26465, 24179, 27001});
+    private static final it.unimi.dsi.fastutil.ints.IntSet ELITE_VOID_TOPS = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.ELITE_VOID_TOP, 26469, 24178, 27003});
+    private static final it.unimi.dsi.fastutil.ints.IntSet ELITE_VOID_ROBES = new it.unimi.dsi.fastutil.ints.IntOpenHashSet(new int[] {ItemId.ELITE_VOID_ROBE, 26471, 24180, 27004});
+
+    private static boolean hasFullVoid(final Player player, final it.unimi.dsi.fastutil.ints.IntSet helms, final boolean eliteOnly) {
+        if (!helms.contains(player.getEquipment().getId(EquipmentSlot.HELMET))) {
             return false;
         }
-        final int gloves = player.getEquipment().getId(EquipmentSlot.HANDS);
-        if (gloves != ItemId.VOID_KNIGHT_GLOVES && gloves != 26467) {
+        if (!VOID_GLOVES.contains(player.getEquipment().getId(EquipmentSlot.HANDS))) {
             return false;
         }
         final int body = player.getEquipment().getId(EquipmentSlot.PLATE);
         final int legs = player.getEquipment().getId(EquipmentSlot.LEGS);
         if (eliteOnly) {
-            return (body == ItemId.ELITE_VOID_TOP || body == 26469) && (legs == ItemId.ELITE_VOID_ROBE || legs == 26471);
+            return ELITE_VOID_TOPS.contains(body) && ELITE_VOID_ROBES.contains(legs);
         }
-        return (body == ItemId.VOID_KNIGHT_TOP || body == 26463) && (legs == ItemId.VOID_KNIGHT_ROBE || legs == 26465);
+        return (VOID_TOPS.contains(body) || ELITE_VOID_TOPS.contains(body)) && (VOID_ROBES.contains(legs) || ELITE_VOID_ROBES.contains(legs));
+    }
+
+    public static boolean hasFullMeleeVoid(final Player player, final boolean eliteOnly) {
+        return hasFullVoid(player, VOID_MELEE_HELMS, eliteOnly);
     }
 
     public static boolean hasFullRangedVoid(final Player player, final boolean eliteOnly) {
-        final int helm = player.getEquipment().getId(EquipmentSlot.HELMET);
-        if (helm != ItemId.VOID_RANGER_HELM && helm != 26475) {
-            return false;
-        }
-        final int gloves = player.getEquipment().getId(EquipmentSlot.HANDS);
-        if (gloves != ItemId.VOID_KNIGHT_GLOVES && gloves != 26467) {
-            return false;
-        }
-        final int body = player.getEquipment().getId(EquipmentSlot.PLATE);
-        final int legs = player.getEquipment().getId(EquipmentSlot.LEGS);
-        if (eliteOnly) {
-            return (body == ItemId.ELITE_VOID_TOP || body == 26469) && (legs == ItemId.ELITE_VOID_ROBE || legs == 26471);
-        }
-        return (body == ItemId.VOID_KNIGHT_TOP || body == 26463) && (legs == ItemId.VOID_KNIGHT_ROBE || legs == 26465);
+        return hasFullVoid(player, VOID_RANGER_HELMS, eliteOnly);
     }
 
     public static boolean hasFullMagicVoid(final Player player, final boolean eliteOnly) {
-        final int helm = player.getEquipment().getId(EquipmentSlot.HELMET);
-        if (helm != ItemId.VOID_MAGE_HELM && helm != 26473) {
-            return false;
-        }
-        final int gloves = player.getEquipment().getId(EquipmentSlot.HANDS);
-        if (gloves != ItemId.VOID_KNIGHT_GLOVES && gloves != 26467) {
-            return false;
-        }
-        final int body = player.getEquipment().getId(EquipmentSlot.PLATE);
-        final int legs = player.getEquipment().getId(EquipmentSlot.LEGS);
-        if (eliteOnly) {
-            return (body == ItemId.ELITE_VOID_TOP || body == 26469) && (legs == ItemId.ELITE_VOID_ROBE || legs == 26471);
-        }
-        return (body == ItemId.VOID_KNIGHT_TOP || body == 26463) && (legs == ItemId.VOID_KNIGHT_ROBE || legs == 26465);
+        return hasFullVoid(player, VOID_MAGE_HELMS, eliteOnly);
     }
 
     public static final boolean hasFullBarrowsSet(final Player player, final String name) {

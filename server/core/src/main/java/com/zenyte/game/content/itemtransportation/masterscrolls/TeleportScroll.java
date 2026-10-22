@@ -31,7 +31,9 @@ public enum TeleportScroll implements Teleport {
     REVENANT_CAVE(new Item(21802), new Location(3127, 3833, 0)),
     WATSON(new Item(23387), new Location(1642, 3576, 0)),
     GUTHIX_TEMPLE(new Item(GUTHIXIAN_TEMPLE_TELEPORT), new Location(4077, 4461, 0)),
-    SPIDY_CAVE(new Item(SPIDER_CAVE_TELEPORT), new Location(3661, 9812, 0))
+    SPIDY_CAVE(new Item(SPIDER_CAVE_TELEPORT), new Location(3661, 9812, 0)),
+    /** Colossal wyrm teleport scroll (30040, sets-prayers SKSP-18): the Colossal Wyrm Remains agility course, Varlamore. */
+    COLOSSAL_WYRM(new Item(30040), new Location(1651, 2931, 0))
     ;
     public static final Int2ObjectMap<TeleportScroll> scrolls = new Int2ObjectOpenHashMap<>();
 
