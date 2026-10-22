@@ -242,7 +242,7 @@ class PartyBook<M : Any>(
      * What happened when a member left: the new leader (if the leader left), or [disbanded] with the applicants
      * that were released ("That party is no longer recruiting.").
      */
-    data class Leave<M>(val party: PartyState<M>, val newLeader: M?, val disbanded: Boolean, val releasedApplicants: List<M>)
+    data class Leave<M : Any>(val party: PartyState<M>, val newLeader: M?, val disbanded: Boolean, val releasedApplicants: List<M>)
 
     /** [m] leaves their party. A new leader takes over, or the party is removed when it empties. */
     fun leave(m: M): Leave<M>? {
