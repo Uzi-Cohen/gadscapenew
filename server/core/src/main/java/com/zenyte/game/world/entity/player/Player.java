@@ -1068,7 +1068,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
                 if(variables.getTime(TickVariable.TRACK_STAR_XP_DROP) == 0 && !(actionManager.getAction() instanceof PlayerFollow)) {
                     variables.schedule(10, TickVariable.TRACK_STAR_XP_DROP);
                 }
-                if (variables.getRunEnergy() >= 0) {
+                if (variables.getRunEnergy() >= 0 && !com.zenyte.game.content.skills.prayer.RuinousPowers.ruinousGrace(this)) {
                     variables.setRunEnergy(Math.max(0, variables.getRunEnergy() - energyLost), inWilderness);
                     if (variables.getRunEnergy() == 0) {
                         setRun(false);
@@ -2741,7 +2741,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
                 final int reflected = Math.min((int) Math.floor(damage / 10.0F) + 1, charges);
                 chargesManager.removeCharges(ringItem, reflected, getEquipment().getContainer(),
                         EquipmentSlot.RING.getSlot());
-                WorldTasksManager.schedule(() -> source.applyHit(new Hit(this, reflected, HitType.REGULAR)));
+                final int rebuked = com.zenyte.game.content.skills.prayer.RuinousPowers.rebuke(this, reflected);
+                WorldTasksManager.schedule(() -> source.applyHit(new Hit(this, rebuked, HitType.REGULAR)));
             }
         }
     }
@@ -2787,6 +2788,11 @@ public class Player extends AbstractEntity implements UsernameProvider {
                 setGraphics(ELYSIAN_EFFECT_GFX);
                 damage -= reduced;
             }
+        }
+        // Rondache: +2 flat armour and magic resistance; the damage stopped charges its Shield Bash.
+        if ((type == HitType.MELEE || type == HitType.RANGED || type == HitType.MAGIC)
+                && shieldId == com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.RONDACHE) {
+            damage = com.zenyte.game.world.entity.player.action.combat.melee.Rondache.mitigate(this, damage);
         }
         if (hit.getDamage() != damage) {
             hit.setDamage(Math.max(0, damage));
@@ -3088,8 +3094,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
         }
 
         if (WildyExtKt.isBountyPaired(this)) {
-            WildyExtKt.processBountyDeath(this);
-            BountyHunterController.completeBounty(source, this);
+            // Credits only the assigned target; never throws (source is null when no player did damage).
+            BountyHunterController.onPairedPlayerDeath(this, source);
         }
 
         WorldTasksManager.schedule(new WorldTask() {
@@ -3108,7 +3114,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
                     if (privilege.inherits(PlayerPrivilege.ADMINISTRATOR) && !DeveloperCommands.INSTANCE.getAdminsLoseItemsOnDeath())
                         sendMessage(Colour.RED.wrap("You do not lose items upon death as you're a " + privilege.getPrettyName()));
                     else if(privilege.is(PlayerPrivilege.FORUM_MODERATOR))
-                        sendMessage("You do not lose items on death cause ya test stuff");
+                        sendMessage("You keep your items on death: QA Team accounts only carry test items.");
                     else
                         deathMechanics.death(source, getArea() instanceof GravestoneLocationPlugin ? ((GravestoneLocationPlugin) getArea()).getGravestoneLocation() : null);
 
@@ -3387,6 +3393,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (target == null || hit == null) {
             return;
         }
+        com.zenyte.game.content.skills.prayer.RuinousPowers.onOutgoingHit(this, target, hit);
         if (target.getHitpoints() - hit.getDamage() <= 0) {
             if (target instanceof NPC) {
                 handleNpcKill((NPC) target, hit);

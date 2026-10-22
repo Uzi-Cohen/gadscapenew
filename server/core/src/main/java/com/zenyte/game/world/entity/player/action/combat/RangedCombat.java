@@ -67,9 +67,9 @@ public class RangedCombat extends PlayerCombat {
         CLEAR_MIND(new SoundEffect(2912, 15, 0), new Graphics(751), 0.05F, 0.055F, 0.0F, 0.0F, 9240, 21940), //n
         MAGICAL_POISON(new SoundEffect(2919, 15, 0), new Graphics(752), 0.54F, 0.594F, 0.55F, 0.605F, 9241, 21942), //n
         BLOOD_FORFEIT(new SoundEffect(2911, 15, 0), new Graphics(754), 0.11F, 0.121F, 0.06F, 0.066F, 9242, 21944),
-        ARMOUR_PIERCING(new SoundEffect(2913, 15, 0), new Graphics(758), 0.05F, 0.055F, 0.1F, 0.11F, 9243, 21946),
+        ARMOUR_PIERCING(new SoundEffect(2913, 15, 0), new Graphics(758), 0.05F, 0.055F, 0.1F, 0.11F, 9243, 21946, ArchiveWeapons.DIAMOND_ASCENSION_BOLTS_E),
         DRAGONS_BREATH(new SoundEffect(2915, 15, 0), new Graphics(756), 0.06F, 0.066F, 0.06F, 0.066F, 9244, 21948),
-        LIFE_LEECH(new SoundEffect(2917, 15, 0), new Graphics(753), 0.1F, 0.11F, 0.11F, 0.121F, 9245, 21950);
+        LIFE_LEECH(new SoundEffect(2917, 15, 0), new Graphics(753), 0.1F, 0.11F, 0.11F, 0.121F, 9245, 21950, ArchiveWeapons.ONYX_ASCENSION_BOLTS_E);
 
         private final float pvpProcChance;
         private final float pvpKandarinProcChance;
@@ -284,7 +284,7 @@ public class RangedCombat extends PlayerCombat {
             int actualLevel = player2.getSkills().getLevel(SkillConstants.DEFENCE);
             effectiveLevel = actualLevel + 9;
 
-            int baseBonus = player.getBonuses().getBonus(Bonuses.Bonus.DEF_RANGE);
+            int baseBonus = player2.getBonuses().getBonus(Bonuses.Bonus.DEF_RANGE); // the target's ranged defence (was the attacker's)
             effectiveDefenseBonus = baseBonus + 64;
         }
         return (int) (effectiveLevel * (effectiveDefenseBonus));
@@ -395,8 +395,7 @@ public class RangedCombat extends PlayerCombat {
      * @return the bonus added to the pre-acc roll factorial
      */
     private float determineVoidBoost(Player player) {
-        if(CombatUtilities.hasFullRangedVoid(player, true))
-            return 0.125F;
+        // OSRS: void ranger gives +10% accuracy with or without the elite pieces (elite only raises damage to +12.5%).
         if(CombatUtilities.hasFullRangedVoid(player, false))
             return 0.1F;
         return 0;

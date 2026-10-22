@@ -440,7 +440,7 @@ public enum SpecialAttack implements ISpecialAttack {
         });
     }),
 
-    ENERGY_DRAIN(AttackType.SLASH, new int[]{4151, ItemId.LAVA_WHIP, 20405, 12773, 12774, 26482}, WEAPON_SPEED, MELEE, new Animation(1658), null, (player, combat, target) -> {
+    ENERGY_DRAIN(AttackType.SLASH, new int[]{4151, ItemId.LAVA_WHIP, 20405, 12773, 12774, 26482, GadScapeWeaponIds.ABYSSAL_WHIP_OR_33338, GadScapeWeaponIds.ABYSSAL_WHIP_OR_33346, GadScapeWeaponIds.ABYSSAL_WHIP_OR_33372, GadScapeWeaponIds.ABYSSAL_WHIP_OR_33380}, WEAPON_SPEED, MELEE, new Animation(1658), null, (player, combat, target) -> {
         combat.delayHit(0, combat.getHit(player, target, 1.25, 1, 1, false));
         boolean hasBonusHit = player.getBoonManager().hasBoon(SliceNDice.class) && SliceNDice.roll();
         if(hasBonusHit && !(combat.getTarget() instanceof Player))
@@ -1030,7 +1030,7 @@ public enum SpecialAttack implements ISpecialAttack {
         combat.delayHit(target, 0, hit);
     }),
 
-    HAMSTRING(AttackType.RANGED, new int[] { MORRIGANS_THROWING_AXE, MORRIGANS_THROWING_AXE_BH }, 4, RANGED, new Animation(929), new Graphics(1626, 0, 90), (player, combat, target) -> {
+    HAMSTRING(AttackType.RANGED, new int[] { MORRIGANS_THROWING_AXE, MORRIGANS_THROWING_AXE_BH }, 4, RANGED, new Animation(929), new Graphics(2921, 0, 90), (player, combat, target) -> {
         final int delay = World.sendProjectile(player, target, HAMSTRING_PROJ);
         final Hit hit = combat.getHit(player, target, 1, 1, 1, false);
         if (hit.getDamage() > 0) {
@@ -1050,7 +1050,7 @@ public enum SpecialAttack implements ISpecialAttack {
         }, delay);
     }),
 
-    PHANTOM_STRIKE(AttackType.RANGED, new int[] { MORRIGANS_JAVELIN, MORRIGANS_JAVELIN_BH }, 4, RANGED, new Animation(806), new Graphics(1621, 0, 90), (player, combat, target) -> {
+    PHANTOM_STRIKE(AttackType.RANGED, new int[] { MORRIGANS_JAVELIN, MORRIGANS_JAVELIN_BH }, 4, RANGED, new Animation(806), new Graphics(2919, 0, 90), (player, combat, target) -> {
         final int delay = World.sendProjectile(player, target, PHANTOM_STRIKE_PROJ);
         final Hit hit = combat.getHit(player, target, 1, 1, 1, false);
         if (combat instanceof RangedCombat ranged) {
@@ -1194,7 +1194,7 @@ public enum SpecialAttack implements ISpecialAttack {
         combat.delayHit(2, hit);
   }),
 
-    DISRUPT(AttackType.SLASH, new int[] { 27690 }, WEAPON_SPEED, MELEE, new Animation(1378), null, (player, combat, target) -> {
+    DISRUPT(AttackType.SLASH, new int[] { 27690, GadScapeWeaponIds.VOIDWAKER_DEADMAN, GadScapeWeaponIds.VOIDWAKER_DEADMAN_33373 }, WEAPON_SPEED, MELEE, new Animation(1378), null, (player, combat, target) -> {
         player.sendSound(new SoundEffect(2945, 5, 25));
         target.setGraphics(new Graphics(2363, 0, 0));
 
@@ -1275,6 +1275,30 @@ public enum SpecialAttack implements ISpecialAttack {
             }
         }
     }),
+
+    /** Zorya's tome (Fractured Archive): +150% accuracy, +60% damage, a hit empowers the next 3 attacks. 50% (enum 906). */
+    ZORYAS_FLOW(AttackType.MAGIC, new int[] { ArchiveWeapons.ZORYAS_TOME }, WEAPON_SPEED, MAGIC, null, null, (player, combat, target) -> {
+        if (combat instanceof final com.zenyte.game.world.entity.player.action.combat.magic.ZoryasTomeCombat tome) {
+            tome.fireSpecial();
+        }
+    }),
+
+    /* Perilous Moons weapons (sets-prayers area): the full Moon armour set is checked by the weapon's combat class. */
+    /** Dual macuahuitl: 25%, -25% current HP, +25% accuracy and max hit, Bloodrager guaranteed on a hit. */
+    BLOOD_INFUSION(AttackType.CRUSH, com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.DUAL_MACUAHUITL_IDS, WEAPON_SPEED, MELEE, new Animation(10989), null, (player, combat, target) -> {
+        if (combat instanceof final com.zenyte.game.world.entity.player.action.combat.moon.DualMacuahuitlCombat macuahuitl) {
+            macuahuitl.bloodInfusion();
+        }
+    }),
+    /** Eclipse atlatl: 50%, melee distance, magic defence roll, +50% accuracy, consumes the target's burns. */
+    ECLIPSE(AttackType.RANGED, com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.ECLIPSE_ATLATL_IDS, WEAPON_SPEED, RANGED, new Animation(11060), null, (player, combat, target) -> {
+        if (combat instanceof final com.zenyte.game.world.entity.player.action.combat.moon.EclipseAtlatlCombat atlatl) {
+            atlatl.eclipse();
+        }
+    }),
+    /** Blue Moon spear: 50%, +1.5% accuracy and damage per tick the target is still bound, then unbinds it. */
+    BREAK_SHACKLES(AttackType.CRUSH, com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.BLUE_MOON_SPEAR_IDS, WEAPON_SPEED, MELEE, new Animation(1710), null, (player, combat, target) ->
+            com.zenyte.game.world.entity.player.action.combat.moon.BlueMoonSpear.breakShackles(player, combat, target)),
 
   ;
 

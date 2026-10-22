@@ -168,7 +168,10 @@ public class FletchingDefinitions {
 		ADAMANT_JAVELIN(AmmunitionType.JAVELIN, 62, 10, new Item(829), new Item(19578), JAVELIN_SHAFT),
 		RUNE_JAVELIN(AmmunitionType.JAVELIN, 77, 12.4, new Item(830), new Item(19580), JAVELIN_SHAFT),
 		AMETHYST_JAVELIN(AmmunitionType.JAVELIN, 84, 13.5, new Item(21318), new Item(21352), JAVELIN_SHAFT),
-		DRAGON_JAVELIN(AmmunitionType.JAVELIN, 92, 15, new Item(19484), new Item(19582), JAVELIN_SHAFT);
+		DRAGON_JAVELIN(AmmunitionType.JAVELIN, 92, 15, new Item(19484), new Item(19582), JAVELIN_SHAFT),
+		// Ascension bolts + bolt tips (OSRS wiki: 86 Fletching, 70 XP per 10)
+		DIAMOND_ASCENSION_BOLT(AmmunitionType.TIPPED_BOLT, 86, 7, new Item(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.DIAMOND_ASCENSION_BOLTS), new Item(9192), new Item(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ASCENSION_BOLTS)),
+		ONYX_ASCENSION_BOLT(AmmunitionType.TIPPED_BOLT, 86, 7, new Item(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ONYX_ASCENSION_BOLTS), new Item(9194), new Item(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ASCENSION_BOLTS));
 		private final Item product;
 		private final Item[] materials;
 		private final int level;

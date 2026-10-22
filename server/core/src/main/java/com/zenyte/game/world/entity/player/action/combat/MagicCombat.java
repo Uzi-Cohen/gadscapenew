@@ -139,7 +139,7 @@ public class MagicCombat extends PlayerCombat {
     public int getAccuracy(Player player, Entity target, double resultModifier) {
         double effectiveLevel = Math.floor(player.getSkills().getLevel(SkillConstants.MAGIC) * player.getPrayerManager().getMagicBoost(SkillConstants.ATTACK));
         final CombatDefinitions combatDefinitions = player.getCombatDefinitions();
-        if (combatDefinitions.getStyleDefinition() == AttackStyleDefinition.THROWN_MAGIC) {
+        if (combatDefinitions.getStyleDefinition() != null && combatDefinitions.getStyleDefinition().isPoweredMagic()) {
             final int style = combatDefinitions.getStyle();
             //Accurate
             if (style == 0) {
@@ -327,6 +327,8 @@ public class MagicCombat extends PlayerCombat {
         int bonus = player.getBonuses().getBonus(Bonuses.Bonus.MAGIC_DAMAGE);
         bonus = evalVirtusBoost(bonus);
         bonus = evalTumekensBoost(bonus);
+        // Prayer magic damage (Mystic Lore 1%, Mystic Might 2%, Mystic Vigour 3%, Augury 4%), not multiplied by the shadow.
+        bonus += player.getPrayerManager().getMagicDamageBonus();
 
         double modifier = 1.0F + (Math.min(100.0F, bonus) / 100.0F);
         //Multiply with the damage modifiers.
@@ -373,13 +375,8 @@ public class MagicCombat extends PlayerCombat {
             }
         }
         damage *= passiveModifier;
-        //Tome of fire effect.
-        final Item shield = player.getEquipment().getItem(EquipmentSlot.SHIELD);
-        if (shield != null && shield.getId() == TomeOfFire.TOME_OF_FIRE && shield.hasCharges()) {
-            if (ArrayUtils.contains(fireSpells, spell)) {
-                damage *= 1.5F;
-            }
-        }
+        //Tome of Fire / Water / Earth: +10% against NPCs (fire +50%, water +20% against players).
+        damage *= com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.damageMultiplier(player, target, spell);
         //Castle wars bracelet effect
         if (player.getTemporaryAttributes().containsKey("castle wars bracelet effect") && player.inArea("Castle wars instance")) {
             if (target instanceof Player) {
@@ -546,12 +543,7 @@ public class MagicCombat extends PlayerCombat {
                 return delay;
             }
         }
-        final Item shield = player.getEquipment().getItem(EquipmentSlot.SHIELD);
-        if (shield != null && shield.getId() == TomeOfFire.TOME_OF_FIRE && shield.hasCharges()) {
-            if (ArrayUtils.contains(fireSpells, spell)) {
-                player.getChargesManager().removeCharges(shield, 1, player.getEquipment().getContainer(), EquipmentSlot.SHIELD.getSlot());
-            }
-        }
+        com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.consumeCharge(player, spell);
         boolean saveRuneOrCharge = SlayerHelmetEffects.INSTANCE.redHelmet(player, target) && Utils.random(100) < 25;
         if(!saveRuneOrCharge && player.getBoonManager().hasBoon(SuperiorSorcery.class))
             saveRuneOrCharge = SuperiorSorcery.roll();
@@ -588,6 +580,8 @@ public class MagicCombat extends PlayerCombat {
             target.drainSkill(SkillConstants.STRENGTH, 5);
         }
         addToxinTask(delay);
+        // Blue Moon set Frostweaver: chance of an instant spear attack after a binding spell lands.
+        com.zenyte.game.world.entity.player.action.combat.moon.BlueMoonSpear.onSpellCast(player, target, spell, splash);
         resetFlag();
         SpellbookSwap.checkSpellbook(player);
         if (castType == CastType.MANUAL_CAST) {
@@ -635,6 +629,8 @@ public class MagicCombat extends PlayerCombat {
                 break;
             }
         }
+        //Tome of Water: +10%/+20% accuracy for water spells, +20% for curses and binds.
+        accuracyModifier *= (float) com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.accuracyMultiplier(player, target, spell);
 
         boolean ignorePrayers = false;
 

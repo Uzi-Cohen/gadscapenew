@@ -98,12 +98,13 @@ public abstract class PlayerCombat extends Action {
     public static final List<Integer> INSTANT_SPEC_WEAPONS = ImmutableList.of(
             4153, 12848, 24227, 24225, 20557, 1377, 11920, 12797,
             13242, 13243, 13244, 20014, 6739, 13241, 20011, 21028,
-            21031, 21033, 20849, 21207, 35, ItemId.STAFF_OF_THE_DEAD, ItemId.TOXIC_STAFF_OF_THE_DEAD, 11037, 22296,
+            21031, 21033, 20849, 21207, 35, ItemId.STAFF_OF_THE_DEAD, ItemId.TOXIC_STAFF_OF_THE_DEAD, ItemId.TOXIC_STAFF_UNCHARGED, 11037, 22296,
             ItemId.STAFF_OF_BALANCE,
             CrystalTool.Harpoon.INSTANCE.getProductItemId(),
             CrystalTool.Axe.INSTANCE.getProductItemId(),
             CrystalTool.Pickaxe.INSTANCE.getProductItemId(),
             PolyporeStaff.INSTANCE.getItemId(),
+            CustomItemId.POLYPORE_STAFF_DEG,
             32161,
             ItemID.KERIS_PARTISAN_OF_THE_SUN
     );
@@ -287,9 +288,14 @@ public abstract class PlayerCombat extends Action {
     }
 
     public static void performInstantSpecial(final Player player, final int weaponId) {
-        final SpecialAttack special = (SpecialAttack) SpecialAttack.SPECIAL_ATTACKS.get(weaponId);
-        if (special == null) {
+        final ISpecialAttack registered = SpecialAttack.SPECIAL_ATTACKS.get(weaponId);
+        if (registered == null) {
             player.getCombatDefinitions().setSpecial(false, true);
+            return;
+        }
+        if (!(registered instanceof final SpecialAttack special)) {
+            // Kotlin specials (Polypore staff, god bows...) are not enum constants: run them like any instant special.
+            useInstantSpecial(player, registered);
             return;
         }
 
@@ -372,6 +378,9 @@ public abstract class PlayerCombat extends Action {
             return;
         } else if (spell == CombatSpell.TUMEKENS_SHADOW) {
             player.getActionManager().setAction(new TumekensShadowCombat(entity, spell, castType));
+            return;
+        } else if (spell == CombatSpell.ZORYAS_TOME) {
+            player.getActionManager().setAction(new ZoryasTomeCombat(entity, spell, castType));
             return;
         } else if (spell == CombatSpell.STARTER_STAFF) {
             player.getActionManager().setAction(new StarterStaffCombat(entity, spell, castType));
@@ -530,6 +539,10 @@ public abstract class PlayerCombat extends Action {
                 return;
             }
         }
+        // PvP worlds (off by default): open-world combat range and skulling.
+        if (entity instanceof Player targetPlayer && !com.zenyte.game.content.pvpworld.PvpWorld.canAttack(player, targetPlayer)) {
+            return;
+        }
         if (player.isLocked()) {
             return;
         }
@@ -620,6 +633,9 @@ public abstract class PlayerCombat extends Action {
         } else if (weapon.getId() == 27662 || weapon.getId() == 27665) {
             magicAttack(player, entity, CombatSpell.ACCURSED_SCEPTRE, true);
             return;
+        } else if (ArchiveWeapons.isZoryasTome(weapon.getId())) {
+            magicAttack(player, entity, CombatSpell.ZORYAS_TOME, true);
+            return;
         }
         final String weaponName = weapon.getName().toLowerCase();
         final int ammo = player.getEquipment().getId(isSpecialRangedAmmunition(weapon.getId(), weaponName) ?
@@ -627,6 +643,10 @@ public abstract class PlayerCombat extends Action {
         final AmmunitionDefinition defs = AmmunitionDefinitions.getDefinitions(ammo);
         if (ArrayUtils.contains(SpecialAttack.SHOVE.getWeapons(), weapon.getId())) {
             player.getActionManager().setAction(new DragonSpearCombat(entity));
+        } else if (ArchiveWeapons.isAscensionCrossbows(weapon.getId())) {
+            player.getActionManager().setAction(new AscensionCrossbowCombat(entity, defs));
+        } else if (ArchiveWeapons.isObligator(weapon.getId())) {
+            player.getActionManager().setAction(new ObligatorCombat(entity));
         } else if (weaponName.endsWith("ballista")) {
             player.getActionManager().setAction(new JavelinRangedCombat(entity, defs));
         } else if (weaponName.startsWith("dragon hunter crossbow")) {
@@ -730,12 +750,45 @@ public abstract class PlayerCombat extends Action {
 
     public static final int TARGET_INDEX_VAR = 1075;
 
+    /**
+     * Special attack costs the server falls back on when the cache's enum 906 has no (or a bad) entry for a weapon
+     * that has a special, in tenths of a percent like the enum. 2746 values.
+     */
+    private static final Int2IntMap SPECIAL_COST_FALLBACKS = Int2IntMaps.unmodifiable(new Int2IntOpenHashMap() {
+        {
+            put(ArchiveWeapons.ZORYAS_TOME, 500);
+            put(ArchiveWeapons.RONDACHE, 10);
+            put(com.zenyte.game.world.entity.player.action.combat.melee.SoulreaperAxe.AXE, 1);
+            put(com.zenyte.game.world.entity.player.action.combat.melee.SoulreaperAxe.AXE_ORNAMENT, 1);
+            put(GadScapeWeaponIds.SOULREAPER_AXE_OR_33369, 1);
+            put(GadScapeWeaponIds.ABYSSAL_WHIP_OR_33338, 500);
+            put(GadScapeWeaponIds.ABYSSAL_WHIP_OR_33346, 500);
+            put(GadScapeWeaponIds.ABYSSAL_WHIP_OR_33372, 500);
+            put(GadScapeWeaponIds.ABYSSAL_WHIP_OR_33380, 500);
+            put(GadScapeWeaponIds.VOIDWAKER_DEADMAN, 500);
+            put(GadScapeWeaponIds.VOIDWAKER_DEADMAN_33373, 500);
+            // Perilous Moons weapons (2746 enum 906: 250/500/500); GadScape's atlatl copies use the atlatl's cost.
+            for (final int id : com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.DUAL_MACUAHUITL_IDS) put(id, 250);
+            for (final int id : com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.ECLIPSE_ATLATL_IDS) put(id, 500);
+            for (final int id : com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.BLUE_MOON_SPEAR_IDS) put(id, 500);
+        }
+    });
+
+    /** The special attack cost of a weapon in tenths of a percent (enum 906), or 0 when it has none. */
+    public static int getSpecialCost(final int weaponId) {
+        final int cost = SPECIAL_ENUM == null ? -1 : SPECIAL_ENUM.getIntValue(weaponId);
+        if (cost > 0) {
+            return cost;
+        }
+        return SPECIAL_COST_FALLBACKS.getOrDefault(weaponId, 0);
+    }
+
     protected static int getRequiredSpecial(final Player player) {
         final Item weapon = player.getWeapon();
         if (weapon == null) {
             return 0;
         }
-        int requiredSpecial = SPECIAL_ENUM.getIntValue(weapon.getId());
+        int requiredSpecial = getSpecialCost(weapon.getId());
         if (player.getArea() instanceof final AbstractTOARaidArea area && area.isOverlyDraining()) {
             requiredSpecial = 1000;
         }
@@ -1132,6 +1185,13 @@ public abstract class PlayerCombat extends Action {
                 player.sendMessage("You cannot use the Dawnbringer outside of the Theatre of Blood.");
                 return -2;
             }
+        }
+        if (special == SpecialAttack.SCORCHING_SHACKLES
+                && !(target instanceof final NPC npc && com.zenyte.game.world.entity.npc.race.Demon.isDemon(npc, true))) {
+            // Refused like on OSRS: no energy is used and the special is switched off.
+            player.sendMessage("Scorching shackles won't work against a non-demon enemy.");
+            player.getCombatDefinitions().setSpecial(false, true);
+            return -2;
         }
         final int specialEnergy = getRequiredSpecial(player);
         if (player.getCombatDefinitions().getSpecialEnergy() < specialEnergy) {

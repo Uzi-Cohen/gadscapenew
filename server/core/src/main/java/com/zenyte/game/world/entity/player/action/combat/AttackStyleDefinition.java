@@ -40,6 +40,13 @@ public enum AttackStyleDefinition {
     DINHS_BULWARK(27, "Bulwark", new AttackStyle(CRUSH, ATTACK_XP), null),
     UNUSED_THROWN_MAGIC(28, "Powered staff", new AttackStyle(MAGIC, MAGIC_XP), new AttackStyle(MAGIC, MAGIC_XP), new AttackStyle(MAGIC, MAGIC_DEFENCE_XP)),
     PARTISAN(29, "Partisan", new AttackStyle(STAB, ATTACK_XP), new AttackStyle(STAB, STRENGTH_XP), new AttackStyle(CRUSH, STRENGTH_XP), new AttackStyle(STAB, DEFENCE_XP)),
+    /*
+     * Fractured Archive (2746) categories. The server index (JSON interfaceVarbit) is the ordinal; the combat tab gets
+     * the 241 client category from getClientCategory(). Obligator: Thrust (accurate), Thrust (aggressive), Smash
+     * (aggressive), all Crush, on buttons 0, 1 and 2. Zorya's tome: Accurate, Accurate, Longrange like a powered staff.
+     */
+    EXTENDING_CHAIN_MACE(30, 36, "Extending Chain Mace", new AttackStyle(CRUSH, ATTACK_XP), new AttackStyle(CRUSH, STRENGTH_XP), new AttackStyle(CRUSH, STRENGTH_XP)),
+    MAGIC_BOOK(31, 37, "Powered book", new AttackStyle(MAGIC, MAGIC_XP), new AttackStyle(MAGIC, MAGIC_XP), new AttackStyle(MAGIC, MAGIC_DEFENCE_XP)),
 
     ;
 
@@ -48,10 +55,35 @@ public enum AttackStyleDefinition {
     private final AttackStyle[] styles;
     private final String prettyName;
     private final int varbit;
+    private final int clientCategory;
     AttackStyleDefinition(int varbit, String prettyName, final AttackStyle... styles) {
+        // 241 added a category at 22 (staff_spellblade), so every 211 category from 22 up is one higher on the client.
+        this(varbit, varbit >= 22 ? varbit + 1 : varbit, prettyName, styles);
+    }
+
+    AttackStyleDefinition(int varbit, int clientCategory, String prettyName, final AttackStyle... styles) {
         this.varbit = varbit;
+        this.clientCategory = clientCategory;
         this.prettyName = prettyName;
         this.styles = styles;
+    }
+
+    /** The value of varbit 357 (combat_weapon_category) the 241 client's combat tab expects for this category. */
+    public int getClientCategory() {
+        return clientCategory;
+    }
+
+    /** The combat-tab button (varp 43 com_mode) that shows the given style as selected. */
+    public int getButtonForStyle(final int style) {
+        if (this == EXTENDING_CHAIN_MACE) {
+            return Math.min(style, 2);
+        }
+        return styles.length == 3 && style == 2 ? (this == LIZARD ? 2 : 3) : style;
+    }
+
+    /** Self-powered magic weapons (powered staves and Zorya's tome): Accurate, Accurate, Longrange. */
+    public boolean isPoweredMagic() {
+        return this == THROWN_MAGIC || this == UNUSED_THROWN_MAGIC || this == MAGIC_BOOK;
     }
 
     public static boolean isSlashVarbit(int varbit) {
