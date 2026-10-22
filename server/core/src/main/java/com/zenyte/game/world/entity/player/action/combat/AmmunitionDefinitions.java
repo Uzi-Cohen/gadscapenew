@@ -197,13 +197,13 @@ public enum AmmunitionDefinitions implements AmmunitionDefinition {
 	RUNE_THROWNAXE(805, true, new Graphics(48, 0, 96), new SoundEffect(2706, 0, 0),
             new Projectile(41, 40, 36, 32, 21, 0, 11, 5)),
 
-	DRAGON_THROWNAXE(20849, true, new Graphics(1320, 0, 96), new SoundEffect(2706, 0, 0),
+	DRAGON_THROWNAXE(new int[] { 20849, 21207 }, true, new Graphics(1320, 0, 96), new SoundEffect(2706, 0, 0),
             new Projectile(1319, 40, 36, 32, 21, 0, 11, 5)),
 
-    MORRIGANS_THROWING_AXE(22634, true, new Graphics(1624, 0, 96), new SoundEffect(2706, 0, 0),
+    MORRIGANS_THROWING_AXE(new int[] { 22634, ItemId.MORRIGANS_THROWING_AXE_BH }, true, new Graphics(1624, 0, 96), new SoundEffect(2706, 0, 0),
             new Projectile(1623, 42, 30, 40, 15, 3, 64, 5)),
 
-    MORRIGANS_JAVELIN(22636, true, new Graphics(1619, 0, 96), new SoundEffect(2706, 0, 0),
+    MORRIGANS_JAVELIN(new int[] { 22636, ItemId.MORRIGANS_JAVELIN_BH, 23619 }, true, new Graphics(1619, 0, 96), new SoundEffect(2706, 0, 0),
             new Projectile(1620, 42, 30, 40, 15, 3, 64, 5)),
 
 
@@ -230,6 +230,10 @@ public enum AmmunitionDefinitions implements AmmunitionDefinition {
 
     RUNE_KNIFE(new int[]{868, 876, 5660, 5667}, true, new Graphics(225, 0, 96), new SoundEffect(2707, 0, 0),
             new Projectile(218, 40, 36, 32, 21, 0, 11, 5)),
+
+    /* Eclipse atlatl (sets-prayers area): atlatl darts are thrown only by it; projectile spotanim 2795 (vfx_atlatl_projectile_01). */
+    ATLATL_DART(new int[]{ItemId.ATLATL_DART, ItemId.ATLATL_DART_29852}, true, new SoundEffect(2707, 0, 0),
+            new Projectile(2795, 40, 36, 32, 21, 0, 11, 5), com.zenyte.game.world.entity.player.action.combat.moon.MoonSets.ECLIPSE_ATLATL_IDS),
 
     DRAGON_KNIFE(new int[]{22804, 22812, 22814}, true, null, new SoundEffect(2707, 0, 0),
             new Projectile(28, 40, 36, 32, 21, 0, 11, 5)),
@@ -437,6 +441,21 @@ public enum AmmunitionDefinitions implements AmmunitionDefinition {
             new Projectile(27, 38, 36, 41, 7, 5, 11, 5),
         11785, 21012, ItemId.DRAGON_HUNTER_CROSSBOW_T, ItemId.DRAGON_HUNTER_CROSSBOW_B, 21902, DRAGON_CROSSBOW_CR, ItemId.ZARYTE_CROSSBOW),
     IMBUED_TEPHRA(23_907, false, null, new Projectile(1731, 40, 36, 21, 21, 11, 11, 5)),
+
+    /*
+     * Ascension bolts (The Fractured Archive): fired only by the Ascension crossbows, which fire nothing else. The
+     * unenchanted gem-tipped bolts have no effect; Diamond (e) is armour piercing and Onyx (e) life leech (RangedCombat).
+     * The first id of each entry must exist in the cache (the constructor reads its equipment slot).
+     */
+    ASCENSION_BOLT(new int[] { ArchiveWeapons.ASCENSION_BOLTS }, true, new SoundEffect(2695, 0, 0),
+            new Projectile(ArchiveWeapons.ASCENSION_BOLT_PROJECTILE, 38, 36, 41, 7, 5, 11, 5),
+        ArchiveWeapons.ASCENSION_CROSSBOWS, GadScapeWeaponIds.ASCENSION_CROSSBOWS_GADSCAPE),
+    ASCENSION_DIAMOND_BOLT(new int[] { ArchiveWeapons.DIAMOND_ASCENSION_BOLTS, ArchiveWeapons.DIAMOND_ASCENSION_BOLTS_E }, true, new SoundEffect(2695, 0, 0),
+            new Projectile(ArchiveWeapons.DIAMOND_ASCENSION_BOLT_PROJECTILE, 38, 36, 41, 7, 5, 11, 5),
+        ArchiveWeapons.ASCENSION_CROSSBOWS, GadScapeWeaponIds.ASCENSION_CROSSBOWS_GADSCAPE),
+    ASCENSION_ONYX_BOLT(new int[] { ArchiveWeapons.ONYX_ASCENSION_BOLTS, ArchiveWeapons.ONYX_ASCENSION_BOLTS_E }, true, new SoundEffect(2695, 0, 0),
+            new Projectile(ArchiveWeapons.ONYX_ASCENSION_BOLT_PROJECTILE, 38, 36, 41, 7, 5, 11, 5),
+        ArchiveWeapons.ASCENSION_CROSSBOWS, GadScapeWeaponIds.ASCENSION_CROSSBOWS_GADSCAPE),
     ;
 
 	AmmunitionDefinitions(final int itemId, final boolean retrievable, final Graphics drawbackGfx, SoundEffect soundEffect, final Projectile projectile, final int... bows) {
@@ -458,7 +477,9 @@ public enum AmmunitionDefinitions implements AmmunitionDefinition {
 		this.projectile = projectile;
 		this.bows = bows;
 		this.retrievable = retrievable;
-		this.weapon = ItemDefinitions.getOrThrow(itemId[0]).getSlot() == EquipmentSlot.WEAPON.getSlot();
+		// Lenient for ids the loaded cache doesn't have yet (they can't be worn then anyway).
+		final ItemDefinitions definitions = ItemDefinitions.get(itemId[0]);
+		this.weapon = definitions != null && definitions.getSlot() == EquipmentSlot.WEAPON.getSlot();
 	}
 
     private static final AmmunitionDefinitions[] VALUES = values();

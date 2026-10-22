@@ -50,11 +50,8 @@ class BountyHunterKitItemCreation : PairedItemOnItemPlugin {
             ItemOnItemAction.ItemPair.of(ItemId.DRAGON_WARHAMMER, ItemId.BOUNTY_HUNTER_ORNAMENT_KIT),
             ItemOnItemAction.ItemPair.of(ItemId.FIGHTER_TORSO, ItemId.BOUNTY_HUNTER_ORNAMENT_KIT),
             ItemOnItemAction.ItemPair.of(ItemId.HELM_OF_NEITIZNOT, ItemId.BOUNTY_HUNTER_ORNAMENT_KIT),
-            ItemOnItemAction.ItemPair.of(ItemId.ELDER_MAUL, ItemId.ELDER_MAUL_ORNAMENT_KIT),
-            ItemOnItemAction.ItemPair.of(ItemId.HEAVY_BALLISTA, ItemId.HEAVY_BALLISTA_ORNAMENT_KIT),
-            ItemOnItemAction.ItemPair.of(ItemId.ELDER_CHAOS_TOP, ItemId.ELDER_CHAOS_ROBES_ORNAMENT_KIT),
-            ItemOnItemAction.ItemPair.of(ItemId.ELDER_CHAOS_HOOD, ItemId.ELDER_CHAOS_ROBES_ORNAMENT_KIT),
-            ItemOnItemAction.ItemPair.of(ItemId.ELDER_CHAOS_ROBE, ItemId.ELDER_CHAOS_ROBES_ORNAMENT_KIT),
+            // Elder maul, heavy ballista and elder chaos robes ornament kits are reversible (DismantleableItem +
+            // ItemAttaching / Dismantleable, like OSRS): registering them here too made the two plugins fight over the pairs.
         )
     }
 

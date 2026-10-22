@@ -1452,7 +1452,7 @@ public class ItemId extends CustomItemId {
     public static final int SARADOMIN_STAFF = 2415;
     public static final int GUTHIX_STAFF = 2416;
     public static final int ZAMORAK_STAFF = 2417;
-    public static final int BRONZE_KEY = 2418;
+    public static final int BRONZE_KEY_2418 = 2418; // GadScape: renamed so it no longer hides CustomItemId.BRONZE_KEY (32044)
     public static final int WIG = 2419;
     public static final int WIG_2421 = 2421;
     public static final int BLUE_PARTYHAT_2422 = 2422;
@@ -5588,7 +5588,7 @@ public class ItemId extends CustomItemId {
     public static final int GROUND_ASHES = 8865;
     public static final int STEEL_KEY = 8866;
     public static final int BRONZE_KEY_8867 = 8867;
-    public static final int SILVER_KEY = 8868;
+    public static final int SILVER_KEY_8868 = 8868; // GadScape: renamed so it no longer hides CustomItemId.SILVER_KEY (32046)
     public static final int IRON_KEY_8869 = 8869;
     public static final int ZANIK = 8870;
     public static final int CRATE_WITH_ZANIK = 8871;
@@ -12520,8 +12520,8 @@ public class ItemId extends CustomItemId {
     public static final int ARMADYL_CHESTPLATE_OR = 26715;
     public static final int ARMADYL_CHAINSKIRT_OR = 26716;
     public static final int BANDOS_ARMOUR_ORNAMENT_KIT = 26717;
-    public static final int BANDOS_CHESTPLATE_OR = 26718;
-    public static final int BANDOS_TASSETS_OR = 26719;
+    public static final int BANDOS_CHESTPLATE_OR_26718 = 26718; // GadScape: renamed so it no longer hides CustomItemId.BANDOS_CHESTPLATE_OR (32142)
+    public static final int BANDOS_TASSETS_OR_26719 = 26719; // GadScape: renamed so it no longer hides CustomItemId.BANDOS_TASSETS_OR (32144)
     public static final int BANDOS_BOOTS_OR = 26720;
     public static final int CENTURION_CUIRASS = 26721;
     public static final int CENTURION_CUIRASS_L = 26722;
@@ -13482,7 +13482,7 @@ public class ItemId extends CustomItemId {
     public static final int SAPPHIRE_KEY_28416 = 28416;
     public static final int EMERALD_KEY_28417 = 28417;
     public static final int RUBY_KEY_28418 = 28418;
-    public static final int DIAMOND_KEY = 28419;
+    public static final int DIAMOND_KEY_28419 = 28419; // GadScape: renamed so it no longer hides CustomItemId.DIAMOND_KEY (32052)
     public static final int DRAGONSTONE_KEY = 28420;
     public static final int ONYX_KEY = 28421;
     public static final int RATIONS = 28422;

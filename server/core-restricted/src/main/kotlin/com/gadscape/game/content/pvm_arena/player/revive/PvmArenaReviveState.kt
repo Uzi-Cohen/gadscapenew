@@ -3,8 +3,8 @@ package com.gadscape.game.content.pvm_arena.player.revive
 import com.gadscape.game.world.entity.player.pvmArenaInRevivalState
 import com.gadscape.game.world.entity.player.pvmArenaPoints
 import com.gadscape.game.world.entity.player.pvmArenaRevivalCount
-import com.runespawn.util.weakMutableSetOf
-import com.runespawn.util.weakReference
+import com.gadscape.util.weakMutableSetOf
+import com.gadscape.util.weakReference
 import com.zenyte.game.util.Colour
 import com.zenyte.game.world.WorldThread
 import com.zenyte.game.world.entity.masks.UpdateFlag

@@ -17,7 +17,7 @@ import kotlin.enums.EnumEntries
 object UniversalShopPacker {
 
     fun pack(cache: Cache) {
-        val archives = File("assets/osnr/universal_shop/").listFiles()
+        val archives = File("assets/gadscape/universal_shop/").listFiles()
         for (archiveFolder in archives) {
             val archiveId = archiveFolder.name.substringAfter("_").toInt()
             val archive = cache.getArchive(archiveId)

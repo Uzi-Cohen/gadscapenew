@@ -33,7 +33,7 @@ fi
 
 echo "==> Installing application files into $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
-for item in server.jar worlds.yml data cache app; do
+for item in server.jar worlds.yml data cache cache241 keys app; do
   if [[ -e "$STAGING_DIR/$item" ]]; then
     rsync -a --delete "$STAGING_DIR/$item" "$INSTALL_DIR/"
   else
@@ -42,6 +42,10 @@ for item in server.jar worlds.yml data cache app; do
 done
 cp "$STAGING_DIR/deploy/start.sh" "$INSTALL_DIR/start.sh"
 chmod +x "$INSTALL_DIR/start.sh"
+# Rev 241 settings (cache dir, RSA key, login token, ports); kept if it already exists.
+if [[ ! -e "$INSTALL_DIR/start.env" ]]; then
+  cp "$STAGING_DIR/deploy/start.env.example" "$INSTALL_DIR/start.env"
+fi
 mkdir -p "$INSTALL_DIR/logs"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 

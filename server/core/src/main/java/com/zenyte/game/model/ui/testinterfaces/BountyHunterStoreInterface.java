@@ -38,6 +38,9 @@ public class BountyHunterStoreInterface extends Interface {
 
     @Override
     public void open(final Player player) {
+        // The legacy store (interface 178, old BH points) is replaced by the universal shop's Bounty Hunter tab
+        // (db table 1005, BH2020 points), the same shop as Emblem trader -> "BH Shop". Opening 178 itself showed nothing.
+        com.zenyte.game.content.universalshop.UniversalShopInterface.openInterfaceToTab(player, 9);
         /*inal PacketDispatcher dispatcher = player.getPacketDispatcher();
         final VarManager varManager = player.getVarManager();
         final BountyHunter bounty = player.getBountyHunter();

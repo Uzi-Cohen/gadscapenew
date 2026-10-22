@@ -25,10 +25,11 @@ class AcidDrip(val instance: AraxxorInstance) : Attack {
 
     override fun invoke(araxxor: Araxxor, target: Entity?) {
         if (target == null || target.isDead || target.isFinished) return
-        araxxor seq 11478
+        araxxor seq 11477 // NPC_ARAXXOR_01_ATTACK_ACID_LEAK_01
         World.sendProjectile(araxxor, target, projectileBlob)
         val delay = araxxor.middleLocation.getDistance(target.location).toInt() - 3
         schedule(delay) {
+            target.graphics = Graphics(1626) // ARAXXOR_VENOM_DRIP
             World.spawnObject(AcidPool(target.location))
             target.temporaryAttributes["araxxor_acid_drip"] = 6
         }

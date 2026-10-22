@@ -40,7 +40,7 @@ public class RedCarpetCutscene extends Cutscene {
     @Override
     public void build() {
         addActions(0, player::lock, () -> closedTabs.forEach(tab -> player.getInterfaceHandler().closeInterface(tab)), () -> player.getInterfaceHandler().openGameTab(GameTab.FRIENDS_TAB));
-        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(10700, 1), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.DISABLED));
+        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.DISABLED));
         addActions(4, new CameraPositionAction(player, instance.getLocation(2199, 4396, 0), 250, -128, 0), new CameraLookAction(player, instance.getLocation(2204, 4396, 0), 200, -128, 0), () -> {
             bunny = new NPC(EasterConstants.EASTER_BUNNY_JR_CUTSCENE, instance.getLocation(2204, 4396, 0), Direction.SOUTH, 0);
             bunny.spawn();
@@ -53,7 +53,7 @@ public class RedCarpetCutscene extends Cutscene {
         addActions(7, new CameraPositionAction(player, instance.getLocation(2204, 4392, 0), 250, 3, 0));
         final FadeScreen fs = new FadeScreen(player);
         addActions(11, fs::fade, () -> bunny.setTransformation(EasterConstants.EASTER_BUNNY_CUTSCENE));
-        addActions(13, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2208, 4394, 0)), () -> player.getPacketDispatcher().sendClientScript(10700, 0), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED), () -> SplittingHeirs.advanceStage(player, Stage.POST_MEETING_CUTSCENE));
+        addActions(13, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2208, 4394, 0)), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 0), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED), () -> SplittingHeirs.advanceStage(player, Stage.POST_MEETING_CUTSCENE));
         addActions(14, fs::unfade, () -> player.getDialogueManager().start(new DressUpDialogue(player, EasterConstants.EASTER_BUNNY_JR_ON_RED_CARPET)));
     }
 

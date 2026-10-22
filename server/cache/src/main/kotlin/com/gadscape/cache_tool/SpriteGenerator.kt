@@ -76,7 +76,7 @@ private fun dump() {
 
         // Save the image as a PNG file
         try {
-            val outputFile: File = File("/Users/stanvanderbend/IdeaProjects/gadscape/server-production/cache/assets/osnr/custom_sprites/revival_state_" + (i + 1) + ".png")
+            val outputFile: File = File("/Users/stanvanderbend/IdeaProjects/gadscape/server-production/cache/assets/gadscape/custom_sprites/revival_state_" + (i + 1) + ".png")
             ImageIO.write(sprite, "PNG", outputFile)
         } catch (e: IOException) {
             System.err.println("Error writing image: " + e.message)

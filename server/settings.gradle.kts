@@ -65,9 +65,9 @@ include(
 
 include(
     ":plugins:area:ferox_enclave",
-    ":plugins:area:osnr_home:npc",
-    ":plugins:area:osnr_home:obj",
-    ":plugins:area:osnr_home",
+    ":plugins:area:gadscape_home:npc",
+    ":plugins:area:gadscape_home:obj",
+    ":plugins:area:gadscape_home",
     ":plugins:area",
     ":plugins:boss:ganodermic-beast",
     ":plugins:boss:zalcano",

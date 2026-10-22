@@ -340,7 +340,15 @@ public class Combine extends Action {
 
 	@Override
 	public int processWithDelay() {
+		// Prescription goggles (sets-prayers): 10% chance to keep the secondary ingredient.
+		final Item savedSecondary = com.zenyte.game.content.sets.SetEffects.secondarySavedByGoggles(player, data.getProduct(), data.getMaterials());
+		if (savedSecondary != null) {
+			player.sendFilteredMessage("Your goggles help you save the " + savedSecondary.getName().toLowerCase() + ".");
+		}
 		for (final Item material : data.getMaterials()) {
+			if (material == savedSecondary) {
+				continue;
+			}
 			if (material.getId() != pestleAndMortarGauntlet.getId() && material.getId() != pestleAndMortar.getId() && material.getId() != knife.getId()) {
 				player.getInventory().deleteItem(material);
 			}

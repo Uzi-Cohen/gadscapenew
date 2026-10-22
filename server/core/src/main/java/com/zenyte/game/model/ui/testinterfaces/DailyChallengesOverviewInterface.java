@@ -30,7 +30,7 @@ public class DailyChallengesOverviewInterface extends Interface {
         put(11, "1");
         put(12, "2");
         put(13, "3");
-        put(15, "4");
+        put(14, "4"); // the fifth row is 1600:14 (components 0-14); 15 does not exist (IF-DAILY-1600-11)
     }
 
     @Override

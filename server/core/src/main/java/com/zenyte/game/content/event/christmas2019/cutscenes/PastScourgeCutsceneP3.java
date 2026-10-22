@@ -74,7 +74,7 @@ public class PastScourgeCutsceneP3 extends Cutscene {
             imp.setFaceEntity(player);
             imp.addWalkSteps(instance.getX(2471), instance.getY(5406), 3);
         });
-        addActions(13, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2465, 5403, 0)), () -> player.getPacketDispatcher().sendClientScript(10700, 0), fadeScreen::unfade, () -> player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED));
+        addActions(13, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2465, 5403, 0)), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 0), fadeScreen::unfade, () -> player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED));
     }
 
     public PastScourgeCutsceneP3(Player player, ScourgeHouseInstance instance, Runnable unfadeRunnable) {

@@ -627,6 +627,14 @@ public enum CombatSpell implements EntitySpell {
             new Projectile(2126, 65, 15, 60, 23, 25, 64, 5)) {
     },
 
+    /** Zorya's tome (The Fractured Archive); max hit from {@link ZoryasTomeCombat#baseDamage()}, female visuals there. */
+    ZORYAS_TOME(null, 18, 0, new Animation(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ZORYAS_TOME_ATTACK),
+            new Graphics(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ZORYAS_TOME_CAST),
+            new Graphics(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ZORYAS_TOME_IMPACT, -1, 60),
+            null, null,
+            new Projectile(com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons.ZORYAS_TOME_PROJECTILE, 40, 31, 46, 16, 10, 64, 5)) {
+    },
+
     TRIDENT_OF_THE_SEAS(null, 20, 0, new Animation(1167),
             new Graphics(1251, 0, 92), new Graphics(1253, -1, 60),
             new SoundEffect(178, 0, 0), new SoundEffect(1460, 10, -1),

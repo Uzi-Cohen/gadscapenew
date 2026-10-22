@@ -228,6 +228,9 @@ public final class PlayerVariables {
 		if (healthRegenBoosts.contains(HealthRegenBoost.RAPID_HEAL) || healthRegenBoosts.contains(HealthRegenBoost.HITPOINTS_CAPE)) {
 			delay /= 2;
 		}
+		if (healthRegenBoosts.contains(HealthRegenBoost.REJUVENATION)) {
+			delay /= 3;
+		}
 		return delay;
 	}
 
@@ -920,6 +923,8 @@ public final class PlayerVariables {
 	public void setBountyHunterSkipTick(int bountyHunterSkipTick) { this.bountyHunterSkipTick = bountyHunterSkipTick; }
 
 	public enum HealthRegenBoost {
-		RAPID_HEAL, REGEN_BRACELET, HITPOINTS_CAPE
+		RAPID_HEAL, REGEN_BRACELET, HITPOINTS_CAPE,
+		/** Ruinous Powers' Rejuvenation: Hitpoints regenerate 3x faster. */
+		REJUVENATION
     }
 }

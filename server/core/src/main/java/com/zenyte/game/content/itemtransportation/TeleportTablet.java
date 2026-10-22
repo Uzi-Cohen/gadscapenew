@@ -35,7 +35,7 @@ public enum TeleportTablet implements Teleport {
     BRIMHAVEN(new Item(11745), new Location(2760, 3178, 0)),
     YANILLE(new Item(11746), new Location(2544, 3092, 0)),
     TROLLHEIM(new Item(11747), new Location(2890, 3676, 0)),
-    EDGEVILLE(new Item(CustomItemId.NR_TABLET), new Location(3087, 3489, 0)),
+    EDGEVILLE(new Item(CustomItemId.HOME_TELEPORT_TABLET), new Location(3087, 3489, 0)),
     PADDEWWA(new Item(12781), new Location(3098, 9884, 0)),
     SENNTISTEN(new Item(12782), new Location(3322, 3336, 0)),
     KHARYRLL(new Item(12779), new Location(3492, 3471, 0)),
@@ -55,7 +55,28 @@ public enum TeleportTablet implements Teleport {
     CEMETARY(new Item(19627), new Location(2976, 3750, 0)),
     BARROWS(new Item(19629), new Location(3565, 3306, 0)),
     APE_ATOLL(new Item(19631), new Location(2778, 2786, 0)),
-    VOLCANIC_MINE(new Item(21541), new Location(3814, 3811, 0));
+    VOLCANIC_MINE(new Item(21541), new Location(3814, 3811, 0)),
+    /* sets-prayers area (SKSP-18): tablets the cache has that had no destination. */
+    /** GadScape's own "Home teleport" tablet at 22721 (user cache item; 2746 has the Attacker icon there): Edgeville like 32056. */
+    GADSCAPE_HOME_TELEPORT(new Item(22721), new Location(3087, 3489, 0)),
+    /** House redirection tablets: just outside the Prifddinas / Aldarin house portals (2746 map locs 34947 / 55353). */
+    PRIFDDINAS(new Item(23771), new Location(3239, 6076, 0)),
+    ALDARIN(new Item(30149), new Location(1420, 2959, 0)),
+    /** Dark crab fishing spots, level 33 Wilderness (warning unless switched off with Configure). */
+    WILDERNESS_CRABS(new Item(24251), new Location(3348, 3797, 0)),
+    /** Lunar spell tablets: the Lunar spells' destinations. */
+    MOONCLAN(new Item(24949), new Location(2113, 3915, 0)),
+    OURANIA(new Item(24951), new Location(2454, 3233, 0)),
+    WATERBIRTH(new Item(24953), new Location(2548, 3757, 0)),
+    BARBARIAN(new Item(24955), new Location(2518, 3571, 0)),
+    KHAZARD(new Item(24957), new Location(2654, 3158, 0)),
+    FISHING_GUILD(new Item(24959), new Location(2611, 3390, 0)),
+    CATHERBY(new Item(24961), new Location(2803, 3434, 0)),
+    /** Level 53 Wilderness (warning unless switched off with Configure). */
+    ICE_PLATEAU(new Item(24963), new Location(2976, 3924, 0)),
+    KOUREND_CASTLE(new Item(28790), new Location(1644, 3673, 0)),
+    /** Civitas illa Fortis (the spell's destination, rsmod SpellObjs). */
+    CIVITAS_ILLA_FORTIS(new Item(28824), new Location(1681, 3133, 0));
     public static final Int2ObjectOpenHashMap<TeleportTablet> tabs = new Int2ObjectOpenHashMap<>();
 
     static {
@@ -81,7 +102,7 @@ public enum TeleportTablet implements Teleport {
 
     @Override
     public TeleportType getType() {
-        return this.equals(VOLCANIC_MINE) ? TeleportType.VOLCANIC_MINE_TELEPORT : this.equals(EDGEVILLE) ? TeleportType.ZENYTE_TABLET_TELEPORT : TeleportType.TABLET_TELEPORT;
+        return this.equals(VOLCANIC_MINE) ? TeleportType.VOLCANIC_MINE_TELEPORT : this.equals(EDGEVILLE) || this.equals(GADSCAPE_HOME_TELEPORT) ? TeleportType.ZENYTE_TABLET_TELEPORT : TeleportType.TABLET_TELEPORT;
     }
 
     @Override

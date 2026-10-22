@@ -189,7 +189,8 @@ public final class Altar implements ObjectInteraction, ItemOnObjectAction {
             if (altar.getId() != ObjectId.CHAOS_ALTAR_411) {
                 player.sendFilteredMessage(OFFERING_MESSAGE);
                 boolean rolledPerk = player.getBoonManager().hasBoon(BoneCruncher.class) && BoneCruncher.roll();
-                if(!rolledPerk) player.getInventory().deleteItem(item);
+                // Zealot's robes (sets-prayers): 1.25% per piece that the bones are not used up.
+                if(!rolledPerk && !com.zenyte.game.content.sets.SetEffects.zealotSavesRemains(player)) player.getInventory().deleteItem(item);
             } else {
                 boolean rolledChaos = Utils.random(1) == 0;
                 boolean rolledPerk = player.getBoonManager().hasBoon(BoneCruncher.class) && BoneCruncher.roll();
@@ -198,7 +199,7 @@ public final class Altar implements ObjectInteraction, ItemOnObjectAction {
                     player.sendFilteredMessage(CHAOS_ALTAR_MESSAGE);
                 } else if(rolledPerk) {
                     player.sendFilteredMessage("Your bone crusher boon saves your bones from destruction.");
-                } else {
+                } else if (!com.zenyte.game.content.sets.SetEffects.zealotSavesRemains(player)) {
                     player.getInventory().deleteItem(item);
                 }
             }

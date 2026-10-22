@@ -285,9 +285,9 @@ class GadToolsController @Inject constructor(
             items.addAll(
                 MenuItem("Interfaces (view + edit)...").apply { setOnAction { InterfaceEditorWindow(spriteLoader, ::log).show() } },
                 MenuItem("Look at another cache's interfaces...").apply { setOnAction {
-                    val d = javafx.stage.DirectoryChooser().apply { title = "Folder with the other cache (e.g. C:\\GadScape\\RoatPkz)" }
+                    val d = javafx.stage.DirectoryChooser().apply { title = "Folder with the other cache (e.g. C:\\GadScape\\OtherCache)" }
                         .showDialog(tabs.scene?.window) ?: return@setOnAction
-                    // either format: new (.dat2) or old-style (.dat, 317 clients like Roat Pkz)
+                    // either format: new (.dat2) or old-style (.dat, 317-format clients)
                     val dat = d.walkTopDown().maxDepth(6).filter { it.isFile && (it.name.equals("main_file_cache.dat2", true) || it.name.equals("main_file_cache.dat", true)) }
                         .sortedBy { it.path.length }.firstOrNull()
                         ?: return@setOnAction status("No game cache found in ${d.path}")
@@ -317,7 +317,7 @@ class GadToolsController @Inject constructor(
                     accelerator = javafx.scene.input.KeyCombination.keyCombination("Ctrl+Shift+I")
                     setOnAction { ModelAnimWindow.show(::log, 2) }
                 },
-                MenuItem("Rebrand the cache (Near-Reality -> GadScape)...").apply { setOnAction { rebrandCache() } },
+                MenuItem("Rebrand the cache (old server names -> GadScape)...").apply { setOnAction { rebrandCache() } },
                 MenuItem("Object options + works like (picked object)...").apply {
                     accelerator = javafx.scene.input.KeyCombination.keyCombination("Ctrl+Shift+O")
                     setOnAction { ObjectOptionsWindow.show(gadToolsModel, configuration, objectLoader, locationsLoader, ::log) }
@@ -544,16 +544,16 @@ class GadToolsController @Inject constructor(
     /** Swap the old server name in the cache's text (interfaces, scripts, item / NPC / object names) in cache-out. */
     fun rebrandCache() {
         val dir = GadTools.ensureExportCache()
-        status("Looking for Near-Reality in the cache's text...")
+        status("Looking for old server names in the cache's text...")
         Thread({
             val hits = try { utils.CacheRebrand.scan(dir) { m -> Platform.runLater { status(m) } } } catch (e: Exception) { e.printStackTrace(); null }
             Platform.runLater {
                 if (hits == null) { status("Couldn't read the cache."); return@runLater }
-                if (hits.isEmpty()) { status("No Near-Reality text left in the cache."); return@runLater }
+                if (hits.isEmpty()) { status("No old server names left in the cache."); return@runLater }
                 val list = ListView(javafx.collections.FXCollections.observableArrayList(hits)).apply { prefHeight = 360.0; prefWidth = 760.0 }
                 val a = Alert(Alert.AlertType.CONFIRMATION, "", ButtonType.OK, ButtonType.CANCEL).apply {
                     title = "Rebrand the cache"
-                    headerText = "${hits.size} cache file(s) still say Near-Reality. Swap them for GadScape (web addresses become gadscape.com)?\n" +
+                    headerText = "${hits.size} cache file(s) still carry an old server name. Swap them for GadScape (web addresses become gadscape.com)?\n" +
                             "Changes the exported map cache; deploy the map to send it. Back up first if unsure (Server tab)."
                     dialogPane.content = list
                     isResizable = true
@@ -1933,7 +1933,6 @@ class GadToolsController @Inject constructor(
             }
         }
         fun serverDir(): java.io.File? = utils.ServerSource.dir(configuration)
-            ?: java.io.File(System.getProperty("user.home"), "Downloads/RSPS-NEAR-REALITY-main/RSPS-NEAR-REALITY-main/near-reality-server-main").takeIf { it.isDirectory }
         val btnShops = Button("Deploy shops + NPC spawns").apply {
             tooltip = Tooltip("Builds the server from your edited shop and spawn files, swaps just those classes in the live jar and restarts. The map is not touched.")
             setOnAction {

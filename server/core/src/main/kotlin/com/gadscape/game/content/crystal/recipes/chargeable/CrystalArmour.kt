@@ -92,6 +92,16 @@ sealed class CrystalArmour(
             0.0
     }
 
+    /**
+     * The active recoloured versions of this piece (made with the crystals of Ithell, Iorwerth, Trahaearn, Cadarn,
+     * Crwys, Hefin and Amlodd, see CrystalOnCrystalArmour). They give the same bow bonus as the Meilyr-coloured
+     * [productItemId]; their (inactive) versions, like the normal inactive piece, give none.
+     */
+    abstract val recolourIds: IntArray
+
+    override fun hasEquippedActive(player: Player) =
+        super.hasEquippedActive(player) || recolourIds.any { player.equipment.containsItem(it) }
+
     override val startCharges = 20_000
 
     override val maximumCharges = 20_000
@@ -109,7 +119,12 @@ sealed class CrystalArmour(
         requiredSmithing = 70,
         craftingExperience = 2500,
         smithingExperience = 2500
-    )
+    ) {
+        override val recolourIds = intArrayOf(
+            ItemId.CRYSTAL_HELM_27705, ItemId.CRYSTAL_HELM_27717, ItemId.CRYSTAL_HELM_27729, ItemId.CRYSTAL_HELM_27741,
+            ItemId.CRYSTAL_HELM_27753, ItemId.CRYSTAL_HELM_27765, ItemId.CRYSTAL_HELM_27777
+        )
+    }
 
     object Legs : CrystalArmour(
         productItemId = ItemId.CRYSTAL_LEGS,
@@ -122,7 +137,12 @@ sealed class CrystalArmour(
         requiredSmithing = 72,
         craftingExperience = 5000,
         smithingExperience = 5000
-    )
+    ) {
+        override val recolourIds = intArrayOf(
+            ItemId.CRYSTAL_LEGS_27701, ItemId.CRYSTAL_LEGS_27713, ItemId.CRYSTAL_LEGS_27725, ItemId.CRYSTAL_LEGS_27737,
+            ItemId.CRYSTAL_LEGS_27749, ItemId.CRYSTAL_LEGS_27761, ItemId.CRYSTAL_LEGS_27773
+        )
+    }
 
     object Body : CrystalArmour(
         productItemId = ItemId.CRYSTAL_BODY,
@@ -135,5 +155,10 @@ sealed class CrystalArmour(
         requiredSmithing = 74,
         craftingExperience = 7500,
         smithingExperience = 7500
-    )
+    ) {
+        override val recolourIds = intArrayOf(
+            ItemId.CRYSTAL_BODY_27697, ItemId.CRYSTAL_BODY_27709, ItemId.CRYSTAL_BODY_27721, ItemId.CRYSTAL_BODY_27733,
+            ItemId.CRYSTAL_BODY_27745, ItemId.CRYSTAL_BODY_27757, ItemId.CRYSTAL_BODY_27769
+        )
+    }
 }

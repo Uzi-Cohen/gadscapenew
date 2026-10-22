@@ -1,0 +1,7 @@
+[
+  {"_source": "pvp area: loot keys use all five wildy_loot_key objs (26651-26655, enum 4212); the data dir only defines 26651. Copied from its entry.",
+   "id": 26652, "name": "Loot key", "tradable": false, "weight": 0.01, "slot": -1},
+  {"id": 26653, "name": "Loot key", "tradable": false, "weight": 0.01, "slot": -1},
+  {"id": 26654, "name": "Loot key", "tradable": false, "weight": 0.01, "slot": -1},
+  {"id": 26655, "name": "Loot key", "tradable": false, "weight": 0.01, "slot": -1}
+]

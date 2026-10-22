@@ -8,7 +8,7 @@ import com.zenyte.game.world.`object`.WorldObject
 import com.zenyte.game.world.`object`.WorldObject.Companion.DEFAULT_TYPE
 
 /**
- * Mack wrote original logic - Kry rewrote in NR terms
+ * Mack wrote original logic - Kry rewrote it for this server
  * @author John J. Woloszyk / Kryeus
  * @date 8.14.2024
  */

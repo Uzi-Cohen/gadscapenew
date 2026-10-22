@@ -1,7 +1,7 @@
 package com.gadscape.game.content.gambling.provablyfair
 
 /*
- * Ported from https://github.com/roatpkz/rsps-provably-fair (MIT License, Copyright Roat Pkz).
+ * Ported from the rsps-provably-fair project (MIT License; copyright notice in THIRD_PARTY_NOTICES.md).
  *
  * Deterministically places mineCount mines across a 5x5 (25 cell) grid: a Fisher-Yates-style
  * swap-with-last draw over a 0-24 bag, where each draw index comes from

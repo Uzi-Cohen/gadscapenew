@@ -73,12 +73,12 @@ public enum SherlockTask implements Clue {
     FLETCH_RUNE_DART(ClueLevel.MASTER, "Fletch a rune dart."),
     //CREMATE_FIYR_REMAINS(ClueLevel.MASTER, "Cremate a set of fiyr remains."),
     DISSECT_SACRED_EEL(ClueLevel.MASTER, "Dissect a sacred eel."),
-    //KILL_LIZARDMAN_SHAMAN(ClueLevel.MASTER, "Kill a lizardman shaman."),
+    KILL_LIZARDMAN_SHAMAN(ClueLevel.MASTER, "Kill a lizardman shaman."),//Progressed by SherlockKillProcessor.
     //CATCH_ANGLERFISH_IN_FISHING_GEAR(ClueLevel.MASTER, "Angle for an Anglerfish in your finest fishing gear."),
     //CHOP_REDWOOD_LOG_IN_LUMBERJACK(ClueLevel.MASTER, "Chop a redwood log whilst sporting the finest lumberjack gear."),
     //CRAFT_A_LIGHTORB_IN_DORGESHKAAN_BANK(ClueLevel.MASTER, "Craft a light orb in the Dorgesh-Kaan bank."),
     KILL_REANIMATED_ABYSSAL(ClueLevel.MASTER, "Kill a reanimated abyssal."),
-    //KILL_FIYR_SHADE_INSIDE_CATACOMBS(ClueLevel.MASTER, "Kill a Fiyr shade inside Mort'tons shade catacombs.")
+    KILL_FIYR_SHADE_INSIDE_CATACOMBS(ClueLevel.MASTER, "Kill a Fiyr shade inside Mort'tons shade catacombs.")//Progressed by SherlockKillProcessor.
     ;
 
     private final String text;

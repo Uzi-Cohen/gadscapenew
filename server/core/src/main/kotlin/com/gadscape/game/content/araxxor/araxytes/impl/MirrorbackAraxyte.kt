@@ -5,12 +5,12 @@ import com.gadscape.game.content.araxxor.araxytes.Araxyte
 import com.gadscape.game.content.damage
 import com.gadscape.game.content.hit
 import com.gadscape.game.content.seq
-import com.gadscape.game.content.spotanim
 import com.zenyte.game.item.ItemId
 import com.zenyte.game.item.ItemId.NOXIOUS_HALBERD
 import com.zenyte.game.task.WorldTasksManager.schedule
 import com.zenyte.game.world.entity.Entity
 import com.zenyte.game.world.entity.Location
+import com.zenyte.game.world.entity.masks.Graphics
 import com.zenyte.game.world.entity.masks.Hit
 import com.zenyte.game.world.entity.masks.HitType
 import com.zenyte.game.world.entity.npc.NpcId.MIRRORBACK_ARAXYTE
@@ -37,7 +37,7 @@ class MirrorbackAraxyte(
     override fun attack(target: Entity?): Int {
         if (getId() == MIRRORBACK_ARAXYTE_EGG) return 1
         if (target == null) return 1
-        this seq 11497
+        this seq 11500 // NPC_ARAXYTE_MIRROR_BACK_01_ATTACK
         val damage = CombatUtilities.getRandomMaxHit(this, 15, AttackType.MELEE, target)
         target.scheduleHit(this, this hit target damage damage, 0)
         return 6
@@ -47,7 +47,7 @@ class MirrorbackAraxyte(
         if (target == null) return
         if (isDead || isFinished) return
         this seq 11509
-        this spotanim 2929
+        graphics = Graphics(2929) // ARAXYTE_MIRRORBACK_SPIDER_EGG
         schedule(1) {
             setTransformationPreservingStats(MIRRORBACK_ARAXYTE)
             addWalkSteps(instance.centerArenaTile.x, instance.centerArenaTile.y, 6)

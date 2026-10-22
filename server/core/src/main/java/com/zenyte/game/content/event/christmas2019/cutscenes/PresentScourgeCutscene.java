@@ -49,7 +49,7 @@ public class PresentScourgeCutscene extends Cutscene {
     public void build() {
         final String impName = ChristmasUtils.getImpName(player);
         addActions(0, player::lock, () -> closedTabs.forEach(tab -> player.getInterfaceHandler().closeInterface(tab)), () -> player.getInterfaceHandler().openGameTab(GameTab.FRIENDS_TAB));
-        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(10700, 1));
+        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1));
         addActions(4, new CameraPositionAction(player, instance.getLocation(2471, 5407, 1), 350, -128, 0), new CameraLookAction(player, instance.getLocation(2471, 5390, 1), 200, -128, 0), () -> {
             dummy = new NPC(24, instance.getLocation(2470, 5398, 1), Direction.NORTH, 0);
             dummy.spawn();
@@ -153,7 +153,7 @@ public class PresentScourgeCutscene extends Cutscene {
             imp.setFaceEntity(player);
             imp.addWalkSteps(instance.getX(2471), instance.getY(5406), 3);
         });
-        addActions(55, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2465, 5403, 0)), () -> player.getPacketDispatcher().sendClientScript(10700, 0), fadeScreen::unfade, this::finish);
+        addActions(55, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2465, 5403, 0)), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 0), fadeScreen::unfade, this::finish);
         startSpawnSequence(100);
         addActions(112, this::turnRight, () -> selectedNPC.setFaceLocation(imp.getLocation()));
         addActions(114, this::turnRight, new DialogueAction(new Dialogue(player) {

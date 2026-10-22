@@ -361,9 +361,10 @@ object RsprotInfo {
                     ext,
                     effects ushr 8 and 0xFF,
                     effects and 0xFF,
-                    player.rankIcon,
+                    chatPlayerType(player),
                     message.isAutotyper,
                     text,
+                    message.pattern,
                 )
             }
         }
@@ -651,18 +652,40 @@ object RsprotInfo {
                     render.rotate270,
                     render.run,
                 ),
-            // The vanilla 241 client has no <title> tag support, so the plain display name is sent.
+            // The vanilla 241 client has no <title> tag support: the plain display name is sent and the crowns
+            // the 211 client showed from getTitleName() go in front of it as <img> tags (name extra 0, which the
+            // client draws before the name in the right-click menu).
             name = player.name ?: "",
             combatLevel = player.skills.combatLevel,
             skillLevel = 0,
             hidden = appearance.isInvisible,
-            beforeName = nametags?.getOrNull(0) ?: "",
+            beforeName = crownTags(player) + (nametags?.getOrNull(0) ?: ""),
             afterName = nametags?.getOrNull(1) ?: "",
             afterCombatLevel = nametags?.getOrNull(2) ?: "",
         )
     }
 
     private fun itemDefinitions(id: Int): ItemDefinitions? = if (id < 0) null else ItemDefinitions.get(id)
+
+    /** The player's crowns (rank, game mode, member) as <img=N> tags, in the order of Player.getTitleName(). */
+    internal fun crownTags(player: Player): String {
+        val tags = StringBuilder()
+        for (crown in arrayOf(player.privilege?.crown(), player.gameModeCrown, player.memberCrown)) {
+            if (crown != null && crown.id != -1) tags.append(crown.crownTag)
+        }
+        return tags.toString()
+    }
+
+    /**
+     * The 241 PlayerType id for the public chat icon: the rank crown (as Player.getRankIcon() picks it), else the
+     * game mode crown, else the member crown, whichever the 241 client can draw (see RsprotExtendedInfo.chatPlayerType).
+     */
+    internal fun chatPlayerType(player: Player): Int =
+        RsprotExtendedInfo.chatPlayerType(
+            player.rankIcon - 1,
+            player.gameModeCrown?.id ?: -1,
+            player.memberCrown?.id ?: -1,
+        )
 
     private fun sourceIndex(source: Entity?): Int =
         when (source) {

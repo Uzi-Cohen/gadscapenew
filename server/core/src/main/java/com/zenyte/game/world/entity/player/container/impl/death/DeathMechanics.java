@@ -13,8 +13,7 @@ import com.zenyte.game.content.consumables.Consumable;
 import com.zenyte.game.content.follower.Follower;
 import com.zenyte.game.content.follower.plugin.Probita;
 import com.zenyte.game.content.gravestone.GravestoneExt;
-import com.zenyte.game.content.lootkeys.LootkeyConstants;
-import com.zenyte.game.content.lootkeys.LootkeySettings;
+import com.zenyte.game.content.lootkeys.LootkeyDeath;
 import com.zenyte.game.content.skills.prayer.Prayer;
 import com.zenyte.game.content.skills.thieving.CoinPouch;
 import com.zenyte.game.item.Item;
@@ -190,70 +189,11 @@ public class DeathMechanics {
         }
 
         if (DeveloperCommands.INSTANCE.getEnabledLootKeys()) {
-            if (receiver != player) {
-                LootkeySettings settings = receiver.getLootkeySettings();
-                if (settings != null) {
-                    if (settings.isEnabled() && !lostToKiller.isEmpty()) {
-
-                        Int2ObjectLinkedOpenHashMap<Item> lootkeyLoot = new Int2ObjectLinkedOpenHashMap<>();
-                        Item lootkeyItem = new Item(LootkeyConstants.LOOT_KEY_ITEM_ID, 1);
-
-                        Iterator iterator = lostToKiller.iterator();
-                        int index = -1;
-                        while (iterator.hasNext()) {
-                            index++;
-                            Item iteratorItem = (Item) iterator.next();
-                            if (iteratorItem == null || iteratorItem.getId() == LootkeyConstants.LOOT_KEY_ITEM_ID)
-                                continue;
-                            // If the item is a consumable
-                            if (Consumable.gourdDrinks.containsKey(iteratorItem.getId())
-                                    || Consumable.consumables.containsKey(iteratorItem.getId())
-                                    || Consumable.food.containsKey(iteratorItem.getId())) {
-
-                                if (!settings.isDropFood()) {
-                                    lootkeyLoot.put(index, iteratorItem);
-                                    iterator.remove();
-                                }
-                                continue;
-                            }
-
-                            if (!settings.isDropValuables()) {
-                                lootkeyLoot.put(index, iteratorItem);
-                                iterator.remove();
-                            } else {
-                                int dropThreshold = settings.getThreshold();
-                                if (iteratorItem.getDefinitions().getPrice() < dropThreshold) {
-                                    lootkeyLoot.put(index, iteratorItem);
-                                    iterator.remove();
-                                }
-                            }
-                        }
-
-                        // Here we store food within the players lootkey
-                        long totalValueOfKey = 0L;
-                        for (var i : lootkeyLoot.int2ObjectEntrySet()) {
-                            totalValueOfKey += i.getValue().getDefinitions().getPrice() * i.getValue().getAmount();
-                        }
-
-                        Container container = new Container(ContainerPolicy.NORMAL, ContainerType.WILDERNESS_LOOT_KEY
-                                , Optional.of(receiver));
-                        container.addAll(lootkeyLoot.values());
-
-                        lootkeyItem.setAttribute(LootkeyConstants.LOOT_KEY_ITEM_LOOT_ITEMS_ATTR,
-                                LoginManager.gson.get().toJson(container.getItems()));
-                        lootkeyItem.setAttribute(LootkeyConstants.LOOT_KEY_ITEM_LOOT_VALUE_ATTR, totalValueOfKey);
-
-                        ContainerResult result = receiver.getInventory().addItem(lootkeyItem);
-                        if (result.isFailure()) {
-                            result.onFailure(res -> World.spawnFloorItem(res, receiver));
-                        } else {
-                            receiver.getUpdateFlags().flag(UpdateFlag.APPEARANCE);
-                        }
-                    }
-                }
-            }
+            // Loot keys: keyed loot for the killer, victim's keys transfer (5 max), PvM deaths destroy keys.
+            LootkeyDeath.process(player, killer, lostToKiller, location);
         }
-        boolean dropToPker = WildernessArea.isWithinWilderness(location) && killer instanceof Player && !((Player) killer).isIronman();
+        boolean dropToPker = (WildernessArea.isWithinWilderness(location) || com.zenyte.game.content.pvpworld.PvpWorld.isPvpTile(player))
+                && killer instanceof Player && !((Player) killer).isIronman();
         lostToKiller.forEach(item -> World.spawnFloorItem(item, location, -1, dropToPker ? receiver : this.player, receiver, 300, 200));
 
         if (player.inArea(WildernessResourceArea.class)) {

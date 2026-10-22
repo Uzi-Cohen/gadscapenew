@@ -280,12 +280,12 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
 
     public int getDuration() {
         int duration = 0;
+        if (animMayaID != -1) {
+            // Skeletal (animaya) sequences carry an empty op-1 frame list (frameLengths = int[0]), so this must be
+            // tested before the frame list. They play one keyframe per client cycle (20 ms).
+            return getSkeletalCycles() * 20;
+        }
         if (frameLengths == null) {
-            // Skeletal (animaya) sequences have no frame list: they play one keyframe per client cycle (20 ms)
-            // from animMayaStart to animMayaEnd. Many build-241 sequences are skeletal.
-            if (animMayaID != -1 && animMayaEnd > animMayaStart) {
-                return (animMayaEnd - animMayaStart) * 20;
-            }
             return 0;
         }
         for (final int i : frameLengths) {
@@ -295,6 +295,82 @@ public final class AnimationDefinitions implements Definitions, Cloneable {
             duration += i * 20;
         }
         return duration;
+    }
+
+    /**
+     * Client cycles one play of a skeletal sequence lasts, -1 until first asked (keyframe-header fallback only).
+     */
+    private transient volatile int skeletalCycles = -1;
+
+    /**
+     * Number of client cycles one play of a skeletal (animaya) sequence lasts; 0 for frame-based sequences.
+     * <p>
+     * The 241 client's sequence frame count for a skeletal sequence is {@code animMayaEnd - animMayaStart} (op 15).
+     * Every build-241 skeletal record carries op 15, but sequence records converted from the 211 cache may not;
+     * those fall back to the keyframe set's own range from its file header (u8 version, u16 skeleton, u16 start,
+     * u16 end), which is the value op 15 copies in every stock 241 record (checked on all 1097 skeletal sequences
+     * of cache 2746). The keyframe file is looked up in archive 22 (build 241) and then archive 0 (where 211-era
+     * records point).
+     */
+    public int getSkeletalCycles() {
+        if (animMayaID == -1) {
+            return 0;
+        }
+        if (animMayaEnd > animMayaStart) {
+            return animMayaEnd - animMayaStart;
+        }
+        int cycles = skeletalCycles;
+        if (cycles == -1) {
+            cycles = readKeyframeRange(animMayaID);
+            skeletalCycles = cycles;
+        }
+        return cycles;
+    }
+
+    private static int readKeyframeRange(final int keyframeId) {
+        final int groupId = keyframeId >>> 16;
+        final int fileId = keyframeId & 0xFFFF;
+        try {
+            final Cache cache = CacheManager.getCache();
+            if (cache == null) {
+                return 0;
+            }
+            for (final ArchiveType type : new ArchiveType[] {ArchiveType.ANIMAYAS, ArchiveType.FRAMES}) {
+                if (!cache.hasArchive(type)) {
+                    continue;
+                }
+                final Archive archive = cache.getArchive(type);
+                if (!archive.containsGroup(groupId)) {
+                    continue;
+                }
+                final Group group = archive.findGroupByID(groupId);
+                if (group == null) {
+                    continue;
+                }
+                try {
+                    final File file = group.findFileByID(fileId);
+                    final ByteBuffer data = file == null ? null : file.getData();
+                    if (data == null) {
+                        continue;
+                    }
+                    final byte[] bytes = data.getBuffer();
+                    if (bytes == null || bytes.length < 7) {
+                        continue;
+                    }
+                    final int start = (bytes[3] & 0xFF) << 8 | (bytes[4] & 0xFF);
+                    final int end = (bytes[5] & 0xFF) << 8 | (bytes[6] & 0xFF);
+                    return Math.max(0, end - start);
+                } finally {
+                    // Nothing else on the server reads keyframe sets: do not keep a whole archive-22 group in memory.
+                    if (type == ArchiveType.ANIMAYAS && group.isLoaded()) {
+                        group.unload();
+                    }
+                }
+            }
+        } catch (final Exception e) {
+            log.warn("Could not read the keyframe range of skeletal keyframe set {}.", keyframeId, e);
+        }
+        return 0;
     }
 
     @Override

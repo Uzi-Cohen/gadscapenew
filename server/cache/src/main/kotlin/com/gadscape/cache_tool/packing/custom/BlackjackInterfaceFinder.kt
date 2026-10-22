@@ -5,7 +5,7 @@ import mgi.types.component.ComponentDefinitions
 
 /**
  * Diagnostic: scans every compiled interface component in the served cache for text
- * matching the "Roat Pkz Blackjack" screenshot (title, rules text, stats labels), to find
+ * matching the reference blackjack screenshot (title, rules text, stats labels), to find
  * whether a ready-made Blackjack/Dice/Mines interface already ships in this cache but was
  * never wired up server-side, before authoring a brand new one from scratch.
  * Run via `./gradlew findBlackjackInterface`.
@@ -13,7 +13,7 @@ import mgi.types.component.ComponentDefinitions
 object BlackjackInterfaceFinder {
 
     private val NEEDLES = listOf(
-        "roat", "blackjack", "dealer must draw", "place bets", "insurance pays", "bj pays",
+        "blackjack", "dealer must draw", "place bets", "insurance pays", "bj pays",
         "session stats", "bet amount", "hit", "stand", "mines", "dice"
     )
 

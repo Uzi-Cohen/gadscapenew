@@ -15,9 +15,9 @@ dependencies {
     runtimeOnly(projects.coreRestricted)
 
     runtimeOnly(projects.plugins.area.feroxEnclave)
-    runtimeOnly(projects.plugins.area.osnrHome.npc)
-    runtimeOnly(projects.plugins.area.osnrHome.obj)
-    runtimeOnly(projects.plugins.area.osnrHome)
+    runtimeOnly(projects.plugins.area.gadscapeHome.npc)
+    runtimeOnly(projects.plugins.area.gadscapeHome.obj)
+    runtimeOnly(projects.plugins.area.gadscapeHome)
     runtimeOnly(projects.plugins.area)
     runtimeOnly(projects.plugins.boss.ganodermicBeast)
     runtimeOnly(projects.plugins.boss.zalcano)
@@ -82,6 +82,7 @@ dependencies {
     runtimeOnly(projects.plugins.excluded.skills.agility)
     runtimeOnly(projects.plugins.excluded.skills.agility.priffdinasrooftop)
     runtimeOnly(projects.plugins.excluded.theatreofblood)
+    runtimeOnly(projects.plugins.raids.fracturedArchive)
     runtimeOnly(projects.plugins.excluded.tools)
     runtimeOnly(projects.plugins.excluded.tools.analyzer)
     runtimeOnly(projects.plugins.excluded.tools.backups)
@@ -170,14 +171,14 @@ fun execTask(name: String, groupName: String, configure: (JavaExecSpec.() -> Uni
         configure?.invoke(this)
     }
 
-val generateCache = execTask("generateCache", "_nr_data") {
+val generateCache = execTask("generateCache", "_gs_data") {
     mainClass.set("mgi.tools.parser.TypeParser")
     args = listOf("--unzip", "false")
 
     workingDir = file("../cache/")
 }
 
-val generateCacheProd = execTask("generateCacheProd", "_nr_data") {
+val generateCacheProd = execTask("generateCacheProd", "_gs_data") {
     jvmArgs("-Xmx6g")
     mainClass.set("mgi.tools.parser.TypeParser")
     args = listOf("--unzip", "false", "production")
@@ -185,7 +186,7 @@ val generateCacheProd = execTask("generateCacheProd", "_nr_data") {
     workingDir = file("../cache/")
 }
 
-val generatePerkData = execTask("generatePerkData", "_nr_data") {
+val generatePerkData = execTask("generatePerkData", "_gs_data") {
 
     group = "application"
     mainClass.set("com.zenyte.game.content.boons.BoonDataGenerator")
@@ -200,28 +201,28 @@ tasks.named("generateCacheProd") {
     dependsOn(generatePerkData)
 }
 
-val runPluginScanner = execTask("runPluginScanner", "_nr_data") {
+val runPluginScanner = execTask("runPluginScanner", "_gs_data") {
     mainClass.set("com.zenyte.plugins.PluginScanner")
 }
 
-execTask("restoreEdgeville", "_nr_data") {
+execTask("restoreEdgeville", "_gs_data") {
     mainClass.set("com.gadscape.cache_tool.packing.custom.EdgevilleRestore")
     args = listOf("C:/Users/Ezz_C/Downloads/cache-oldschool-live-en-b211-2023-02-08-11-45-05-openrs2#1266/cache")
 }
 
-execTask("findEdgevilleBank", "_nr_data") {
+execTask("findEdgevilleBank", "_gs_data") {
     mainClass.set("com.gadscape.cache_tool.packing.custom.EdgevilleBankFinder")
 }
 
-execTask("findGamblingRoom", "_nr_data") {
+execTask("findGamblingRoom", "_gs_data") {
     mainClass.set("com.gadscape.cache_tool.packing.custom.GamblingRoomFinder")
 }
 
-execTask("findBlackjackInterface", "_nr_data") {
+execTask("findBlackjackInterface", "_gs_data") {
     mainClass.set("com.gadscape.cache_tool.packing.custom.BlackjackInterfaceFinder")
 }
 
-execTask("runDev", "_nr_dev") {
+execTask("runDev", "_gs_dev") {
     args = listOf("localhost")
 //    tryEnableSignozLogging("game-dev")
 }
@@ -229,7 +230,7 @@ tasks.named("runDev") {
     dependsOn(runPluginScanner)
 }
 
-execTask("runBeta", "_nr") {
+execTask("runBeta", "_gs") {
     args = listOf("beta")
 //    tryEnableSignozLogging("game-beta")
 }
@@ -237,7 +238,7 @@ tasks.named("runBeta") {
     dependsOn(runPluginScanner)
 }
 
-execTask("runBetaUpdate", "_nr") {
+execTask("runBetaUpdate", "_gs") {
     args = listOf("beta")
 //    tryEnableSignozLogging("game-beta")
 }
@@ -246,14 +247,14 @@ tasks.named("runBetaUpdate") {
     dependsOn(runPluginScanner)
 }
 
-execTask("runProduction", "_nr") {
+execTask("runProduction", "_gs") {
     jvmArgs("-Xmx60g", "-Xms24g", "-XX:+UseZGC")
 //    tryEnableNewRelicLogging()
 //    tryEnableSignozLogging("game-live")
     args = listOf("main")
 }
 
-execTask("runProductionUpdate", "_nr") {
+execTask("runProductionUpdate", "_gs") {
     jvmArgs("-Xmx60g", "-Xms24g", "-XX:+UseZGC")
 //    tryEnableNewRelicLogging()
 //    tryEnableSignozLogging("game-live")
@@ -304,11 +305,11 @@ tasks.named("runProductionUpdate") {
     dependsOn(runPluginScanner)
 }
 
-execTask("updateNPCOptions", "_nr_misc") {
+execTask("updateNPCOptions", "_gs_misc") {
     mainClass.set("com.zenyte.game.world.entity.npc.actions.NPCPlugin")
 }
 
-execTask("dumpSprites", "_nr_misc") {
+execTask("dumpSprites", "_gs_misc") {
     mainClass.set("com.gadscape.cache_tool.dumping.SpriteDumper")
 }
 
@@ -325,30 +326,30 @@ tasks.shadowJar {
     isZip64 = true
 }
 
-execTask("scanLogs", "_nr_misc") {
+execTask("scanLogs", "_gs_misc") {
     mainClass.set("com.gadscape.util.ScanLogs")
 }
 
-execTask("runDatabaseRunner", "_nr_dev") {
+execTask("runDatabaseRunner", "_gs_dev") {
     mainClass.set("com.zenyte.DatabaseRunner")
 }
 
-execTask("wealthScanner", "_nr_misc") {
+execTask("wealthScanner", "_gs_misc") {
     mainClass.set("com.gadscape..tools.WealthScanner")
 }
 
-execTask("ecoSearch", "_nr_misc") {
+execTask("ecoSearch", "_gs_misc") {
     mainClass.set("com.gadscape.tools.EcoSearch")
 }
 
-execTask("totalEcoSearch", "_nr_misc") {
+execTask("totalEcoSearch", "_gs_misc") {
     mainClass.set("com.gadscape.tools.TotalEcoSearch")
 }
 
-execTask("eco", "_nr_misc") {
+execTask("eco", "_gs_misc") {
     mainClass.set("com.gadscape.tools.Eco")
 }
-execTask("simulateDrops", "_nr_misc") {
+execTask("simulateDrops", "_gs_misc") {
     mainClass.set("com.gadscape.tools.DropTableSimulator")
 
 }
@@ -374,5 +375,21 @@ tasks.withType<JavaExec>().configureEach {
 listOf("generateCache", "generateCacheProd").forEach { name ->
     tasks.named(name) {
         onlyIf("no external cache (-Dgadscape.cache.dir)") { System.getProperty("gadscape.cache.dir").isNullOrBlank() }
+    }
+}
+
+/*
+ * Rev 241 live/beta worlds (SFP-16): the server must run on the 241 cache. Without -Dgadscape.cache.dir it would
+ * open the rev-211 cache in cache/data/cache, and the *Update tasks would first rebuild that 211 cache with the
+ * 211 packers. Refuse before anything runs.
+ */
+gradle.taskGraph.whenReady {
+    val worldTasks = listOf("runProduction", "runProductionUpdate", "runBeta", "runBetaUpdate")
+        .filter { hasTask("${project.path}:$it") }
+    if (worldTasks.isNotEmpty() && System.getProperty("gadscape.cache.dir").isNullOrBlank()) {
+        throw GradleException(
+            "${worldTasks.joinToString()}: rev 241 needs -Dgadscape.cache.dir=<rev 241 cache directory> " +
+                "(see deploy/README.md); without it the server would use the rev-211 cache in cache/data/cache."
+        )
     }
 }

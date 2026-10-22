@@ -37,6 +37,12 @@ public final class ItemAttaching implements ItemOnItemAction {
 		if (dis == null) {
 			return;
 		}
+		// A result the loaded cache does not have yet (e.g. GadScape kit results before the cache adds them) would be
+		// an unknown obj for the client.
+		if (mgi.types.config.items.ItemDefinitions.get(dis.getCompleteItem()) == null) {
+			player.sendMessage("Nothing interesting happens.");
+			return;
+		}
 		player.sendMessage("You attach the " + dis.getKitName() + " onto the " + dis.getBaseName() + ".");
 		player.getInventory().deleteItem(fromSlot, from);
 		player.getInventory().deleteItem(toSlot, to);

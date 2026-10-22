@@ -276,9 +276,26 @@ public abstract class NPCPlugin implements Plugin {
         uniqueOptions.forEach(option -> registerHandler(option, handler));
     }
 
+    /**
+     * A fallback plugin (e.g. the generic treasure trail NPC dialogue) returns false so that it never replaces another
+     * plugin's handler for the same NPC and option, whatever order the plugins are loaded in.
+     */
+    protected boolean overridesExistingHandlers() {
+        return true;
+    }
+
     private void registerHandler(String option, OptionHandler handler) {
         option = option.toLowerCase();
         for (int i : getCachedNPCs()) {
+            final NPCPluginHandler existing = handlerMap.get(i + "|" + option);
+            if (existing != null && existing.plugin != null && (!overridesExistingHandlers() || !existing.plugin.overridesExistingHandlers())) {
+                if (!overridesExistingHandlers()) {
+                    continue;
+                }
+                //The existing handler is a fallback: replace it quietly.
+                handlerMap.put(i + "|" + option, new NPCPluginHandler(this, handler));
+                continue;
+            }
             if (handlerMap.containsKey(i + "|" + option)) {
                 log.warn("Overlapping handler found for option: " + option + ", " + getClass().getSimpleName() + ", " + handlerMap.get(i + "|" + option)
                         .plugin.getClass().getSimpleName());

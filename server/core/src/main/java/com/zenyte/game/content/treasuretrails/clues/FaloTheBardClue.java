@@ -43,7 +43,8 @@ public enum FaloTheBardClue implements Clue {
     ARMADYL_HELMET("A shiny helmet of flight, to obtain this with melee, struggle you might.", item(ItemId.ARMADYL_HELMET)),
     DRAGON_DEFENDER("A sword held in the other hand, red its colour, Cyclops strength you must withstand.", any("Dragon defender", item(ItemId.DRAGON_DEFENDER), item(DRAGON_DEFENDER_T), item(AVERNIC_DEFENDER))),
     WARRIORS_GUILD_TOKEN("A token used to kill mythical beasts, in hopes of a blade or just for an xp feast.", item(WARRIOR_GUILD_TOKEN)),
-    //GREENMANS_ALE("Green is my favourite, mature ale I do love, this takes your herblore above.", item(ItemId.GREENMANS_ALE)),
+    //The OSRS step wants the mature ale, Greenman's ale(m) (5743), which brewing on GadScape produces.
+    GREENMANS_ALE("Green is my favourite, mature ale I do love, this takes your herblore above.", item(ItemId.GREENMANS_ALEM)),
     BARRELCHEST_ANCHOR("It can hold down a boat or crush a goat, this object, you see, is quite heavy.", item(ItemId.BARRELCHEST_ANCHOR)),
     BASALT("It comes from the ground, underneath the snowy plain. Trolls aplenty, with what looks like a mane.", item(ItemId.BASALT)),
     TZHAAR_KET_OM("No attack to wield, only strength is required, made of obsidian, but with no room for a shield.", item(TZHAARKETOM)),
@@ -52,8 +53,7 @@ public enum FaloTheBardClue implements Clue {
     COOKING_GLOVES("These gloves of white won't help you fight, but aid in cooking, they just might.", item(COOKING_GAUNTLETS)),
     NUMULITE("They come from some time ago, from a land unto the east. Fossilised they have become, this small and gentle beast.", item(ItemId.NUMULITE)),
     RUNE_PLATEBODY("To slay a dragon you must first do, before this chest piece can be put on you.", item(ItemId.RUNE_PLATEBODY)),
-    //ROD_OF_IVANDIS("Vampyres are agile opponents, damaged best with a weapon of many components.", any("Rod of Ivandis or Ivandis flail", range(ROD_OF_IVANDIS_10, ROD_OF_IVANDIS_1), item
-    // (IVANDIS_FLAIL)))
+    ROD_OF_IVANDIS("Vampyres are agile opponents, damaged best with a weapon of many components.", any("Rod of Ivandis or Ivandis/Blisterwood flail", range(ROD_OF_IVANDIS_10, ROD_OF_IVANDIS_1), item(IVANDIS_FLAIL), item(BLISTERWOOD_FLAIL)))
     ;
 
     private final String text;

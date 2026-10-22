@@ -73,7 +73,7 @@ public class BankPin {
     private void openPinEntryUI(Player player) {
         player.getInterfaceHandler().sendInterface(BANK_PIN_VERIFICATION);
         var dispatcher = player.getPacketDispatcher();
-            dispatcher.sendClientScript(917, "ii", -1, -1);
+            dispatcher.sendClientScript(917, -1, -1);
             dispatcher.sendComponentVisibility(BANK_PIN_VERIFICATION.getId(), 14, true);
         if (enteredPin == -1) {
             dispatcher.sendComponentText(BANK_PIN_VERIFICATION.getId(), 2, "Enter your PIN");
@@ -146,7 +146,7 @@ public class BankPin {
         player.getInterfaceHandler().sendInterface(BANK_PIN_SETTINGS);
         configType = type;
         var dispatcher = player.getPacketDispatcher();
-            dispatcher.sendClientScript(917, "ii", -1, -1);
+            dispatcher.sendClientScript(917, -1, -1);
             dispatcher.sendComponentVisibility(BANK_PIN_SETTINGS.getId(), 0, true);
             dispatcher.sendComponentVisibility(BANK_PIN_SETTINGS.getId(), 28, false);
         if (type == 1) {

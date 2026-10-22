@@ -117,18 +117,18 @@ object DropTableSimulator {
 
         val playersWithDamageContribution = mapOf(
 
-//            mockPlayer("Stan") to 1.0,     // 30
+//            mockPlayer("Player A") to 1.0,     // 30
 
-            mockPlayer("Stan") to 0.50,     // 30
-            mockPlayer("Harsh") to 0.30,    // 50
-            mockPlayer("Jacmob") to 0.20,       // 60
+            mockPlayer("Player A") to 0.50,     // 30
+            mockPlayer("Player B") to 0.30,    // 50
+            mockPlayer("Player C") to 0.20,       // 60
 
-//            mockPlayer("Stan") to 0.30,     // 30
-//            mockPlayer("Harsh") to 0.20,    // 50
-//            mockPlayer("Jacmob") to 0.10,       // 60
-//            mockPlayer("Leanbow") to 0.05,  // 65
-//            mockPlayer("Kryeus") to 0.05,   // 70
-//            mockPlayer("Patrity") to 0.05,  // 75
+//            mockPlayer("Player A") to 0.30,     // 30
+//            mockPlayer("Player B") to 0.20,    // 50
+//            mockPlayer("Player C") to 0.10,       // 60
+//            mockPlayer("Player D") to 0.05,  // 65
+//            mockPlayer("Player E") to 0.05,   // 70
+//            mockPlayer("Player F") to 0.05,  // 75
 //            mockPlayer("Player 1") to 0.025,// 77.5
 //            mockPlayer("Player 2") to 0.025,// 80
 //            mockPlayer("Player 3") to 0.005,// 80.5

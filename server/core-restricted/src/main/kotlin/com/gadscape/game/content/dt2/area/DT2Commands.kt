@@ -26,6 +26,12 @@ class DT2Commands {
             Command(PlayerPrivilege.FORUM_MODERATOR, "dt2dia") { p, _ ->
                 DukeSucellusInstance.createInstance(DT2BossDifficulty.AWAKENED, p).constructRegion()
             }
+            Command(PlayerPrivilege.FORUM_MODERATOR, "dt2li") { p, _ ->
+                LeviathanInstance.createInstance(p).constructRegion()
+            }
+            Command(PlayerPrivilege.FORUM_MODERATOR, "dt2lia") { p, _ ->
+                LeviathanInstance.createInstance(p, DT2BossDifficulty.AWAKENED).constructRegion()
+            }
         }
     }
 }

@@ -21,7 +21,10 @@ import java.util.function.Function;
 @StaticInitializer
 public class AdventCalendarManager {
 
-	private static final String REWARD_ATTRIBUTE = "completed_2022_advent";
+	/** One reward per calendar year (the calendar was hard-wired to 2022, so no other year could ever count progress). */
+	private static String rewardAttribute() {
+		return "completed_" + currentYear + "_advent";
+	}
 	public static AdventCalendar adventCalendar;
 	public static int currentYear;
 
@@ -58,7 +61,7 @@ public class AdventCalendarManager {
 
 		new SnowmanNPC(16061, new Location(3305, 2781), Direction.SOUTH, 9).spawn();
 
-		adventCalendar = new AdventCalendar(2022, new AdventDay[] {
+		adventCalendar = new AdventCalendar(currentYear, new AdventDay[] {
 				new AdventDay(1, 10327, "Find 10 snowman", value -> {
 					int returnValue = 0;
 					for (int i = 0; i < 10; i++) {
@@ -114,8 +117,11 @@ public class AdventCalendarManager {
 	}
 
 	public static void setChallenge(Player player, int year, int day, int value) {
-		if (!adventEnabled() || adventCalendar.getYear() != year) {
-			player.sendDeveloperMessage("Calendar null or doesn't match year.");
+		if (!adventEnabled()) {
+			return; // outside 30 Nov - 25 Dec: nothing to count
+		}
+		if (adventCalendar.getYear() != year) {
+			player.sendDeveloperMessage("Advent calendar is for " + adventCalendar.getYear() + ", not " + year + ".");
 			return;
 		}
 
@@ -151,12 +157,12 @@ public class AdventCalendarManager {
 	}
 
 	public static void checkForCompletion(Player player) {
-		if (player.getBooleanAttribute(REWARD_ATTRIBUTE)) {
+		if (player.getBooleanAttribute(rewardAttribute())) {
 			return;
 		}
 
 		if (getCompletedCount(player) >= 25) {
-			player.putBooleanAttribute(REWARD_ATTRIBUTE, true);
+			player.putBooleanAttribute(rewardAttribute(), true);
 			Item reward = new Item(ItemId.CHRISTMAS_SCYTHE);
 			player.sendMessage("You're awarded " + TextUtils.formatCurrency(reward.getAmount()) + "x " + reward.getName() + " for completing the Advent Calendar!");
 			player.getInventory().addItem(reward).onFailure(remainder -> {
@@ -187,8 +193,11 @@ public class AdventCalendarManager {
 	}
 
 	public static int getChallengeProgress(Player player, int year, int day) {
-		if (!adventEnabled() || adventCalendar.getYear() != year) {
-			player.sendDeveloperMessage("Calendar null or doesn't match year.");
+		if (!adventEnabled()) {
+			return 0;
+		}
+		if (adventCalendar.getYear() != year) {
+			player.sendDeveloperMessage("Advent calendar is for " + adventCalendar.getYear() + ", not " + year + ".");
 			return 0;
 		}
 

@@ -6,6 +6,7 @@ import com.zenyte.game.world.entity.npc.NpcId.FLOATING_COLUMN
 import com.zenyte.game.world.entity.npc.NpcId.FLOATING_COLUMN_12210
 import com.zenyte.game.world.entity.npc.combatdefs.AggressionType.AGGRESSIVE
 import com.zenyte.game.world.entity.npc.combatdefs.AggressionType.PASSIVE
+import com.zenyte.game.world.entity.npc.combatdefs.AttackType.MAGIC
 import com.zenyte.game.world.entity.npc.combatdefs.AttackType.MELEE
 
 class Dt2Npcs : NPCDefinitionsScript() {
@@ -46,7 +47,8 @@ class Dt2Npcs : NPCDefinitionsScript() {
             animation = Animation(10340)
         }
         spawn {
-            deathAnimation = Animation(10347)
+            // NPC_VARDORVIS_01_DEATH_01 (10347 is the pet's death)
+            deathAnimation = Animation(10346)
         }
     }
 
@@ -56,6 +58,9 @@ class Dt2Npcs : NPCDefinitionsScript() {
         attackSpeed = 4
         aggressionType = AGGRESSIVE
         aggressionDistance = 64
+        // Stationary in its pool and fires orbs across the whole arena (LeviathanCombat picks the real style per orb).
+        attackDistance = 30
+        maximumDistance = 64
         stats {
             combatStats = intArrayOf(
                 if(awakened) 525 else 300,
@@ -68,8 +73,9 @@ class Dt2Npcs : NPCDefinitionsScript() {
             defensiveStats = intArrayOf(260, 190, 230, 280, 50)
         }
         attack {
-            type = MELEE
-            maxHit = if(awakened) 86 else 87
+            // A ranged-distance type so NPCCombat attacks from afar; melee max hit (orb/bite) per the wiki infobox.
+            type = MAGIC
+            maxHit = if(awakened) 86 else 50
             animation = Animation(10281)
         }
         spawn {
@@ -94,7 +100,10 @@ class Dt2Npcs : NPCDefinitionsScript() {
             aggressiveStats = intArrayOf(200, 38, 0, 0, 0)
             defensiveStats = intArrayOf(255, 65, 190, 440, 320)
         }
-
+        spawn {
+            // NPC_DUKE_SUCELLUS01_DEATH_01; DukeSucellusEntity then shows the DUKE_SUCELLUS_DEAD form before he sleeps again.
+            deathAnimation = Animation(10181)
+        }
     }
 
     fun Int.pillar() = invoke {

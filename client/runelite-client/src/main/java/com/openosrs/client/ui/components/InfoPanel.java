@@ -51,7 +51,7 @@ public class InfoPanel extends JPanel
 	private static final Color DARK_GREY = new Color(10, 10, 10, 255);
 	private static final BufferedImage TRANSPARENT_LOGO = ImageUtil.getResourceStreamFromClass(InfoPanel.class, "/openosrs.png");
 	private static final Dimension VERSION_SIZE = new Dimension(PANEL_SIZE.width, 25);
-	private static final File RUNELITE_DIR = new File(System.getProperty("user.home"), ".osnr");
+	private static final File RUNELITE_DIR = new File(System.getProperty("user.home"), ".gadscape");
 	private static final File LOGS_DIR = new File(RUNELITE_DIR, "logs");
 
 	public InfoPanel()

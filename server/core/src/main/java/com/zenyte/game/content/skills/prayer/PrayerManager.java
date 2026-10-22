@@ -34,6 +34,9 @@ public class PrayerManager {
 	private transient final Player player;
 	@Expose
 	private int quickPrayerSettings;
+	/** Quick prayers of the Ruinous Powers book (bits = book slots, varp 3781). */
+	@Expose
+	private int ruinousQuickPrayerSettings;
 	private final transient Object2IntOpenHashMap<Prayer> activePrayers = new Object2IntOpenHashMap<>();
 	private transient int drain;
 	public static final int INTERFACE = 541;
@@ -53,6 +56,32 @@ public class PrayerManager {
 
 	public void setPrayer(final PrayerManager prayerManager) {
 		setQuickPrayerSettings(prayerManager.getQuickPrayerSettings());
+		ruinousQuickPrayerSettings = prayerManager.ruinousQuickPrayerSettings;
+	}
+
+	/* ---- prayer books (varbit 14826 prayerbook: 0 standard, 1 Ruinous Powers) ---- */
+	public static final int PRAYERBOOK_VARBIT = 14826;
+	private static final int RUINOUS_QUICK_PRAYERS_VARP = 3781;
+	private static final String PRAYERBOOK_ATTRIBUTE = "prayerbook";
+
+	public Prayer.Book getBook() {
+		return player.getNumericAttribute(PRAYERBOOK_ATTRIBUTE).intValue() == 1 ? Prayer.Book.RUINOUS : Prayer.Book.STANDARD;
+	}
+
+	public boolean isRuinousBook() {
+		return getBook() == Prayer.Book.RUINOUS;
+	}
+
+	/** Switches the prayer book: every active prayer and the quick prayers are switched off first. */
+	public void setBook(final Prayer.Book book) {
+		if (book == getBook()) {
+			return;
+		}
+		deactivateActivePrayers();
+		player.getVarManager().sendBit(4103, 0);
+		player.addAttribute(PRAYERBOOK_ATTRIBUTE, book == Prayer.Book.RUINOUS ? 1 : 0);
+		player.getVarManager().sendBit(PRAYERBOOK_VARBIT, book == Prayer.Book.RUINOUS ? 1 : 0);
+		refreshQuickPrayers();
 	}
 
 	public int getPrayerPoints() {
@@ -66,15 +95,24 @@ public class PrayerManager {
 	 * @param quickPrayers
 	 */
 	public void togglePrayer(int id, final boolean quickPrayers) {
-		player.stop(Player.StopType.INTERFACES);
 		if (!quickPrayers) {
+			// The 211 prayer book order (Chivalry, Piety, Rigour at 24-26). The 241 prayer tab uses togglePrayer(Prayer).
 			if (id == 25 || id == 24) {
 				id++;
 			} else if (id == 26) {
 				id -= 2;
 			}
 		}
-		final Prayer prayer = Prayer.get(id);
+		togglePrayer(id < 0 || id >= Prayer.STANDARD_BOOK_SIZE ? null : Prayer.get(id));
+	}
+
+	/**
+	 * Toggles the prayer of a prayer book slot: the given standard prayer, or the alternate that replaces it when the
+	 * player has unlocked that (Deadeye for Eagle Eye, Mystic Vigour for Mystic Might, Zeal for Piety).
+	 */
+	public void togglePrayer(final Prayer selected) {
+		player.stop(Player.StopType.INTERFACES);
+		final Prayer prayer = selected == null ? null : resolve(selected);
 		final RegionArea area = player.getArea();
 		if (prayer == null || player.isDead() || !player.getControllerManager().canUsePrayer(prayer) || !hasRequirements(prayer) || (area instanceof PrayerPlugin && !((PrayerPlugin) area).activatePrayer(player, prayer))) {
 			player.send(new SyncClientVarCache());
@@ -83,8 +121,7 @@ public class PrayerManager {
 		final boolean activating = !isActive(prayer);
 		if (activating) {
 			activatePrayer(prayer);
-			if (!quickPrayers)
-				player.getVarManager().sendBit(4103, 0);
+			player.getVarManager().sendBit(4103, 0);
 		} else {
 			deactivatePrayer(prayer);
 		}
@@ -96,7 +133,8 @@ public class PrayerManager {
 	 * @param prayer
 	 */
 	public void activatePrayer(final Prayer prayer) {
-		if ((prayer == Prayer.PROTECT_FROM_MAGIC || prayer == Prayer.PROTECT_FROM_MISSILES || prayer == Prayer.PROTECT_FROM_MELEE) && player.getNumericTemporaryAttribute("prayer delay").longValue() > System.currentTimeMillis()) {
+		if ((prayer == Prayer.PROTECT_FROM_MAGIC || prayer == Prayer.PROTECT_FROM_MISSILES || prayer == Prayer.PROTECT_FROM_MELEE
+				|| prayer == Prayer.RUINOUS_DAMPEN_MAGIC || prayer == Prayer.RUINOUS_DAMPEN_RANGED || prayer == Prayer.RUINOUS_DAMPEN_MELEE) && player.getNumericTemporaryAttribute("prayer delay").longValue() > System.currentTimeMillis()) {
 			player.sendMessage("You've been injured and can't use protection prayers!");
 			player.send(new SyncClientVarCache());
 			player.sendSound(blockSoundEffect);
@@ -108,6 +146,11 @@ public class PrayerManager {
 		handleActivation(prayer);
 		if (prayer == Prayer.RAPID_HEAL) {
 			player.getVariables().addBoost(PlayerVariables.HealthRegenBoost.REGEN_BRACELET);
+		} else if (prayer == Prayer.RUINOUS_REJUVENATION) {
+			player.getVariables().addBoost(PlayerVariables.HealthRegenBoost.REJUVENATION);
+		}
+		if (prayer == Prayer.RUINOUS_METABOLISE) {
+			player.getTemporaryAttributes().put(RuinousPowers.METABOLISE_START, WorldThread.getCurrentCycle());
 		}
 		if (prayer == Prayer.CHIVALRY) {
 			SherlockTask.ACTIVATE_CHIVALRY_PRAYER.progress(player);
@@ -143,17 +186,26 @@ public class PrayerManager {
 
 	public double getSkillBoost(final int skill) {
 		if (skill == SkillConstants.DEFENCE) {
+			double boost = 1;
 			if (activePrayers.containsKey(Prayer.THICK_SKIN)) {
-				return 1.05;
+				boost = 1.05;
 			} else if (activePrayers.containsKey(Prayer.ROCK_SKIN)) {
-				return 1.1;
+				boost = 1.1;
 			} else if (activePrayers.containsKey(Prayer.STEEL_SKIN)) {
-				return 1.15;
+				boost = 1.15;
 			} else if (activePrayers.containsKey(Prayer.CHIVALRY)) {
-				return 1.2;
-			} else if (activePrayers.containsKey(Prayer.PIETY) || activePrayers.containsKey(Prayer.RIGOUR) || activePrayers.containsKey(Prayer.AUGURY)) {
-				return 1.25;
+				boost = 1.2;
+			} else if (activePrayers.containsKey(Prayer.PIETY) || activePrayers.containsKey(Prayer.ZEAL) || activePrayers.containsKey(Prayer.RIGOUR) || activePrayers.containsKey(Prayer.AUGURY)) {
+				boost = 1.25;
 			}
+			// Deadeye and Mystic Vigour: +5% Defence that stacks additively with a defence prayer (OSRS wiki).
+			if (activePrayers.containsKey(Prayer.DEADEYE)) {
+				boost += 0.05;
+			}
+			if (activePrayers.containsKey(Prayer.MYSTIC_VIGOUR)) {
+				boost += 0.05;
+			}
+			return boost;
 		} else if (skill == SkillConstants.STRENGTH) {
 			if (activePrayers.containsKey(Prayer.BURST_OF_STRENGTH)) {
 				return 1.05;
@@ -165,6 +217,14 @@ public class PrayerManager {
 				return 1.18;
 			} else if (activePrayers.containsKey(Prayer.PIETY)) {
 				return 1.23;
+			} else if (activePrayers.containsKey(Prayer.ZEAL)) {
+				return 1.28;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_ANCIENT_STRENGTH)) {
+				return 1.2;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_TRINITAS)) {
+				return 1.15;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_DECIMATE)) {
+				return 1.27;
 			}
 		} else if (skill == SkillConstants.ATTACK) {
 			if (activePrayers.containsKey(Prayer.CLARITY_OF_THOUGHT)) {
@@ -175,6 +235,16 @@ public class PrayerManager {
 				return 1.15;
 			} else if (activePrayers.containsKey(Prayer.PIETY)) {
 				return 1.2;
+			} else if (activePrayers.containsKey(Prayer.ZEAL)) {
+				return 1.25;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_ANCIENT_STRENGTH)) {
+				return 1.2;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_TRINITAS)) {
+				return 1.15;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_DECIMATE)) {
+				return 1.3;
+			} else if (activePrayers.containsKey(Prayer.RUINOUS_INTENSIFY)) {
+				return 1.5;
 			}
 		}
 		return 1;
@@ -182,9 +252,8 @@ public class PrayerManager {
 
 	public double getRangedBoost(final int style) {
 		if (style == SkillConstants.DEFENCE) {
-			if (activePrayers.containsKey(Prayer.RIGOUR)) {
-				return 1.25;
-			}
+			// Rigour's (and Deadeye's) Defence boost is in getSkillBoost(DEFENCE): the defence roll multiplies both, so
+			// returning 1.25 here as well gave Rigour users +56% Defence.
 			return 1;
 		}
 		if (activePrayers.containsKey(Prayer.SHARP_EYE)) {
@@ -193,6 +262,16 @@ public class PrayerManager {
 			return 1.1;
 		} else if (activePrayers.containsKey(Prayer.EAGLE_EYE)) {
 			return 1.15;
+		} else if (activePrayers.containsKey(Prayer.DEADEYE)) {
+			return style == SkillConstants.ATTACK || style == SkillConstants.STRENGTH ? 1.18 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_ANCIENT_SIGHT)) {
+			return style == SkillConstants.ATTACK || style == SkillConstants.STRENGTH ? 1.2 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_TRINITAS)) {
+			return style == SkillConstants.ATTACK || style == SkillConstants.STRENGTH ? 1.15 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_ANNIHILATE)) {
+			return style == SkillConstants.ATTACK ? 1.3 : style == SkillConstants.STRENGTH ? 1.27 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_INTENSIFY)) {
+			return style == SkillConstants.ATTACK ? 1.5 : 1;
 		} else if (activePrayers.containsKey(Prayer.RIGOUR)) {
 			return style == SkillConstants.ATTACK ? 1.2 : style == SkillConstants.STRENGTH ? 1.23 : 1;
 		}
@@ -206,10 +285,122 @@ public class PrayerManager {
 			return 1.1;
 		} else if (activePrayers.containsKey(Prayer.MYSTIC_MIGHT)) {
 			return 1.15;
+		} else if (activePrayers.containsKey(Prayer.MYSTIC_VIGOUR)) {
+			return style == SkillConstants.ATTACK || style == SkillConstants.DEFENCE ? 1.18 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_ANCIENT_WILL)) {
+			return style == SkillConstants.ATTACK ? 1.2 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_TRINITAS)) {
+			return style == SkillConstants.ATTACK ? 1.15 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_VAPORISE)) {
+			return style == SkillConstants.ATTACK ? 1.3 : 1;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_INTENSIFY)) {
+			return style == SkillConstants.ATTACK ? 1.5 : 1;
 		} else if (activePrayers.containsKey(Prayer.AUGURY)) {
 			return style == SkillConstants.ATTACK ? 1.25 : style == SkillConstants.DEFENCE ? 1.25 : 1;
 		}
 		return 1;
+	}
+
+	/**
+	 * Magic damage (magic strength) bonus of the active prayer in whole percent, added to the equipment's magic damage
+	 * bonus: Mystic Lore 1%, Mystic Might 2%, Mystic Vigour 3%, Augury 4% (prayer descriptions in the 2746 cache).
+	 */
+	public int getMagicDamageBonus() {
+		if (activePrayers.containsKey(Prayer.AUGURY) || activePrayers.containsKey(Prayer.RUINOUS_VAPORISE)) {
+			return 4;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_ANCIENT_WILL)) {
+			return 3;
+		} else if (activePrayers.containsKey(Prayer.RUINOUS_TRINITAS)) {
+			return 2;
+		} else if (activePrayers.containsKey(Prayer.MYSTIC_VIGOUR)) {
+			return 3;
+		} else if (activePrayers.containsKey(Prayer.MYSTIC_MIGHT)) {
+			return 2;
+		} else if (activePrayers.containsKey(Prayer.MYSTIC_LORE)) {
+			return 1;
+		}
+		return 0;
+	}
+
+	/*
+	 * Alternate prayers (dbtable 270 alternate_prayers in the 2746 cache): the 241 prayer book shows the alternate in
+	 * the base prayer's slot once its unlock varbit is 1.
+	 */
+	public static final int DEADEYE_UNLOCKED_VARBIT = 16097;
+	public static final int MYSTIC_VIGOUR_UNLOCKED_VARBIT = 16098;
+	public static final int ZEAL_UNLOCKED_VARBIT = 16578;
+	private static final String DEADEYE_UNLOCKED = "prayer_deadeye_unlocked";
+	private static final String MYSTIC_VIGOUR_UNLOCKED = "prayer_mystic_vigour_unlocked";
+	private static final String ZEAL_UNLOCKED = "prayer_zeal_unlocked";
+
+	private static String unlockAttribute(final Prayer alternate) {
+		return alternate == Prayer.DEADEYE ? DEADEYE_UNLOCKED : alternate == Prayer.MYSTIC_VIGOUR ? MYSTIC_VIGOUR_UNLOCKED : alternate == Prayer.ZEAL ? ZEAL_UNLOCKED : null;
+	}
+
+	private static int unlockVarbit(final Prayer alternate) {
+		return alternate == Prayer.DEADEYE ? DEADEYE_UNLOCKED_VARBIT : alternate == Prayer.MYSTIC_VIGOUR ? MYSTIC_VIGOUR_UNLOCKED_VARBIT : alternate == Prayer.ZEAL ? ZEAL_UNLOCKED_VARBIT : -1;
+	}
+
+	/** Whether the player has unlocked the given alternate prayer (always true for a standard prayer). */
+	public boolean isUnlocked(final Prayer prayer) {
+		final String attribute = unlockAttribute(prayer);
+		return attribute == null || player.getNumericAttribute(attribute).intValue() == 1;
+	}
+
+	/** Unlocks an alternate prayer: it replaces its base prayer in the book from now on. */
+	public void unlock(final Prayer alternate) {
+		final String attribute = unlockAttribute(alternate);
+		if (attribute == null) {
+			return;
+		}
+		player.addAttribute(attribute, 1);
+		player.getVarManager().sendBit(unlockVarbit(alternate), 1);
+		if (alternate.getBase() != null && isActive(alternate.getBase())) {
+			deactivatePrayer(alternate.getBase());
+		}
+	}
+
+	/** Locks an alternate prayer again (staff/debug): the base prayer returns to its slot. */
+	public void lock(final Prayer alternate) {
+		final String attribute = unlockAttribute(alternate);
+		if (attribute == null) {
+			return;
+		}
+		player.getAttributes().remove(attribute);
+		player.getVarManager().sendBit(unlockVarbit(alternate), 0);
+		if (isActive(alternate)) {
+			deactivatePrayer(alternate);
+		}
+	}
+
+	/** The prayer in the given prayer's book slot for this player: its alternate when unlocked, else itself. */
+	public Prayer resolve(final Prayer prayer) {
+		if (prayer.isAlternate()) {
+			return isUnlocked(prayer) ? prayer : prayer.getBase();
+		}
+		final Prayer alternate = prayer.getAlternate();
+		return alternate != null && isUnlocked(alternate) ? alternate : prayer;
+	}
+
+	/** Sends the alternate-prayer unlock varbits (login). */
+	public void refreshUnlocks() {
+		for (final Prayer alternate : new Prayer[] {Prayer.DEADEYE, Prayer.MYSTIC_VIGOUR, Prayer.ZEAL}) {
+			player.getVarManager().sendBit(unlockVarbit(alternate), isUnlocked(alternate) ? 1 : 0);
+		}
+		// Ruinous Powers: the book, and the per-prayer unlocks the 241 book checks (Deadman: every prayer is unlocked by
+		// Prayer level alone, so they are always sent as unlocked).
+		player.getVarManager().sendBit(PRAYERBOOK_VARBIT, isRuinousBook() ? 1 : 0);
+		for (final int varbit : RuinousPowers.UNLOCK_VARBITS) {
+			player.getVarManager().sendBit(varbit, 1);
+		}
+	}
+
+	@com.google.common.eventbus.Subscribe
+	public static void onLogin(final com.zenyte.plugins.events.LoginEvent event) {
+		final Player player = event.getPlayer();
+		if (player.getPrayerManager() != null) {
+			player.getPrayerManager().refreshUnlocks();
+		}
 	}
 
 	private static final SoundEffect OUT_OF_PRAY_SOUND = new SoundEffect(2672);
@@ -222,6 +413,15 @@ public class PrayerManager {
 	 * @param prayer
 	 */
 	public void deactivatePrayer(final Prayer prayer) {
+		if (!activePrayers.containsKey(prayer)) {
+			// Ruinous Powers: code that switches off Protect from Melee (etc.) switches off Dampen Melee (etc.) too.
+			final Prayer ruinous = prayer.getRuinousEquivalent();
+			if (ruinous != null && activePrayers.containsKey(ruinous)) {
+				activePrayers.removeInt(ruinous);
+				deactivateWithoutRemoving(ruinous);
+				return;
+			}
+		}
 		activePrayers.removeInt(prayer);
 		deactivateWithoutRemoving(prayer);
 	}
@@ -241,11 +441,14 @@ public class PrayerManager {
 		}
 		if (prayer == Prayer.RAPID_HEAL) {
 			player.getVariables().removeBoost(PlayerVariables.HealthRegenBoost.REGEN_BRACELET);
+		} else if (prayer == Prayer.RUINOUS_REJUVENATION) {
+			player.getVariables().removeBoost(PlayerVariables.HealthRegenBoost.REJUVENATION);
 		}
-		if (prayer.equals(Prayer.PROTECT_FROM_MAGIC) || prayer.equals(Prayer.PROTECT_FROM_MISSILES) || prayer.equals(Prayer.PROTECT_FROM_MELEE) || prayer.equals(Prayer.RETRIBUTION) || prayer.equals(Prayer.REDEMPTION) || prayer.equals(Prayer.SMITE)) {
+		// every overhead prayer (protection, Retribution, Redemption, Smite and the Ruinous overheads)
+		if (prayer.getHeadIcon() != -1) {
 			player.getAppearance().setHeadIcon((byte) -1);
 		}
-		if (prayer == Prayer.RAPID_HEAL) {
+		if (prayer == Prayer.RAPID_HEAL || prayer == Prayer.RUINOUS_REJUVENATION) {
 			player.getVariables().setHealthRegeneration(0);
 		}
 	}
@@ -273,8 +476,21 @@ public class PrayerManager {
 	 * @param id
 	 */
 	public void setQuickPrayer(final int id) {
-		final Prayer prayer = Prayer.get(id);
-		if (prayer == null || player.isDead() || (!hasRequirements(prayer, false) && !Utils.getShiftedBoolean(quickPrayerSettings, id)) || player.isLocked()) {
+		if (isRuinousBook()) {
+			final Prayer prayer = Prayer.ruinous(id);
+			if (prayer == null || player.isDead() || (!hasRequirements(prayer, false) && !Utils.getShiftedBoolean(ruinousQuickPrayerSettings, id)) || player.isLocked()) {
+				refreshQuickPrayers();
+				return;
+			}
+			ruinousQuickPrayerSettings = Utils.getShiftedValue(ruinousQuickPrayerSettings, id);
+			for (final int slot : prayer.getQuickPrayerCollisions()) {
+				ruinousQuickPrayerSettings = Utils.getShiftedValue(ruinousQuickPrayerSettings, slot, false);
+			}
+			refreshQuickPrayers();
+			return;
+		}
+		final Prayer prayer = id < 0 || id >= Prayer.STANDARD_BOOK_SIZE ? null : Prayer.get(id);
+		if (prayer == null || player.isDead() || (!hasRequirements(resolve(prayer), false) && !Utils.getShiftedBoolean(quickPrayerSettings, id)) || player.isLocked()) {
 			if (prayer != null) {
 				refreshQuickPrayers();
 			}
@@ -290,13 +506,13 @@ public class PrayerManager {
 	 */
 	public void refreshQuickPrayers() {
 		int value = 0;
-		for (int i = 0; i < 29; i++) {
+		for (int i = 0; i < Prayer.STANDARD_BOOK_SIZE; i++) {
 			if (Utils.getShiftedBoolean(quickPrayerSettings, i)) {
-				final Prayer prayer = Prayer.get(i);
-				value |= (int) Math.pow(2, prayer.ordinal());
+				value |= 1 << i;
 			}
 		}
 		player.getVarManager().sendVar(84, value);
+		player.getVarManager().sendVar(RUINOUS_QUICK_PRAYERS_VARP, ruinousQuickPrayerSettings);
 	}
 
 	/**
@@ -314,19 +530,24 @@ public class PrayerManager {
 			return;
 		}
 		final boolean on = player.getVarManager().getBitValue(4103) == 1;
-		final boolean empty = quickPrayerSettings == 0;
+		final boolean ruinous = isRuinousBook();
+		final int settings = ruinous ? ruinousQuickPrayerSettings : quickPrayerSettings;
+		final boolean empty = settings == 0;
 		if (on) {
 			deactivateActivePrayers();
 		} else {
 			final RegionArea area = player.getArea();
-			for (int i = 0; i < 29; i++) {
-				if (Utils.getShiftedBoolean(quickPrayerSettings, i)) {
-					final Prayer prayer = Prayer.get(i);
-					if (!isActive(Prayer.get(i))) {
-						if (prayer == null || player.isDead() || !player.getControllerManager().canUsePrayer(prayer) || !hasRequirements(prayer) || (area instanceof PrayerPlugin && !((PrayerPlugin) area).activatePrayer(player, prayer))) {
+			for (int i = 0; i < (ruinous ? 24 : Prayer.STANDARD_BOOK_SIZE); i++) {
+				if (Utils.getShiftedBoolean(settings, i)) {
+					final Prayer prayer = ruinous ? Prayer.ruinous(i) : resolve(Prayer.get(i));
+					if (prayer == null) {
+						continue;
+					}
+					if (!isActive(prayer)) {
+						if (player.isDead() || !player.getControllerManager().canUsePrayer(prayer) || !hasRequirements(prayer) || (area instanceof PrayerPlugin && !((PrayerPlugin) area).activatePrayer(player, prayer))) {
 							continue;
 						}
-						this.activatePrayer(Prayer.get(i));
+						this.activatePrayer(prayer);
 					}
 				}
 			}
@@ -421,6 +642,18 @@ public class PrayerManager {
 			player.getDialogueManager().start(new PlainChat(player, "You need a <col=000080>Defence</col> level of 70 to use <col=000080>" + prayer.getName() + "</col>."));
 			return false;
 		}
+		if (prayer.isRuinous() != isRuinousBook()) {
+			return false;
+		}
+		if (prayer.isAlternate() && !isUnlocked(prayer)) {
+			player.getDialogueManager().start(new PlainChat(player, "You need to have learnt the prayer in order to use <col=000080>" + prayer.getName() + "</col>."));
+			return false;
+		}
+		// Zeal (2746 script 10193): 75 Attack, 75 Strength and Piety's 70 Defence.
+		if (prayer.equals(Prayer.ZEAL) && (player.getSkills().getLevelForXp(SkillConstants.ATTACK) < 75 || player.getSkills().getLevelForXp(SkillConstants.STRENGTH) < 75 || player.getSkills().getLevelForXp(SkillConstants.DEFENCE) < 70)) {
+			player.getDialogueManager().start(new PlainChat(player, "You need <col=000080>Attack</col> and <col=000080>Strength</col> levels of 75 and a <col=000080>Defence</col> level of 70 to use <col=000080>" + prayer.getName() + "</col>."));
+			return false;
+		}
 		if ((prayer.equals(Prayer.RIGOUR) && (!settings.isRigour() || player.getSkills().getLevelForXp(SkillConstants.DEFENCE) < 70)) || (prayer.equals(Prayer.AUGURY) && (!settings.isAugury() || player.getSkills().getLevelForXp(SkillConstants.DEFENCE) < 70)) || (prayer.equals(Prayer.PRESERVE) && !settings.isPreserve())) {
 			if (prayer.equals(Prayer.RIGOUR) || prayer.equals(Prayer.AUGURY)) {
 				player.getDialogueManager().start(new PlainChat(player, "You need a <col=000080>Prayer</col> level of " + prayer.getLevel() + ", a <col=000080>Defence</col> level of 70, and to have learnt the prayer in order to use <col=000080>" + TextUtils.capitalizeFirstCharacter(prayer.getName().toLowerCase()) + "</col>."));
@@ -497,7 +730,12 @@ public class PrayerManager {
 	 * @return
 	 */
 	public boolean isActive(final Prayer prayer) {
-		return activePrayers.containsKey(prayer);
+		if (activePrayers.containsKey(prayer)) {
+			return true;
+		}
+		// Ruinous Powers: Dampen Magic counts as Protect from Magic, Vindication as Redemption, Wrath as Retribution...
+		final Prayer ruinous = prayer.getRuinousEquivalent();
+		return ruinous != null && activePrayers.containsKey(ruinous);
 	}
 
 	/**
@@ -529,7 +767,8 @@ public class PrayerManager {
 				}
 			}
 		}
-		CharacterLoop.forEach(player.getLocation(), 1, Entity.class, p -> {
+		// Wrath (Ruinous Powers) hits a 5x5 area, Retribution a 3x3 one.
+		CharacterLoop.forEach(player.getLocation(), activePrayers.containsKey(Prayer.RUINOUS_WRATH) ? 2 : 1, Entity.class, p -> {
 			if (p == player || p.isDead() || p instanceof Player && !((Player) p).isCanPvp() || (p instanceof NPC && !((NPC) p).isAttackable())) return;
 			if (!p.isMultiArea() && p != source) {
 				return;

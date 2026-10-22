@@ -140,14 +140,20 @@ internal object RsprotExtendedInfo {
             idOrMinusOne(bas.getOrElse(5) { -1 }),
             idOrMinusOne(bas.getOrElse(6) { -1 }),
         )
-        ext.setName(limit(data.name, MAX_NAME))
+        val name = limit(data.name, MAX_NAME)
+        ext.setName(name)
         ext.setCombatLevel(ubyte(data.combatLevel))
         ext.setSkillLevel(u16(data.skillLevel))
         ext.setHidden(data.hidden)
+        val afterName = limit(data.afterName, MAX_NAME_EXTRA)
+        val afterCombatLevel = limit(data.afterCombatLevel, MAX_NAME_EXTRA)
+        // beforeName carries the crown <img> tags plus nametag 0, so it gets whatever the other strings leave
+        // of the name + extras budget (64 + 3 * 32), at least 32 chars.
+        val beforeNameBudget = MAX_NAME + 3 * MAX_NAME_EXTRA - name.length - afterName.length - afterCombatLevel.length
         ext.setNameExtras(
-            limit(data.beforeName, MAX_NAME_EXTRA),
-            limit(data.afterName, MAX_NAME_EXTRA),
-            limit(data.afterCombatLevel, MAX_NAME_EXTRA),
+            limit(data.beforeName, beforeNameBudget.coerceAtLeast(MAX_NAME_EXTRA)),
+            afterName,
+            afterCombatLevel,
         )
     }
 
@@ -161,19 +167,44 @@ internal object RsprotExtendedInfo {
 
     /**
      * Public chat. [colour] and [effect] are the two bytes of Zenyte's `ChatMessage.effects`
-     * (`colour << 8 | effect`). Pattern colours (13-20) need pattern bytes that the old message
-     * model does not carry, so they fall back to yellow.
+     * (`colour << 8 | effect`). Pattern colours (13-20) need [pattern] (colour - 12 colour codes, as the
+     * sender's client sent them); without a matching pattern they fall back to yellow.
+     * [playerType] is the 241 client's PlayerType id (0 = no icon), see [chatPlayerType].
      */
     fun applyChat(
         ext: PlayerAvatarExtendedInfo,
         colour: Int,
         effect: Int,
-        modIcon: Int,
+        playerType: Int,
         autotyper: Boolean,
         text: String,
+        pattern: ByteArray? = null,
     ) {
-        val safeColour = if (colour in 0..12) colour else 0
-        ext.setChat(safeColour, u8(effect), u8(modIcon), autotyper, limit(text, MAX_CHAT), null)
+        val patterned = colour in 13..20 && pattern != null && pattern.size == colour - 12
+        val safeColour = if (colour in 0..12 || patterned) colour else 0
+        val safeType = if (playerType in PLAYER_TYPE_MOD_ICONS.indices) playerType else 0
+        ext.setChat(safeColour, u8(effect), safeType, autotyper, limit(text, MAX_CHAT), if (patterned) pattern else null)
+    }
+
+    /**
+     * The 241 client's PlayerType table (id -> mod icon), read from the 1.13.3 client: the chat
+     * "mod icon" byte is a PlayerType id, and the client draws that type's mod icon. Ids outside it
+     * make the client fail on the chat block, so only these are sent.
+     */
+    private val PLAYER_TYPE_MOD_ICONS = intArrayOf(-1, 0, 1, 2, 3, 10, 22, 41, 42, 43, 44, 45, 46, 47, 48, 49, 52, 55)
+
+    /**
+     * The PlayerType id for the first of [modIcons] (mod_icons image ids, -1 = none) that a 241
+     * PlayerType draws, or 0 (no icon). The 211 GadScape client drew any crown; the vanilla 241 client
+     * only draws the PlayerType icons in public chat.
+     */
+    fun chatPlayerType(vararg modIcons: Int): Int {
+        for (icon in modIcons) {
+            if (icon < 0) continue
+            val type = PLAYER_TYPE_MOD_ICONS.indexOf(icon)
+            if (type > 0) return type
+        }
+        return 0
     }
 
     /**

@@ -38,7 +38,7 @@ public class CustomItemId
 	public static final int GOLD_KEY = 32048;
 	public static final int PLATINUM_KEY = 32050;
 	public static final int DIAMOND_KEY = 32052;
-	public static final int NR_TABLET = 32056;
+	public static final int HOME_TELEPORT_TABLET = 32056;
 	public static final int DEATH_CAPE = 32058;
 	public static final int LIME_WHIP = 32060;
 	public static final int LIME_WHIP_SPECIAL = 32062;
@@ -52,7 +52,7 @@ public class CustomItemId
 	public static final int GAUNTLET_SLAYER_HELM = 32074;
 	public static final int CORRUPTED_GAUNTLET_SLAYER_HELM = 32076;
 	public static final int GADSCAPE_PARTY_HAT = 32078;
-	public static final int OSNR_MYSTERY_BOX = 32080;
+	public static final int GADSCAPE_MYSTERY_BOX = 32080;
 	public static final int PET_XAMPHUR = 32083;
 	public static final int GANODERMIC_RUNT = 32100;
 	public static final int BLUE_ANKOU_SOCKS = 32102;
@@ -78,7 +78,7 @@ public class CustomItemId
 	public static final int BANDOS_CHESTPLATE_OR = 32142;
 	public static final int BANDOS_TASSETS_OR = 32144;
 	public static final int BANDOS_ORNAMENT_KIT = 32146;
-	public static final int NR_VOTE_SHARD = 32148;
+	public static final int VOTE_SHARD = 32148;
 	public static final int LARRANS_KEY_BOOSTER = 32149;
 	public static final int GANODERMIC_BOOSTER = 32150;
 	public static final int SLAYER_BOOSTER = 32151;

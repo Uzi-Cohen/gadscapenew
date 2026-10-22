@@ -13,7 +13,6 @@ import com.gadscape.game.content.dt2.npc.vardorvis.attacks.impl.swingingaxe.Swin
 import com.gadscape.game.content.dt2.npc.vardorvis.attacks.impl.swingingaxe.SwingingAxeTask
 import com.gadscape.game.content.dt2.npc.vardorvis.attacks.impl.swingingaxe.SwingingAxes
 import com.gadscape.game.content.seq
-import com.gadscape.game.content.spotanim
 import com.zenyte.game.content.boss.BossRespawnTimer
 import com.zenyte.game.content.skills.prayer.Prayer
 import com.zenyte.game.task.TickTask
@@ -130,7 +129,7 @@ internal class Vardorvis(
                     }
                 }
                 if (ticks % 2 == 0 && player.entangled) {
-                    player spotanim 2525
+                    player.graphics = Graphics(2525) // the infix "spotanim" only builds a pair and never played this
                     World.sendGraphics(Graphics(2527, 0, 100), player.location)
                 }
             }
@@ -205,7 +204,7 @@ internal class Vardorvis(
         spawn.spawn()
         spawn.setFaceEntity(instance.player)
         spawn seq 10348
-        spawn spotanim 2520
+        spawn.graphics = Graphics(2520)
 
         val defs: NPCCombatDefinitions = this.getCombatDefinitions()
         val head: Optional<VardorvisHead> = Optional.of(spawn)

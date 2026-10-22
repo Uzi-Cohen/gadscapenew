@@ -1,4 +1,4 @@
-# OSNR Server
+# GadScape Server
 
 When you add a new plugin class, you need to run `com.zenyte.plugins.PluginScanner` to update the `data/plugins.dat`
 file so it can be loaded.

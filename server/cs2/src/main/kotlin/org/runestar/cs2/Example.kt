@@ -17,7 +17,7 @@ fun main() {
     val readme = StringBuilder()
     readme.append("[![Discord](https://img.shields.io/discord/384870460640329728.svg?logo=discord)](https://discord.gg/G2kxrnU)\n\n")
 
-    val baseDir = Path.of("/Users/stanvanderbend/IdeaProjects/gadscape/server-production/cache/assets/osnr/store_interface/")
+    val baseDir = Path.of("/Users/stanvanderbend/IdeaProjects/gadscape/server-production/cache/assets/gadscape/store_interface/")
     val loadDir = baseDir.resolve("cs2")
     val saveDir = baseDir.resolve("cs2_decompiled")
     Files.createDirectories(saveDir)

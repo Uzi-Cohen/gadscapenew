@@ -27,7 +27,9 @@ public interface ObjectInteraction extends ObjectAction {
 			if (!(player.getControllerManager().getController() instanceof ConstructionController)) {
 				return;
 			}
-			handleObjectAction(player, player.getConstruction(), player.getConstruction().getReference(object), object, optionId, option);
+			// The house the player stands in: their own, or the friend's house they are visiting.
+			final Construction house = Construction.current(player);
+			handleObjectAction(player, house, house.getReference(object), object, optionId, option);
 		}));
 	}
 	

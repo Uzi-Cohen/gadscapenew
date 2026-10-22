@@ -1,5 +1,7 @@
 package com.zenyte.game.content.treasuretrails.plugins;
 
+import com.zenyte.game.content.treasuretrails.ClueStackLimit;
+
 import com.zenyte.game.content.treasuretrails.ClueItem;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
@@ -19,6 +21,10 @@ public class SkillingClueItem extends ItemPlugin {
             final String name = item.getName().toLowerCase();
             final ClueItem clueItem = Objects.requireNonNull(ClueItem.getMap().get(item.getId()));
             final boolean nest = name.contains("nest");
+            if (!ClueStackLimit.canReceive(player, clueItem)) {
+                player.sendMessage("You have too many " + clueItem.getLevel().toString().toLowerCase() + " clues to open this.");
+                return;
+            }
             if (nest) {
                 if (player.getInventory().getFreeSlots() < 1 && !player.getInventory().containsItem(clueItem.getScrollBox())) {
                     player.sendMessage("Not enough free space in your inventory.");

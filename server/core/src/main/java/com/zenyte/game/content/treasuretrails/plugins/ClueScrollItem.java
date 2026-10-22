@@ -2,6 +2,7 @@ package com.zenyte.game.content.treasuretrails.plugins;
 
 import com.zenyte.game.content.treasuretrails.ClueItem;
 import com.zenyte.game.content.treasuretrails.TreasureTrail;
+import com.zenyte.game.content.treasuretrails.clues.Clue;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.player.Player;
@@ -20,11 +21,12 @@ public class ClueScrollItem extends ItemPlugin implements FloorItemPlugin {
     public void handle() {
         bind("Read", (player, item, container, slotId) -> {
             List<String> list = TreasureTrail.getCluesList(item);
-            if (list == null) {
+            final Clue clue = list == null || list.isEmpty() ? null : TreasureTrail.getClues().get(list.get(0));
+            if (clue == null) {
+                //No step yet, or a step that no longer exists on this server: draw a new one for the same tier.
                 TreasureTrail.setRandomClue(item).view(player, item);
             } else {
-                assert list.size() >= 1;
-                TreasureTrail.getClues().get(list.get(0)).view(player, item);
+                clue.view(player, item);
             }
         });
         bind("Check steps", (player, item, container, slotId) -> {

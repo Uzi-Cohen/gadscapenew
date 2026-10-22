@@ -54,7 +54,8 @@ public class MediumRewardsTable extends ClueRewardTable {
 
     private final List<ImmutableItem> rareItemsTable = tableOf(
             item(YEW_COMP_BOW),
-            item(STRENGTH_AMULET_T)
+            item(STRENGTH_AMULET_T),
+            item(GNOMISH_FIRELIGHTER)//Same rate as the other two (OSRS wiki, Reward casket (medium)).
     );
 
     private final List<ImmutableItem> rareCosmeticsTable = tableOf(

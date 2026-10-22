@@ -43,7 +43,7 @@ abstract class CrystalChargeable : CrystalRecipe, CrystalDegradeable {
     override fun deleteMaterials(player: Player): Boolean =
         player.inventory.deleteItems(*ingredients().toTypedArray()).result == RequestResult.SUCCESS
 
-    fun hasEquippedActive(player: Player) =
+    open fun hasEquippedActive(player: Player) =
         player.equipment.containsItem(productItemId)
 
     fun `is`(itemId: Int) = itemId == productItemId || itemId == inactiveId

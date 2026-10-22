@@ -24,8 +24,9 @@ import com.zenyte.game.world.entity.player.action.combat.CombatUtilities
  */
 class MagicAttack : Attack {
 
+    // 241: spotanim 2853 LUC2_UNDEAD_DEMON_FIREBALL_PROJ + impact 2854 (was 1166, a Dragon Slayer quest projectile).
     private val projectile : Projectile =
-        Projectile(1166, 64, 32, 96, 0)
+        Projectile(2853, 64, 32, 96, 0)
 
     override fun invoke(demon: TormentedDemon, target: Entity?) {
         if (target == null) return
@@ -35,6 +36,8 @@ class MagicAttack : Attack {
             damageMax = 0
         val damage = CombatUtilities.getRandomMaxHit(demon, damageMax, AttackType.MAGIC, target)
         val delay = World.sendProjectile(demon, target, projectile)
-        target.scheduleHit(demon, demon hit target damage damage, delay)
+        val hit = demon hit target damage damage
+        hit.onLand { target.graphics = Graphics(2854) }
+        target.scheduleHit(demon, hit, delay)
     }
 }

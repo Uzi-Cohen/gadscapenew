@@ -9,13 +9,23 @@ import java.io.File
  * name of a different length is fine. Works on the exported cache (cache-out); deploy the map to send it.
  */
 object CacheRebrand {
-    /** Longest first, so web addresses are swapped before the bare name. */
+    /**
+     * The old server names this tool removes (it has to know them to find them) - the same rules as the cache
+     * converter's rebrand table (content-work/branding-fodder/REBRAND_TABLE.tsv). Longest first, so web addresses
+     * and whole titles are swapped before the bare names.
+     */
     val replacements = listOf(
+        "OSNR Mystery Box" to "GadScape Mystery Box",
+        "RuneSpawn Credit Packages" to "GadScape Credit Packages",
+        "Roat Pkz Blackjack" to "GadScape Blackjack",
         "www.near-reality.org" to "gadscape.com", "www.near-reality.com" to "gadscape.com",
         "near-reality.org" to "gadscape.com", "near-reality.com" to "gadscape.com",
         "Near-Reality" to "GadScape", "Near Reality" to "GadScape", "NEAR-REALITY" to "GADSCAPE",
-        "Near-reality" to "GadScape", "near-reality" to "gadscape", "NearReality" to "GadScape"
+        "Near-reality" to "GadScape", "near-reality" to "gadscape", "NearReality" to "GadScape",
+        "Roat Pkz" to "GadScape", "RoatPkz" to "GadScape", "RuneSpawn" to "GadScape", "OSNR" to "GadScape"
     )
+    /** Cheap pre-check before the swap: any of the old names, any case. */
+    private val anyOldName = Regex("""near.?reality|roat ?pkz|runespawn|osnr""", RegexOption.IGNORE_CASE)
     private val INDEXES = listOf(2 to "configs", 3 to "interfaces", 12 to "client scripts")
 
     class Hit(val index: Int, val archive: Int, val file: Int, val what: String, val sample: String) {
@@ -25,7 +35,7 @@ object CacheRebrand {
     private fun swap(s: String): String { var r = s; for ((a, b) in replacements) r = r.replace(a, b); return r }
 
     private fun samples(text: String): String =
-        Regex("""[ -~]{0,40}(?:near.?reality)[ -~]{0,40}""", RegexOption.IGNORE_CASE).findAll(text).take(3).joinToString("  |  ") { it.value.trim() }
+        Regex("""[ -~]{0,40}(?:near.?reality|roat ?pkz|runespawn|osnr)[ -~]{0,40}""", RegexOption.IGNORE_CASE).findAll(text).take(3).joinToString("  |  ") { it.value.trim() }
 
     fun scan(dir: File, progress: (String) -> Unit): List<Hit> {
         val out = ArrayList<Hit>()
@@ -39,7 +49,7 @@ object CacheRebrand {
                     for (f in archive.fileIds()) {
                         val d = try { lib.data(index, a, f) } catch (e: Exception) { null } ?: continue
                         val t = String(d, Charsets.ISO_8859_1)
-                        if (!t.contains("eality", true)) continue
+                        if (!anyOldName.containsMatchIn(t)) continue
                         if (swap(t) != t) out.add(Hit(index, a, f, what, samples(t)))
                     }
                     if (index == 2) idx.unCache()

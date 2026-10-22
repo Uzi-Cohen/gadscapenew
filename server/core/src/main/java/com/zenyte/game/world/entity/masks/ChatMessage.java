@@ -14,6 +14,7 @@ public final class ChatMessage extends DefaultByteBufHolder implements AutoClose
     private int effects;
     private String chatText;
     private boolean autotyper;
+    private byte[] pattern;
 
     public ChatMessage(final ByteBuf huffmanBuf) {
         super(huffmanBuf);
@@ -32,9 +33,21 @@ public final class ChatMessage extends DefaultByteBufHolder implements AutoClose
     public ChatMessage set(final String text,
                            final int effects,
                            final boolean autotyper) {
+        return set(text, effects, autotyper, null);
+    }
+
+    /**
+     * @param pattern the colour pattern of a public message in colour 13-20 (rev 241: one colour code per
+     *                pattern step, colour - 12 bytes), or null.
+     */
+    public ChatMessage set(final String text,
+                           final int effects,
+                           final boolean autotyper,
+                           final byte[] pattern) {
         this.chatText = text;
         this.effects = effects;
         this.autotyper = autotyper;
+        this.pattern = pattern;
 
         final ByteBuf content = content();
         content.clear();
@@ -52,6 +65,11 @@ public final class ChatMessage extends DefaultByteBufHolder implements AutoClose
 
     public boolean isAutotyper() {
         return autotyper;
+    }
+
+    /** The colour pattern of a public message in colour 13-20, or null. */
+    public byte[] getPattern() {
+        return pattern;
     }
 
     public static ChatMessage reusable() {

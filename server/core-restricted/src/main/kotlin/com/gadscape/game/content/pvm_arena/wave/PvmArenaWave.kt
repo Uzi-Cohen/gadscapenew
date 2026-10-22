@@ -6,7 +6,7 @@ import com.gadscape.game.content.pvm_arena.npc.PvmArenaNpc
 import com.gadscape.game.world.entity.player.pvmArenaMvpCountDuringGame
 import com.gadscape.game.world.entity.player.pvmArenaPoints
 import com.gadscape.game.world.entity.player.pvmArenaPointsGainedDuringGame
-import com.runespawn.util.weakMutableSetOf
+import com.gadscape.util.weakMutableSetOf
 import com.zenyte.game.util.Colour.RS_RED
 import com.zenyte.game.world.entity.npc.NPC
 import com.zenyte.game.world.entity.player.Player

@@ -49,6 +49,8 @@ public class TeleportManager {
         }
         favoriteTeleports.removeIf(Objects::isNull);
         favoriteTeleports.sort(Comparator.comparingInt(PortalTeleport::ordinal));
+        // GadScape teleport menu (1601): restore the magic stone's "Previous teleport: <name>" label.
+        player.getTeleportsManager().refreshPreviousTeleportLabel();
     }
 
     public void initialize(final TeleportManager manager) {

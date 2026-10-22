@@ -113,9 +113,9 @@ import static java.nio.file.StandardCopyOption.COPY_ATTRIBUTES;
 public class RuneLite
 {
 	public static boolean BETA = false;
-	public static final String OPENOSRS = ".osnr";
-	public static final String OPENOSRS_BETA = ".osnr-beta";
-	public static final String OPENOSRS_DEV = ".osnr-beta";
+	public static final String OPENOSRS = ".gadscape";
+	public static final String OPENOSRS_BETA = ".gadscape-beta";
+	public static final String OPENOSRS_DEV = ".gadscape-beta";
 	public static final File RUNELITE_DIR = new File(System.getProperty("user.home"), BETA ? OPENOSRS_BETA :  OPENOSRS);
 	public static final File CACHE_DIR = new File(RUNELITE_DIR, "cache");
 	public static final File PLUGINS_DIR = new File(RUNELITE_DIR, "plugin-hub");

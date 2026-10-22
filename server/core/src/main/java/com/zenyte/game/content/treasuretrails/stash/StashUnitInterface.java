@@ -30,9 +30,10 @@ public class StashUnitInterface extends Interface {
         for (final Int2IntMap.Entry entry : intEnum.getValues().int2IntEntrySet()) {
             final int objectId = entry.getIntKey();
             final int coordGrid = entry.getIntValue();
-            final StashUnit unit = StashUnit.getMap().get(objectId);
+            final StashUnit unit = StashUnit.getChartMap().get(objectId);
             if (unit == null) {
-                throw new IllegalStateException("Stash unit not located for object " + objectId + "!");
+                //A unit the cache lists but the server does not know (newer OSRS content): show it as not built.
+                continue;
             }
             if (stash.isFilled(unit)) {
                 consumer.accept(coordGrid);
@@ -47,11 +48,22 @@ public class StashUnitInterface extends Interface {
         final IntEnum containerEnum = Enums.STASH_UNIT_BUILD_STAGES_CONTAINER;
         final Container container = new Container(ContainerPolicy.NEVER_STACK, ContainerType.STASH_UNIT_BUILD_STAGES, Optional.empty());
         container.setFullUpdate(true);
-        iterateEnums(containerEnum, stash, coordGrid -> container.set(((coordGrid >> 14) & 16383), new Item(0)));
+        iterateEnums(containerEnum, stash, coordGrid -> {
+            final int slot = (coordGrid >> 14) & 16383;
+            if (slot < container.getContainerSize()) {
+                container.set(slot, new Item(0));
+            }
+        });
         player.getPacketDispatcher().sendUpdateItemContainer(container);
         final int[] arguments = new int[3];
         final IntEnum varsEnum = Enums.STASH_UNIT_BUILD_STAGES_VARS;
-        iterateEnums(varsEnum, stash, coordGrid -> arguments[((coordGrid >> 14) & 16383) - 1] |= 1 << (coordGrid & 16383));
+        iterateEnums(varsEnum, stash, coordGrid -> {
+            final int index = ((coordGrid >> 14) & 16383) - 1;
+            final int bit = coordGrid & 16383;
+            if (index >= 0 && index < arguments.length && bit < 32) {
+                arguments[index] |= 1 << bit;
+            }
+        });
         //Exception in CS2.
         if (stash.isFilled(StashUnit.TOP_WATCHTOWER)) {
             arguments[2] |= 1 << 10;

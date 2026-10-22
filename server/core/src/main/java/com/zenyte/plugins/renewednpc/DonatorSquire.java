@@ -30,7 +30,7 @@ public class DonatorSquire extends NPCPlugin {
 
                 player(5, "Please switch my home teleport.");
 
-                options(6, "Choose a location", ContentConstants.SERVER_NAME + " Home", "Mage's Bank", "Forex Enclave", "Donator Island", "Next")
+                options(6, "Choose a location", ContentConstants.SERVER_NAME + " Home", "Mage's Bank", "Ferox Enclave", "Donator Island", "Next")
                         .onOptionOne(() -> changeTeleport(player, 0))
                         .onOptionTwo(() -> changeTeleport(player, 1))
                         .onOptionThree(() -> changeTeleport(player, 2))

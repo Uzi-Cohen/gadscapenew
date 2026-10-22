@@ -43,7 +43,7 @@ public class PastScourgeCutsceneP1 extends Cutscene {
     @Override
     public void build() {
         final String impName = ChristmasUtils.getImpName(player);
-        addActions(0, player::lock, () -> player.getPacketDispatcher().sendClientScript(10700, 1), () -> closedTabs.forEach(tab -> player.getInterfaceHandler().closeInterface(tab)), () -> player.getInterfaceHandler().openGameTab(GameTab.FRIENDS_TAB), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.MAP_DISABLED));
+        addActions(0, player::lock, () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1), () -> closedTabs.forEach(tab -> player.getInterfaceHandler().closeInterface(tab)), () -> player.getInterfaceHandler().openGameTab(GameTab.FRIENDS_TAB), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.MAP_DISABLED));
         addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1));
         addActions(4, new CameraPositionAction(player, instance.getLocation(2471, 5407, 1), 350, -128, 0), new CameraLookAction(player, instance.getLocation(2471, 5390, 1), 200, -128, 0), () -> {
             dummy = new NPC(24, instance.getLocation(2470, 5398, 1), Direction.NORTH, 0);

@@ -10,12 +10,13 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"syscall"
 	"unsafe"
 )
 
-// A small loading window (splash.png with orange text), drawn while the exe unpacks Java and the client, with a
+// A small loading window (splash.png with gold text), drawn while the exe unpacks Java and the client, with a
 // progress bar along the bottom. It stays hidden unless there is something to show; once RuneLite starts, its own
 // splash opens. Adapted from the map editor's launcher (launcher/progress.go in this repo).
 
@@ -79,11 +80,11 @@ const (
 
 // label: #ff981f, Verdana bold 13px, black shadow 1px down-right, 24px from the left
 const (
-	textColor   = 0x001F98FF // COLORREF is 0x00BBGGRR
+	textColor   = 0x0050C4F0 // COLORREF is 0x00BBGGRR: GadScape gold F0C450
 	shadowColor = 0x00000000
 	barBorder   = 0x00000000
-	barEmpty    = 0x00182028
-	barFill     = 0x001F98FF
+	barEmpty    = 0x00161C5C // GadScape maroon 5C1C16
+	barFill     = 0x0050C4F0
 	textX       = 24
 )
 
@@ -209,7 +210,7 @@ func newProgress() *progress {
 		instance:  inst,
 		icon:      icon,
 		cursor:    cursor,
-		className: wstr("GadScape241TestSplash"),
+		className: wstr(strings.ReplaceAll(appName, " ", "") + "Splash"),
 		iconSm:    icon,
 	}
 	wc.size = uint32(unsafe.Sizeof(wc))
@@ -221,7 +222,7 @@ func newProgress() *progress {
 	y := (int32(sh) - p.h) / 2
 	current = p
 	p.hwnd, _, _ = procCreateWindowEx.Call(wsExAppWin, uintptr(unsafe.Pointer(wc.className)),
-		uintptr(unsafe.Pointer(wstr("GadScape 241 Test"))), wsPopup,
+		uintptr(unsafe.Pointer(wstr(appName))), wsPopup,
 		uintptr(x), uintptr(y), uintptr(p.w), uintptr(p.h), 0, 0, inst, 0)
 	p.tid, _, _ = procGetCurrentThreadId.Call()
 	logf("splash window %#x", p.hwnd)

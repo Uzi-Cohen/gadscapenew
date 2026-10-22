@@ -1,7 +1,7 @@
 package com.gadscape.game.content.tournament.spectating
 
 import com.gadscape.game.content.tournament.TournamentPair
-import com.runespawn.util.weakMutableSetOf
+import com.gadscape.util.weakMutableSetOf
 import com.zenyte.game.world.entity.player.Player
 
 class TournamentSpectatorController(

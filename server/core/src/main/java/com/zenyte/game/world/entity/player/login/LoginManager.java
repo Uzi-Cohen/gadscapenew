@@ -678,6 +678,11 @@ public final class LoginManager {
         player.getGrandExchange().initialize(parser.getGrandExchange());
         player.getTeleportManager().initialize(parser.getTeleportManager());
         player.getPetInsurance().initialize(parser.getPetInsurance());
+        // construction area: the house (rooms, furniture, costume storage, servant, options) is saved but was never loaded
+        // back, so every relog emptied it.
+        if (parser.getConstruction() != null) {
+            player.getConstruction().setFields(parser.getConstruction());
+        }
         player.getPerkManager().initialize(parser.getPerkManager());
         player.getKillstreakLog().initialize(parser.getKillstreakLog());
         player.getTOAManager().initialize(parser.getTOAManager());

@@ -70,7 +70,7 @@ public enum PlayerSkulls {
     }
 
     private static PlayerSkulls getLootKeySkull(Player player) {
-        int keyCount = player.getInventory().getAmountOf(LootkeyConstants.LOOT_KEY_ITEM_ID);
+        int keyCount = (int) player.getInventory().getAmountOf(LootkeyConstants.LOOT_KEY_IDS);
         switch (keyCount) {
             case 0:
                 return DEFAULT;

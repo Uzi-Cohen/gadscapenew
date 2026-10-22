@@ -30,6 +30,9 @@ public class HomeShopNPC extends NPCPlugin {
             put(NpcId.ARNAS, 1);
             put(NpcId.TRISTAN, 1);
             put(NpcId.FAE, 2);
+            // Robin Hood and Jackie have "Trade" too but had no tab: Trade threw a NullPointerException.
+            put(NpcId.ROBIN_HOOD, 2);
+            put(NpcId.JACKIE, 6);
             put(NpcId.BABA_YAGA, 3);
             put(NpcId.JOHN_16007, 4);
             put(NpcId.HERQUIN, 5);
@@ -38,7 +41,12 @@ public class HomeShopNPC extends NPCPlugin {
 
     private static final Map<Integer, String> OLD_SHOPS = new HashMap<>() {
         {
-         put(NpcId.ARNAS, "Melee Armoury Shop");
+         // "Melee Armoury Shop" does not exist (Shop.get threw); Arnas sells melee gear like Tristan.
+         put(NpcId.ARNAS, "Melee Store");
+
+        put(NpcId.ROBIN_HOOD, "Ranged Store");
+
+        put(NpcId.JACKIE, "Jewellery Store");
 
         put(NpcId.TRISTAN, "Melee Store");
 
@@ -61,12 +69,12 @@ public class HomeShopNPC extends NPCPlugin {
                 player.stopAll();
                 player.faceEntity(npc);
                 if(UNIVERSAL_SHOP_FLOODGATE) {
-                    UniversalShopInterface.openInterfaceToTab(player, SHOPS.get(npc.getId()));
+                    UniversalShopInterface.openInterfaceToTab(player, SHOPS.getOrDefault(npc.getId(), 0));
                 } else {
                     if (npc.getId() == NpcId.TRISTAN && player.getNumericAttribute("demon_kills").intValue() == 100) {
                         player.openShop("Melee Store<Alternative>");
                     } else {
-                        player.openShop(OLD_SHOPS.get(npc.getId()));
+                        player.openShop(OLD_SHOPS.getOrDefault(npc.getId(), "Melee Store"));
                     }
                 }
 
@@ -124,14 +132,14 @@ public class HomeShopNPC extends NPCPlugin {
                 return;
             }
             final Inventory inventory = player.getInventory();
-            if (!inventory.hasFreeSlots() && !inventory.containsItem(CustomItemId.NR_TABLET, 1)) {
+            if (!inventory.hasFreeSlots() && !inventory.containsItem(CustomItemId.HOME_TELEPORT_TABLET, 1)) {
                 player.getDialogueManager().start(new NPCChat(player, npc.getId(), "You need some free inventory space to purchase these!"));
                 return;
             }
             final int price = 175;
             final int coins = inventory.getAmountOf(ItemId.COINS_995);
             final int maxAmountPurchaseable = coins / price;
-            final int count = inventory.getAmountOf(CustomItemId.NR_TABLET);
+            final int count = inventory.getAmountOf(CustomItemId.HOME_TELEPORT_TABLET);
             final int maxAvailablePurchase = Math.min(Math.min(maxAmountPurchaseable, 1000 - purchases), Integer.MAX_VALUE - count);
             if (maxAvailablePurchase <= 0) {
                 player.getDialogueManager().start(new NPCChat(player, npc.getId(), "You can't afford any teletabs!"));
@@ -140,7 +148,7 @@ public class HomeShopNPC extends NPCPlugin {
             player.sendInputInt("How many would you like to purchase for " + price + " each? (0-" + maxAvailablePurchase + ")", value -> {
                 final int currentCoins = inventory.getAmountOf(ItemId.COINS_995);
                 final int currentMaxAmountPurchaseable = currentCoins / price;
-                final int currentCount = inventory.getAmountOf(CustomItemId.NR_TABLET);
+                final int currentCount = inventory.getAmountOf(CustomItemId.HOME_TELEPORT_TABLET);
                 final int currentMaxAvailablePurchase = Math.min(Math.min(currentMaxAmountPurchaseable, 1000 - purchases), Integer.MAX_VALUE - currentCount);
                 final int purchaseQuantity = Math.min(value, currentMaxAvailablePurchase);
                 if (purchaseQuantity <= 0) {
@@ -148,7 +156,7 @@ public class HomeShopNPC extends NPCPlugin {
                 }
                 player.getVariables().setTeletabPurchases(purchases + purchaseQuantity);
                 inventory.deleteItem(new Item(ItemId.COINS_995, purchaseQuantity * price));
-                inventory.addOrDrop(new Item(CustomItemId.NR_TABLET, purchaseQuantity));
+                inventory.addOrDrop(new Item(CustomItemId.HOME_TELEPORT_TABLET, purchaseQuantity));
                 player.getDialogueManager().start(new NPCChat(player, npc.getId(), "Pleasure doing business with you!"));
             });
         });

@@ -24,7 +24,8 @@ internal fun TeleportsBuilder.dungeons() = "Dungeons Teleports"(10006) {
     "Karamja Underground"(-1963, 2861, 9571, 0, "")
     "Karuulm Slayer Dungeon"(-23037, 1311, 10205, 0, "")
     "Kraken Cove"(-11908, 2280, 3609, 0, "")
-    "Kruk's Dungeon"(-19525, 2316, 9159, 1, "")
+    // 2316,9159,1 is a blocked tile (211, 241 and 2746 maps): one tile west is open floor.
+    "Kruk's Dungeon"(-19525, 2315, 9159, 1, "")
     "Lighthouse"(-3842, 2509, 3634, 0, "")
     "Lithkren Vault"(-21902, 1568, 5063, 0, "")
     "Lizardman Cavern"(-13576, 1305, 9973, 0, "")
@@ -37,7 +38,8 @@ internal fun TeleportsBuilder.dungeons() = "Dungeons Teleports"(10006) {
     "Smoke Dungeon"(-12002, 3207, 9378, 0, "")
     "Observatory Dungeon"(-600, 2335, 9350, 0, "")
     "Slayer Tower"(-11864, 3428, 3530, 0, "")
-    "Stronghold of Security"(-9005, 1859, 5244, 0, "")
+    // 1859,5244 is blocked; 1859,5243 is the OSRS arrival tile of the entrance ladder.
+    "Stronghold of Security"(-9005, 1859, 5243, 0, "")
     "Stronghold Slayer Cave"(-13495, 2427, 9824, 0, "")
     "Taverley Dungeon"(-1751, 2884, 9799, 0, "")
     "Varrock Sewers"(-526, 3237, 9862, 0, "")

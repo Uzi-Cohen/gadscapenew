@@ -22,7 +22,7 @@ class AcidSplatter(val instance: AraxxorInstance) : Attack {
 
     override fun invoke(araxxor: Araxxor, target: Entity?) {
         if (target == null || target.isDead || target.isFinished) return
-        araxxor seq 11476
+        araxxor seq 11478 // NPC_ARAXXOR_01_ATTACK_ACID_SPRAY_01
         repeat(9) {
             val landing = instance.getAcidSplatterLocation(target.location)
             val delay = World.sendProjectile(araxxor.middleLocation, landing, projectileBlob)

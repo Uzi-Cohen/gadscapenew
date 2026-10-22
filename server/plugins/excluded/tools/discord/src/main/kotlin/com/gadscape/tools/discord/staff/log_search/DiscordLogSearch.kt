@@ -8,7 +8,7 @@ import com.gadscape.tools.discord.readDaysAgo
 import com.gadscape.tools.discord.readUsername
 import com.gadscape.tools.discord.staff.DiscordStaffBot
 import com.gadscape.tools.logging.GameLogMessage
-import com.gadscape.tools.logging.file.nrJson
+import com.gadscape.tools.logging.file.gameLogJson
 import com.gadscape.tools.logging.file.readGameLogsSince
 import com.zenyte.game.world.entity.player.PlayerLogger
 import com.zenyte.utils.TextUtils
@@ -61,7 +61,7 @@ fun DiscordStaffBot.configureLogSearchCommand() {
                         if (ourEmbeds != null) {
                             ourEmbeds += embeds
                         }
-                        val bytes = nrJson.encodeToString(tradeMessages).toByteArray()
+                        val bytes = gameLogJson.encodeToString(tradeMessages).toByteArray()
                         addFile("trades_$username.json", ChannelProvider(bytes.size.toLong()) {
                             bytes.inputStream().toByteReadChannel()
                         })

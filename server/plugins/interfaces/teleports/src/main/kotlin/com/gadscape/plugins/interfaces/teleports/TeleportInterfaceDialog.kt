@@ -6,6 +6,7 @@ import com.zenyte.game.model.ui.InterfacePosition
 import com.zenyte.game.world.entity.player.Analytics
 import com.zenyte.game.world.entity.player.Player
 import com.zenyte.game.world.entity.player.teleports.DestinationTeleport
+import com.zenyte.game.world.entity.player.teleports.TeleportsManager
 import com.zenyte.plugins.dialogue.CountDialogue
 
 class TeleportInterfaceDialog : CountDialogue {
@@ -50,7 +51,7 @@ class TeleportInterfaceDialog : CountDialogue {
 			}
 
 			val index = listIndex shr 5
-			if (index > 6) {
+			if (index >= TeleportsManager.FAVORITE_VARPS.size) {
 				player.sendDeveloperMessage("Out of bounds teleporting trying to favorite: $index")
 				return
 			}
@@ -71,10 +72,12 @@ class TeleportInterfaceDialog : CountDialogue {
 		}
 
 		Analytics.flagInteraction(player, Analytics.InteractionType.TELEPORT_INTERFACE)
-		DestinationTeleport(destination).teleport(player)
-		player.teleportsManager.setPreviousTeleport(destination)
+		// Close the menu and its chatbox input first: a Wilderness destination opens the "Wilderness Teleport
+		// Confirmation" options in the chatbox, and closing the input afterwards (script 299) could wipe them.
 		player.interfaceHandler.closeInterface(InterfacePosition.CENTRAL)
 		player.interfaceHandler.forceCloseInput()
+		player.teleportsManager.setPreviousTeleport(destination)
+		DestinationTeleport(destination).teleport(player)
 	}
 
 }

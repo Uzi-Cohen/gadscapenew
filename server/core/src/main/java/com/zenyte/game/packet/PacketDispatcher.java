@@ -251,7 +251,7 @@ public class PacketDispatcher {
 	}
 
 	public void sendObjAdd(final FloorItem item, final Location tile) {
-		player.sendZoneUpdate(tile.getX(), tile.getY(), new ObjAdd(item));
+		player.sendZoneUpdate(tile.getX(), tile.getY(), new ObjAdd(item, player));
 	}
 
 	public void sendObjDel(final FloorItem item, final Location tile) {

@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Another cache opened for reading maps from, in either format:
  *  - new (main_file_cache.dat2, OSRS style, optional xteas.json)
- *  - old (main_file_cache.dat, 317-style private-server clients like Roat Pkz)
+ *  - old (main_file_cache.dat, 317-style private-server clients)
  * [access] gives its regions; nothing is ever written to it.
  */
 class OtherCache private constructor(

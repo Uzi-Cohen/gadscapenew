@@ -169,12 +169,5 @@ object PlayerCommands {
             teleport.teleport(p, true)
         }
 
-        /* YouTubers */
-        Command(PlayerPrivilege.PLAYER, "lano", "") { p, _ ->
-            p.packetDispatcher.sendURL("https://www.youtube.com/@LanoRS")
-        }
-        Command(PlayerPrivilege.PLAYER, "eggy", "") { p, _ ->
-            p.packetDispatcher.sendURL("https://www.youtube.com/@EggyRS")
-        }
     }
 }

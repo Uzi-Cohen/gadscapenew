@@ -15,6 +15,7 @@ import com.zenyte.game.model.ui.InterfacePosition
 import com.zenyte.game.world.entity.player.MessageType
 import com.zenyte.game.world.entity.player.Player
 import com.zenyte.game.world.entity.player.variables.TickVariable
+import com.zenyte.game.world.region.area.wilderness.WildernessArea
 import com.zenyte.utils.TimeUnit
 import java.text.DecimalFormat
 import java.util.*
@@ -24,7 +25,8 @@ fun Player.inExcludedBountyZone() : Boolean = Boundary.isIn(this, excludedBounty
 fun Player.canContinueBHMatchmaking() : Boolean = inActiveBountyZone() && !inExcludedBountyZone()
 fun Player.isIneligibleForBHMatchmaking() : Boolean = !inActiveBountyZone() || inExcludedBountyZone()
 fun Player.isEligibleForBHRegister() : Boolean = canContinueBHMatchmaking() && !isBHRegistered()
-fun Player.getWildernessLevel() : Int = ((position.y - 3520 shr 3) + 1).coerceAtMost(1)
+/** Real wilderness level of the player's tile (0 outside the wilderness), incl. dungeons and the custom boss lairs. */
+fun Player.getWildernessLevel() : Int = WildernessArea.getWildernessLevel(location).orElse(0)
 fun Player.updateWildernessRange() = with(this) { bountyHunterCurrentWildernessRange = BountyHunterWildernessRange.getForWildernessLevel(getWildernessLevel()) }
 fun Player.isBHRegistered() : Boolean = eligiblePlayersInWilderness.contains(this)
 fun Player.inBHMatchmaking() : Boolean = matchmakingPlayers.contains(this)

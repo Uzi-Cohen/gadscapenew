@@ -28,8 +28,8 @@ import java.util.Objects;
 public class DiceItem extends ItemPlugin {
     public static final String GAMBLE_WARNING = "All forms of gambling are at your own " + Colour.RED.wrap("risk") +
             "!<br>" + Colour.RED.wrap("Always") + " record all gambles and use trusted members or middlemen!<br>The " +
-            "hub for gambling can be accessed from the " + GameConstants.SERVER_NAME + " portal at home, under misc " +
-            "teleports.";
+            "hub for gambling can be reached with the Teleportation nexus at home (or the magic tab's Misc Teleports), " +
+            "under Misc: Gambling.";
 
     @Override
     public void handle() {

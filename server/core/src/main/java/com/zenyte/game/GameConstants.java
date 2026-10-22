@@ -8,9 +8,7 @@ import com.gadscape.game.world.info.WorldProfile;
 import com.zenyte.utils.TimeUnit;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import org.apache.commons.lang3.ArrayUtils;
 
-import java.util.Arrays;
 import java.util.Set;
 
 /**
@@ -46,18 +44,14 @@ public class GameConstants {
 	 */
 	public static WorldProfile WORLD_PROFILE;
 
-	public static boolean RUNESPAWN;
 	public static boolean CYCLE_DEBUG = false;
 
 	public static boolean CHECK_HUNTER_TRAPS_QUANTITY = true;
 
 	public static boolean ANTIKNOX = false;
-	public static boolean WHITELISTING = true;
 	public static boolean DUEL_ARENA = true;
 	public static boolean GROTESQUE_GUARDIANS = true;
 	public static boolean PURGING_CHUNKS = true;
-
-	public static final Set<String> whitelistedUsernames = new ObjectOpenHashSet<>();
 
 	public static final boolean BOUNTY_HUNTER = false;
 
@@ -68,17 +62,46 @@ public class GameConstants {
 	public static boolean CHAMBERS_OF_XERIC = true;
 	public static boolean ALCHEMICAL_HYDRA = true;
 
-	//!Case sensitive usernames
-	public static final String[] owners = new String[] {
-			"gilded"
-	};
+	/**
+	 * The GadScape owner account(s). There is deliberately no built-in name: an account is an owner only when the
+	 * operator names it, in worlds.yml ({@code owners: ["name"]} under the world) or with
+	 * {@code -Dgadscape.owners=name1,name2}. With neither set nobody is an owner, so the owner-only commands
+	 * (::checkowner, ::isolemnlysweariamuptonogood, ::magicbuffet, ::teleparty, ...) do nothing.
+	 * Names are compared like login names: case-insensitive, spaces and underscores equal.
+	 */
+	public static Set<String> owners() {
+		final Set<String> names = new ObjectOpenHashSet<>();
+		final WorldProfile profile = WORLD_PROFILE;
+		if (profile != null && profile.getOwners() != null) {
+			for (final String name : profile.getOwners()) {
+				addOwnerName(names, name);
+			}
+		}
+		final String property = System.getProperty("gadscape.owners");
+		if (property != null) {
+			for (final String name : property.split(",")) {
+				addOwnerName(names, name);
+			}
+		}
+		return names;
+	}
 
-	static {
-		whitelistedUsernames.addAll(Arrays.asList(owners));
+	private static void addOwnerName(final Set<String> names, final String name) {
+		if (name != null && !name.isBlank()) {
+			names.add(normaliseOwnerName(name));
+		}
+	}
+
+	private static String normaliseOwnerName(final String name) {
+		return name.trim().toLowerCase().replace(' ', '_');
+	}
+
+	public static boolean isOwnerName(final String username) {
+		return username != null && !username.isBlank() && owners().contains(normaliseOwnerName(username));
 	}
 
 	public static boolean isOwner(final Player player) {
-		return ArrayUtils.contains(owners, player.getUsername().toLowerCase());
+		return player != null && isOwnerName(player.getUsername());
 	}
 
 	/**

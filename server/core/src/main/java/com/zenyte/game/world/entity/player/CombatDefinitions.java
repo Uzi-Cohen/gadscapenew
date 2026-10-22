@@ -12,6 +12,8 @@ import com.zenyte.game.world.entity.player.action.combat.AttackStyle;
 import com.zenyte.game.world.entity.player.action.combat.AttackStyle.AttackExperienceType;
 import com.zenyte.game.world.entity.player.action.combat.AttackStyleDefinition;
 import com.zenyte.game.world.entity.player.action.combat.PlayerCombat;
+import com.zenyte.game.world.entity.player.action.combat.SpecialAttack;
+import com.zenyte.game.world.entity.player.action.combat.melee.Rondache;
 import com.zenyte.game.world.entity.player.action.combat.magic.CombatSpell;
 import com.zenyte.game.world.entity.player.container.impl.equipment.EquipmentSlot;
 import com.zenyte.game.world.entity.player.privilege.PlayerPrivilege;
@@ -62,6 +64,8 @@ public final class CombatDefinitions {
 	private CombatSpell autocastSpell;
 	private transient AttackStyleDefinition styleDefinition;
 	private transient boolean usingSpecial;
+	/** The off-hand (Rondache) special attack is selected: varp 301 sa_attack = 2 on the 2746 client. */
+	private transient boolean usingOffhandSpecial;
 	private transient int fakeSpellbookState;
 
 	public boolean hasFullAhrimsAndDamned() {
@@ -156,11 +160,15 @@ public final class CombatDefinitions {
 		}
 		varManager.sendVar(172, autoRetaliate ? 0 : 1);
 		varManager.sendVar(300, Math.min(255, specialEnergy) * 10);
-		varManager.sendVar(301, usingSpecial ? 1 : 0);
-		varManager.sendBit(357, typeVarbit);
+		if (usingOffhandSpecial && !Rondache.isWearing(player)) {
+			usingOffhandSpecial = false;
+		}
+		varManager.sendVar(301, getSpecialAttackVarValue());
+		// The 241 client numbers weapon categories differently from GadScape's 211 data from 22 up (see AttackStyleDefinition).
+		varManager.sendBit(357, styleDefinition.getClientCategory());
 		varManager.sendBit(2668, defensiveAutocast ? 1 : 2);
 		varManager.sendBit(276, autocastSpell == null ? -1 : SpellDefinitions.autocastSlotMap.getInt(autocastSpell.getSpellName()));
-		varManager.sendVar(43, autocastSpell == null ? (attackStylesLength == 3 && style == 2 ? (typeVarbit == 6 ? 2 : 3) : style) : 5);
+		varManager.sendVar(43, autocastSpell == null ? styleDefinition.getButtonForStyle(style) : 5);
 		dispatcher.sendComponentText(593, 1, weapon == null ? "Unarmed" : weapon.getName());
 		dispatcher.sendComponentText(593, 2, "Category: " + styleDefinition.getPrettyName());
 		player.getVarManager().sendBit(13027, player.getSkills().getCombatLevel());
@@ -169,7 +177,8 @@ public final class CombatDefinitions {
 	private int getWeaponTypeVarbit() {
 		final Item weapon = player.getEquipment().getItem(EquipmentSlot.WEAPON);
 		if (weapon == null) return 0;
-		return weapon.getDefinitions() == null ? 0 : weapon.getDefinitions().getInterfaceVarbit();
+		final int varbit = weapon.getDefinitions() == null ? 0 : weapon.getDefinitions().getInterfaceVarbit();
+		return varbit < 0 || varbit >= AttackStyleDefinition.values.length ? 0 : varbit;
 	}
 
 	private void refreshCachedSettings() {
@@ -221,8 +230,16 @@ public final class CombatDefinitions {
 	}
 
 	public void setSpecial(final boolean state, final boolean ignoreWeapon) {
+		if (!ignoreWeapon && state && !weaponHasSpecial() && Rondache.isWearing(player)) {
+			// 2746: with a weapon that has no special attack, the Rondache takes over the special attack bar and orb.
+			toggleOffhandSpecial();
+			return;
+		}
 		usingSpecial = state;
-		player.getVarManager().sendVar(301, usingSpecial ? 1 : 0);
+		if (state) {
+			usingOffhandSpecial = false;
+		}
+		player.getVarManager().sendVar(301, getSpecialAttackVarValue());
 		if (!ignoreWeapon) {
 			final int weaponId = player.getEquipment().getId(EquipmentSlot.WEAPON);
 			if (weaponId == 4153 || weaponId == 12848
@@ -296,6 +313,54 @@ public final class CombatDefinitions {
 
 	public boolean isUsingSpecial() {
 		return usingSpecial;
+	}
+
+	/** varp 301 sa_attack: 1 = main-hand (weapon) special selected, 2 = off-hand (Rondache) special selected. */
+	public int getSpecialAttackVarValue() {
+		return usingSpecial ? 1 : usingOffhandSpecial ? 2 : 0;
+	}
+
+	public boolean isUsingOffhandSpecial() {
+		return usingOffhandSpecial;
+	}
+
+	/** Whether the wielded weapon has a special attack (the client shows a bar for it: enum 906 cost above 0). */
+	public boolean weaponHasSpecial() {
+		final int weaponId = player.getEquipment().getId(EquipmentSlot.WEAPON);
+		return weaponId != -1 && (PlayerCombat.getSpecialCost(weaponId) > 0 || SpecialAttack.SPECIAL_ATTACKS.containsKey(weaponId));
+	}
+
+	/**
+	 * Selects or clears the off-hand special attack (Rondache Shield Bash). Selecting it clears the weapon special, as
+	 * the client keeps one value in sa_attack. Shield Bash is instant: it fires straight away when the player is in
+	 * melee reach of their target, otherwise as soon as they are.
+	 */
+	public void setOffhandSpecial(final boolean state) {
+		usingOffhandSpecial = state && Rondache.isWearing(player);
+		if (usingOffhandSpecial) {
+			usingSpecial = false;
+		}
+		player.getVarManager().sendVar(301, getSpecialAttackVarValue());
+		if (usingOffhandSpecial) {
+			Rondache.onSelected(player);
+		}
+	}
+
+	public void toggleOffhandSpecial() {
+		setOffhandSpecial(!usingOffhandSpecial);
+	}
+
+	/**
+	 * Special attack buttons of the 2746 client: 0 = the special attack orb's first option or the combat tab's single
+	 * bar (593:41), 1 = the combat tab's main-hand bar (593:57), 2 = the combat tab's off-hand bar (593:67) or the
+	 * orb's second option ("Use Offhand"). Callers check duel rules and locks first.
+	 */
+	public void toggleSpecialBar(final int bar) {
+		if (bar == 2) {
+			toggleOffhandSpecial();
+			return;
+		}
+		setSpecial(!usingSpecial, false);
 	}
 
 	public void setUsingSpecial(boolean usingSpecial) {

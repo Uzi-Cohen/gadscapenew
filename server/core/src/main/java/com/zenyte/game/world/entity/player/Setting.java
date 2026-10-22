@@ -71,6 +71,12 @@ public enum Setting {
 	MOBILE_SHOP_QUANTITY(6348, false),
 	SHOW_SPELLS_YOU_LACK_THE_REQUIREMENTS_TO_CAST(12137, false),
 	ENABLE_ICON_RESIZING(6548, false),
+	/* 241 prayer tab filters (541:42 rows 0-4, sets-prayers area); 0 = OSRS default for each. */
+	PRAYER_FILTER_BLOCK_LOW_TIER(6574, false),
+	PRAYER_FILTER_ALLOW_COMBINED_TIER(6575, false),
+	PRAYER_FILTER_BLOCK_HEALING(6576, false),
+	PRAYER_FILTER_BLOCK_LACK_LEVEL(6577, false),
+	PRAYER_FILTER_BLOCK_LOCKED(6578, false),
 	;
 	private final int id;
 	private final boolean varp;

@@ -25,33 +25,48 @@ public class CatapultInterface extends Interface {
     private static final Location SARADOMIN_CATAPULT_LOWEST_LAND_COORDS = new ImmutableLocation(2412, 3091, 0);
     private static final Location ZAMORAK_CATAPULT_START = new ImmutableLocation(2385, 3118, 0);
     private static final Location SARADOMIN_CATAPULT_START = new ImmutableLocation(2414, 3089, 0);
-    private static final int ZAMORAK_X = 86;
-    private static final int ZAMORAK_Y = 113;
+    /*
+     * Marker start positions inside map_frame (54:2 at 22,44; the marker 54:17 is its child). The old values (86,113 /
+     * 193,222) were relative to the interface root of the pre-211 layout; minus the map frame origin they line up with
+     * the catapult icons 54:15 (40,38) and 54:16 (166,159).
+     */
+    private static final int ZAMORAK_X = 86 - 22;
+    private static final int ZAMORAK_Y = 113 - 44;
     private static final int ZAMORAK_OFFSET_MULTIPLIER = 2;
-    private static final int SARADOMIN_X = 193;
-    private static final int SARADOMIN_Y = 222;
+    private static final int SARADOMIN_X = 193 - 22;
+    private static final int SARADOMIN_Y = 222 - 44;
     private static final int SARADOMIN_OFFSET_MULTIPLIER = -2;
     private static final int MAX_CLICKS = 30;
     private static final int NUMBER_0_MODEL_ID = 4863;
     private static final Projectile projectile = new Projectile(304, 50, 5, 0, 45, 100, 32, 5);
 
+    /*
+     * castlewars_catapult (54) has 26 components in the 211 and the 241 cache (0..25, identical). The old ids 146-161
+     * came from a pre-211 layout and every IF_SETMODEL/IF_SETPOSITION to them kicked the client (packet error).
+     * Names from the 241 gamevals: 5 fire_catapult_button, 6/7 castlewars_z_up/down ("Move Up/Down"),
+     * 18/19 castlewars_x_up/down ("Move Left/Right"), 10/13 vertical_coord_t/u, 22/25 horizontal_coord_t/u, 17 marker.
+     */
     @Override
     protected void attach() {
-        put(146, "First vertical digit");
-        put(147, "Second vertical digit");
-        put(148, "First horizontal digit");
-        put(149, "Second horizontal digit");
-        put(150, "Increase vertical");
-        put(151, "Decrease vertical");
-        put(152, "Increase horizontal");
-        put(153, "Decrease horizontal");
-        put(158, "Fire");
-        put(161, "Cross");
+        put(10, "First vertical digit");
+        put(13, "Second vertical digit");
+        put(22, "First horizontal digit");
+        put(25, "Second horizontal digit");
+        put(6, "Increase vertical");
+        put(7, "Decrease vertical");
+        put(18, "Increase horizontal");
+        put(19, "Decrease horizontal");
+        put(5, "Fire");
+        put(17, "Cross");
     }
 
     @Override
     public void open(final Player player) {
         player.getInterfaceHandler().sendInterface(this);
+        // The buttons get their op text from castlewars_catapult_init (script 3634) but have no static click mask.
+        for (final String button : new String[] {"Increase vertical", "Decrease vertical", "Increase horizontal", "Decrease horizontal", "Fire"}) {
+            player.getPacketDispatcher().sendComponentSettings(getId(), getComponent(button), -1, -1, com.zenyte.game.util.AccessMask.CLICK_OP1);
+        }
         resetDigits(player);
         refreshDigits(player);
         refreshCross(player);

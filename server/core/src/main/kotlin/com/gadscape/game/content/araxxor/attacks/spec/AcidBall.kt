@@ -79,7 +79,7 @@ class AcidBall(
         repeat(9) {
             val landing = instance.getAcidSplatterLocation(location)
             val delay = World.sendProjectile(location, landing, projectileBlob)
-            World.sendGraphics(Graphics(2923, delay, 0), landing)
+            World.sendGraphics(Graphics(2923, delay * 30, 0), landing) // spotanim delays are client cycles (30 per tick)
             instance.spawnAcidPool(landing)
             this.remove()
         }

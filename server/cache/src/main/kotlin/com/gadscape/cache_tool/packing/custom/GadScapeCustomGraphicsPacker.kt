@@ -7,7 +7,7 @@ import mgi.types.config.SpotAnimationDefinition
 object GadScapeCustomGraphicsPacker {
     @JvmStatic
     fun pack() {
-        assetsBase("assets/osnr/custom_graphics/") {
+        assetsBase("assets/gadscape/custom_graphics/") {
             "models" {
                 TypeParser.packModel(id, bytes)
             }

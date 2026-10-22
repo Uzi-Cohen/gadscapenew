@@ -7,7 +7,7 @@ import mgi.tools.parser.TypeParser
 internal object GadScapeCustomCS2Packer {
 
 	@JvmStatic
-	fun pack() = assets("assets/osnr/custom_cs2/") {
+	fun pack() = assets("assets/gadscape/custom_cs2/") {
 		TypeParser.packClientScript(id, bytes)
 	}
 

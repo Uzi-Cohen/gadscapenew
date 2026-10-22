@@ -1,6 +1,6 @@
 package com.gadscape.game.content.pvm_arena.npc
 
-import com.runespawn.util.weakMutableSetOf
+import com.gadscape.util.weakMutableSetOf
 import com.zenyte.game.world.entity.npc.NPC
 
 /**

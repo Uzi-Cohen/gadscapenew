@@ -313,9 +313,11 @@ public final class Hunllef extends NPC implements CombatScript {
 
         int attackSpeed = getBaseCombatDefinitions().getAttackSpeed();
         if (outgoingHitCount == TYPE_SWAP_OUTGOING_THRESHOLD) {
+            // HUNLLEF_ATTACK_TRANSITION_MAGIC 8754 when switching to magic, _RANGED 8755 when switching to ranged.
+            final Animation transition = new Animation(hitType == HitType.RANGED ? 8754 : 8755);
             WorldTasksManager.schedule(() -> {
                 if (!isDead())
-                    setAnimation(new Animation(8754));
+                    setAnimation(transition);
             }, 1);
             if (hitType == HitType.RANGED) hitType = HitType.MAGIC;
             else if (hitType == HitType.MAGIC) hitType = HitType.RANGED;

@@ -120,25 +120,132 @@ object RsprotOut {
 
     // ------------------------------------------------------------------------------------- misc
 
-    /** RUNCLIENTSCRIPT; rsprot infers the argument types from the values (int, string, long). */
+    /**
+     * RUNCLIENTSCRIPT; rsprot infers the argument types from the values (int, string, long, int array).
+     *
+     * The 241 client binds the arguments positionally per type (the n-th int to int argument n, the n-th
+     * string/array to object argument n, the n-th long to long argument n) into local arrays sized by the
+     * script, so a surplus argument of any type throws before the first instruction. The arguments are
+     * checked against the script's header in the cache the server serves (see [checkClientScript]).
+     *
+     * @return the message, or `null` (dropped) when the script does not exist in the cache.
+     */
     @JvmStatic
-    fun runClientScript(scriptId: Int, arguments: Array<out Any?>?): RunClientScript {
-        if (arguments == null || arguments.isEmpty()) return RunClientScript(scriptId, emptyList())
-        val values = ArrayList<Any>(arguments.size)
-        for (argument in arguments) {
-            values += when (argument) {
-                null -> -1
-                is String -> argument
-                is Long -> argument
-                is Int -> argument
-                is Number -> argument.toInt()
-                is Boolean -> if (argument) 1 else 0
-                is Char -> argument.code
-                is IntArray -> argument
-                else -> argument.toString()
+    fun runClientScript(scriptId: Int, arguments: Array<out Any?>?): RunClientScript? {
+        val values = ArrayList<Any>(arguments?.size ?: 0)
+        if (arguments != null) {
+            for (argument in arguments) {
+                values += when (argument) {
+                    null -> -1
+                    is String -> argument
+                    is Long -> argument
+                    is Int -> argument
+                    is Number -> argument.toInt()
+                    is Boolean -> if (argument) 1 else 0
+                    is Char -> argument.code
+                    is IntArray -> argument
+                    else -> argument.toString()
+                }
             }
         }
+        if (!checkClientScript(scriptId, values)) return null
         return RunClientScript(scriptId, values)
+    }
+
+    /** Script ids already reported by [checkClientScript] (one WARN per script id per boot). */
+    private val reportedScripts: MutableSet<Int> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** A rev-211 style type descriptor ("ii", "isi", ...) some call sites still pass as their first argument. */
+    private val TYPE_DESCRIPTOR = Regex("^[isWXlo]+$")
+
+    /**
+     * Checks [values] (already normalised to Int/String/Long/IntArray) against the int/object/long
+     * argument counts of client script [scriptId] in the served cache. If the counts do not match and the
+     * first value is a pure type-descriptor string (e.g. `"ii"`) whose removal makes them match, the string
+     * is removed from [values]. Any other mismatch is logged (WARN, once per script id, with the caller) and
+     * sent unchanged.
+     *
+     * @return `false` if the packet must not be sent: the script does not exist in the cache, so the client
+     * can only fail on it.
+     */
+    @JvmStatic
+    fun checkClientScript(scriptId: Int, values: MutableList<Any>): Boolean {
+        val definition = clientScriptHeader(scriptId) ?: return true // cache not loaded: nothing to check against
+        if (definition === MISSING_SCRIPT) {
+            report(scriptId, "script $scriptId does not exist in the cache; packet dropped")
+            return false
+        }
+        val wantInts = definition.intArgsCount
+        val wantObjs = definition.stringArgsCount
+        val wantLongs = definition.longArgumentCount
+        if (countsMatch(values, 0, wantInts, wantObjs, wantLongs)) return true
+        val first = values.firstOrNull()
+        if (first is String && TYPE_DESCRIPTOR.matches(first) && countsMatch(values, 1, wantInts, wantObjs, wantLongs)) {
+            values.removeAt(0)
+            return true
+        }
+        var ints = 0
+        var objs = 0
+        var longs = 0
+        for (value in values) {
+            when (value) {
+                is Int -> ints++
+                is Long -> longs++
+                else -> objs++
+            }
+        }
+        val overflow = ints > definition.intArgumentCount || objs > definition.stringArgumentCount ||
+            longs > definition.localLongCount
+        report(scriptId, "script $scriptId takes $wantInts int/$wantObjs object/$wantLongs long arguments but was sent " +
+            "$ints int/$objs object/$longs long " + values.joinToString(prefix = "(", postfix = ")") { describe(it) } +
+            if (overflow) "; the client will throw before the script runs" else "; the missing arguments read as 0/null")
+        return true
+    }
+
+    private fun countsMatch(values: List<Any>, from: Int, ints: Int, objs: Int, longs: Int): Boolean {
+        var i = 0
+        var o = 0
+        var l = 0
+        for (index in from until values.size) {
+            when (values[index]) {
+                is Int -> i++
+                is Long -> l++
+                else -> o++
+            }
+        }
+        return i == ints && o == objs && l == longs
+    }
+
+    private fun describe(value: Any): String = when (value) {
+        is String -> "\"" + value + "\""
+        is Long -> value.toString() + "L"
+        is IntArray -> "int[" + value.size + "]"
+        else -> value.toString()
+    }
+
+    private val MISSING_SCRIPT = mgi.types.clientscript.ClientScriptDefinitions()
+
+    /** The script's header from the served cache, [MISSING_SCRIPT] if it is not in the cache, null if no cache is loaded. */
+    private fun clientScriptHeader(scriptId: Int): mgi.types.clientscript.ClientScriptDefinitions? {
+        return try {
+            mgi.types.clientscript.ClientScriptDefinitions.get(scriptId) ?: MISSING_SCRIPT
+        } catch (e: ArrayIndexOutOfBoundsException) {
+            if (scriptId < 0) null else MISSING_SCRIPT
+        } catch (e: NullPointerException) {
+            null // definitions not loaded (tools, tests)
+        }
+    }
+
+    private fun report(scriptId: Int, problem: String) {
+        if (!reportedScripts.add(scriptId)) return
+        val trace = Throwable("RUNCLIENTSCRIPT $scriptId caller")
+        val caller = trace.stackTrace.firstOrNull { frame ->
+            val cls = frame.className
+            !cls.startsWith("com.gadscape.network.rsprot.") && cls != "com.zenyte.game.packet.out.RunClientScript" &&
+                cls != "com.zenyte.game.packet.PacketDispatcher" && cls != "com.zenyte.game.world.entity.player.Player" &&
+                !cls.startsWith("kotlin.") && !cls.startsWith("java.")
+        }
+        logger.warn("RUNCLIENTSCRIPT {}: {}. Caller: {} (logged once per script)", scriptId, problem, caller, trace)
     }
 
     @JvmStatic

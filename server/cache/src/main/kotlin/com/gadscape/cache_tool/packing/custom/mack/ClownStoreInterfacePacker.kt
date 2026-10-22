@@ -32,7 +32,7 @@ class ClownStoreInterfacePacker(cache: Cache) : ClownInterfacePacker(cache){
 
     override fun pack() {
 
-        assetsBase("assets/osnr/store_interface/") {
+        assetsBase("assets/gadscape/store_interface/") {
             "cs2" {
                 val groupId = name.substringBefore('.').substringBefore('_').toInt()
                 packAsFileInGroup(ArchiveType.CLIENTSCRIPTS, groupId, fileId = 0)

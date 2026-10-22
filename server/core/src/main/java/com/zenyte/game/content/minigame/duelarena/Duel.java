@@ -231,7 +231,8 @@ public final class Duel {
         settings = Utils.getShiftedValue(settings, setting.getBit());
         player.getVarManager().sendVar(286, settings);
         opponent.getVarManager().sendVar(286, settings);
-        opponent.getPacketDispatcher().sendClientScript(968, (2000 << 16) + 106, setting.getBit());
+        // Script 968 is the proc 2d_array_length (int,int)(int) in the 211 and 241 caches, so the old "option changed"
+        // flash call never did anything; not sent any more (CRIT-05). The info text below tells the opponent.
         opponent.sendMessage("Duel Option change - " + setting.getName() + (hasRule(setting) ? " ON!" : " OFF!"));
         opponent.getPacketDispatcher().sendComponentText(SETTINGS_INTERFACE, SETTINGS_INTERFACE_INFO, "<col=ff0000>An option has changed - check before accepting!");
         player.getPacketDispatcher().sendComponentText(SETTINGS_INTERFACE, SETTINGS_INTERFACE_INFO, "");
@@ -780,8 +781,8 @@ public final class Duel {
         final Inventory inventory = player.getInventory();
         container.deposit(player, inventory.getContainer(), inventory.getContainer().getSlotOf(itemId), requestedAmount);
         inventory.refresh();
-        for (int slot : container.getModifiedSlots())
-            opponent.getPacketDispatcher().sendClientScript(1450, (GameInterface.DUEL_STAKING.getId() << 16) | 28, slot, (1999 << 16) + 73);
+        // Script 1450 is the proc serialise_intarray in the 211 and 241 caches (array argument): the old "stake
+        // changed" flash call did nothing on 211 and throws a client script error on 241 (SFP-07), so it is not sent.
         opponent.sendMessage("Duel Stake addition: " + StringFormatUtil.format(container.getAmountOf(itemId) - previousAmount) + " x " + ItemDefinitions.get(itemId).getName() + " added!");
         player.getPacketDispatcher().sendUpdateItemContainer(container, ContainerType.DUEL_STAKE);
         opponent.getPacketDispatcher().sendUpdateItemContainer(container, ContainerType.OPPONENT_STAKE);
@@ -808,7 +809,7 @@ public final class Duel {
         final int slot = container.getSlotOf(itemId);
         player.getInventory().getContainer().deposit(player, container, slot, requestedAmount);
         player.getInventory().refresh();
-        opponent.getPacketDispatcher().sendClientScript(1450, (1999 << 16) + 28, slot, (1999 << 16) + 73);
+        // (script 1450 call removed, see addItem)
         opponent.sendMessage("Duel Stake removal: " + StringFormatUtil.format(previousAmount - container.getAmountOf(itemId)) + " x " + ItemDefinitions.get(itemId).getName() + " removed!");
         player.getPacketDispatcher().sendUpdateItemContainer(container, ContainerType.DUEL_STAKE);
         opponent.getPacketDispatcher().sendUpdateItemContainer(container, ContainerType.OPPONENT_STAKE);

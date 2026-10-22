@@ -44,9 +44,6 @@ object WildernessEventModule {
         Command(PlayerPrivilege.PLAYER, "wevent") { player, _ ->
             messageWhereEventIs(player)
         }
-        Command(PlayerPrivilege.PLAYER, "gano") { player, _ ->
-            player.sendMessage("This command is deprecated in favour of the ::wevent command.")
-        }
         Command(PlayerPrivilege.ADMINISTRATOR, "managewevents") { player, _ ->
             player.dialogue {
                 if (!WildernessEventManager.startedUp()) {

@@ -88,6 +88,12 @@ data class WorldProfile(
     val useWhitelist: Boolean = false,
     val whitelistedUsernames: List<String> = emptyList(),
 
+    /**
+     * Usernames of the GadScape owner account(s): only they can use the owner-only commands (::checkowner,
+     * ::isolemnlysweariamuptonogood, ::magicbuffet, ...). Empty = nobody. See GameConstants.owners().
+     */
+    val owners: List<String> = emptyList(),
+
     val visibility: WorldVisibility = WorldVisibility.DEVELOPER,
     val location: String = "UNITED_STATES_OF_AMERICA",
     val types: List<String> = emptyList(),
@@ -97,6 +103,12 @@ data class WorldProfile(
     val mainDatabase: DatabaseProfile? = null,
 
     val discordToken: String? = null,
+
+    /**
+     * Where Discord embeds load their pictures from (no trailing slash): item icons are <base>/items/<id>.png and the
+     * other pictures <base>/<name>.png. Default: <website>/images/discord. See com.gadscape.tools.discord.DiscordUtil.
+     */
+    val discordImageBase: String? = null,
 
     val website: WebsiteProfile? = null,
 

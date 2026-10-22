@@ -28,7 +28,7 @@ import io.mockk.InternalPlatformDsl.toArray
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap
 
 /**
- * Mack wrote original logic - Kry rewrote in NR terms
+ * Mack wrote original logic - Kry rewrote it for this server
  * @author John J. Woloszyk / Kryeus
  * @date 8.14.2024
  */

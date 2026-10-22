@@ -73,7 +73,13 @@ class TormentedDemon(
     override fun isTolerable(): Boolean = false
 
     override fun validate(id: Int, name: String): Boolean =
-        id == TORRMENTED_DEMON || id == TORRMENTED_DEMON_13600 || id == TORRMENTED_DEMON_13601 || id == TORRMENTED_DEMON_13602
+        // 13602 is GadScape's Smoldering Demon pet (cache/assets/types/npc/custom.toml), not a Tormented Demon.
+        id == TORRMENTED_DEMON || id == TORRMENTED_DEMON_13600 || id == TORRMENTED_DEMON_13601
+
+    override fun onDeath(source: Entity?) {
+        super.onDeath(source)
+        graphics = Graphics(2848) // LUC2_UNDEAD_DEMON_DEATH_SPOT
+    }
 
     override fun spawn(): NPC {
         val npc = super.spawn()

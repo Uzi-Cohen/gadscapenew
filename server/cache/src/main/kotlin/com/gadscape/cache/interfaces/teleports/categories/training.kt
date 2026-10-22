@@ -14,7 +14,8 @@ internal fun TeleportsBuilder.training() = "Training Teleports"(10001) {
     "Yaks"(-10822, 2332, 3803, 0, "")
     "Experiments"(-7893, 3576, 9927, 0, "")
     "Bandit Camp"(-4611, 3174, 3002, 0, "")
-    "Cave Horrors"(-8921, 3746, 9372, 0, "")
+    // 3746,9372 is inside the cave wall (blocked on 211, 241 and 2746 maps): arrive on the open floor next to it.
+    "Cave Horrors"(-8921, 3744, 9373, 0, "")
     "Dagannoths (Waterbirth)"(-13492, 2523, 3740, 0, "")
     "Dagannoths (Lighthouse)"(-13492, 2516, 4625, 0, "")
     "Monkey Guards"(-13450, 2786, 2786, 0, "")

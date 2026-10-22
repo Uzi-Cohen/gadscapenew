@@ -38,7 +38,7 @@ object GadScapeCustomAnimationsPacker {
             rightHandItem = CustomItemId.HOLY_GREAT_WARHAMMER
             pack()
         }
-        assetsBase("assets/osnr/custom_animations/armadyl_godbow_special/") {
+        assetsBase("assets/gadscape/custom_animations/armadyl_godbow_special/") {
             "sequence_definitions" {
                 AnimationDefinitions(id, mgiBuffer).pack()
             }

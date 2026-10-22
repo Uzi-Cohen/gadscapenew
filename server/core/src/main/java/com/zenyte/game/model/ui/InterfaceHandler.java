@@ -242,10 +242,18 @@ public class InterfaceHandler {
 	}
 
 	public void closeInterfaceSpecific(final int paneComponent, final PaneType pane) {
+		closeInterfaceSpecific(paneComponent, pane, true);
+	}
+
+	/**
+	 * Closes whatever is open at pane:paneComponent; with closeEvent false the player's close-interfaces event is
+	 * left alone (for sub-interfaces closed as part of another screen, e.g. the fullscreen world map's 165:37).
+	 */
+	public void closeInterfaceSpecific(final int paneComponent, final PaneType pane, final boolean closeEvent) {
 		final boolean contains = visible.containsKey(pane.getId() << 16 | paneComponent);
 		final boolean dialogue = pane == PaneType.CHATBOX;
 		final int hash = (pane.getId() << 16) | paneComponent;
-		closeInterface(hash, true, true, contains, dialogue, null);
+		closeInterface(hash, true, closeEvent, contains, dialogue, null);
 	}
 
 	public void sendInterface(final GameInterface gameInterface) {
@@ -264,6 +272,18 @@ public class InterfaceHandler {
 	public void sendInterface(final InterfacePosition position, final int id, final boolean walkable) {
 		if (!ComponentDefinitions.containsInterface(id)) {
 			return;
+		}
+		if (id == GameInterface.TOA_REWARD_POTENTIAL.getId()) {
+			// 289 only lives inside the ToA party management screen (774:61); opened anywhere else it would be an
+			// invisible sub-interface of a closed parent.
+			if (!isVisible(GameInterface.TOA_PARTY_MANAGEMENT.getId())) {
+				player.sendMessage("The reward potential can only be viewed from the Tombs of Amascut party screen.");
+				return;
+			}
+			if (position != InterfacePosition.TOA_MANAGEMENT) {
+				sendInterface(InterfacePosition.TOA_MANAGEMENT, id, walkable);
+				return;
+			}
 		}
 		if (position.equals(InterfacePosition.DIALOGUE)) {
 			closeInterface(InterfacePosition.CENTRAL);
@@ -384,12 +404,21 @@ public class InterfaceHandler {
 	}
 
 	public void closeInterface(final int interfaceId) {
-		final int componentId = getInterfaceComponent(interfaceId);
-		final InterfacePosition position = InterfacePosition.getPosition(componentId, pane);
-		if (position == null) {
+		final Integer hash = visible.inverse().get(interfaceId);
+		if (hash == null) {
 			return;
 		}
-		closeInterface(position, true, true, false);
+		final int paneId = hash >>> 16;
+		final int componentId = hash & 65535;
+		final PaneType hashPane = paneId == PaneType.CHATBOX.getId() ? PaneType.CHATBOX : pane;
+		final InterfacePosition position = hashPane != null && paneId == hashPane.getId()
+				? InterfacePosition.getPosition(componentId, hashPane) : null;
+		if (position != null) {
+			closeInterface(position, true, true, false);
+			return;
+		}
+		// Not at a known position of the current pane (e.g. opened in another pane): close exactly where it is.
+		closeInterface(hash, true, false, true, paneId == PaneType.CHATBOX.getId(), null);
 	}
 
 	public void closeInterfaces() {

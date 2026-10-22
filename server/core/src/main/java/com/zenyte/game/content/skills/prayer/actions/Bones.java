@@ -144,7 +144,10 @@ public enum Bones {
 		if(player.getBoonManager().hasBoon(BoneCruncher.class) && BoneCruncher.roll()) {
 			player.sendMessage("Your Bone Cruncher boon has saved your resources");
 		} else {
-			player.getInventory().deleteItem(slot, item);
+			// Zealot's robes (sets-prayers): 1.25% per piece that the bones are not used up.
+			if (!com.zenyte.game.content.sets.SetEffects.zealotSavesRemains(player)) {
+				player.getInventory().deleteItem(slot, item);
+			}
 			player.sendMessage("You bury the " + bone.name + ".");
 		}
 		player.sendSound(2738);

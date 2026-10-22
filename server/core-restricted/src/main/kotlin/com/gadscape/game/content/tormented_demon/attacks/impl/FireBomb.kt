@@ -9,6 +9,7 @@ import com.zenyte.game.world.World
 import com.zenyte.game.world.entity.AbstractEntity
 import com.zenyte.game.world.entity.Entity
 import com.zenyte.game.world.entity.Location
+import com.zenyte.game.world.entity.masks.Graphics
 import com.zenyte.game.world.entity.npc.combatdefs.AttackType
 import com.zenyte.game.world.entity.player.Player
 import com.zenyte.game.world.entity.player.action.combat.CombatUtilities
@@ -47,10 +48,12 @@ class FireBomb : Attack {
         World.sendProjectile(demon.location, secondBombLocation, fireBombProjectile)
         // Schedule the hits
         schedule(4) {
+            World.sendGraphics(Graphics(2856), targetLocation) // LUC2_UNDEAD_DEMON_FIREBALL_LARGE_IMPACT
             if (target.location == targetLocation)
                 target.scheduleHit(demon, demon hit target damage Random.nextInt(40, 45), 0)
         }
         schedule(5) {
+            World.sendGraphics(Graphics(2856), secondBombLocation)
             if (target.location == secondBombLocation)
                 target.scheduleHit(demon, demon hit target damage Random.nextInt(40, 45), 0)
         }
@@ -59,8 +62,8 @@ class FireBomb : Attack {
     }
 
     private fun getSecondBombLocation(location: Location?): Location {
-        val xOffset = Random.nextInt(-1, 1)
-        val yOffset = Random.nextInt(-1, 1)
+        val xOffset = Random.nextInt(-1, 2)
+        val yOffset = Random.nextInt(-1, 2)
         val tempLocation = Location(location?.offset(Pair(xOffset, yOffset)))
         return tempLocation
     }

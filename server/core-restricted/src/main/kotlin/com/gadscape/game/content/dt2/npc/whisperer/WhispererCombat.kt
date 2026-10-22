@@ -76,24 +76,16 @@ data class WhispererCombat(
         val whisperer = this
         WorldTasksManager.schedule(object : TickTask() {
             override fun run() {
-                when (ticks) {
-                    0 -> {
-                        whisperer seq 10245
-                        attacks[ticks].invoke(whisperer, target)
-                    }
-                    1 -> {
-                        whisperer seq 10246
-                        attacks[ticks].invoke(whisperer, target)
-                    }
-                    2 -> {
-                        whisperer seq 10245
-                        attacks[ticks].invoke(whisperer, target)
-                    }
-                    3 -> {
-                        whisperer seq 10246
-                        attacks[ticks].invoke(whisperer, target)
-                        stop()
-                    }
+                if (ticks < attacks.size) {
+                    // The cast animation follows the style of each orb: NPC_WHISPERER_01_ATTACK_RANGED_05/06
+                    // (10239/10240) for ranged, ATTACK_MAGIC_05/06 (10245/10246) otherwise, alternating hands.
+                    val attack = attacks[ticks]
+                    val ranged = attack is com.gadscape.game.content.dt2.npc.whisperer.attacks.basic.impl.RangedAttack
+                    whisperer seq (if (ranged) 10239 else 10245) + (ticks and 1)
+                    attack.invoke(whisperer, target)
+                }
+                if (ticks >= 3 || ticks >= attacks.size - 1) {
+                    stop()
                 }
                 ticks++
             }

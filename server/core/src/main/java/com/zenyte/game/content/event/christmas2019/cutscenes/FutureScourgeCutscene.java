@@ -51,7 +51,7 @@ public class FutureScourgeCutscene extends Cutscene {
     public void build() {
         final String impName = ChristmasUtils.getImpName(player);
         addActions(0, player::lock, () -> closedTabs.forEach(tab -> player.getInterfaceHandler().closeInterface(tab)), () -> player.getInterfaceHandler().openGameTab(GameTab.FRIENDS_TAB));
-        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(10700, 1));
+        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1));
         addActions(4, new CameraPositionAction(player, instance.getLocation(2471, 5407, 1), 350, -128, 0), new CameraLookAction(player, instance.getLocation(2471, 5390, 1), 200, -128, 0), () -> {
             dummy = new NPC(24, instance.getLocation(2470, 5398, 1), Direction.NORTH, 0);
             dummy.spawn();
@@ -189,7 +189,7 @@ public class FutureScourgeCutscene extends Cutscene {
         }));
         final FadeScreen fs = new FadeScreen(player);
         addActions(331, fs::fade);
-        addActions(334, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2098, 5405, 0)), () -> player.getPacketDispatcher().sendClientScript(10700, 0));
+        addActions(334, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(2098, 5405, 0)), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 0));
         addActions(335, fs::unfade);
     }
 

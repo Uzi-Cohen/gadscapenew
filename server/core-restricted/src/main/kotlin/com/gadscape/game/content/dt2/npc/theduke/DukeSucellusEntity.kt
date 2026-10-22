@@ -21,12 +21,17 @@ import com.zenyte.game.world.entity.npc.combat.CombatScript
 import com.zenyte.game.world.entity.player.Player
 
 /**
- * Mack wrote original logic - Kry rewrote in NR terms
+ * Mack wrote original logic - Kry rewrote it for this server
  * @author John J. Woloszyk / Kryeus
  * @date 8.14.2024
  */
 class DukeSucellusEntity(val arena: DukeSucellusInstance)
     : NPC(12166, arena.getLocation(3036, 6452), Direction.SOUTH, 0), CombatScript {
+
+    private companion object {
+        /** Ticks the Duke lies in his DUKE_SUCELLUS_DEAD form before the reset animation. */
+        const val COLLAPSED_TICKS = 6
+    }
 
     val difficulty: DT2BossDifficulty = arena.difficulty
     var specialAttackActive: Boolean = false
@@ -88,21 +93,48 @@ class DukeSucellusEntity(val arena: DukeSucellusInstance)
         if (slumbering) {
             return false
         }
+        if (collapsed) {
+            return true
+        }
 
         return super.isDead()
     }
 
     override fun onFinish(source: Entity?) {
+        if (isFinished || collapsed) {
+            return
+        }
+        try {
+            val p = source as Player
+            (source as? Player)?.let { sendNotifications(it) }
+            drop(p.location)
+        } catch (_: Exception) { }
+        arena.player.hpHud.close()
+        // OSRS: after the death animation the Duke lies collapsed (DUKE_SUCELLUS_DEAD, stand = 10183 DEATH_SINGLEFRAME)
+        // before he falls back asleep (10182 DEATH_RESET).
+        collapsed = true
+        setTransformation(if (difficulty == DT2BossDifficulty.AWAKENED) 12196 else 12192)
+        WorldTasksManager.schedule(object : TickTask() {
+            override fun run() {
+                when (ticks++) {
+                    COLLAPSED_TICKS -> setAnimation(Animation(10182))
+                    COLLAPSED_TICKS + 2 -> {
+                        stop()
+                        collapsed = false
+                        backToSleep()
+                    }
+                }
+            }
+        }, 0, 0)
+    }
+
+    private var collapsed = false
+
+    private fun backToSleep() {
         if (isFinished) {
             return
         }
-
         try {
-            try {
-                val p = source as Player
-                (source as? Player)?.let { sendNotifications(it) }
-                drop(p.location)
-            } catch (_: Exception) { }
             isFinished = true
             routeEvent = null
             interactingWith = null
@@ -122,7 +154,7 @@ class DukeSucellusEntity(val arena: DukeSucellusInstance)
     }
 
     override fun isAttackable(e: Entity): Boolean {
-        return !slumbering
+        return !slumbering && !collapsed
     }
 
     private fun Location.safeFromMage() : Boolean {
@@ -203,7 +235,7 @@ class DukeSucellusEntity(val arena: DukeSucellusInstance)
     }
 
     private fun performStandardMagic(player: Player) {
-        setAnimation(Animation(10176))
+        setAnimation(Animation(10177)) // NPC_DUKE_SUCELLUS01_MAGIC_ATTACK_01 (10176 is the melee swing)
         val delay = World.sendProjectile(this, player, magicProjectile)
         player.scheduleHit(this, difficulty.getMagicHit(this, player), delay, false)
     }
@@ -222,7 +254,7 @@ class DukeSucellusEntity(val arena: DukeSucellusInstance)
         return when(this) {
             DT2BossDifficulty.NORMAL -> 12191
             DT2BossDifficulty.AWAKENED -> 12195
-            DT2BossDifficulty.QUEST -> 12190
+            DT2BossDifficulty.QUEST -> 12191 // 12190 is a Beaver pet (SKILLPET_WC_ARCTIC)
         }
     }
 

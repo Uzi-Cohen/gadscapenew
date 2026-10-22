@@ -40,120 +40,47 @@ dependencies {
     api(libs.runelite.cache)
 }
 
-val cache225Name = "cache-225.zip"
-val cache225URL = "https://files.jire.org/nr211/cache-225.zip"
+/*
+ * Source caches for the old 211 cache build (mgi.tools.parser.TypeParser). The 241 server reads its cache with
+ * -Dgadscape.cache.dir and needs none of them. They are only downloaded when a host is given:
+ *   ./gradlew :cache:build -Pgadscape.sourceCacheUrl=https://<host>/<folder>
+ * (the zips/keys below are fetched from that folder); otherwise put them in cache/data/ by hand.
+ */
+val sourceCacheUrl: String? = (findProperty("gadscape.sourceCacheUrl") as String?)?.trimEnd('/')?.takeIf { it.isNotBlank() }
 
-val keys225Name = "cache-225-keys.json"
-val keys225URL = "https://files.jire.org/nr211/cache-225-keys.json"
+fun registerSourceCacheDownload(taskName: String, label: String, vararg fileNames: String) =
+    tasks.register(taskName) {
+        group = "_gs_data"
 
-val download225Cache = tasks.register("download225Cache") {
-    group = "_nr_data"
-
-    doLast {
-        val dataDirectory = projectDir.toPath().resolve("data")
-
-        val cache = dataDirectory.resolve(cache225Name)
-        if (Files.notExists(cache)) {
-            logger.lifecycle("Cache (225) does not exist. Downloading...")
-            Files.createDirectories(dataDirectory)
-            URI.create(cache225URL)
-                .toURL()
-                .openStream()
-                .use { inputStream ->
-                    Files.copy(
-                        inputStream,
-                        cache,
-                        StandardCopyOption.REPLACE_EXISTING
-                    )
+        doLast {
+            val dataDirectory = projectDir.toPath().resolve("data")
+            for (fileName in fileNames) {
+                val target = dataDirectory.resolve(fileName)
+                if (Files.exists(target)) {
+                    logger.lifecycle("{} ({}) already exists at: {}", label, fileName, target.absolutePathString())
+                    continue
                 }
-            logger.lifecycle("Cache (225) download complete: {}", cache.absolutePathString())
-        } else {
-            logger.lifecycle("Cache (225) already exists at: {}", cache.absolutePathString())
-        }
-
-        val keys = dataDirectory.resolve(keys225Name)
-        if (Files.notExists(keys)) {
-            logger.lifecycle("Keys (225) does not exist. Downloading...")
-            Files.createDirectories(dataDirectory)
-            URI.create(keys225URL)
-                .toURL()
-                .openStream()
-                .use { inputStream ->
-                    Files.copy(
-                        inputStream,
-                        keys,
-                        StandardCopyOption.REPLACE_EXISTING
-                    )
+                if (sourceCacheUrl == null) {
+                    logger.lifecycle("{} ({}) is missing; set -Pgadscape.sourceCacheUrl or copy it to {}", label, fileName, dataDirectory)
+                    continue
                 }
-            logger.lifecycle("Keys (225) download complete: {}", keys.absolutePathString())
-        } else {
-            logger.lifecycle("Keys (225) already exists at: {}", keys.absolutePathString())
+                logger.lifecycle("{} ({}) does not exist. Downloading...", label, fileName)
+                Files.createDirectories(dataDirectory)
+                URI.create("$sourceCacheUrl/$fileName")
+                    .toURL()
+                    .openStream()
+                    .use { inputStream -> Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING) }
+                logger.lifecycle("{} ({}) download complete: {}", label, fileName, target.absolutePathString())
+            }
         }
     }
-}
 
-val cache219Name = "cache-219.zip"
-val cache219URL = "https://files.jire.org/nr211/cache-219.zip"
-
-val download219Cache = tasks.register("download219Cache") {
-    group = "_nr_data"
-
-    doLast {
-        val dataDirectory = projectDir.toPath().resolve("data")
-
-        val cache = dataDirectory.resolve(cache219Name)
-        if (Files.notExists(cache)) {
-            logger.lifecycle("Cache (219) does not exist. Downloading...")
-            Files.createDirectories(dataDirectory)
-            URI.create(cache219URL)
-                .toURL()
-                .openStream()
-                .use { inputStream ->
-                    Files.copy(
-                        inputStream,
-                        cache,
-                        StandardCopyOption.REPLACE_EXISTING
-                    )
-                }
-            logger.lifecycle("Cache (219) download complete: {}", cache.absolutePathString())
-        } else {
-            logger.lifecycle("Cache (219) already exists at: {}", cache.absolutePathString())
-        }
-    }
-}
-
-val cacheRuneSpawnName = "cache-runespawn.zip"
-val cacheRuneSpawnURL = "https://files.jire.org/nr211/cache-runespawn.zip"
-
-val downloadRuneSpawnCache = tasks.register("downloadRuneSpawnCache") {
-    group = "_nr_data"
-
-    doLast {
-        val dataDirectory = projectDir.toPath().resolve("data")
-
-        val cache = dataDirectory.resolve(cacheRuneSpawnName)
-        if (Files.notExists(cache)) {
-            logger.lifecycle("Cache (RuneSpawn) does not exist. Downloading...")
-            Files.createDirectories(dataDirectory)
-            URI.create(cacheRuneSpawnURL)
-                .toURL()
-                .openStream()
-                .use { inputStream ->
-                    Files.copy(
-                        inputStream,
-                        cache,
-                        StandardCopyOption.REPLACE_EXISTING
-                    )
-                }
-            logger.lifecycle("Cache (RuneSpawn) download complete: {}", cache.absolutePathString())
-        } else {
-            logger.lifecycle("Cache (RuneSpawn) already exists at: {}", cache.absolutePathString())
-        }
-    }
-}
+val download225Cache = registerSourceCacheDownload("download225Cache", "Cache (225)", "cache-225.zip", "cache-225-keys.json")
+val download219Cache = registerSourceCacheDownload("download219Cache", "Cache (219)", "cache-219.zip")
+val downloadLegacyContentCache = registerSourceCacheDownload("downloadLegacyContentCache", "Cache (legacy content)", "cache-legacy-content.zip")
 
 tasks.named("build") {
-    dependsOn(download225Cache, download219Cache, downloadRuneSpawnCache)
+    dependsOn(download225Cache, download219Cache, downloadLegacyContentCache)
 }
 
 /*

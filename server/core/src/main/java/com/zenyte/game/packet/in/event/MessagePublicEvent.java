@@ -33,6 +33,7 @@ public class MessagePublicEvent implements ClientProtEvent {
     private final int effect;
     private final String message;
     private final int clanType;
+    private final byte[] pattern;
 
     @Override
     public void handle(Player player) {
@@ -80,7 +81,7 @@ public class MessagePublicEvent implements ClientProtEvent {
             return;
         }
         player.getUpdateFlags().flag(UpdateFlag.CHAT);
-        player.getChatMessage().set(message, effects, type == 1);
+        player.getChatMessage().set(message, effects, type == 1, pattern);
         GameLogger.log(Level.INFO, () -> new GameLogMessage.Message.Public(
                 Instant.Companion.now(),
                 player.getUsername(),
@@ -99,10 +100,16 @@ public class MessagePublicEvent implements ClientProtEvent {
     }
 
     public MessagePublicEvent(int type, int colour, int effect, String message, int clanType) {
+        this(type, colour, effect, message, clanType, null);
+    }
+
+    /** @param pattern the rev-241 colour pattern for colours 13-20 (colour - 12 colour codes), or null. */
+    public MessagePublicEvent(int type, int colour, int effect, String message, int clanType, byte[] pattern) {
         this.type = type;
         this.colour = colour;
         this.effect = effect;
         this.message = message;
         this.clanType = clanType;
+        this.pattern = pattern;
     }
 }

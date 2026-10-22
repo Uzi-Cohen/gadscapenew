@@ -2,7 +2,7 @@ package com.gadscape.game.content.tournament
 
 import com.gadscape.game.content.tournament.area.TournamentFightArea
 import com.gadscape.game.util.WorldTimer
-import com.runespawn.util.weakReference
+import com.gadscape.util.weakReference
 import com.zenyte.game.world.entity.player.Player
 import java.util.*
 import kotlin.time.Duration.Companion.minutes

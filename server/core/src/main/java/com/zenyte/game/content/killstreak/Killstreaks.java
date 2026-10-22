@@ -15,16 +15,24 @@ import org.apache.commons.lang3.StringUtils;
 public class Killstreaks {
     public static final int BLOODMONEY_ITEM_ID = 13_307;
 
+    /**
+     * Whether a victim died inside the active wilderness hot zone (double blood money). Set by core-restricted's
+     * WildernessKillStreakModule at launch; the double used to exist only in that module's unused copy of this code.
+     */
+    public static volatile java.util.function.Predicate<Player> hotZone = player -> false;
+
     public static void handlePlayerKill(Player attacker, Player victim) {
         if(!WildernessArea.isWithinWilderness(victim.getLocation().getX(), victim.getLocation().getY()))
             return;
-        if(attacker.getIP().equalsIgnoreCase(victim.getIP()))
+        // Anti-farm / anti-rag: same IP or client UUID, recent kill of the same victim, low risk, new account.
+        if (!PvpKillValidator.validate(attacker, victim, "blood money"))
             return;
 
-        if (attacker.getKillstreakLog().entryExists(victim)) {
-            attacker.sendMessage("You recently killed " + victim.getName() + " and therefore did not receive any rewards for that kill..</col>");
-            return;
-        }
+        // PvP hiscores (HiscoresCategory.PVP) and the wilderness K/D varps only count validated kills (PVP-21).
+        attacker.getAttributes().put("WildernessKills", attacker.getNumericAttribute("WildernessKills").intValue() + 1);
+        victim.getAttributes().put("WildernessDeaths", victim.getNumericAttribute("WildernessDeaths").intValue() + 1);
+        refreshKDR(attacker);
+        refreshKDR(victim);
 
         int totalBloodmoney = getTotalBloodmoneyForKill(attacker, victim);
         if(World.hasBoost(XamphurBoost.BONUS_BLOOD_MONEY))
@@ -33,6 +41,8 @@ public class Killstreaks {
             attacker.getVariables().setBloodMoneyBoosterLeft(attacker.getVariables().getBloodMoneyBoosterLeft() - 1);
             totalBloodmoney *= 1.25;
         }
+        if (hotZone.test(victim))
+            totalBloodmoney *= 2;
         if(World.hasBoost(WellPerk.DOUBLE_BLOOD_MONEY))
             totalBloodmoney *= 2;
         int attackerCurrentStreak = PlayerAttributesKt.getPvpKillStreak(attacker);
@@ -52,6 +62,11 @@ public class Killstreaks {
 
         resetKillstreak(victim, true);
         announceKillstreak(attacker, attackerCurrentStreak + 1);
+    }
+
+    private static void refreshKDR(final Player player) {
+        player.getVarManager().sendVar(1102, player.getNumericAttribute("WildernessDeaths").intValue());
+        player.getVarManager().sendVar(1103, player.getNumericAttribute("WildernessKills").intValue());
     }
 
     /**

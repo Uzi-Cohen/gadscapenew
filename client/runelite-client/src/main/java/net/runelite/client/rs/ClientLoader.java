@@ -162,7 +162,7 @@ public class ClientLoader implements Supplier<Applet>
 
 				SplashScreen.stage(.40, null, "Loading client");
 
-				File oprsInjected = new File(System.getProperty("user.home") + "/.osnr/cache/injected-client.jar");
+				File oprsInjected = new File(System.getProperty("user.home") + "/.gadscape/cache/injected-client.jar");
 				if (updateCheckMode == AUTO)
 				{
 					writeInjectedClient(oprsInjected);

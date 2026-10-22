@@ -35,7 +35,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Starts the GadScape build 241 TEST client: stock RuneLite 1.13.3 with the patched injected-client.
+ * Starts the GadScape client: RuneLite 1.13.3 with the patched injected-client, RuneLite's client jar branded as
+ * GadScape and GadScape's own plugins (gadscape-plugins.jar).
+ *
+ * <p>The build channel ({@link Channel}: release or test) is baked into the launcher jar by build.sh
+ * (channel.properties): window title, world name, the home folder and the default server differ, so a tester can
+ * have both installed. A launcher without that file behaves as the test channel.
  *
  * <p>What it does, in order:
  * <ol>
@@ -56,13 +61,15 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>Writes RuneLite's runtime config to a local file (runelite.rtconf): RuneLite's live config without the
  *   lists that block logins on old clients or old Plugin Hub plugins ("outdatedClientVersions",
  *   "outdatedPluginVersions") and the outage fields, plus props: Discord off (it registers a URL handler outside the
- *   test home) and the API base above.</li>
+ *   client's home), the window title and the API base above.</li>
+ *   <li>Writes GadScape's default RuneLite settings ({@link Defaults}: plugins that cannot work on a private server
+ *   off, GPU on), once per profile; --no-defaults skips it.</li>
  *   <li>Runs net.runelite.client.RuneLite.main in this same JVM.</li>
  * </ol>
  *
- * <p>Options: --host H (game server host, default 127.0.0.1, or the first line of --host-file F), --world N (default 1),
- * --session S (jav_config param 9), --home DIR, --jav-config URL, --http-port P, --serve-only; anything after "--" goes
- * to RuneLite as is (for example -- --safe-mode --debug).
+ * <p>Options: --host H (game server host, default: the channel's server, or the first line of --host-file F),
+ * --world N (default 1), --session S (jav_config param 9), --home DIR, --jav-config URL, --http-port P, --serve-only,
+ * --no-defaults; anything after "--" goes to RuneLite as is (for example -- --safe-mode --debug).
  */
 public final class Launcher
 {
@@ -70,8 +77,12 @@ public final class Launcher
 	/** Jagex's param 9 as of build 241; the old GadScape server checked for this same value. */
 	static final String DEFAULT_SESSION = "ElZAIrq5NpKN6D3mDdihco3oPeYN2KFy2DCquj7JMmECPmLrDP3Bnw";
 	static final String MARKER = "gadscape-patch.properties";
+	/** Written by client241/patcher brand into RuneLite's client jar. */
+	static final String CLIENT_MARKER = "gadscape-client-patch.properties";
 	/** Name RuneLite fetches jav_config from; routed to this launcher's own HTTP server, never resolved in DNS. */
 	static final String JAV_HOST = "jav-config.gadscape-test.runescape.com";
+	/** This build's channel (release or test), from channel.properties in the launcher jar. */
+	static final Channel CHANNEL = Channel.load();
 	/**
 	 * Hosts (and their subdomains) that only receive gameplay data: requests to them are refused. OSRS Wiki
 	 * crowdsourcing (on by default in RuneLite) and the XP updater's trackers.
@@ -97,7 +108,8 @@ public final class Launcher
 
 	static void run(String[] args) throws Exception
 	{
-		String host = null, hostFile = null, session = DEFAULT_SESSION, home = null, javConfig = null, activity = "GadScape 241 Test";
+		String host = null, hostFile = null, session = DEFAULT_SESSION, home = null, javConfig = null, activity = CHANNEL.activity;
+		boolean defaults = true;
 		int world = 1, httpPort = 0;
 		boolean serveOnly = false;
 		List<String> rlArgs = new ArrayList<>();
@@ -115,6 +127,7 @@ public final class Launcher
 				case "--jav-config": javConfig = value(args, ++i, a); break;
 				case "--http-port": httpPort = number(args, ++i, a); break;
 				case "--serve-only": serveOnly = true; break;
+				case "--no-defaults": defaults = false; break;
 				case "--":
 					for (int j = i + 1; j < args.length; j++)
 					{
@@ -133,7 +146,7 @@ public final class Launcher
 		host = host == null ? "" : normalizeHost(host);
 		if (host.isEmpty())
 		{
-			host = "127.0.0.1";
+			host = CHANNEL.defaultHost;
 		}
 		if (!host.matches("[A-Za-z0-9.\\-]+"))
 		{
@@ -145,13 +158,14 @@ public final class Launcher
 		Path homeDir = Paths.get(home != null ? home : defaultHome()).toAbsolutePath();
 		Files.createDirectories(homeDir);
 		System.setProperty("user.home", homeDir.toString());
-		log("home folder " + homeDir + " (RuneLite settings: " + homeDir.resolve(".runelite") + ", game cache: "
+		log(CHANNEL.title + " (" + CHANNEL.name + " build); home folder " + homeDir + " (RuneLite settings: " + homeDir.resolve(".runelite") + ", game cache: "
 			+ homeDir.resolve(".runelite").resolve("jagexcache") + "; your normal RuneLite folders are not used)");
 
-		// 2. the patched injected-client must be the only one on the classpath
+		// 2. the patched injected-client must be the only one on the classpath, and RuneLite's client jar only once
 		if (!serveOnly)
 		{
 			checkInjectedClient();
+			checkRuneLiteClient();
 		}
 
 		// 3. jav_config + world list, served on 127.0.0.1
@@ -161,7 +175,7 @@ public final class Launcher
 		byte[] jav;
 		if (javConfig == null)
 		{
-			jav = javConfig(host, world, session, base + "/worldlist.ws").getBytes(StandardCharsets.ISO_8859_1);
+			jav = javConfig(host, world, session, base + "/worldlist.ws", CHANNEL).getBytes(StandardCharsets.ISO_8859_1);
 			byte[] worlds = worldList(world, host, activity);
 			server.createContext("/worldlist.ws", ex -> reply(ex, "application/octet-stream", worlds));
 			log("jav_config: world " + world + " at " + host + ":" + GAME_PORT + ", world list " + base + "/worldlist.ws");
@@ -191,7 +205,7 @@ public final class Launcher
 		// 5. runtime config without the kill switches, Discord off, API writes kept local
 		Path rtconf = homeDir.resolve("gadscape").resolve("runelite-runtime-config.json");
 		Files.createDirectories(rtconf.getParent());
-		Files.write(rtconf, runtimeConfig(realApi != null ? base + API_PATH : null).getBytes(StandardCharsets.UTF_8));
+		Files.write(rtconf, runtimeConfig(realApi != null ? base + API_PATH : null, CHANNEL.title).getBytes(StandardCharsets.UTF_8));
 		System.setProperty("runelite.rtconf", rtconf.toString());
 		if (realApi != null)
 		{
@@ -201,6 +215,18 @@ public final class Launcher
 		{
 			log("RuneLite is not on the classpath, RuneLite API filter not set up");
 		}
+		// 6. GadScape's default RuneLite settings (plugins that cannot work on a private server off, GPU on)
+		if (defaults)
+		{
+			try
+			{
+				log("RuneLite settings: " + Defaults.apply(homeDir.resolve(".runelite")));
+			}
+			catch (IOException | RuntimeException e)
+			{
+				log("WARNING: could not write GadScape's default RuneLite settings: " + e);
+			}
+		}
 		if (serveOnly)
 		{
 			log("--serve-only: not starting RuneLite; Ctrl+C to stop");
@@ -208,7 +234,7 @@ public final class Launcher
 			return;
 		}
 
-		// 6. RuneLite, in this JVM
+		// 7. RuneLite, in this JVM
 		List<String> a = new ArrayList<>();
 		a.add("--jav_config");
 		a.add(javUrl);
@@ -282,7 +308,7 @@ public final class Launcher
 				{
 					if (reported.add(h.toLowerCase(Locale.ROOT)))
 					{
-						log("blocked " + h + " (it would get gameplay from this private test server)");
+						log("blocked " + h + " (it would get gameplay from this private server)");
 					}
 					return Collections.singletonList(deadEnd);
 				}
@@ -372,8 +398,8 @@ public final class Launcher
 		}
 		else
 		{
-			log("api " + method + " " + rest + " refused: the test client does not send game data to RuneLite's API");
-			reply(ex, 403, "text/plain", "refused by the GadScape test launcher\n".getBytes(StandardCharsets.US_ASCII));
+			log("api " + method + " " + rest + " refused: the GadScape client does not send game data to RuneLite's API");
+			reply(ex, 403, "text/plain", "refused by the GadScape launcher\n".getBytes(StandardCharsets.US_ASCII));
 		}
 	}
 
@@ -414,9 +440,9 @@ public final class Launcher
 		String local = System.getenv("LOCALAPPDATA");
 		if (os.contains("win") && local != null)
 		{
-			return Paths.get(local, "GadScape241Test", "home").toString();
+			return Paths.get(local, CHANNEL.windowsDir, "home").toString();
 		}
-		return Paths.get(System.getProperty("user.home"), ".gadscape-241-test", "home").toString();
+		return Paths.get(System.getProperty("user.home"), CHANNEL.unixDir, "home").toString();
 	}
 
 	/**
@@ -519,10 +545,40 @@ public final class Launcher
 	}
 
 	/**
-	 * RuneLite's live runtime config minus the fields that could stop this pinned test client, plus props that
-	 * RuneLite applies over its runelite.properties (RuneLiteModule): Discord off and, if given, the API base.
+	 * RuneLite's client jar must be on the classpath once (two copies of the same classes would mix), and should be
+	 * the one client241/patcher branded (GadScape icons, splash, login screen hook). A stock one still runs, with
+	 * RuneLite's look and the game's own login screen, so that is only a warning.
 	 */
-	static String runtimeConfig(String apiBase)
+	static void checkRuneLiteClient() throws IOException
+	{
+		ClassLoader cl = Launcher.class.getClassLoader();
+		List<URL> clients = Collections.list(cl.getResources("net/runelite/client/RuneLite.class"));
+		if (clients.size() > 1)
+		{
+			throw new IllegalStateException("RuneLite's client jar is on the classpath " + clients.size() + " times: " + clients
+				+ " (keep only client-1.13.3-gadscape.jar)");
+		}
+		Enumeration<URL> markers = cl.getResources(CLIENT_MARKER);
+		if (!markers.hasMoreElements())
+		{
+			log("WARNING: RuneLite's client jar is not branded by client241/patcher (no " + CLIENT_MARKER
+				+ "): RuneLite icons and the game's own login screen");
+			return;
+		}
+		Properties p = new Properties();
+		try (InputStream in = markers.nextElement().openStream())
+		{
+			p.load(in);
+		}
+		log("branded RuneLite client ok: title " + p.getProperty("title") + ", accent " + p.getProperty("accent"));
+	}
+
+	/**
+	 * RuneLite's live runtime config minus the fields that could stop this pinned client, plus props that
+	 * RuneLite applies over its runelite.properties (RuneLiteModule): Discord off, the window title and, if given, the
+	 * API base.
+	 */
+	static String runtimeConfig(String apiBase, String title)
 	{
 		String body = null;
 		try
@@ -530,7 +586,7 @@ public final class Launcher
 			HttpURLConnection c = (HttpURLConnection) new URL("https://static.runelite.net/config.json").openConnection();
 			c.setConnectTimeout(5000);
 			c.setReadTimeout(5000);
-			c.setRequestProperty("User-Agent", "GadScape241TestLauncher");
+			c.setRequestProperty("User-Agent", "GadScapeLauncher");
 			if (c.getResponseCode() == 200)
 			{
 				try (InputStream in = c.getInputStream())
@@ -559,9 +615,12 @@ public final class Launcher
 			o.remove(k);
 		}
 		JsonObject props = o.has("props") && o.get("props").isJsonObject() ? o.getAsJsonObject("props") : new JsonObject();
-		// Discord rich presence registers a discord-<id> URL handler outside the test home (Windows registry,
-		// ~/.local/share/applications) that would replace the one of the tester's normal RuneLite
+		// Discord rich presence registers a discord-<id> URL handler outside the client's home (Windows registry,
+		// ~/.local/share/applications) that would replace the one of the player's normal RuneLite
 		props.addProperty("runelite.discord.enable", "false");
+		// window title (ClientUI's @Named("runelite.title")); the branded client jar has "GadScape" built in, this also
+		// marks test builds
+		props.addProperty("runelite.title", title);
 		if (apiBase != null)
 		{
 			props.addProperty("runelite.api.base", apiBase);
@@ -571,11 +630,11 @@ public final class Launcher
 	}
 
 	/** Same keys and params as Jagex's https://oldschool.runescape.com/jav_config.ws (build 241), pointed at our server. */
-	static String javConfig(String host, int world, String session, String worldListUrl)
+	static String javConfig(String host, int world, String session, String worldListUrl, Channel channel)
 	{
 		StringBuilder sb = new StringBuilder();
 		String[] lines = {
-			"title=GadScape 241 Test",
+			"title=" + channel.title,
 			"adverturl=",
 			"codebase=http://" + host + "/",
 			"cachedir=oldschool",
@@ -600,7 +659,7 @@ public final class Launcher
 			"applet_maxwidth=5760",
 			"applet_maxheight=2160",
 			"msg=lang0=English",
-			"msg=tandc=GadScape TEST server (build 241). Not affiliated with Jagex.",
+			"msg=tandc=" + channel.title + ". Not affiliated with Jagex.",
 			"param=21=0",
 			"param=2=https://payments.jagex.com/",
 			"param=7=0",

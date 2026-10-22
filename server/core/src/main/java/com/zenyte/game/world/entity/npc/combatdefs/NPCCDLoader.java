@@ -44,7 +44,8 @@ public class NPCCDLoader {
                             return def;
                         })
                         .collect(Collectors.toList());
-                defs.forEach(def -> insert(def.getId(), def));
+                // Bundled fixes (resources gadscape/npcs/combat-patches.json) go in before indexing.
+                BundledNpcCombatPatches.apply(defs).forEach(def -> insert(def.getId(), def));
             }
         } catch (Exception e) {
             log.error("", e);

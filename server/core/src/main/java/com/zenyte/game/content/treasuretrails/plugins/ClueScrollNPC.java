@@ -29,6 +29,15 @@ public class ClueScrollNPC extends NPCPlugin {
         bind("Talk", this::talk);
     }
 
+    /**
+     * Generic fallback dialogue only: an NPC's own Talk-to plugin always wins (the clue step itself is handled for every
+     * NPC by NPCHandler through TreasureTrail#hasTalkStep).
+     */
+    @Override
+    protected boolean overridesExistingHandlers() {
+        return false;
+    }
+
     private final void talk(@NotNull final Player player, @NotNull final NPC npc) {
         if (!TreasureTrail.talk(player, npc)) {
             if (npc.getId() == 5735) {

@@ -251,6 +251,8 @@ abstract class HunterNPC extends NPC {
         if (player == null || player.isNulled() || player.getSkills().getLevel(SkillConstants.HUNTER) < prey.baseRequirement()) {
             return false;
         }
-        return Utils.randomDouble() < successProbability(player, player.getSkills().getLevel(SkillConstants.HUNTER), prey);
+        // Guild hunter outfit (sets-prayers): up to +2.5% catch rate.
+        return Utils.randomDouble() < successProbability(player, player.getSkills().getLevel(SkillConstants.HUNTER), prey)
+                + com.zenyte.game.content.sets.SetEffects.guildHunterCatchBonus(player);
     }
 }

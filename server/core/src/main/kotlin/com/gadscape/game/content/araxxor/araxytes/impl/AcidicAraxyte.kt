@@ -5,7 +5,6 @@ import com.gadscape.game.content.araxxor.araxytes.Araxyte
 import com.gadscape.game.content.damage
 import com.gadscape.game.content.hit
 import com.gadscape.game.content.seq
-import com.gadscape.game.content.spotanim
 import com.zenyte.game.task.WorldTasksManager.schedule
 import com.zenyte.game.world.Projectile
 import com.zenyte.game.world.World
@@ -38,7 +37,7 @@ class AcidicAraxyte(
     override fun attack(target: Entity?): Int {
         if (getId() == ACIDIC_ARAXYTE_EGG) return 1
         if (target == null) return 1
-        this seq 11497
+        this seq 11498 // NPC_ARAXYTE_ACIDIC_01_ATTACK
         val damage = CombatUtilities.getRandomMaxHit(this, 15, AttackType.RANGED, target)
         val delay = World.sendProjectile(this, target, projectile)
         target.scheduleHit(this, this hit target damage damage, delay)
@@ -49,7 +48,7 @@ class AcidicAraxyte(
         if (target == null) return
         if (isDead || isFinished) return
         this seq 11509
-        this spotanim 2927
+        graphics = Graphics(2927) // ARAXYTE_ACID_SPIDER_EGG
         schedule(1) {
             setTransformationPreservingStats(ACIDIC_ARAXYTE)
             addWalkSteps(instance.centerArenaTile.x, instance.centerArenaTile.y, 6)
@@ -63,7 +62,7 @@ class AcidicAraxyte(
         repeat(9) {
             val landing = instance.getAcidSplatterLocation(deathLocation)
             val delay = World.sendProjectile(deathLocation, landing, projectileBlob)
-            World.sendGraphics(Graphics(2923, delay, 0), landing)
+            World.sendGraphics(Graphics(2923, delay * 30, 0), landing) // spotanim delays are client cycles (30 per tick)
             instance.spawnAcidPool(landing)
             instance.araxytes.remove(this)
         }

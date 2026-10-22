@@ -125,7 +125,7 @@ public class ZalcanoLootHandler {
     private static void simulate(int amount) {
         System.out.println("Simulating " + amount);
         Container container = new Container(ContainerType.BANK, ContainerPolicy.ALWAYS_STACK, 1000, Optional.empty());
-        Player player = new Player(new PlayerInformation("jacmob", "", 0, null, null), null);
+        Player player = new Player(new PlayerInformation("test_player", "", 0, null, null), null);
         ZalcanoLootHandler zalcanoLootHandler = new ZalcanoLootHandler(null);
         zalcanoLootHandler.healthDamage.put(player, 100);
         zalcanoLootHandler.shieldDamage.put(player, 100);
