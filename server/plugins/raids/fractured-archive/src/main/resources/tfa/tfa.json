@@ -1,0 +1,96 @@
+{
+  "_comment": "Fractured Archive raid-wide settings (spec 2-3, 7.1). Bundled defaults; override any key in data/raids/tfa/tfa.json and reload with ::tfareload (running raids keep their snapshot). Tiles are static cache coordinates [x, y, plane]. List keys confirmed by a public source in \"$verified\": {\"key.path\": \"source\"}.",
+  "entryGate": {
+    "mode": "attunement",
+    "requirements": {
+      "thieving": 72,
+      "magic": 67,
+      "agility": 66,
+      "farming": 65,
+      "herblore": 65,
+      "hunter": 62,
+      "firemaking": 49,
+      "attackPlusStrength": 130,
+      "tormentedDemonKills": 1,
+      "combatLevel": 100
+    },
+    "refusalMessage": "You need to have proven yourself to the Guthixian Alliance to enter the Archive."
+  },
+  "teleportOut": "leave_raid",
+  "logout": {
+    "allowRejoin": false
+  },
+  "lateJoin": "until_guardian_touch",
+  "passagewayExit": "antechamber_only",
+  "watchdogMinutes": 30,
+  "releaseDelayTicks": 2,
+  "roomExitDelayTicks": 3,
+  "completionJingle": 886,
+  "recordsKey": {
+    "source": "record_keeper",
+    "kc": 100
+  },
+  "folio": {
+    "chargesPerShard": 5,
+    "chargeCap": 1000
+  },
+  "supplies": {
+    "baseCredits": 40,
+    "shareCredits": 43,
+    "deathPenalty": 10,
+    "maxCredits": 83,
+    "fairSharePoints": 16000,
+    "perPlayerStock": true,
+    "useOmnishop": true,
+    "slotMap": "buyable_rows"
+  },
+  "nexus": {
+    "variantPlanes": [1, 3],
+    "fallbackPlanes": [0, 2],
+    "navigatorDelayTicks": 10,
+    "campRecopyDelayTicks": 9,
+    "doorsLockedUntilNavigator": true,
+    "confirmSideOnce": true,
+    "antechamberInset": 2
+  },
+  "hud": {
+    "timerMode": "total",
+    "orbHpCap": 99
+  },
+  "practice": {
+    "enabled": false
+  },
+  "introScene": {
+    "enabled": true,
+    "skippable": true
+  },
+  "stats": {
+    "inRaidScoreboard": true
+  },
+  "party": {
+    "refreshRateLimitTicks": 8
+  },
+  "tiles": {
+    "lobbyArrival": [4126, 5508, 0],
+    "templeExit": [4051, 4564, 0],
+    "nexusArrival": [4127, 5582, 0],
+    "lobbyGravestone": [4123, 5558, 0],
+    "navigatorSpawn": [4127, 5590, 0],
+    "quartermaster": [4121, 5581, 0],
+    "ivy": [4127, 5618, 0],
+    "campMeritScroll": [4131, 5579, 0],
+    "ocellusCorridor": [4127, 5634, 1],
+    "ocellusGateSpill": [4127, 5661, 1],
+    "vaultArrival": [4127, 5775, 2],
+    "vaultMeritScroll": [4127, 5790, 2],
+    "uniqueChest": [4126, 5807, 2]
+  },
+  "rooms": {
+    "ezekiel": { "entry": [4063, 5532, 0], "facing": "n", "spread": 1 },
+    "bork_smorks": { "entry": [4186, 5599, 0], "facing": "e", "spread": 1 },
+    "moia": { "entry": [4066, 5663, 0], "facing": "w", "spread": 1 },
+    "dreadnoth": { "entry": [4185, 5663, 0], "facing": "e", "spread": 1 },
+    "dagonhai": { "entry": [4072, 5601, 0], "facing": "w", "spread": 1 },
+    "xarth": { "entry": [4184, 5535, 0], "facing": "e", "spread": 1 }
+  }
+}

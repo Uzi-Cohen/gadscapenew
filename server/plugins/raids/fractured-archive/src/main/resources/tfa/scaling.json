@@ -1,0 +1,14 @@
+{
+  "_comment": "Fractured Archive HP scaling (spec 2.6). scaledHp(base, n) = round(base x (1 + perPlayer x (n - minScale))), n = members inside the raid at encounter start, clamped to minScale..maxScale (solo counts as 2). Override any key in data/raids/tfa/scaling.json. List keys confirmed by a public source in \"$verified\".",
+  "minScale": 2,
+  "maxScale": 8,
+  "perPlayer": 0.42727,
+  "rounding": "half_up",
+  "overrides": {
+    "xarth_corpse_hp": [20, 27, 34, 41, 48, 55, 62]
+  },
+  "combatLevelOverride": {
+    "moia": 1064,
+    "ocellus_p3": 1601
+  }
+}
