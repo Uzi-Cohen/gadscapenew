@@ -1,0 +1,35 @@
+# GadScape UI fixes (ui-fixes step, UiFixesStep): QA fixes of GadScape's own interfaces, applied after ui-merge and
+# ui-convert on every build. Rows: IFACE<TAB>COMPS<TAB>ACTION<TAB>ARG<TAB>FINDING<TAB>NOTE; IFACE is the USER id (mapped
+# through the id map), COMPS a list/range. Actions: set FIELD VALUE (int or str:TEXT; IfComp field names), move-hook FROM TO,
+# drop-hook HOOK, hook-args HOOK N (keep the script and its first N arguments). Owner standard: no interface may be
+# transparent, incomplete or without working buttons.
+1612	0	move-hook	onMouseOver onLoad	QA-1612	the frame script 10625 drew the window only while hovered (transparent until then)
+1612	12,16	move-hook	onMouseOver onLoad	QA-1612	the frame script 1191 of the inner panels, same mistake
+1723	0	move-hook	onMouseOver onLoad	QA-1723	the frame script 34030 drew the window only while hovered (transparent until then)
+1723	12,16	move-hook	onMouseOver onLoad	QA-1723	the frame script 1191 of the inner panels, same mistake
+5103	4,7,13,15,18,21,23,25,27,29	set	font 495	QA-5103	Blackjack: font 645 (31 px glyphs) in 16 px buttons overlapped and clipped; p12_full
+5103	31	set	font 494	QA-5103	"Rules" label in a 14 px box: p11_full
+5103	16	set	font 495	QA-5103	bet text
+5103	8	set	font 495	QA-5103	wins/losses/profit line
+5103	8	set	y 24	QA-5103	re-layout: 16 px rows below the 20 px title bar
+5103	8	set	height 16	QA-5103	
+5103	9	set	font 494	QA-5103	client seed line (long hex string)
+5103	9	set	y 42	QA-5103	
+5103	9	set	height 16	QA-5103	
+5103	10	set	font 495	QA-5103	table text (hands, results; the server writes up to 6 lines)
+5103	10	set	y 62	QA-5103	
+5103	10	set	height 126	QA-5103	ends at 188, above the button rows at 192
+2000	7-9	set	x 26	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	11-13	set	x 72	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	15-17	set	x 121	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	19-21	set	x 167	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	23-25	set	x 51	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	27-29	set	x 101	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	31-33	set	x 150	DUEL-2000	opponent level box beside the stat icon: 2 px further from the 22 px icon
+2000	8,12,16,20,24,28,32	set	text str:	DUEL-2000	the 211 template text "000" showed over the stat icons until the server writes the levels
+2000	9,13,17,21,25,29,33	set	text str:	DUEL-2000	the 211 template text "00"
+476	2	drop-hook	onLoad	IF-HOOKARGS	GadScape duel confirmation: onLoad called proc 206 (a duel-rule test that returns a value) without its argument: no effect, wrong arg count
+476	2	drop-hook	onInvTransmit	IF-HOOKARGS	same call on inventory updates
+476	11	drop-hook	onLoad	IF-HOOKARGS	onLoad called scrollbar proc 764 without its 4 arguments (it would address component 0:0)
+1614	25,28	drop-hook	onOp	IF-HOOKARGS	hiscores "Select" buttons called 2680 (house portal scry list) with 1 of 2 args; the click still reaches the server (op 1)
+1606	0	hook-args	onLoad 16	IF-HOOKARGS	game mode setup: the 17th argument 1606:32 names no component and 10571 takes 16

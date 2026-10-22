@@ -1,0 +1,67 @@
+# What the content areas' CACHE_NEEDS.md ask the shipped cache to hold (area-expect step, AreaExpect), checked on every
+# build. CHECK<TAB>KIND<TAB>IDS<TAB>AREA<TAB>WHY. CHECK: base (equals BASE 2746), moved (USER's entry relocated, BASE's
+# back at the id), exists (=ID output id, else a USER id mapped), runelite (RuneLite overlay hashes). KIND: a config
+# kind, if, cs, spr, synth.
+#
+# bosses
+base	seq	10000	bosses 2	BOSS-03: Callisto's bear trap idle (TRAP_BEAR01_IDLE), not the user's player animation
+base	spot	1621,1622,1625,1626	bosses 3	Araxxor's projectiles/impacts (Morrigan's specials use 2919-2922)
+base	spot	2298	bosses 5	LEVIATHAN_BUFF_SPAWN
+moved	spot	2500-2515	bosses 4	Leviathan / Vardorvis VFX back; GadScape's spotanims at the new ids
+# client
+runelite	cs	*	client 1	RuneLite 1.13.3 overlays its 30 scripts only when they are byte-identical to BASE
+base	cs	10003,10004	client 2	Raids 4 scripts; RuneLite's own 10003/10004 are used only when the ids are free
+exists	cs	=10719	interfaces-server 1	hide roofs (ClientScripts.HIDE_ROOFS)
+# clues
+moved	obj	2749-2758	clues 1	CLUE-20: castle puzzle pieces back; the ankou set boxes moved
+base	enum	1354	clues 1	Puzzle.HARD_CASTLE pieces
+base	if	306	clues 5	puzzle box interface and its script as a pair from BASE
+base	cs	688	clues 5	puzzle box script (reads inv 140, varp 261)
+base	obj	30902-30926	clues 3	scroll cases at their stock ids
+base	enum	1440,1525	clues 4	S.T.A.S.H. chart enums
+# construction
+base	if	370,212,422,458,675,674,71	construction 3	house options, room creation, house viewer, furniture creation, costume storage, loading overlay
+base	cs	648,1376,1382	construction 3	room list and house viewer scripts
+base	enum	1374	construction 3	house viewer rooms
+base	varbit	2176,4744,14670,6269,2190,4153	construction 3/5	house option toggles, servant variant, Yanille portal
+base	loc	15478,15482,55353,34947,29229,29228,33408-33410	construction 2/4	house portals, fairy tree/ring, portal nexus
+base	npc	222,224,226,228,230,3095	construction 5	Servants' Guild
+base	obj	22705-22709	construction 3	nexus furniture items
+# pvp
+base	if	742	pvp 1	241 loot chest (one tab per key)
+base	cs	8006-8019,5916,5917	pvp 1	wildy_loot_* scripts
+base	enum	4212,1243	pvp 1	loot key objs / loot invs
+base	varbit	4842,4843,13651,4163,4605,13131,8121	pvp 1/5	loot chest, teleblock, multi, skull prevention, spec
+base	obj	26651-26655	pvp 1	loot keys
+base	loc	43484-43486	pvp 1	Ferox loot chest
+base	npc	10382	pvp 1	Skully
+base	if	54,58,131,90,475	pvp 5	Castle Wars catapult/overlay/waiting room, pvp icons, wilderness warning
+moved	loc	50081	pvp 5	Clan Wars FFA loc off 241's garden_white_tree_fruit_4_noop
+# sets-prayers
+base	if	541,77	sets-prayers 1	2746 prayer book and quick prayers
+base	cs	451,458,461-466,1138,2762,10183-10185,10189-10196,10172	sets-prayers 1	prayer scripts
+base	obj	20803-20831,22350,25939,27034,15297,25942-25989,26217,26218,26981-26983,30626,30627,34679,34680,28775	sets-prayers 1	prayer data and items
+base	enum	4956,4959,859,860,864,865	sets-prayers 1	prayer book enums
+base	dbtable	270	sets-prayers 1	alternate_prayers
+base	dbrow	17172-17174	sets-prayers 1	Piety->Zeal, Eagle Eye->Deadeye, Mystic Might->Mystic Vigour
+base	param	630,1751-1760,2265,2679,2774,2775	sets-prayers 1	prayer params
+base	varbit	16090,16091,16577,16097,16098,16578,14826-14966,4101,3909	sets-prayers 1	prayer varbits
+base	spr	1420-1427,8595,8599,4842-4889,440	sets-prayers 1	prayer sprites and overhead icons
+base	synth	10194,10100,12645	sets-prayers 1	activation sounds
+base	npc	3531	sets-prayers 1	King Arthur
+base	enum	1034,316,1433-1445,5264-5266,5411,5711,5712,5729	sets-prayers 2	GE item sets
+base	seq	10989,11057,11060,1709-1713	sets-prayers 4	moon weapons
+base	spot	2791-2798	sets-prayers 4	moon weapon specials
+exists	obj	=60000-60008	sets-prayers 3	SKSP-15 kit results at GadScapeKits' ids
+# teleports-shops
+moved	loc	50082	teleports-shops 3	Teleportation nexus off 241's Wilderness Sign
+base	enum	1982-1985	teleports-shops 2	241 spellbook enums (with BASE 218 and the re-pointed category spell objs)
+# weapons
+base	if	593	weapons 3	2746 combat options
+base	cs	187,188,189,327,7558,7593,10148,10159,10160,10180,10181	weapons 3	special attack / Rondache / soul stack bars
+base	varp	300,301,5925,5926,3784	weapons 3	special attack and weapon vars
+base	varbit	16438,16323,16324,357	weapons 3	Rondache/Obligator/tome charges, weapon category
+base	seq	15108-15155,10169-10173,604,609	weapons 4	live weapon sequences
+base	spot	4422-4439,4008,2430	weapons 5	live weapon spotanims
+base	obj	34669,34681,34684,34690,34696,34702,34708,34686-34713,34714,34715-34720,34724,34725,34727,34728,25574,25576,25578,30064,30066,30068	weapons 1	live items (34721-34723/34726 moved: OBL-6)
+moved	obj	34721,34722,34723,34726	weapons 1	OBL-6: GadScape copies off the live raid ids

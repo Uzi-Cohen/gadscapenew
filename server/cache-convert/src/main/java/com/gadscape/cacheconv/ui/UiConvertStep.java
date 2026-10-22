@@ -58,6 +58,7 @@ public final class UiConvertStep implements Step {
         TreeMap<Integer, GroupData> ifaces = new TreeMap<>();
         int comps = 0, trimmed = 0;
         for (int id : m.customInterfaces) {
+            if (m.scope.vanillaPorts.contains(id)) continue;   // after GadScape's own UI (keeps the ids its ports already have)
             int to = ctx.ids.map(Kind.INTERFACE, id);
             GroupData g = InterfaceConv.group(ctx.user().group(Arch.INTERFACES, id));
             GroupData.Builder b = new GroupData.Builder(to).name(g.name);
@@ -78,6 +79,32 @@ public final class UiConvertStep implements Step {
             newId.put(id, to);
             patched.put(to, patchScript(ctx, m, set, res.get(id), id));
         }
+        while (!m.portQueue.isEmpty()) {
+            int id = m.portQueue.poll();
+            int to = ctx.ids.map(Kind.SCRIPT, id);
+            newId.put(id, to);
+            patched.put(to, patchScript(ctx, m, set, res.get(id), id));
+        }
+        // the vanilla UI ports last (interfaces the server opens whose 241 id is another interface, and the scripts only the
+        // server runs), so their ported scripts come after the ids GadScape's own UI already has
+        for (int id : m.scope.vanillaPorts) {
+            int to = ctx.ids.map(Kind.INTERFACE, id);
+            GroupData g = InterfaceConv.group(ctx.user().group(Arch.INTERFACES, id));
+            GroupData.Builder b = new GroupData.Builder(to).name(g.name);
+            for (int i = 0; i < g.fileCount(); i++) {
+                byte[] c = patchComponent(ctx, m, set, id, g.fileIdAt(i), g.dataAt(i).clone());
+                if (c.length < g.dataAt(i).length) trimmed++;
+                b.put(g.fileIdAt(i), g.fileNameAt(i), c);
+                comps++;
+            }
+            ifaces.put(id, b.build());
+        }
+        if (m.scope.all && Boolean.parseBoolean(ctx.opt.get("ui.vanillaPorts", "true")))
+            for (int id : new TreeSet<>(UiScope.VANILLA_SCRIPT_PORTS.keySet())) {
+                if (!ctx.user().hasGroup(Arch.SCRIPTS, id)) continue;
+                int to = m.script(id, false, "server RUNCLIENTSCRIPT (" + UiScope.VANILLA_SCRIPT_PORTS.get(id) + ")");
+                if (to != id) ctx.ids.markVanilla(Kind.SCRIPT, id);
+            }
         while (!m.portQueue.isEmpty()) {
             int id = m.portQueue.poll();
             int to = ctx.ids.map(Kind.SCRIPT, id);

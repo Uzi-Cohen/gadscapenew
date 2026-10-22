@@ -59,7 +59,10 @@ public final class ConfigPlanStep implements Step {
     public static final String NAME = "configs-plan";
 
     /** Defaults for kinds without a spec range (obj ids must stay u16-safe, hand objs below 65024; varcs below 2048). */
-    public static final Map<Kind, int[]> EXTRA_RANGES = Map.of(Kind.OBJ, new int[]{60000, 64999}, Kind.VARC, new int[]{2016, 2047});
+    public static final Map<Kind, int[]> EXTRA_RANGES = Map.of(Kind.OBJ, new int[]{60000, 64999}, Kind.VARC, new int[]{2016, 2047}, Kind.SPOT, new int[]{6100, 6999});
+
+    /** Resource listing USER entries that must move although the clash rules would keep them at their id. */
+    public static final String RELOCATE_RESOURCE = "config/relocate.tsv";
 
     /** 211 clientscript opcodes whose operand is a variable id: push/pop varp, varbit, varc int, varc string. */
     static Kind varOperand(int op) {
@@ -77,6 +80,7 @@ public final class ConfigPlanStep implements Step {
         CfgModel m = new CfgModel(ctx);
         setRanges(ctx);
         Plan p = new Plan(ctx, m);
+        ConfigFixesStep.claim(ctx);  // new entries at fixed ids (server constants name them) before anything allocates
         p.serverVarps();  // first: reserves the server's varp ids before anything allocates varps
         p.scanScripts();
         p.standIns();
@@ -85,6 +89,7 @@ public final class ConfigPlanStep implements Step {
             if (k == null || !CfgCodec.walked(g) && k != Kind.VARP && k != Kind.VARC) continue;
             p.group(g, k);
         }
+        p.forced();       // audit/area decisions: USER entries that move although the clash rules keep them (after the rule-based moves, so their ids stay)
         p.portedVanillaRefs();
         p.implicitVars();
         p.protectedVanilla();
@@ -94,9 +99,50 @@ public final class ConfigPlanStep implements Step {
             if (!ctx.ids.all(k).isEmpty()) ctx.log("%s: %d relocated (total in id map)", k.key, ctx.ids.all(k).size());
     }
 
+    /**
+     * The forced relocations of {@value #RELOCATE_RESOURCE} ({@code --configs.relocate=FILE|none}) for the kinds
+     * {@code which} accepts: rows {@code KIND<TAB>IDS<TAB>FINDING<TAB>REASON}. A listed id moves only when USER added or
+     * changed it (a vanilla or absent entry is BASE's anyway); the reason goes to the id map. For clashes the policy keeps
+     * but an area needs moved: 241 content sits at the id and GadScape's own entry has no business there (castle puzzle
+     * pieces 2749-2758 under the ankou set boxes, Leviathan/Vardorvis VFX 2500-2515, the Clan Wars FFA loc 50081). They
+     * run after the rule-based moves of their kind (locs at the end of maps-plan), so ids already handed out stay put.
+     * Returns counts by key.
+     */
+    public static TreeMap<String, Integer> forcedRelocations(Ctx ctx, java.util.function.Predicate<Kind> which) {
+        TreeMap<String, Integer> counts = new TreeMap<>();
+        String opt = ctx.opt.get("configs.relocate", null);
+        if ("none".equals(opt)) return counts;
+        List<String> lines;
+        try {
+            if (opt != null) lines = java.nio.file.Files.readAllLines(java.nio.file.Path.of(opt));
+            else try (java.io.InputStream in = ConfigPlanStep.class.getClassLoader().getResourceAsStream(RELOCATE_RESOURCE)) {
+                if (in == null) return counts;
+                lines = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).lines().toList();
+            }
+        } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+        for (String line : lines) {
+            if (line.isBlank() || line.startsWith("#")) continue;
+            String[] c = line.split("\\t");
+            if (c.length < 4) throw new IllegalArgumentException(RELOCATE_RESOURCE + ": expected KIND<TAB>IDS<TAB>FINDING<TAB>REASON: " + line);
+            Kind k = Kind.byKey(c[0].trim());
+            if (k.configGroup < 0) throw new IllegalArgumentException(RELOCATE_RESOURCE + ": not a config kind: " + c[0]);
+            if (!which.test(k)) continue;
+            for (int id : com.gadscape.cacheconv.ui.UiScope.ids(c[1])) {
+                if (!ctx.user().hasConfig(k.configGroup, id)) { counts.merge(k.key + ".forced-absent", 1, Integer::sum); continue; }
+                if (!ctx.origin(k, id).isUser()) { counts.merge(k.key + ".forced-vanilla-kept", 1, Integer::sum); continue; }
+                if (ctx.ids.moved(k, id)) continue;
+                String why = c[2].trim() + ": " + c[3].trim();
+                int to = ctx.ids.relocate(k, id, why);
+                ctx.report.relocated(k, id, to, why);
+                counts.merge(k.key + ".forced-relocated", 1, Integer::sum);
+            }
+        }
+        return counts;
+    }
+
     /** Applies the extra default ranges and every --configs.range.KIND=LO-HI option. */
     static void setRanges(Ctx ctx) {
-        for (Kind k : new Kind[]{Kind.OBJ, Kind.VARC}) {
+        for (Kind k : new Kind[]{Kind.OBJ, Kind.VARC, Kind.SPOT}) {
             int[] r = EXTRA_RANGES.get(k);
             if (ctx.ids.range(k) == null) ctx.ids.setRange(k, r[0], r[1]);
         }
@@ -126,6 +172,17 @@ public final class ConfigPlanStep implements Step {
         }
 
         void count(String k) { counts.merge(k, 1L, Long::sum); }
+
+        /**
+         * The forced relocations of {@value #RELOCATE_RESOURCE} ({@code --configs.relocate=FILE|none}): one row per id
+         * range, {@code KIND<TAB>IDS<TAB>FINDING<TAB>REASON}. A listed id moves only when USER added or changed it (a
+         * vanilla or absent entry is BASE's anyway); the reason goes to the id map. Used for clashes the policy keeps but
+         * an area needs moved: 241 content sits at the id and GadScape's own entry has no business there (castle
+         * puzzle pieces 2749-2758 under the ankou set boxes, Leviathan/Vardorvis VFX 2500-2515, Clan Wars FFA locs).
+         */
+        void forced() {
+            for (var e : forcedRelocations(ctx, k -> k != Kind.LOC).entrySet()) counts.merge(e.getKey(), (long) e.getValue(), Long::sum);
+        }
 
         void use(Kind k, int id, String by) {
             if (id < 0) return;

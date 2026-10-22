@@ -29,6 +29,9 @@
  *       {@code CacheVerifier} in a separate JVM (asserting it leaves the cache untouched);
  *       {@link com.gadscape.cacheconv.verify.BrandScan}: Near-Reality / Roat Pkz / OSNR / RuneSpawn strings;
  *       {@link com.gadscape.cacheconv.verify.Determinism}: group-by-group comparison of two outputs.</li>
+ *   <li>{@link com.gadscape.cacheconv.verify.StringScan}: the branding scan over every decoded string (configs through the
+ *       server decoders, IF3/IF1 texts, script constants), part of the brand check; {@link com.gadscape.cacheconv.verify.AreaExpect}
+ *       ("area-expect"): the content areas' cache needs as data, with the RuneLite overlay hashes.</li>
  *   <li>Dev tools: {@link com.gadscape.cacheconv.verify.CsDump} (script listing with stack depths),
  *       {@link com.gadscape.cacheconv.verify.CsCheckBase} (stack analysis of a whole cache),
  *       {@link com.gadscape.cacheconv.verify.VerifySelfCheck} (self-checks; {@code --full} adds the BASE golden checks).</li>

@@ -24,7 +24,8 @@ import java.util.TreeMap;
  *       strings, ...): the rules are applied to each NUL-terminated string of the entry; the result must parse with
  *       the same fields and references as before, otherwise the entry is left alone and reported as an error;</li>
  *   <li><b>interfaces</b> (IF3 components through {@link IfComp}): text, op base, ops, target verb and string hook
- *       arguments; IF1 components are reported, not rewritten;</li>
+ *       arguments; IF1 components through {@link If1Text} (text, active text, target verb, spell name, tooltip of the
+ *       types it walks; the others are reported);</li>
  *   <li><b>clientscripts</b>: string constants (op 3); script names are never changed (lookups use their hashes).</li>
  * </ul>
  * Only entries whose bytes may match a rule are decoded. Other archives the branding scan reads (world map, defaults,
@@ -128,7 +129,16 @@ public final class Rebrander {
                 String where = g + ":" + f;
                 IfComp c;
                 try { c = IfComp.decode(b); } catch (RuntimeException e) { report.error("component", (long) g << 16 | f, "rebrand: component " + where + " does not decode: " + e.getMessage()); count("rebrand.component.rejected"); continue; }
-                if (!c.if3) { report.warn("component", (long) g << 16 | f, "rebrand: IF1 component " + where + " may hold old branding; IF1 texts are not rewritten"); count("rebrand.component.if1"); continue; }
+                if (!c.if3) {
+                    List<String[]> ch = new ArrayList<>();
+                    byte[] nb = If1Text.rewrite(b, t::apply, ch);
+                    if (nb == null) { report.warn("component", (long) g << 16 | f, "rebrand: IF1 component " + where + " (a type whose fields are not walked) may hold old branding; not rewritten"); count("rebrand.component.if1-skipped"); continue; }
+                    if (ch.isEmpty()) continue;
+                    out.putFile(Arch.INTERFACES, g, f, nb);
+                    count("rebrand.component.if1");
+                    report.add(Decision.REBRANDED, "component", (long) g << 16 | f, where + " (IF1): " + describe(ch));
+                    continue;
+                }
                 if (!Arrays.equals(c.encode(), b)) { report.error("component", (long) g << 16 | f, "rebrand: component " + where + " does not re-encode exactly; left as it was"); count("rebrand.component.rejected"); continue; }
                 List<String[]> changes = new ArrayList<>();
                 for (Map.Entry<String, Object> e : c.f.entrySet()) {

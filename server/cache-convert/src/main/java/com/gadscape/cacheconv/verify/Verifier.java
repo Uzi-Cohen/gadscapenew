@@ -135,7 +135,7 @@ public final class Verifier {
             RefCheck.interfaces(c, ex, w, f);
         }
         if (o.checks.contains("maps")) { o.log.accept("  maps"); RefCheck.maps(c, ex, f); }
-        if (o.checks.contains("brand")) { o.log.accept("  branding scan"); BrandScan.run(c, f, o.brandSeverity); }
+        if (o.checks.contains("brand")) { o.log.accept("  branding scan"); BrandScan.run(c, f, o.brandSeverity); StringScan.run(c, f, o.brandSeverity); }
         if (o.checks.contains("oracle")) {
             String[] why = new String[1];
             Path lib = o.clientLib != null ? o.clientLib : o.root != null ? o.root.resolve("rev241/inputs/runelite") : null;

@@ -1,0 +1,2 @@
+# Sprite frames GadScape redrew (asset-fixes step, AssetFixesStep): SPRITE (USER id, mapped)<TAB>FRAME<TAB>PNG (resource under sprite/)<TAB>FINDING<TAB>NOTE
+5265	0	5265-0-gadscape-coin.png	B10	credits coin of the Credit Store (script 32031 cc_setgraphic): the "NR" coin redrawn with a "G" (same 15x15 size, outline and palette)

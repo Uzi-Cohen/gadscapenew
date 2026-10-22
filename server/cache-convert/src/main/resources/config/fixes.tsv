@@ -1,0 +1,216 @@
+# GadScape config fixes (config-fixes step, ConfigFixesStep): data-driven fixes of GadScape's own config entries that
+# QA and the content areas asked for; applied after the configs step on every build, so nothing is hand-patched.
+# Rows: KIND<TAB>IDS<TAB>ACTION<TAB>ARG<TAB>FINDING<TAB>NOTE. IDS are USER ids (mapped through the id map), "=ID" is an
+# output id. Actions: set OP PAYLOAD (u8:/u16:/i32:/str:), unset OP[,OP], copy base:ID|out:ID OP,..., recolour FROM=TO,
+# new base:ID NAME (objs; the id is claimed by configs-plan and listed under _new), enum-copy KEY=FROMKEY.
+# obj opcodes (241): 2 name, 13/14/27 wearpos 1-3, 4-8/95 zoom/rotation/offsets, 35-39 inventory ops 1-5,
+# 40 recolour, 44 inventory model, 45-50 male/female worn models, 51-54 head models, 65 tradeable, 97/98 cert link/template,
+# 148/149 placeholder link/template. npc: 13 stand seq, 14 walk seq.
+# ---- items-data section 3 (F07): placeholder names/links and typos
+obj	32171	set	2 str:Vesta's helmet	F07	placeholder of 32169 named "Steel full helm"
+obj	32171	unset	97	F07	placeholder carried the Steel full helm cert link 1158
+obj	32194	set	2 str:Malevolent kiteshield	F07	placeholder named "Dragon hunter lance"
+obj	32194	unset	97,36	F07	placeholder carried the lance cert link 22979 and a Wield op
+obj	32197	set	2 str:Merciless kiteshield	F07	placeholder named "Dragon hunter lance"
+obj	32197	unset	97,36	F07	placeholder carried the lance cert link 22979 and a Wield op
+obj	32200	set	2 str:Vengeful kiteshield	F07	placeholder named "Dragon hunter lance"
+obj	32200	unset	97,36	F07	placeholder carried the lance cert link 22979 and a Wield op
+obj	32202	set	2 str:Drop Rate Pin	F07	placeholder named "Dragon hunter lance"
+obj	32202	unset	97,36	F07	placeholder carried the lance cert link 22979 and a Wield op
+obj	32233	set	2 str:Regal Mystery Box	F07	placeholder of 32231 named "Mystery box"
+obj	33056	set	2 str:Home teleport	F07	placeholder of 32056 named "Gs tablet"
+obj	33070-33073	unset	35,37	F07	placeholders of the donator pins carried Redeem/Deposit ops
+obj	32078	set	97 u16:32079	F07	GadScape party hat certlink pointed at itself
+obj	32192	set	2 str:Malevolent kiteshield	F07	typo "Malovelent"
+obj	32195	set	2 str:Merciless kiteshield	F07	typo "Mercicless"
+# ---- items-data section 2: wearpos the user's 211 editor dropped (server slot in the note)
+obj	1037	copy	base:1037 13,14,27	IC-WEARPOS	Bunny ears: same item as 2746 ((0, -1, -1))
+obj	2683	set	13 u8:0	IC-WEARPOS	GadScape helm (server slot 0)
+obj	3057	copy	base:3057 13,14,27	IC-WEARPOS	Mime mask: same item as 2746 ((0, 11, -1))
+obj	4708	copy	base:4708 13,14,27	IC-WEARPOS	Ahrim's hood: same item as 2746 ((0, 8, -1))
+obj	4716	copy	base:4716 13,14,27	IC-WEARPOS	Dharok's helm: same item as 2746 ((0, 8, -1))
+obj	4724	copy	base:4724 13,14,27	IC-WEARPOS	Guthan's helm: same item as 2746 ((0, 8, 11))
+obj	4732	copy	base:4732 13,14,27	IC-WEARPOS	Karil's coif: same item as 2746 ((0, 8, 11))
+obj	4745	copy	base:4745 13,14,27	IC-WEARPOS	Torag's helm: same item as 2746 ((0, 8, 11))
+obj	4753	copy	base:4753 13,14,27	IC-WEARPOS	Verac's helm: same item as 2746 ((0, 8, 11))
+obj	4856	copy	base:4856 13,14,27	IC-WEARPOS	Ahrim's hood 100: same item as 2746 ((0, 8, -1))
+obj	4857	copy	base:4857 13,14,27	IC-WEARPOS	Ahrim's hood 75: same item as 2746 ((0, 8, -1))
+obj	4858	copy	base:4858 13,14,27	IC-WEARPOS	Ahrim's hood 50: same item as 2746 ((0, 8, -1))
+obj	4859	copy	base:4859 13,14,27	IC-WEARPOS	Ahrim's hood 25: same item as 2746 ((0, 8, -1))
+obj	4880	copy	base:4880 13,14,27	IC-WEARPOS	Dharok's helm 100: same item as 2746 ((0, 8, -1))
+obj	4881	copy	base:4881 13,14,27	IC-WEARPOS	Dharok's helm 75: same item as 2746 ((0, 8, -1))
+obj	4882	copy	base:4882 13,14,27	IC-WEARPOS	Dharok's helm 50: same item as 2746 ((0, 8, -1))
+obj	4883	copy	base:4883 13,14,27	IC-WEARPOS	Dharok's helm 25: same item as 2746 ((0, 8, -1))
+obj	4904	copy	base:4904 13,14,27	IC-WEARPOS	Guthan's helm 100: same item as 2746 ((0, 8, 11))
+obj	4905	copy	base:4905 13,14,27	IC-WEARPOS	Guthan's helm 75: same item as 2746 ((0, 8, 11))
+obj	4906	copy	base:4906 13,14,27	IC-WEARPOS	Guthan's helm 50: same item as 2746 ((0, 8, 11))
+obj	4907	copy	base:4907 13,14,27	IC-WEARPOS	Guthan's helm 25: same item as 2746 ((0, 8, 11))
+obj	4928	copy	base:4928 13,14,27	IC-WEARPOS	Karil's coif 100: same item as 2746 ((0, 8, 11))
+obj	4929	copy	base:4929 13,14,27	IC-WEARPOS	Karil's coif 75: same item as 2746 ((0, 8, 11))
+obj	4930	copy	base:4930 13,14,27	IC-WEARPOS	Karil's coif 50: same item as 2746 ((0, 8, 11))
+obj	4931	copy	base:4931 13,14,27	IC-WEARPOS	Karil's coif 25: same item as 2746 ((0, 8, 11))
+obj	4952	copy	base:4952 13,14,27	IC-WEARPOS	Torag's helm 100: same item as 2746 ((0, 8, 11))
+obj	4953	copy	base:4953 13,14,27	IC-WEARPOS	Torag's helm 75: same item as 2746 ((0, 8, 11))
+obj	4954	copy	base:4954 13,14,27	IC-WEARPOS	Torag's helm 50: same item as 2746 ((0, 8, 11))
+obj	4955	copy	base:4955 13,14,27	IC-WEARPOS	Torag's helm 25: same item as 2746 ((0, 8, 11))
+obj	4976	copy	base:4976 13,14,27	IC-WEARPOS	Verac's helm 100: same item as 2746 ((0, 8, 11))
+obj	4977	copy	base:4977 13,14,27	IC-WEARPOS	Verac's helm 75: same item as 2746 ((0, 8, 11))
+obj	4978	copy	base:4978 13,14,27	IC-WEARPOS	Verac's helm 50: same item as 2746 ((0, 8, 11))
+obj	4979	copy	base:4979 13,14,27	IC-WEARPOS	Verac's helm 25: same item as 2746 ((0, 8, 11))
+obj	6656	copy	base:6656 13,14,27	IC-WEARPOS	Camo helmet: same item as 2746 ((0, -1, -1))
+obj	7594	copy	base:7594 13,14,27	IC-WEARPOS	Zombie mask: same item as 2746 ((0, 8, 11))
+obj	7927	set	13 u8:12	IC-WEARPOS	Easter ring (server slot 12)
+obj	9920	copy	base:9920 13,14,27	IC-WEARPOS	Jack lantern mask: same item as 2746 ((0, 8, 11))
+obj	9925	copy	base:9925 13,14,27	IC-WEARPOS	Skeleton mask: same item as 2746 ((0, 8, -1))
+obj	11021	copy	base:11021 13,14,27	IC-WEARPOS	Chicken head: same item as 2746 ((0, 8, -1))
+obj	11847	copy	base:11847 13,14,27	IC-WEARPOS	Black h'ween mask: same item as 2746 ((0, 8, 11))
+obj	11862	copy	base:11862 13,14,27	IC-WEARPOS	Black partyhat: same item as 2746 ((0, -1, -1))
+obj	11863	copy	base:11863 13,14,27	IC-WEARPOS	Rainbow partyhat: same item as 2746 ((0, -1, -1))
+obj	11919	copy	base:11919 13,14,27	IC-WEARPOS	Cow mask: same item as 2746 ((0, 8, -1))
+obj	12637	copy	base:12637 13,14,27	IC-WEARPOS	Saradomin halo: same item as 2746 ((0, -1, -1))
+obj	12638	copy	base:12638 13,14,27	IC-WEARPOS	Zamorak halo: same item as 2746 ((0, -1, -1))
+obj	12639	copy	base:12639 13,14,27	IC-WEARPOS	Guthix halo: same item as 2746 ((0, -1, -1))
+obj	12845	copy	base:12845 13,14,27	IC-WEARPOS	Grim reaper hood: same item as 2746 ((0, 8, 11))
+obj	12887	copy	base:12887 13,14,27	IC-WEARPOS	Santa mask: same item as 2746 ((0, 8, 11))
+obj	13283	copy	base:13283 13,14,27	IC-WEARPOS	Gravedigger mask: same item as 2746 ((0, 8, 11))
+obj	13343	copy	base:13343 13,14,27	IC-WEARPOS	Black santa hat: same item as 2746 ((0, -1, -1))
+obj	13344	copy	base:13344 13,14,27	IC-WEARPOS	Inverted santa hat: same item as 2746 ((0, -1, -1))
+obj	13655	copy	base:13655 13,14,27	IC-WEARPOS	Gnome child hat: same item as 2746 ((0, -1, -1))
+obj	20773	copy	base:20773 13,14,27	IC-WEARPOS	Banshee mask: same item as 2746 ((0, 8, 11))
+obj	20838	copy	base:20838 13,14,27	IC-WEARPOS	Corrupted helm: same item as 2746 ((0, 8, 11))
+obj	21859	copy	base:21859 13,14,27	IC-WEARPOS	Wise old man's santa hat: same item as 2746 ((0, -1, -1))
+obj	22625	copy	base:22625 13,14,27	IC-WEARPOS	Statius's full helm: same item as 2746 ((0, 8, -1))
+obj	22638	copy	base:22638 13,14,27	IC-WEARPOS	Morrigan's coif: same item as 2746 ((0, 8, -1))
+obj	22650	copy	base:22650 13,14,27	IC-WEARPOS	Zuriel's hood: same item as 2746 ((0, 8, -1))
+obj	23448	copy	base:23448 13,14,27	IC-WEARPOS	Bunnyman mask: same item as 2746 ((0, 8, 11))
+obj	24525	copy	base:24525 13,14,27	IC-WEARPOS	Cat ears: same item as 2746 ((0, -1, -1))
+obj	24527	copy	base:24527 13,14,27	IC-WEARPOS	Hell cat ears: same item as 2746 ((0, -1, -1))
+obj	26312	copy	base:26312 13,14,27	IC-WEARPOS	Festive elf hat: same item as 2746 ((0, -1, -1))
+obj	30102	set	13 u8:0	IC-WEARPOS	Christmas ghost hood (server slot 0)
+obj	30103	set	13 u8:4	IC-WEARPOS	Christmas ghost top (server slot 4)
+obj	30104	set	13 u8:7	IC-WEARPOS	Christmas ghost bottoms (server slot 7)
+obj	30105	set	13 u8:3	IC-WEARPOS	Candy cane (server slot 3)
+obj	30113	set	13 u8:2	IC-WEARPOS	Ice amulet (server slot 2)
+obj	30115	set	13 u8:3	IC-WEARPOS	Christmas scythe (server slot 3)
+obj	32001	set	13 u8:3	IC-WEARPOS	Korasi's sword (server slot 3)
+obj	32161	set	13 u8:3	IC-WEARPOS	Enhanced excalibur (server slot 3)
+obj	32169	set	13 u8:0	IC-WEARPOS	Vesta's helmet (server slot 0)
+obj	32192	set	13 u8:5	IC-WEARPOS	Malovelent kiteshield is a shield (server slot 5)
+obj	32195	set	13 u8:5	IC-WEARPOS	Mercicless kiteshield is a shield (server slot 5)
+obj	32198	set	13 u8:5	IC-WEARPOS	Vengeful kiteshield is a shield (server slot 5)
+obj	32234	set	13 u8:0	IC-WEARPOS	Pink santa hat (server slot 0)
+obj	32237	set	13 u8:0	IC-WEARPOS	Pink h'ween mask (server slot 0)
+obj	32240	set	13 u8:0	IC-WEARPOS	Sleeping cap (afk) (server slot 0)
+obj	32066	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32068	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32078	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32224	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32225	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32355	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32074	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32076	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32108	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32118	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32128	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32138	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32221	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32226	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32401	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32411	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32415	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32417	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	32419	set	13 u8:0	IC-WEARPOS	head item (server slot 0)
+obj	30112	set	13 u8:3	IC-WEARPOS	held in the weapon slot (server slot 3)
+obj	32351	set	13 u8:3	IC-WEARPOS	held in the weapon slot (server slot 3)
+obj	32352	set	13 u8:3	IC-WEARPOS	held in the weapon slot (server slot 3)
+obj	32353	set	13 u8:3	IC-WEARPOS	held in the weapon slot (server slot 3)
+obj	32222	set	13 u8:5	IC-WEARPOS	Anubis shield (server slot 5)
+obj	32222	unset	14,27	IC-WEARPOS	a shield carried a helmet's wearpos 8/11
+obj	32223	set	13 u8:5	IC-WEARPOS	Anubis shield (server slot 5)
+obj	32223	unset	14,27	IC-WEARPOS	a shield carried a helmet's wearpos 8/11
+# ---- items-data section 1 (IC-08): two-tone ankou pieces take the models, wearpos and view of their own Ankou piece
+obj	32458,32473,32488,32503,32518,32533,32548,32563,32578,32593	copy	base:20101 44,45,46,47,48,49,50,51,52,53,54,4,5,6,7,8,95,13,14,27	IC-08	two-tone ankou gloves rendered as socks (inherit 20107): models/wearpos of Ankou gloves 20101
+obj	32461,32476,32491,32506,32521,32536,32551,32566,32581,32596	copy	base:20104 44,45,46,47,48,49,50,51,52,53,54,4,5,6,7,8,95,13,14,27	IC-08	two-tone ankou leggings rendered as socks (inherit 20107): models/wearpos of Ankou leggings 20104
+obj	32464,32479,32494,32509,32524,32539,32554,32569,32584,32599	copy	base:20095 44,45,46,47,48,49,50,51,52,53,54,4,5,6,7,8,95,13,14,27	IC-08	two-tone ankou mask rendered as socks (inherit 20107): models/wearpos of Ankou mask 20095
+obj	32467,32482,32497,32512,32527,32542,32557,32572,32587,32602	copy	base:20098 44,45,46,47,48,49,50,51,52,53,54,4,5,6,7,8,95,13,14,27	IC-08	two-tone ankou top rendered as socks (inherit 20107): models/wearpos of Ankou top 20098
+# ---- items-data section 1 / CLUE-20: the ankou set boxes (moved off the castle puzzle pieces by config/relocate.tsv)
+obj	2749-2758	set	35 str:Open	IC-08	the server binds "Open" (CustomItemSet)
+obj	2749-2758	copy	out:2746 44,4,5,6,7,8,95	IC-08	package model 2450 and view of the working set box 2746
+obj	2749-2758	unset-param	186,401	CLUE-20	the puzzle-piece params (186 piece model, 401) of the castle puzzle id
+# ---- branding-fodder section 4 (B12): NR lettering on models, recoloured through the objs that use them (only users)
+obj	33246	recolour	0=7870	B12	Founder's Cape: black "N"/"R" faces 410-437 of models 52013/52014 become medallion gold
+obj	32054	recolour	20323=48	B12	N tablet: the green "N" faces 8-29 of model 60049 become the tablet grey
+obj	32055	recolour	20323=48	B12	N tablet: the green "N" faces 8-29 of model 60049 become the tablet grey
+obj	33054	recolour	20323=48	B12	N tablet: the green "N" faces 8-29 of model 60049 become the tablet grey
+# ---- bosses section 6 (BOSS-13): Hagavik inherited Askeladden's missing stand/walk
+npc	16024	set	13 u16:808	BOSS-13	stand: human idle
+npc	16024	set	14 u16:819	BOSS-13	walk: human walk
+# ---- sets-prayers section 3 (SKSP-15): GadScape kit results at the ids GadScapeKits.java uses
+obj	=60000	new	base:27235 Pegasian masori mask (f)	SKSP-15	result of a GadScape ornament kit: copy of 27235
+obj	=60000	set	2 str:Pegasian masori mask (f)	SKSP-15	
+obj	=60000	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60000	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60001	new	base:27238 Pegasian masori body (f)	SKSP-15	result of a GadScape ornament kit: copy of 27238
+obj	=60001	set	2 str:Pegasian masori body (f)	SKSP-15	
+obj	=60001	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60001	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60002	new	base:27241 Pegasian masori chaps (f)	SKSP-15	result of a GadScape ornament kit: copy of 27241
+obj	=60002	set	2 str:Pegasian masori chaps (f)	SKSP-15	
+obj	=60002	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60002	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60003	new	base:21018 Eternal ancestral hat	SKSP-15	result of a GadScape ornament kit: copy of 21018
+obj	=60003	set	2 str:Eternal ancestral hat	SKSP-15	
+obj	=60003	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60003	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60004	new	base:21021 Eternal ancestral robe top	SKSP-15	result of a GadScape ornament kit: copy of 21021
+obj	=60004	set	2 str:Eternal ancestral robe top	SKSP-15	
+obj	=60004	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60004	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60005	new	base:21024 Eternal ancestral robe bottom	SKSP-15	result of a GadScape ornament kit: copy of 21024
+obj	=60005	set	2 str:Eternal ancestral robe bottom	SKSP-15	
+obj	=60005	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60005	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60006	new	base:26382 Primordial torva full helm	SKSP-15	result of a GadScape ornament kit: copy of 26382
+obj	=60006	set	2 str:Primordial torva full helm	SKSP-15	
+obj	=60006	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60006	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60007	new	base:26384 Primordial torva platebody	SKSP-15	result of a GadScape ornament kit: copy of 26384
+obj	=60007	set	2 str:Primordial torva platebody	SKSP-15	
+obj	=60007	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60007	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+obj	=60008	new	base:26386 Primordial torva platelegs	SKSP-15	result of a GadScape ornament kit: copy of 26386
+obj	=60008	set	2 str:Primordial torva platelegs	SKSP-15	
+obj	=60008	set	39 str:Dismantle	SKSP-15	kit removal (DismantleableItem), in the Drop slot like 241's (or) items
+obj	=60008	unset	65,97,98,148,149	SKSP-15	untradeable, no noted copy, no placeholder
+# ---- weapons section 2 / items-data section 4: spec cost (906) and spec text (1739) for GadScape's weapon copies
+enum	906	enum-copy	33369=28338	WEAPONS-2	GadScape copy 33369 gets the entry of 28338
+enum	906	enum-copy	33338=4151	WEAPONS-2	GadScape copy 33338 gets the entry of 4151
+enum	906	enum-copy	33346=4151	WEAPONS-2	GadScape copy 33346 gets the entry of 4151
+enum	906	enum-copy	33372=4151	WEAPONS-2	GadScape copy 33372 gets the entry of 4151
+enum	906	enum-copy	33380=4151	WEAPONS-2	GadScape copy 33380 gets the entry of 4151
+enum	906	enum-copy	33339=27690	WEAPONS-2	GadScape copy 33339 gets the entry of 27690
+enum	906	enum-copy	33373=27690	WEAPONS-2	GadScape copy 33373 gets the entry of 27690
+enum	906	enum-copy	33342=29000	WEAPONS-2	GadScape copy 33342 gets the entry of 29000
+enum	906	enum-copy	33376=29000	WEAPONS-2	GadScape copy 33376 gets the entry of 29000
+enum	1739	enum-copy	33369=28338	WEAPONS-2	GadScape copy 33369 gets the entry of 28338
+enum	1739	enum-copy	33338=4151	WEAPONS-2	GadScape copy 33338 gets the entry of 4151
+enum	1739	enum-copy	33346=4151	WEAPONS-2	GadScape copy 33346 gets the entry of 4151
+enum	1739	enum-copy	33372=4151	WEAPONS-2	GadScape copy 33372 gets the entry of 4151
+enum	1739	enum-copy	33380=4151	WEAPONS-2	GadScape copy 33380 gets the entry of 4151
+enum	1739	enum-copy	33339=27690	WEAPONS-2	GadScape copy 33339 gets the entry of 27690
+enum	1739	enum-copy	33373=27690	WEAPONS-2	GadScape copy 33373 gets the entry of 27690
+enum	1739	enum-copy	33342=29000	WEAPONS-2	GadScape copy 33342 gets the entry of 29000
+enum	1739	enum-copy	33376=29000	WEAPONS-2	GadScape copy 33376 gets the entry of 29000
+# ---- IF-DUEL-1999-2000-06 / IF-TOURN-1707-05 in enums: GadScape's own enums still name the old interfaces
+enum	1505	enum-component	481=1999	IF-DUEL-1999-2000-06	stake screen worn-slot components: 481:47-57 (old duel interface; 481 is toa_hud in 241) -> 1999:47-57
+enum	2521	enum-component	707=1707	IF-TOURN-1707-05	tournament preset buttons: 707:25-31 (707 is side_channels, 9 components) -> 1707:25-31
+# ---- teleports-shops section 2: GadScape's teleport-menu category spells (the city teleports of the four books). The
+# three-way merge keeps BASE's rune requirements (params 365-370) that GadScape removed: the spellbook showed law/air/fire
+# runes for "Training Teleports" and greyed the spell out without them. The spells only open the menu: no runes.
+obj	3286,3289,3292,3296,3301,3306,3312,21836	unset-param	365,366,367,368,369,370	TELE-SPELLS	standard book category spells
+obj	4631,4634,4637,4640,4643,4646,4649,4652	unset-param	365,366,367,368,369,370	TELE-SPELLS	ancient book category spells
+obj	9111,20759,9114,9117,9120,9127,9129,9131	unset-param	365,366,367,368,369,370	TELE-SPELLS	lunar book category spells
+obj	20409,20410,20411,20412,20413,20414,20419,20420	unset-param	365,366,367,368,369,370	TELE-SPELLS	arceuus book category spells
+# ---- branding-fodder section 5 (F08): the "N tablet" (Near-Reality's tablet; nothing in the server uses it) keeps its
+# model with the "N" recoloured away (B12 above) and gets a GadScape name; the noted copy takes its name from 32054
+obj	32054,33054	set	2 str:GadScape tablet	F08	"N tablet" named after the old brand

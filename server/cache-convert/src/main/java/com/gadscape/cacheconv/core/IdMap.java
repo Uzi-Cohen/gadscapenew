@@ -166,6 +166,23 @@ public final class IdMap {
         return id;
     }
 
+    /**
+     * A new id at a fixed place (server constants already name it, e.g. GadScape's kit results 60000-60008): the id must
+     * be free ({@link #isFree}) and is then taken like an {@link #addNew} id; the same name and id again is a no-op.
+     */
+    public int claimNew(Kind k, String name, int id, String why) {
+        Integer cur = added.get(k).get(name);
+        if (cur != null) {
+            if (cur != id) throw new IllegalStateException(k.key + " new id '" + name + "' is " + cur + ", not " + id);
+            return id;
+        }
+        if (!isFree(k, id)) throw new IllegalStateException(k.key + " " + id + " is not free for new entry '" + name + "'");
+        taken.get(k).add(id);
+        added.get(k).put(name, id);
+        addedWhy.get(k).put(name, why);
+        return id;
+    }
+
     /** The id {@link #addNew} gave {@code name}, or -1. */
     public int newId(Kind k, String name) { Integer v = added.get(k).get(name); return v == null ? -1 : v; }
 

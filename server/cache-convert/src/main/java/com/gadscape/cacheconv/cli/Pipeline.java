@@ -27,12 +27,14 @@ import java.util.Map;
  *       <li>{@code anim}: seqs, frames, framemaps, keyframes (written here; hand objs follow configs-plan).</li>
  *     </ul></li>
  *   <li><b>Writers</b>, which map every reference through the id map: {@code configs} (archive 2 except seqs),
- *       {@code config-sprites} (deleted vanilla sprites those configs name), {@code mapscene}, {@code ui-merge} (the three-way-merged vanilla UI), {@code ui-convert} (GadScape's own UI),
+ *       {@code config-sprites} (deleted vanilla sprites those configs name), {@code config-fixes} (data-driven fixes of
+ *       GadScape configs), {@code mapscene}, {@code ui-merge} (the three-way-merged vanilla UI), {@code ui-convert} (GadScape's own UI),
+ *       {@code ui-fixes} (QA fixes of GadScape UI), {@code asset-fixes} (redrawn sprites, the user's title screen),
  *       {@code maps} (user squares), {@code db-slayer-rewards} (GadScape's slayer rewards as rows of table 117),
  *       {@code db-index} (archive 21 from the rows written), {@code rebrand} (texts),
  *       then {@code models-prune} (vanilla model ports nothing ended up using are removed again).</li>
  *   <li><b>Checks</b> (read-only, one report error per failure): {@code configs-oracle}, {@code configs-refcheck},
- *       {@code configs-expect}, {@code models-refcheck}, {@code anim-refcheck}, {@code ui-check}, and {@code verify}
+ *       {@code configs-expect}, {@code area-expect}, {@code models-refcheck}, {@code anim-refcheck}, {@code ui-check}, and {@code verify}
  *       (the whole-cache verifier with BASE as baseline) last.</li>
  * </ol>
  * {@code --only}/{@code --skip} select steps by name; a planner skipped makes the later steps see fewer relocations.
@@ -55,9 +57,12 @@ public final class Pipeline {
         // writers: every reference goes through ctx.ids
         s.add(new com.gadscape.cacheconv.config.ConfigStep());          // configs
         s.add(new com.gadscape.cacheconv.sprite.ConfigSpritesStep());   // config-sprites
+        s.add(new com.gadscape.cacheconv.config.ConfigFixesStep());     // config-fixes (QA / area fixes of GadScape configs, config/fixes.tsv)
         s.add(new com.gadscape.cacheconv.sprite.MapsceneStep());        // mapscene
         s.add(new com.gadscape.cacheconv.uimerge.UiMergeStep());        // ui-merge
         s.add(new com.gadscape.cacheconv.ui.UiConvertStep());           // ui-convert
+        s.add(new com.gadscape.cacheconv.ui.UiFixesStep());             // ui-fixes (QA fixes of GadScape UI: ui/fixes.tsv, script recipes, new scripts)
+        s.add(new com.gadscape.cacheconv.sprite.AssetFixesStep());      // asset-fixes (redrawn sprite frames, user-changed binary archive)
         s.add(new com.gadscape.cacheconv.map.MapsStep());               // maps
         s.add(new com.gadscape.cacheconv.db.SlayerRewardsStep());       // db-slayer-rewards (GadScape's slayer rewards as table 117 rows)
         s.add(new com.gadscape.cacheconv.db.DbIndexStep());             // db-index
@@ -67,6 +72,7 @@ public final class Pipeline {
         s.add(new com.gadscape.cacheconv.config.ConfigOracle());        // configs-oracle
         s.add(new com.gadscape.cacheconv.config.ConfigRefCheck());      // configs-refcheck
         s.add(new com.gadscape.cacheconv.config.ConfigExpect());        // configs-expect
+        s.add(new com.gadscape.cacheconv.verify.AreaExpect());          // area-expect (content areas' CACHE_NEEDS, verify/area-expect.tsv)
         s.add(new com.gadscape.cacheconv.model.ModelRefCheckStep());    // models-refcheck
         s.add(new com.gadscape.cacheconv.anim.AnimRefCheck());          // anim-refcheck
         s.add(new com.gadscape.cacheconv.ui.UiCheckStep());             // ui-check

@@ -54,9 +54,11 @@ final class UiMergeNotes {
                     + "reward table 117 (step db-slayer-rewards, idmap.json _new dbrow 'slayer-reward:53') with reward id 95 (varp 5587 bit 31), since "
                     + "241 gave id 53 to 'Revenenenenenants'. The server's Slayer unlocks (a 64-bit set over the 211 indices, varps 1076/1344) must "
                     + "unlock it as reward id 95; 211 indices 0-52 are 241's ids 0-52.",
-            "**Poll screens (310, 345, 400)**: 241 reuses these ids for other interfaces (gryphon_boss, sailing_intro_hud, trr_display) and has "
-                    + "no polls; component-remap.tsv maps them to -1. PollManager needs its own copies of the 211 screens (like 215 -> 1606) or has "
-                    + "to be disabled on 241.",
+            "**Poll screens (310, 345, 400) and the gnome cocktail shaker (436)**: 241 reuses these ids for other interfaces (gryphon_boss, "
+                    + "sailing_intro_hud, trr_display, soul_wars_stats); component-remap.tsv maps 310/345/400 to -1 at their old ids. ui-convert "
+                    + "ports the 211 screens into the reserved interface range (ui.UiScope.VANILLA_PORTS, idmap.json _vanilla interface, same "
+                    + "component numbering) with the poll scripts the server runs (603/604/609/610, _vanilla script): PollManager and "
+                    + "GameInterface.GNOME_COCKTAIL follow the id map.",
             "**Emotes (699/701/702)** follow the config merge of enums 1000-1002 (USER wins keys 52-57, so 241's Fortis Salute, Sit down and Crab dance "
                     + "are not in the list). If the emote enums are ever merged differently (e.g. GadScape's emotes moved after 241's), the counts (57) and "
                     + "the switch keys 52-57 in these recipes must follow.",
