@@ -81,7 +81,7 @@ data class ItemDefinition(
                         if (attackStab > def.bonuses[0]) attackStab else def.bonuses[0],
                         if (attackSlash > def.bonuses[1]) attackSlash else def.bonuses[1],
                         if (attackCrush > def.bonuses[2]) attackCrush else def.bonuses[2],
-                        if (attackMagic > def.bonuses[3]) attackCrush else def.bonuses[3],
+                        if (attackMagic > def.bonuses[3]) attackMagic else def.bonuses[3],
                         if (attackRanged > def.bonuses[4]) attackRanged else def.bonuses[4],
                         if (defenceStab > def.bonuses[5]) defenceStab else def.bonuses[5],
                         if (defenceSlash > def.bonuses[6]) defenceSlash else def.bonuses[6],

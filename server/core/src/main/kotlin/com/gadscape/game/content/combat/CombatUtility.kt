@@ -37,11 +37,13 @@ object CombatUtility {
             DRAGON_CLAWS_CR,
             DRAGON_CROSSBOW_CR,
             DRAGON_DAGGER_CR,
+            DRAGON_DAGGER_PCR, DRAGON_DAGGER_PCR_28023, DRAGON_DAGGER_PCR_28025, // poisoned (cr) daggers
             DRAGON_HALBERD_CR,
             DRAGON_LONGSWORD_CR,
             DRAGON_MACE_CR,
             DRAGON_SCIMITAR_CR,
             DRAGON_SPEAR_CR,
+            DRAGON_SPEAR_PCR, DRAGON_SPEAR_PCR_28045, DRAGON_SPEAR_PCR_28047, // poisoned (cr) spears
             DRAGON_SWORD_CR,
             DRAGON_WARHAMMER_CR, -> return true
         }

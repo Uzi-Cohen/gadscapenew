@@ -34,6 +34,8 @@ public class JSONItemDefinitionsLoader implements Parse {
                 }
             }
         }
+        // GadScape: definitions bundled with the code (resources gadscape/items/*.json), layered over the data dir.
+        BundledItemDefinitions.load(JSONItemDefinitionsLoader.definitions);
     }
 
     public static void main(final String[] args) {
@@ -73,7 +75,14 @@ public class JSONItemDefinitionsLoader implements Parse {
             }
             return npc1.getId() > npc2.getId() ? 1 : -1;
         };
-        final List<JSONItemDefinitions> list = new ArrayList<>(values);
+        final List<JSONItemDefinitions> list = new ArrayList<>(values.size());
+        for (final JSONItemDefinitions def : values) {
+            // Bundled entries stay in the bundled files: write the data-dir original (or nothing) for them.
+            final JSONItemDefinitions toSave = BundledItemDefinitions.forSave(def);
+            if (toSave != null) {
+                list.add(toSave);
+            }
+        }
         list.sort(comparator);
         final String toJson = gson.toJson(list);
         try {

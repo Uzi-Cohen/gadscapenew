@@ -3,6 +3,7 @@ package mgi.types.config.items;
 import com.zenyte.CacheManager;
 import com.zenyte.game.content.grandexchange.JSONGEItemDefinitions;
 import com.zenyte.game.content.grandexchange.JSONGEItemDefinitionsLoader;
+import com.zenyte.game.parser.impl.BundledItemDefinitions;
 import com.zenyte.game.parser.impl.ItemRequirements;
 import com.zenyte.game.parser.impl.JSONItemDefinitionsLoader;
 import com.zenyte.game.world.entity.masks.RenderAnimation;
@@ -278,18 +279,38 @@ public final class ItemDefinitions implements Definitions, Cloneable {
             log.error("", e);
             return;
         }
-        try {
-            for (JSONItemDefinitions jsonDefs : JSONItemDefinitionsLoader.getDefinitions().values()) {
-                int itemID = jsonDefs.getId();
+        final Int2ObjectMap<JSONItemDefinitions> jsonDefinitions = JSONItemDefinitionsLoader.getDefinitions();
+        int missingBundled = 0;
+        for (JSONItemDefinitions jsonDefs : new java.util.ArrayList<>(jsonDefinitions.values())) {
+            final int itemID = jsonDefs.getId();
+            try {
                 ItemDefinitions def = ItemDefinitions.get(itemID);
                 if (def == null) {
-                    log.warn("JSON item def was defined for " + itemID + " but definition was null");
+                    if (BundledItemDefinitions.isBundledOnly(itemID)) {
+                        missingBundled++;
+                    } else {
+                        log.warn("JSON item def was defined for " + itemID + " but definition was null");
+                    }
                     continue;
                 }
+                if (BundledItemDefinitions.isBundled(itemID)) {
+                    // Bundled entries name the item they were written for; skip them if the cache has another item there.
+                    jsonDefs = BundledItemDefinitions.checkAgainstCache(jsonDefinitions, jsonDefs, def.getName());
+                    if (jsonDefs == null) {
+                        continue;
+                    }
+                    if (BundledItemDefinitions.hasOwnRequirements(itemID)) {
+                        ItemRequirements.clear(itemID);
+                    }
+                }
                 apply(def, jsonDefs);
+            } catch (final Exception e) {
+                // One bad entry must not stop the rest from being applied.
+                log.error("Failed to apply the JSON item definition of " + itemID, e);
             }
-        } catch (final Exception e) {
-            log.error("", e);
+        }
+        if (missingBundled > 0) {
+            log.info("{} bundled item definitions are for ids this cache does not have; not applied.", missingBundled);
         }
         afterParsed.run();
     }
