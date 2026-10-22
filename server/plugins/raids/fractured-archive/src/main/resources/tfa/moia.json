@@ -1,0 +1,112 @@
+{
+  "_comment": "Moia (room 6, spec 4.4). House values from the spec; override any key in data/raids/tfa/moia.json. Tiles are static [x, y, plane]. List keys confirmed by a public source in \"$verified\".",
+  "baseHp": 1900,
+  "enrageFraction": 0.3333,
+  "attackSpeed": 5,
+  "rangedMax": 32,
+  "magicMax": 34,
+  "specialEveryNthAuto": 4,
+  "spawnTicks": 2,
+  "deathTicks": 5,
+  "special": {
+    "_comment": "Ticks after the dagger on T: teleport out (14788 + 4219), arrive on another arm (4220), cast (14785 + 4213); the magic hit lands hitDelay after the cast (T+6: off the 5-t grid and off every dagger landing).",
+    "teleportOut": 1,
+    "arrive": 2,
+    "cast": 3,
+    "hitDelay": 3,
+    "impactHeight": 92
+  },
+  "projectiles": {
+    "_comment": "Classic projectiles: end cycle = delay + perTile x distance; hit after max(1 + floor((hitOffset + d) / hitDivisor), projectile flight). Slope in client units.",
+    "dagger": { "startHeight": 70, "endHeight": 31, "delay": 30, "slope": 15, "perTile": 5, "hitOffset": 3, "hitDivisor": 6 },
+    "magic": { "startHeight": 70, "endHeight": 31, "delay": 30, "slope": 15, "perTile": 5, "hitOffset": 1, "hitDivisor": 3 },
+    "infect": { "startHeight": 70, "endHeight": 31, "delay": 30, "slope": 15, "perTile": 10, "hitOffset": 1, "hitDivisor": 3 }
+  },
+  "infect": {
+    "interval": 30,
+    "duration": 20,
+    "coughEvery": 4,
+    "dmg": [4, 8],
+    "serpMult": 0.25,
+    "binderDmg": 20,
+    "coughAnim": false
+  },
+  "binders": {
+    "setBase": 2,
+    "setPerScale": 2,
+    "setCap": 12,
+    "respawn": 12,
+    "shuffle": 8,
+    "max": 22,
+    "reach": 2,
+    "despawn": 6,
+    "hp": 95,
+    "attackSpeed": 5,
+    "hitDelay": 1,
+    "minPlayerDistance": 2
+  },
+  "enrage": {
+    "set": 8,
+    "diamond": [[4063, 5660, 0], [4065, 5661, 0], [4066, 5663, 0], [4065, 5665, 0], [4063, 5666, 0], [4061, 5665, 0], [4060, 5663, 0], [4061, 5661, 0]],
+    "chargeTicks": 25,
+    "explosionPerSurvivor": 25,
+    "explosionCap": 99,
+    "transitionTicks": 2,
+    "hudExtraBar": true
+  },
+  "startArm": "W",
+  "arms": {
+    "W": [4054, 5662, 0],
+    "E": [4070, 5662, 0],
+    "S": [4062, 5654, 0],
+    "N": [4062, 5670, 0],
+    "centre": [4062, 5662, 0]
+  },
+  "combatLevel": 1064,
+  "traits": {
+    "defenceFloorPct": 60,
+    "weakness": "air",
+    "weaknessPct": 80,
+    "rangedDef": [60, 120, 140],
+    "immunePoison": true,
+    "immuneVenom": true,
+    "immuneCannon": true,
+    "freezeResistPct": 0,
+    "immuneAncients": false,
+    "demonbanePct": null,
+    "flatArmour": 0,
+    "magicResist": 0,
+    "magicDrainInverted": false,
+    "flying": false
+  },
+  "binderTraits": {
+    "defenceFloorPct": null,
+    "weakness": "none",
+    "weaknessPct": 0,
+    "rangedDef": [0, 0, 0],
+    "immunePoison": false,
+    "immuneVenom": false,
+    "immuneCannon": true,
+    "freezeResistPct": 0,
+    "immuneAncients": false,
+    "demonbanePct": null,
+    "flatArmour": 0,
+    "magicResist": 0,
+    "magicDrainInverted": false,
+    "flying": false
+  },
+  "stats": {
+    "_comment": "Cache 2746 npc 16667: levels att/str/def/mag/rng, attack bonuses stab/slash/crush/magic/ranged, defence (ranged = standard), strength melee/ranged/magic %.",
+    "levels": [1, 1, 195, 350, 200],
+    "attack": [0, 0, 0, 300, 350],
+    "defence": [20, 110, 15, 30, 120],
+    "strength": [1, 35, 15]
+  },
+  "binderStats": {
+    "_comment": "Cache 2746 npc 16670.",
+    "levels": [1, 170, 225, 50, 1],
+    "attack": [0, 0, 0, 0, 0],
+    "defence": [12, 15, 10, -20, 0],
+    "strength": [15, 0, 0]
+  }
+}

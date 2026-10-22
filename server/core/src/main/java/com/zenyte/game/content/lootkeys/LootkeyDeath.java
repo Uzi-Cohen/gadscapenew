@@ -26,8 +26,9 @@ import static com.zenyte.game.content.lootkeys.LootkeyConstants.*;
  *     and items at/above the valuables threshold drop to the floor as usual). No loot, no key.</li>
  *     <li>A killer already holding 5 keys gets no key: "You have reached the limit of 5 loot keys." and the loot drops.</li>
  *     <li>Keys carried by the victim go to the killer after a PvP death even if the killer has not enabled keys.
- *     Anything that would take the killer past 5 keys is destroyed (lowest value first). After a PvM death, or when
- *     the killer is dead/gone, the victim's keys are destroyed.</li>
+ *     Anything that would take the killer past 5 keys is destroyed (lowest value first); if the killer's new key is
+ *     the one that does not fit, its loot drops to the floor instead. A killer with keys enabled always removes one
+ *     key from a 5-key victim. After a PvM death, or when the killer is dead/gone, the victim's keys are destroyed.</li>
  *     <li>A key that does not fit in the inventory lands on the floor, visible only to the killer for 2 minutes.</li>
  * </ul>
  */
@@ -64,25 +65,40 @@ public final class LootkeyDeath {
             final int held = LootKeys.countKeys(receiver);
             Item newKey = null;
             final LootkeySettings settings = receiver.getLootkeySettings();
-            if (settings != null && settings.isUnlocked() && settings.isEnabled() && !lostToKiller.isEmpty()) {
+            final boolean keysEnabled = settings != null && settings.isUnlocked() && settings.isEnabled();
+            if (keysEnabled && !lostToKiller.isEmpty()) {
                 if (held >= MAX_KEYS) {
                     receiver.sendMessage("You have reached the limit of " + MAX_KEYS + " loot keys.");
                 } else {
                     newKey = buildKey(settings, lostToKiller);
                 }
             }
+            victimKeys.sort(Comparator.comparingLong(LootKeys::storedValue).reversed());
+            int destroyed = 0;
+            /*
+             * OSRS: "defeating an opponent that has 5 keys in the inventory with the loot keys enabled will always cause
+             * one key to be removed, even if the killer has none" (the new loot key pushes the total past 5). When no
+             * new key could be made (nothing else to loot), the rule still applies: the lowest-value key is removed.
+             */
+            if (keysEnabled && newKey == null && victimKeys.size() >= MAX_KEYS) {
+                victimKeys.remove(victimKeys.size() - 1);
+                destroyed++;
+            }
             final List<Item> candidates = new ArrayList<>(victimKeys);
             if (newKey != null) {
                 candidates.add(newKey);
             }
-            if (candidates.isEmpty()) {
+            if (candidates.isEmpty() && destroyed == 0) {
                 return;
             }
+            // The most valuable keys are kept. Keys taken from the victim that do not fit are destroyed; when the new
+            // key does not fit, its loot goes back to the drop list and lands on the floor for the killer (as when the
+            // killer already holds 5 keys), so the victim's inventory is never deleted.
             candidates.sort(Comparator.comparingLong(LootKeys::storedValue).reversed());
             int capacity = Math.max(0, MAX_KEYS - held);
-            int destroyed = 0;
             int transferred = 0;
             boolean receivedNew = false;
+            boolean newKeyDropped = false;
             for (final Item key : candidates) {
                 if (capacity > 0 && LootKeys.give(receiver, key, tile)) {
                     capacity--;
@@ -91,6 +107,9 @@ public final class LootkeyDeath {
                     } else {
                         transferred++;
                     }
+                } else if (key == newKey) {
+                    returnLoot(newKey, lostToKiller);
+                    newKeyDropped = true;
                 } else {
                     destroyed++;
                 }
@@ -103,6 +122,10 @@ public final class LootkeyDeath {
                 receiver.sendMessage("<col=ef1020>You take " + (transferred == 1 ? "a loot key" : transferred + " loot keys") + " from "
                         + victim.getName() + ".</col>");
             }
+            if (newKeyDropped) {
+                receiver.sendMessage("<col=ef1020>You have reached the limit of " + MAX_KEYS + " loot keys, so " + victim.getName()
+                        + "'s loot has dropped to the floor.</col>");
+            }
             if (destroyed > 0) {
                 receiver.sendMessage("<col=ef1020>You can only carry " + MAX_KEYS + " loot keys, so " + destroyed
                         + (destroyed == 1 ? " key was" : " keys were") + " destroyed.</col>");
@@ -111,6 +134,15 @@ public final class LootkeyDeath {
         } catch (final Exception e) {
             // Never let loot key handling break a death; whatever is still in lostToKiller drops as normal.
             log.error("Loot key death handling failed for {}", victim.getUsername(), e);
+        }
+    }
+
+    /** Puts a new key's loot back into the drop list (the key did not fit), so it drops to the floor for the killer. */
+    private static void returnLoot(final Item key, final List<Item> lostToKiller) {
+        for (final Item item : LootKeys.readContents(key).getItems().values()) {
+            if (item != null && item.getAmount() > 0) {
+                lostToKiller.add(item);
+            }
         }
     }
 

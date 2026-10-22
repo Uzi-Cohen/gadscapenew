@@ -33,6 +33,9 @@ import java.util.List;
  * Menagerie pet house (CON-9): pets used on the pet house are kept in the house and roam the menagerie rooms; "View" lists
  * them and hands one back; "Upgrade" builds the next pet house over the current one (oak, teak, mahogany, consecrated,
  * desecrated, nature).
+ * <p>
+ * A stored pet still counts as owned: {@code Player#containsItem} looks in {@link Construction#getMenageriePets()}, so pet
+ * insurance can't reclaim it and the pet's drop roll gives the "funny feeling" message instead of a second copy.
  */
 public final class PetHouse implements ObjectInteraction, ItemOnObjectAction {
 
@@ -203,7 +206,8 @@ public final class PetHouse implements ObjectInteraction, ItemOnObjectAction {
             }
             final RoomReference room = rooms.get(index++ % rooms.size());
             final Location tile = house.getRoomTile(room, 2 + Utils.random(3), 2 + Utils.random(3));
-            final NPC npc = new NPC(pet.petId(), tile, Direction.SOUTH, 3);
+            // Spawned (no respawn task): the house removes and re-creates these itself.
+            final NPC npc = new NPC(pet.petId(), tile, Direction.SOUTH, 3, true);
             npc.spawn();
             house.getRoamingPets().add(npc);
         }

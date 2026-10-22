@@ -123,6 +123,10 @@ public class MagicCombat extends PlayerCombat {
             splash = false;
             return Utils.random(minimumHit, (int) (minimumHit * bonusModifier));
         }
+        if (isGuaranteedHit(target)) {
+            splash = false; // Raids 4 E8
+            return Utils.random(calculateMinimumHit(player, maxhit), maxhit);
+        }
         final int targetRoll = getTargetDefenceRoll(player, target, oppositeIndex);
         sendDebug(accuracy, targetRoll, maxhit);
         final int accRoll = accuracy > 0 ? Utils.random(accuracy) : 0;
@@ -206,7 +210,35 @@ public class MagicCombat extends PlayerCombat {
                 result *= 1.2;
         }
         result = Math.floor(result);
-        return (int) result;
+        // Raids 4 E5: elemental weakness, +1% accuracy per point for the matching standard elemental spell.
+        return com.zenyte.game.world.entity.npc.combat.CombatTraitRules.weaknessAccuracy((int) result, elementalWeaknessPercent(target));
+    }
+
+    /**
+     * The elemental weakness of {@code target} that applies to this combat's spell: its traits' percentage when the
+     * spell is a standard elemental spell of the weak element, else 0 (Raids 4 E5).
+     */
+    protected int elementalWeaknessPercent(final Entity target) {
+        final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = CombatUtilities.traitsOf(target);
+        if (traits == null || traits.weaknessPercent() == 0) {
+            return 0;
+        }
+        final com.zenyte.game.world.entity.npc.combat.SpellElement element = com.zenyte.game.world.entity.npc.combat.SpellElement.of(spell);
+        return element != null && element == traits.weaknessElement() ? traits.weaknessPercent() : 0;
+    }
+
+    /** Raids 4 E9: whether {@code target}'s traits refuse this spell as an Ancient Magicks spell; sends the message. */
+    protected final boolean refusedAsAncientMagicks(final Entity target) {
+        if (spell == null || spell.getSpellbook() != Spellbook.ANCIENT || !(target instanceof final NPC npc)) {
+            return false;
+        }
+        final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+        if (traits == null || !traits.immuneToAncientMagicks()) {
+            return false;
+        }
+        final String message = traits.ancientMagicksMessage();
+        player.sendMessage(message != null ? message : "The " + npc.getDefinitions().getName() + " is immune to Ancient Magicks.");
+        return true;
     }
 
     @Override
@@ -324,6 +356,7 @@ public class MagicCombat extends PlayerCombat {
                 damage += 3;
             }
         }
+        final int elementalBase = damage; // the base spell max hit for the elemental weakness bonus (Raids 4 E5)
         int bonus = player.getBonuses().getBonus(Bonuses.Bonus.MAGIC_DAMAGE);
         bonus = evalVirtusBoost(bonus);
         bonus = evalTumekensBoost(bonus);
@@ -386,6 +419,8 @@ public class MagicCombat extends PlayerCombat {
                 }
             }
         }
+        // Raids 4 E5: + floor(base max × weakness%), after every other magic damage modifier.
+        damage += com.zenyte.game.world.entity.npc.combat.CombatTraitRules.weaknessBonusDamage(elementalBase, elementalWeaknessPercent(target));
 
         return damage;
     }
@@ -427,6 +462,9 @@ public class MagicCombat extends PlayerCombat {
     @Override
     public boolean start() {
         if (!spell.canCast(player, target)) {
+            return false;
+        }
+        if (refusedAsAncientMagicks(target)) {
             return false;
         }
         state = new SpellState(player, spell.getLevel(), spell.getRunes());
@@ -543,12 +581,13 @@ public class MagicCombat extends PlayerCombat {
                 return delay;
             }
         }
-        com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.consumeCharge(player, spell);
         boolean saveRuneOrCharge = SlayerHelmetEffects.INSTANCE.redHelmet(player, target) && Utils.random(100) < 25;
         if(!saveRuneOrCharge && player.getBoonManager().hasBoon(SuperiorSorcery.class))
             saveRuneOrCharge = SuperiorSorcery.roll();
         final int delay = fireProjectile();
         hit(delay);
+        // After the hit, so the cast that uses a tome's last charge still gets the tome's boosts.
+        com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.consumeCharge(player, spell);
         if (area instanceof PlayerCombatPlugin) {
             ((PlayerCombatPlugin) area).onAttack(player, target, "Magic", spell, splash);
         }
@@ -612,11 +651,13 @@ public class MagicCombat extends PlayerCombat {
         float accuracyModifier = 1.0F;
         switch (spell) {
             case INFERIOR_DEMONBANE, DARK_DEMONBANE, SUPERIOR_DEMONBANE: {
+                // Raids 4 E9: the demonbane bonuses scale with the target's demonbane effectiveness (100% by default).
+                final int demonbane = CombatUtilities.demonbanePercent(target);
                 if (MarkOfDarknessEffectKt.getHasMarkOfDarkness(target)) {
-                    accuracyModifier += 0.4F;
-                    passiveModifier += 0.25F;
+                    accuracyModifier += demonbane == 100 ? 0.4F : (float) com.zenyte.game.world.entity.npc.combat.CombatTraitRules.scaledDemonbaneBonus(0.4, demonbane);
+                    passiveModifier += demonbane == 100 ? 0.25F : (float) com.zenyte.game.world.entity.npc.combat.CombatTraitRules.scaledDemonbaneBonus(0.25, demonbane);
                 } else {
-                    accuracyModifier += 0.2F;
+                    accuracyModifier += demonbane == 100 ? 0.2F : (float) com.zenyte.game.world.entity.npc.combat.CombatTraitRules.scaledDemonbaneBonus(0.2, demonbane);
                 }
                 break;
             }
@@ -672,14 +713,43 @@ public class MagicCombat extends PlayerCombat {
         }
     }
 
-    protected void applyHit(final Entity target, final Hit hit, final boolean splash, final int delay, final int clientcycles) {
+    protected void applyHit(final Entity target, final Hit hit, final boolean splash, int delay, int clientcycles) {
+        // Raids 4 E17: per-spell hit-delay override and the spell-hit hook of the target NPC.
+        boolean delayOverridden = false;
+        if (target instanceof final NPC npc) {
+            final int override = npc.getSpellHitDelay(player, spell, delay);
+            if (override != delay) {
+                delay = com.zenyte.game.world.entity.npc.combat.CombatTraitRules.landingDelay(override);
+                clientcycles = Math.max(0, override) * 30;
+                delayOverridden = true;
+            }
+            final com.zenyte.game.world.entity.npc.combat.SpellElement element = com.zenyte.game.world.entity.npc.combat.SpellElement.of(spell);
+            final Player caster = player;
+            final CombatSpell castSpell = spell;
+            if (splash) {
+                final Runnable notify = () -> {
+                    if (!npc.isFinished()) {
+                        npc.onSpellHit(caster, castSpell, element, hit, true);
+                    }
+                };
+                if (delay < 0) {
+                    notify.run();
+                } else {
+                    WorldTasksManager.schedule(notify::run, delay);
+                }
+            } else {
+                final java.util.function.Consumer<Hit> previous = hit.getOnLandConsumer();
+                final java.util.function.Consumer<Hit> notify = landed -> npc.onSpellHit(caster, castSpell, element, landed, false);
+                hit.onLand(previous == null ? notify : previous.andThen(notify));
+            }
+        }
         final Graphics gfx = splash ? new Graphics(85, -1, 124) : spell.getHitGfx();
         if (gfx != null) {
-            target.setGraphics(new Graphics(gfx.getId(), gfx.getDelay() != -1 ? gfx.getDelay() : clientcycles, gfx.getHeight()));
+            target.setGraphics(new Graphics(gfx.getId(), gfx.getDelay() != -1 && !delayOverridden ? gfx.getDelay() : clientcycles, gfx.getHeight()));
         }
         final SoundEffect hitSound = splash ? new SoundEffect(227, 10, -1) : spell.getHitSound();
         if (hitSound != null) {
-            World.sendSoundEffect(target.getLocation(), new SoundEffect(hitSound.getId(), hitSound.getRadius(), hitSound.getDelay() == -1 ? clientcycles : hitSound.getDelay()));
+            World.sendSoundEffect(target.getLocation(), new SoundEffect(hitSound.getId(), hitSound.getRadius(), hitSound.getDelay() == -1 || delayOverridden ? clientcycles : hitSound.getDelay()));
             if (spell == CombatSpell.IBAN_BLAST) {
                 World.sendSoundEffect(target.getLocation(), new SoundEffect(hitSound.getId(), hitSound.getRadius(), hitSound.getDelay() == -1 ? clientcycles : hitSound.getDelay()));
             }
@@ -698,14 +768,18 @@ public class MagicCombat extends PlayerCombat {
                             ((NPC) target).flinch();
                         }
                     }
-                }, delay);
+                }, Math.max(0, delay));
             } else {
                 if (!isFreezingImpling && spell != CombatSpell.TELE_BLOCK) {
                     this.delayHit(target, delay, hit);
                 }
             }
             final SpellEffect effect = spell.getEffect();
-            if (effect != null) {
+            if (effect instanceof final com.zenyte.game.world.entity.player.action.combat.magic.spelleffect.DebuffEffect debuff
+                    && com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.curseEffectMultiplier(player, spell) != 1) {
+                // Tome of Water: stat-draining curses are 50% more effective (Confuse 5% -> 7%, Stun 10% -> 15%).
+                target.drainSkill(debuff.getSkill(), com.zenyte.game.world.entity.player.action.combat.magic.ElementalTomes.curseDrainPercentage(player, spell, debuff.getPercentage()), debuff.getMinimumDrain());
+            } else if (effect != null) {
                 effect.spellEffect(player, target, hit.getDamage());
             }
         } else {
@@ -717,7 +791,7 @@ public class MagicCombat extends PlayerCombat {
                 if (target instanceof NPC) {
                     ((NPC) target).flinch();
                 }
-            }, delay);
+            }, Math.max(0, delay));
         }
     }
 
@@ -767,6 +841,8 @@ public class MagicCombat extends PlayerCombat {
             return false;
         }
         if (area instanceof SpellPlugin && !((SpellPlugin) area).canCast(player, spell))
+            return false;
+        if (refusedAsAncientMagicks(target))
             return false;
         return !isTargetDead();
     }

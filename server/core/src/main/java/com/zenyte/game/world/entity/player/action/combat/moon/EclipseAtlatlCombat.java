@@ -74,6 +74,21 @@ public class EclipseAtlatlCombat extends RangedCombat {
             player.sendMessage("You need to be wearing the full Eclipse Moon armour set to use this special attack.");
             player.getCombatDefinitions().setSpecial(false, true);
         }
+        // The special needs no darts. But when useSpecial cannot run it (not enough energy, no ranged special for this
+        // id) it switches the special off and RangedCombat carries on with a dart attack, which needs darts: check
+        // that here, before anything is fired.
+        final boolean noDarts = ammunition == null || !ammunition.isCompatible(player.getEquipment().getId(EquipmentSlot.WEAPON));
+        if (player.getCombatDefinitions().isUsingSpecial() && noDarts) {
+            final com.gadscape.game.world.entity.player.action.combat.ISpecialAttack special =
+                    com.zenyte.game.world.entity.player.action.combat.SpecialAttack.SPECIAL_ATTACKS.get(player.getEquipment().getId(EquipmentSlot.WEAPON));
+            if (special == null || special.getType() != com.zenyte.game.world.entity.player.action.combat.SpecialType.RANGED) {
+                player.getCombatDefinitions().setSpecial(false, true);
+            } else if (player.getCombatDefinitions().getSpecialEnergy() < getRequiredSpecial(player)) {
+                player.sendMessage("You don't have enough special energy.");
+                player.getCombatDefinitions().setSpecial(false, true);
+                return -1;
+            }
+        }
         if (!player.getCombatDefinitions().isUsingSpecial() && (ammunition == null || !ammunition.isCompatible(player.getEquipment().getId(EquipmentSlot.WEAPON)))) {
             player.sendMessage(ammunition == null ? "You don't have any ammunition." : "You cannot use that ammunition with this weapon.");
             return -1;

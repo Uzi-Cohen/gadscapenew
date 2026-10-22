@@ -14,7 +14,8 @@ public class SeersVillageCourthouseArea extends KingdomOfKandarin {
     @Override
     public void enter(Player player) {
         super.enter(player);
-        if (player.getPrayerManager().isActive(Prayer.PIETY)) {
+        // Zeal takes Piety's place once unlocked (Horn of Bran), so it counts for the task too.
+        if (player.getPrayerManager().isActive(Prayer.PIETY) || player.getPrayerManager().isActive(Prayer.ZEAL)) {
             player.getAchievementDiaries().update(KandarinDiary.ENTER_SEERS_VILLAGE_COURTHOUSE);
         }
     }

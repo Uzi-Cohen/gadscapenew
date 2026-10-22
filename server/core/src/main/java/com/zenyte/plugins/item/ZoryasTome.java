@@ -5,10 +5,9 @@ import com.zenyte.game.item.ItemId;
 import com.zenyte.game.world.entity.player.action.combat.ArchiveWeapons;
 
 /**
- * Zorya's tome charges. Jagex has not published what charges the tome (the Out Today post says Ascension shards charge
- * only the Obligator and the Archivist's folio), so this is a placeholder until the live cost is known: one chaos rune
- * and one death rune per charge, one charge per attack, up to 20,000 charges. Change {@link #materialsPerSet()} when
- * the real cost is published.
+ * Zorya's tome charges (OSRS wiki, Zorya's tome): each charge costs 3 astral runes and 2 nature runes, one charge per
+ * attack, up to 20,000 charges (60,000 astral + 40,000 nature runes). Uncharging works anywhere and gives every rune
+ * back.
  */
 @SuppressWarnings("unused")
 public final class ZoryasTome extends ArchiveChargedWeapon {
@@ -36,7 +35,7 @@ public final class ZoryasTome extends ArchiveChargedWeapon {
 
     @Override
     protected Item[] materialsPerSet() {
-        return new Item[]{new Item(ItemId.CHAOS_RUNE, 1), new Item(ItemId.DEATH_RUNE, 1)};
+        return new Item[]{new Item(ItemId.ASTRAL_RUNE, 3), new Item(ItemId.NATURE_RUNE, 2)};
     }
 
     @Override

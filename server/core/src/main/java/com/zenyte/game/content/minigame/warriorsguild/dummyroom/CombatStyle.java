@@ -36,7 +36,13 @@ enum CombatStyle {
     VARBIT_24(new StyleDefinition(ACCURATE, STAB), new StyleDefinition(AGGRESSIVE, SLASH), new StyleDefinition(CONTROLLED, CRUSH), new StyleDefinition(DEFENSIVE, STAB)),
     VARBIT_25(new StyleDefinition(CONTROLLED, STAB), new StyleDefinition(AGGRESSIVE, SLASH), new StyleDefinition(DEFENSIVE, STAB)),
     VARBIT_26(new StyleDefinition(AGGRESSIVE, CRUSH), new StyleDefinition(AGGRESSIVE, CRUSH), new StyleDefinition(AGGRESSIVE, CRUSH)),
-    VARBIT_27(new StyleDefinition(ACCURATE, CRUSH));
+    VARBIT_27(new StyleDefinition(ACCURATE, CRUSH)),
+    // Server categories 28-31 (AttackStyleDefinition): powered staff, partisan, extending chain mace (Obligator),
+    // powered book (Zorya's tome).
+    VARBIT_28(),
+    VARBIT_29(new StyleDefinition(ACCURATE, STAB), new StyleDefinition(AGGRESSIVE, STAB), new StyleDefinition(AGGRESSIVE, CRUSH), new StyleDefinition(DEFENSIVE, STAB)),
+    VARBIT_30(new StyleDefinition(ACCURATE, CRUSH), new StyleDefinition(AGGRESSIVE, CRUSH), new StyleDefinition(AGGRESSIVE, CRUSH)),
+    VARBIT_31();
 
     public static final CombatStyle[] VALUES = values();
 

@@ -10,13 +10,11 @@ import com.zenyte.game.world.entity.masks.Graphics;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.SkillConstants;
 import com.zenyte.game.world.entity.player.action.combat.AttackStyleDefinition;
-import com.zenyte.game.world.entity.player.container.impl.equipment.EquipmentSlot;
 import com.zenyte.game.world.object.ObjectId;
 import com.zenyte.game.world.object.WorldObject;
 import com.zenyte.game.world.region.RSPolygon;
 import com.zenyte.game.world.region.area.WarriorsGuildArea;
 import com.zenyte.game.world.region.area.plugins.CycleProcessPlugin;
-import mgi.types.config.items.ItemDefinitions;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -84,26 +82,20 @@ public final class DummyRoom extends WarriorsGuildArea implements CycleProcessPl
             player.sendMessage("You already hit a dummy this turn.");
             return;
         }
-        final int weaponId = player.getEquipment().getId(EquipmentSlot.WEAPON.getSlot());
-        final ItemDefinitions definitions = ItemDefinitions.get(weaponId);
-        int varbit = 0;
-        if (definitions != null) {
-            if (definitions.getInterfaceVarbit() > 0 && definitions.getInterfaceVarbit() < 28) {
-                varbit = definitions.getInterfaceVarbit();
-            }
-        }
-        final int maxStyles = weaponId == -1 ? 3 : AttackStyleDefinition.values[varbit].getStyles().length;
-        final int value = player.getVarManager().getValue(43);
-        final int bit = player.getVarManager().getBitValue(357);
-        final int varp = maxStyles == 2 && value == 3 ? 2 : value;
-        final CombatStyle style = CombatStyle.VALUES[bit > 27 ? 0 : bit];
-        if (style.getStyles().length == 0) {
+        // The server's weapon category (AttackStyleDefinition ordinal, 211 numbering), not varbit 357: the 241 client
+        // numbers the categories from 22 up one higher (AttackStyleDefinition.getClientCategory()).
+        final AttackStyleDefinition definition = player.getCombatDefinitions().getStyleDefinition();
+        final int category = definition == null ? 0 : definition.ordinal();
+        final StyleDefinition[] styles = category < CombatStyle.VALUES.length ? CombatStyle.VALUES[category].getStyles() : new StyleDefinition[0];
+        if (styles.length == 0) {
             player.sendMessage("You can only use melee weapons in this minigame.");
             return;
         }
         taggedPlayers.add(player);
-        final StyleDefinition[] styles = style.getStyles();
-        final boolean valid = varp < styles.length && validStyle(styles[varp]);
+        // The selected combat-tab button (varp 43); weapons with three styles use buttons 0, 1 and 3.
+        final int button = player.getCombatDefinitions().getStyle();
+        final int index = styles.length == 3 && button == 3 ? 2 : button;
+        final boolean valid = index >= 0 && index < styles.length && styles[index] != null && validStyle(styles[index]);
         player.setAnimation(new Animation(player.getEquipment().getAttackAnimation(player.getCombatDefinitions().getStyle())));
         WorldTasksManager.schedule(() -> {
             if (!valid) {

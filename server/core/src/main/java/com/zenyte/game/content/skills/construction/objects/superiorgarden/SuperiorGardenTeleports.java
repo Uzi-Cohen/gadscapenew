@@ -24,7 +24,7 @@ import com.zenyte.plugins.interfaces.FairyRingLog;
 import com.zenyte.plugins.object.WildernessObeliskOA;
 
 /**
- * Superior garden teleport space (CON-9): spirit tree (29227), fairy ring (29228, a multi-loc showing the last code),
+ * Superior garden teleport space (CON-9): spirit tree (29227, with "Last-destination"), fairy ring (29228, a multi-loc showing the last code),
  * spiritual fairy tree (29422) and obelisk (31554). Guests may use them too.
  * <p>
  * Spirit tree: every spirit tree destination. Fairy ring: Zanaris, the code interface and the last destination, through the
@@ -48,12 +48,23 @@ public final class SuperiorGardenTeleports implements ObjectInteraction {
     private static final String[] OBELISK_NAMES = new String[] { "Level 50 Wilderness", "Level 19 Wilderness", "Level 13 Wilderness", "Level 35 Wilderness", "Level 27 Wilderness", "Level 44 Wilderness" };
     /** Menu order (by level). */
     private static final int[] OBELISK_ORDER = new int[] { 2, 1, 4, 3, 5, 0 };
+    /** Persistent attribute: {@link SpiritTree} ordinal + 1 of the last trip with the house spirit tree (op3 "Last-destination"). */
+    private static final String LAST_SPIRIT_TREE = "poh_spirit_tree_last";
 
     @Override
     public void handleObjectAction(final Player player, final Construction construction, final RoomReference reference, final WorldObject object, final int optionId, final String option) {
         final int id = object.getId();
         if (id == SPIRIT_TREE && option.equals("Travel") || id == SPIRITUAL_FAIRY_TREE && option.equals("Tree")) {
             player.getDialogueManager().start(new HouseSpiritTreeMenu(player));
+            return;
+        }
+        if (id == SPIRIT_TREE && option.equals("Last-destination")) {
+            final int last = player.getNumericAttribute(LAST_SPIRIT_TREE).intValue() - 1;
+            if (last < 0 || last >= SpiritTree.values().length) {
+                player.sendMessage("You haven't travelled with your spirit tree yet.");
+                return;
+            }
+            spiritTreeTeleport(player, SpiritTree.get(last));
             return;
         }
         if (id == FAIRY_RING || id == SPIRITUAL_FAIRY_TREE) {
@@ -63,12 +74,13 @@ public final class SuperiorGardenTeleports implements ObjectInteraction {
                 FairyRingCombination.open(player, object);
                 FairyRingLog.open(player);
             } else if (option.startsWith("Last-destination") || option.startsWith("Ring-last-destination")) {
-                final Object last = player.getNumericAttribute("lastFairyRing");
-                if (!(last instanceof Integer) || (int) last == 0) {
+                // Attributes come back from the save as Long/Double (LoginManager uses LONG_OR_DOUBLE), so read the number.
+                final int last = player.getNumericAttribute("lastFairyRing").intValue();
+                if (last == 0) {
                     player.sendFilteredMessage("You haven't used the fairy ring teleportation system yet.");
                     return;
                 }
-                FairyRing.handle(player, object, FairyRing.getRing((int) last));
+                FairyRing.handle(player, object, FairyRing.getRing(last));
             }
             return;
         }
@@ -147,6 +159,17 @@ public final class SuperiorGardenTeleports implements ObjectInteraction {
         }, 2);
     }
 
+    private static void spiritTreeTeleport(final Player player, final SpiritTree destination) {
+        final Location location = destination.getLocation();
+        if (location == null) {
+            return;
+        }
+        player.lock(2);
+        player.setAnimation(SPIRIT_TREE_ANIM);
+        player.getDialogueManager().start(new ItemChat(player, new Item(6063), "You place your hands on the dry though bark of the<br> spirit tree, and feel a surge of energy run through<br> your veins."));
+        WorldTasksManager.schedule(() -> player.setLocation(location), 1);
+    }
+
     /** Spirit tree menu for the house tree: every destination, no "current tree". */
     private static final class HouseSpiritTreeMenu extends OptionsMenuD {
         HouseSpiritTreeMenu(final Player player) {
@@ -155,15 +178,15 @@ public final class SuperiorGardenTeleports implements ObjectInteraction {
 
         @Override
         public void handleClick(final int slotId) {
-            final SpiritTree destination = SpiritTree.get(slotId);
-            final Location location = destination.getLocation();
-            if (location == null) {
+            if (slotId < 0 || slotId >= SpiritTree.values().length) {
                 return;
             }
-            player.lock(2);
-            player.setAnimation(SPIRIT_TREE_ANIM);
-            player.getDialogueManager().start(new ItemChat(player, new Item(6063), "You place your hands on the dry though bark of the<br> spirit tree, and feel a surge of energy run through<br> your veins."));
-            WorldTasksManager.schedule(() -> player.setLocation(location), 1);
+            final SpiritTree destination = SpiritTree.get(slotId);
+            if (destination.getLocation() == null) {
+                return;
+            }
+            player.addAttribute(LAST_SPIRIT_TREE, destination.ordinal() + 1);
+            spiritTreeTeleport(player, destination);
         }
 
         @Override

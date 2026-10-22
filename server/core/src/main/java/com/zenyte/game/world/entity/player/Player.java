@@ -3325,6 +3325,12 @@ public class Player extends AbstractEntity implements UsernameProvider {
         setUnprioritizedAnimation(getDefenceAnimation());
     }
 
+    /** No combat XP for hitting a player inside a player-owned house (combat rings, dungeon PvP): deaths there are safe. */
+    @Override
+    public float getXpModifier(final Hit hit) {
+        return getCurrentHouse() != null ? 0.0F : 1.0F;
+    }
+
     @Override
     public void performDeathAnimation() {
         setAnimation(DEATH_ANIMATION);
@@ -3590,6 +3596,10 @@ public class Player extends AbstractEntity implements UsernameProvider {
             if (i != null && i.getId() == item.getId()) {
                 return true;
             }
+        }
+        // Pets kept in the POH menagerie are still owned (pet insurance reclaim, duplicate pet drops).
+        if (construction != null && construction.getMenageriePets().contains(item.getId())) {
+            return true;
         }
         return false;
     }
@@ -4914,6 +4924,11 @@ public class Player extends AbstractEntity implements UsernameProvider {
     public void setRun(boolean run) {
         if (getBooleanTemporaryAttribute("nightmare_drowsy")) {
             sendMessage("You're too drowsy to run!");
+            getVarManager().sendVar(173, 0);
+            return;
+        }
+        if (run && com.gadscape.game.world.entity.player.status.Weary.isWeary(this)) {
+            sendMessage("You're too weary to run!"); // Raids 4 Weary (Archive Guardian mushrooms)
             getVarManager().sendVar(173, 0);
             return;
         }

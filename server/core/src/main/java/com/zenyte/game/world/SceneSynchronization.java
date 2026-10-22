@@ -132,9 +132,11 @@ public class SceneSynchronization {
                             continue;
                         }
                         final Location location = item.getLocation();
-                        player.sendZoneUpdate(location.getX(), location.getY(), new ObjAdd(item));
+                        player.sendZoneUpdate(location.getX(), location.getY(), new ObjAdd(item, player));
                     }
                 }
+                // locs spawned or hidden for this player only (E16)
+                com.gadscape.game.world.PrivateScene.onZoneEnteredScope(player, chunkX, chunkY, plane);
             }
         }
     }
@@ -168,7 +170,7 @@ public class SceneSynchronization {
                             continue;
                         }
                         final Location location = item.getLocation();
-                        player.sendZoneUpdate(location.getX(), location.getY(), add ? new ObjAdd(item) : new ObjDel(item));
+                        player.sendZoneUpdate(location.getX(), location.getY(), add ? new ObjAdd(item, player) : new ObjDel(item));
                     }
                 }
             }

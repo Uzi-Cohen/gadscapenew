@@ -54,6 +54,11 @@ public final class Staircase implements ObjectInteraction {
             else
                 player.setLocation(tile);
         } else if (optionId == 4) {
+            // "Remove-room": the owner, in building mode (the controller checks this too).
+            if (!construction.isOwner(player) || !construction.isBuildingMode()) {
+                player.sendMessage(construction.isOwner(player) ? "You can only do that in building mode." : "You can only do that in your own house.");
+                return;
+            }
             if (player.getPlane() == 2) {
                 player.getDialogueManager().start(new PlainChat(player, "You cannot remove a room supporting another room."));
                 return;
@@ -63,7 +68,7 @@ public final class Staircase implements ObjectInteraction {
                 player.getDialogueManager().start(new PlainChat(player, "There's no room above to remove."));
                 return;
             }
-            player.getDialogueManager().start(new UpperRoomRemovalD(player, ref));
+            player.getDialogueManager().start(new UpperRoomRemovalD(player, construction, ref));
             return;
         }
     }

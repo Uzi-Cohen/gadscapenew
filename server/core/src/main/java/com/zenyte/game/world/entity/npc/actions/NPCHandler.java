@@ -89,13 +89,21 @@ public enum NPCHandler {
         if ((op.equalsIgnoreCase("Talk-to") || op.equalsIgnoreCase("Talk"))
                 && com.zenyte.game.content.treasuretrails.TreasureTrail.hasTalkStep(player, npc)) {
             final NPCPlugin.NPCPluginHandler fallback = plugin;
+            final NPCPlugin.NPCOption npcOption = new NPCPlugin.NPCOption(option, op);
             player.setRouteEvent(new EntityEvent(player, new EntityStrategy(npc), () -> {
                 player.stopAll();
                 player.setFaceEntity(npc);
                 if (npc.getRadius() > 0)
                     npc.setInteractingWith(player);
-                if (!com.zenyte.game.content.treasuretrails.TreasureTrail.talk(player, npc) && fallback != null) {
-                    fallback.getOption().handle(player, npc);
+                if (!com.zenyte.game.content.treasuretrails.TreasureTrail.talk(player, npc)) {
+                    // The clue left the inventory on the way: run the NPC's own handler as a normal arrival would.
+                    if (fallback == null) {
+                        player.sendMessage("Nothing interesting happens.");
+                    } else if (fallback.getOption() instanceof NPCPlugin.ExtendedOptionHandler) {
+                        ((NPCPlugin.ExtendedOptionHandler) fallback.getOption()).execute(player, npc, npcOption);
+                    } else {
+                        fallback.getOption().execute(player, npc);
+                    }
                 }
             }, true));
             return;

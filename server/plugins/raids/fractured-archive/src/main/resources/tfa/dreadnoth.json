@@ -1,0 +1,121 @@
+{
+  "_doc": "Dreadnoth the Jellied (spec §4.5, WU-24). The keys moveEveryTicks..blood are the spec's house block; the rest are implementation keys documented in raids4-impl/ENC-dreadnoth.md. Ticks are server ticks; projectile delays are client cycles (30 per tick).",
+  "baseHp": 2100,
+  "moveEveryTicks": 2,
+  "attackSpeed": 4,
+  "meleeMax": 45,
+  "slamMax": 45,
+  "rangedMax": 34,
+  "thresholds": [85, 65, 45],
+  "thresholdMode": "cycles",
+  "volleyTicks": [3, 7, 11],
+  "cycleLength": 14,
+  "enragePct": 25,
+  "jump": {
+    "period": 8,
+    "landTick": 3,
+    "landingDmg": [40, 70],
+    "pfmMult": 0.5,
+    "heal": [30, 40],
+    "noPrayerMax": 45,
+    "firstDelay": 1,
+    "followUpTick": 4,
+    "moveStartCycle": 2,
+    "moveEndCycle": 88,
+    "followUpOnlyTarget": true
+  },
+  "jelly": {
+    "hp": 75,
+    "perThresholdBase": 4,
+    "perScale": 1,
+    "cap": 12,
+    "deathWave": 10,
+    "max": 17,
+    "prayerDrain": 2,
+    "spawnTicks": 3,
+    "rangedWhenBlocked": true,
+    "attackSpeed": 5,
+    "riseTicks": 3,
+    "bloodDelay": 2,
+    "despawnTicks": 3,
+    "minBossDistance": 2,
+    "hopMaxTiles": 3,
+    "rangedRange": 4,
+    "rangedStuckTicks": 2,
+    "stockSounds": true,
+    "stats": {
+      "levels": [200, 160, 100, 100, 1],
+      "attackBonuses": [0, 0, 0, 0, 0],
+      "defenceBonuses": [4, 5, 0, 15, 18],
+      "otherBonuses": [0, 0, 0]
+    },
+    "traits": {
+      "defenceFloorPct": null,
+      "weakness": "fire",
+      "weaknessPct": 60,
+      "rangedDef": [-45, 18, -50],
+      "immunePoison": false,
+      "immuneVenom": false,
+      "immuneCannon": true,
+      "freezeResistPct": 20,
+      "immuneAncients": false,
+      "demonbanePct": 100,
+      "flatArmour": 0,
+      "magicResist": 0,
+      "magicDrainInverted": false,
+      "flying": false
+    }
+  },
+  "blood": {
+    "dmg": [6, 8],
+    "lifetime": 30,
+    "periodicEveryNthMelee": 3
+  },
+  "melee": {
+    "hitDelay": 1,
+    "reach": 1,
+    "style": "crush"
+  },
+  "slam": {
+    "hitDelay": 1
+  },
+  "volley": {
+    "seq": true,
+    "allPlayers": true
+  },
+  "projectiles": {
+    "ranged": { "startHeight": 60, "endHeight": 31, "delay": 30, "slope": 16, "duration": 0, "perTile": 5 },
+    "splatter": { "startHeight": 60, "endHeight": 0, "delay": 30, "slope": 16, "duration": 30, "perTile": 0 }
+  },
+  "death": {
+    "waveTick": 2,
+    "despawnTick": 5
+  },
+  "arena": {
+    "spawn": [4189, 5661, 0],
+    "spawnFacing": "west"
+  },
+  "stats": {
+    "levels": [280, 285, 125, 220, 250],
+    "attackBonuses": [185, 185, 185, 0, 180],
+    "defenceBonuses": [15, 20, 5, 20, 80],
+    "otherBonuses": [35, 20, 0]
+  },
+  "xpModifier": 1.775,
+  "traits": {
+    "defenceFloorPct": null,
+    "weakness": "fire",
+    "weaknessPct": 85,
+    "rangedDef": [100, 80, 80],
+    "immunePoison": true,
+    "immuneVenom": true,
+    "immuneCannon": true,
+    "freezeResistPct": 40,
+    "immuneAncients": false,
+    "demonbanePct": 25,
+    "flatArmour": 0,
+    "magicResist": 0,
+    "magicDrainInverted": false,
+    "flying": false
+  }
+}

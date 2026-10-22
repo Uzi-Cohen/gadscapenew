@@ -3,7 +3,6 @@ package com.gadscape.plugins.interfaces.death
 import com.gadscape.game.content.UniversalShop
 import com.gadscape.game.content.shop.ShopCurrencyHandler
 import com.gadscape.game.content.shop.UniversalShopCategory
-import com.gadscape.game.content.universalshop.UnivShopItem
 import com.gadscape.game.world.entity.player.selectedUniversalShopCategory
 import com.gadscape.scripts.interfaces.InterfaceScript
 import com.zenyte.game.GameConstants
@@ -19,6 +18,7 @@ import com.zenyte.game.world.entity.player.container.impl.ContainerType
 import com.zenyte.game.world.entity.player.dialogue.options
 import com.zenyte.game.world.entity.player.dialogue.start
 import com.zenyte.plugins.dialogue.OptionsMenuD
+import kotlin.math.min
 
 class UnivShopInvInterface : InterfaceScript() {
     init {
@@ -57,10 +57,9 @@ class UnivShopInvInterface : InterfaceScript() {
         val category = UniversalShop.getCategory(selectedUniversalShopCategory) ?: return
         if(option == 1) {
             if(category != UniversalShop.General) {
-                val found = category.table.items.firstOrNull { it.id == itemId }
-                    ?: run { sendMessage("This item cannot be sold to this shop."); return }
-                if (found.sellPrice != -1) {
-                    sendMessage("${item.name} can be sold for ${found.sellPrice} ${UniversalShop.getCategoryCurrency(selectedUniversalShopCategory)}"); return
+                val price = UniversalShop.sellPrice(category, itemId)
+                if (price > 0) {
+                    sendMessage("${item.name} can be sold for $price ${UniversalShop.getCategoryCurrency(selectedUniversalShopCategory)}"); return
                 } else {
                     sendMessage("This item cannot be sold to this shop."); return
                 }
@@ -99,13 +98,11 @@ class UnivShopInvInterface : InterfaceScript() {
                         }
                     }
                 } else {
-                    val found = category.table.items.firstOrNull { it.id == itemId }
-                        ?: run { sendMessage("This item cannot be sold to this shop."); return@sendInputInt }
-                    if (found.sellPrice != -1) {
+                    if (UniversalShop.sellPrice(category, itemId) > 0) {
                         dialogueManager.start {
                             options("Are you sure you want to sell $requested x ${item.name}") {
                                 "Yes" {
-                                    attemptSaleCategory(player, requested, item, found, category)
+                                    attemptSaleCategory(player, requested, item, category)
                                 }
                                 "No" {
                                     UniversalShopInterface.openInterfaceToTab(player, selectedUniversalShopCategory)
@@ -121,10 +118,22 @@ class UnivShopInvInterface : InterfaceScript() {
         }
     }
 
-    private fun attemptSaleCategory(player: Player, requested: Int, item: Item, found: UnivShopItem, category: UniversalShopCategory) {
-        val success = player.inventory.deleteItem(Item(item.id, requested)).succeededAmount
-        ShopCurrencyHandler.add(UniversalShop.getCategoryCurrency(category.uniqueIndex), player, success * found.sellPrice)
-        player.sendMessage(Colour.RS_GREEN.wrap("You have received ${success * found.sellPrice} ${UniversalShop.getCategoryCurrency(category.uniqueIndex)}"))
+    private fun attemptSaleCategory(player: Player, requested: Int, item: Item, category: UniversalShopCategory) {
+        val currency = UniversalShop.getCategoryCurrency(category.uniqueIndex)
+        // Checked before anything leaves the inventory: an unhandled currency (Slayer points before) deleted the item and
+        // then threw in ShopCurrencyHandler.add, so the player lost it for nothing.
+        val price = UniversalShop.sellPrice(category, item.id)
+        if (price <= 0 || !ShopCurrencyHandler.isSupported(currency)) {
+            player.sendMessage("This item cannot be sold to this shop.")
+            return
+        }
+        val amount = min(requested, Int.MAX_VALUE / price)
+        if (amount <= 0) return
+        val sold = player.inventory.deleteItem(Item(item.id, amount)).succeededAmount
+        if (sold <= 0) return
+        val payment = sold * price
+        ShopCurrencyHandler.add(currency, player, payment)
+        player.sendMessage(Colour.RS_GREEN.wrap("You have received $payment $currency"))
         UniversalShopInterface.openInterfaceToTab(player, player.selectedUniversalShopCategory)
     }
 

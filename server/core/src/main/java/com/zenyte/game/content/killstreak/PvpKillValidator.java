@@ -83,13 +83,21 @@ public final class PvpKillValidator {
         if (result == Result.OK) {
             return true;
         }
+        report(attacker, victim, result, rewardName);
+        return false;
+    }
+
+    /** Tells the killer why a kill (already checked with {@link #check}) gives no reward, and logs it. */
+    public static void report(final Player attacker, final Player victim, final Result result, final String rewardName) {
+        if (result == null || result == Result.OK) {
+            return;
+        }
         final String message = result.message(victim);
         if (message != null && attacker != null) {
             attacker.sendMessage("<col=ef1020>" + message + "</col>");
         }
         log.info("PvP reward '{}' denied: {} killed {} -> {}", rewardName,
                 attacker == null ? "null" : attacker.getUsername(), victim == null ? "null" : victim.getUsername(), result);
-        return false;
     }
 
     private static boolean shareUuid(final Player a, final Player b) {

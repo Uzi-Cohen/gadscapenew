@@ -14,6 +14,18 @@ import kotlin.math.min
 
 object ShopCurrencyHandler {
 
+    /**
+     * Whether [getAmount], [remove] and [add] handle [type]. Callers that take something from the player before paying
+     * them (selling to a shop) check this first, so an unhandled currency can't destroy the item.
+     */
+    @JvmStatic
+    fun isSupported(type: CurrencyPalette): Boolean = when (type) {
+        ShopCurrency.VOTE_POINTS, ShopCurrency.AFK_POINTS, ShopCurrency.BH_POINTS, ShopCurrency.LOYALTY_POINTS,
+        ShopCurrency.EXCHANGE_POINTS, ShopCurrency.TOURNAMENT_POINTS, ShopCurrency.PVM_ARENA_POINTS,
+        ShopCurrency.SLAYER_POINTS -> true
+        else -> type.isPhysical && type.id > 0
+    }
+
     @JvmStatic
     fun getAmount(type: CurrencyPalette, player: Player): Int {
         return when(type) {
@@ -24,6 +36,8 @@ object ShopCurrencyHandler {
             ShopCurrency.EXCHANGE_POINTS -> player.exchangePoints
             ShopCurrency.TOURNAMENT_POINTS -> player.getNumericAttribute("tournament points").toInt()
             ShopCurrency.PVM_ARENA_POINTS -> player.pvmArenaPoints.toInt()
+            // Universal shop Slayer tab (category 8); setSlayerPoints(.., true) refreshes varbit 4068.
+            ShopCurrency.SLAYER_POINTS -> player.slayer.slayerPoints
             else -> {
                 if (type.isPhysical) {
                     val itemId = type.id.takeIf { it > 0 } ?: error("Invalid item id: ${type.id} for currency type: ${type::class.simpleName}")
@@ -47,6 +61,7 @@ object ShopCurrencyHandler {
             ShopCurrency.TOURNAMENT_POINTS -> player.incrementNumericAttribute("tournament points", -amount)
             ShopCurrency.EXCHANGE_POINTS -> player.exchangePoints -= amount
             ShopCurrency.PVM_ARENA_POINTS -> player.pvmArenaPoints -= amount
+            ShopCurrency.SLAYER_POINTS -> player.slayer.setSlayerPoints(max(0, player.slayer.slayerPoints - amount), true)
             else -> {
                 if (type.isPhysical) {
                     val itemId = type.id.takeIf { it > 0 } ?: error("Invalid item id: ${type.id} for currency type: ${type::class.simpleName}")
@@ -70,6 +85,9 @@ object ShopCurrencyHandler {
             ShopCurrency.TOURNAMENT_POINTS -> player.incrementNumericAttribute("tournament points", amount)
             ShopCurrency.EXCHANGE_POINTS -> player.exchangePoints += amount
             ShopCurrency.PVM_ARENA_POINTS -> player.pvmArenaPoints += amount
+            ShopCurrency.SLAYER_POINTS -> player.slayer.setSlayerPoints(
+                min(player.slayer.slayerPoints.toLong() + amount, Int.MAX_VALUE.toLong()).toInt(), true
+            )
             else -> {
                 if (type.isPhysical) {
                     val itemId = type.id.takeIf { it > 0 } ?: error("Invalid item id: ${type.id} for currency type: ${type::class.simpleName}")

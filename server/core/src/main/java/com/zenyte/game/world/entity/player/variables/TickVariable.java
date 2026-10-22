@@ -259,10 +259,13 @@ public enum TickVariable {
         if (player.isDead() || player.isFinished()) {
             return;
         }
-        if (player.bleedNextTick || (ticks < 14 && ticks % 3 == 0)) {
+        // Bleeds applied through PlayerBleed (Raids 4 Ezekiel) also hurt on every tick the player moved.
+        final boolean moved = com.gadscape.game.world.entity.player.status.PlayerBleed.movedSinceLastPulse(player, ticks);
+        if (player.bleedNextTick || moved || (ticks < 14 && ticks % 3 == 0)) {
             if(player.bleedNextTick)
                 player.bleedNextTick = false;
-            CombatUtilities.delayHit(null, -1, player, new Hit(3, HitType.TYPELESS));
+            // Hitsplat BLEED 67, the live bleed hitmark (was typeless).
+            CombatUtilities.delayHit(null, -1, player, new Hit(3, HitType.BLEED));
         }
     }),
     DIVINE_BASTION_POTION(DivinePotion.Bastion.INSTANCE::pulse),

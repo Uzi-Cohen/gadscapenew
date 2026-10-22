@@ -21,6 +21,11 @@ public class CombatTabInterface extends Interface {
         put(26, "Autocast");
         put(30, "Auto retaliate");
         put(36, "Special attack");
+        // 2746 (241) only: the main-hand / off-hand special bars shown when the weapon and the shield (Rondache) both
+        // have a special. 211's 593 has components 0-42, so these ids clash with nothing; the 211 -> 241 remap must leave
+        // them as they are (special_attack_mainhand 57, special_attack_offhand 67).
+        put(57, "Special attack main hand");
+        put(67, "Special attack off hand");
     }
 
     @Override
@@ -73,17 +78,22 @@ public class CombatTabInterface extends Interface {
             }
             player.getCombatDefinitions().setAutoRetaliate(!player.getCombatDefinitions().isAutoRetaliate());
         });
-        bind("Special attack", player -> {
-            if (player.isLocked()) {
-                return;
-            }
-            final Duel duel = player.getDuel();
-            if (duel != null && duel.hasRule(DuelSetting.NO_SPECIAL_ATTACK) && duel.inDuel()) {
-                player.sendMessage("Use of special attacks has been turned off for this duel.");
-                return;
-            }
-            player.getCombatDefinitions().setSpecial(!player.getCombatDefinitions().isUsingSpecial(), false);
-        });
+        bind("Special attack", player -> toggleSpecialBar(player, 0));
+        bind("Special attack main hand", player -> toggleSpecialBar(player, 1));
+        bind("Special attack off hand", player -> toggleSpecialBar(player, 2));
+    }
+
+    /** Special attack bars: 0 = the single bar, 1 = the main-hand bar, 2 = the off-hand (Rondache) bar. */
+    private static void toggleSpecialBar(final Player player, final int bar) {
+        if (player.isLocked()) {
+            return;
+        }
+        final Duel duel = player.getDuel();
+        if (duel != null && duel.hasRule(DuelSetting.NO_SPECIAL_ATTACK) && duel.inDuel()) {
+            player.sendMessage("Use of special attacks has been turned off for this duel.");
+            return;
+        }
+        player.getCombatDefinitions().toggleSpecialBar(bar);
     }
 
     @Override

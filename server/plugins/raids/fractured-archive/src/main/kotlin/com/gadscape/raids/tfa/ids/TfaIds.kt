@@ -395,6 +395,8 @@ object TfaIds {
         val RUBY by id(1603)
         val DIAMOND by id(1601)
         val ONYX_BOLT_TIPS by id(9194)
+        /** Ascension rocks gem pre-roll (§3.2) [DOC wiki Ascension rocks]: uncut sapphire, emerald, ruby, diamond. */
+        val UNCUT_GEMS by ids(1623, 1621, 1619, 1617)
         // Alchables
         val BATTLESTAFF by id(1391)
         val EARTH_ORB by id(575)
@@ -420,6 +422,9 @@ object TfaIds {
         val MAHOGANY_LOGS by id(6332)
         val DESICCATED_PAGE by id(30640)
         val AETHER_CATALYST by id(30771)
+        /** Alliance Supplies food newer than GadScape's ItemId table (§3.12) [CACHE 2746 objs giant_krill, halibut]. */
+        val GIANT_KRILL by id(32312)
+        val HALIBUT by id(32336)
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -1409,6 +1414,11 @@ object TfaIds {
     object Sprite : IdGroup(IdKind.SPRITE) {
         /** NPC head icons; indexes in [HeadIcon]. */
         val HEAD_ICONS by id(440)
+        /**
+         * Stats category icons `icon_boss_25x25,72..80` (§3.14; 10139 room icons) in enum 6066 tab order: Overall,
+         * Guardian, Dreadnoth, Xarth, Dagon'hai, Ezekiel, Moia, Bork, Ocellus [CACHE graphic.sym 8360-8367, 8575].
+         */
+        val STATS_CATEGORY_ICONS by ids(8360, 8361, 8362, 8363, 8364, 8365, 8366, 8367, 8575)
     }
 
     /** Indexes in [Sprite.HEAD_ICONS] (E13). */

@@ -2,7 +2,6 @@ package com.gadscape.tools.soak;
 
 import com.gadscape.game.world.WorldEvent;
 import com.gadscape.game.world.WorldHooks;
-import com.gadscape.game.world.entity.player.FakePlayer;
 import com.google.common.eventbus.Subscribe;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.util.Utils;
@@ -35,8 +34,13 @@ import java.util.concurrent.ThreadLocalRandom;
  * ::soak stats                       tick p50/p95/p99/max, players, NPCs, heap, GC since the start
  * ::soak stop                        remove all bots and print the final report
  * </pre>
- * Bots copy your equipment and have 99 combat stats; they are healed every few ticks so nobody dies (no loot spam).
- * Also log a line every minute while bots exist ("soak:" in the server log). What it does not measure: network
+ * Bots (SoakBot) copy your equipment and have 99 combat stats. They can never die (hitpoints never go below 1, a
+ * death is turned into a full heal), so the copied gear is never dropped; they are also healed every few ticks.
+ * Bot names start with "~" (no real account can have it) and are never reused while the server runs. Bots get rsprot
+ * player info, so real clients nearby see them and the info encoding cost is part of the measurement.
+ * ::soak stop takes them out like a logout (Bounty Hunter targets released, chunk/area/location map, rsprot info)
+ * without saving them or putting them on the hiscores.
+ * Also logs a line every 100 ticks while bots exist ("soak:" in the server log). What it does not measure: network
  * bandwidth and rsprot encoding for real clients (bots have no session) - pair it with a few real clients standing in
  * the crowd. For realistic numbers run the server with -Dnet.rsprot.protocol.internal.development=false.
  */
@@ -51,7 +55,7 @@ public final class SoakTest {
     private static long startGcMillis;
     private static int ticks;
 
-    private record Bot(FakePlayer player, Location anchor, int radius, boolean fight) {
+    private record Bot(SoakBot player, Location anchor, int radius, boolean fight) {
     }
 
     private SoakTest() {
@@ -96,7 +100,7 @@ public final class SoakTest {
         final Location centre = new Location(owner.getLocation());
         for (int i = 0; i < count; i++) {
             final Location tile = randomTile(centre, radius);
-            final FakePlayer bot = new FakePlayer("soak" + (bots.size() + 1));
+            final SoakBot bot = new SoakBot();
             bot.setDefaultSettings();
             bot.forceLocation(tile);
             World.addPlayer(bot);
@@ -116,6 +120,7 @@ public final class SoakTest {
             bot.setInitialized(true);
             bot.getCombatDefinitions().refresh();
             bot.getBonuses().update();
+            bot.allocateInfo();
             bot.getUpdateFlags().flag(UpdateFlag.APPEARANCE);
             bots.add(new Bot(bot, centre, radius, fight));
         }
@@ -126,7 +131,7 @@ public final class SoakTest {
     private static void stop() {
         for (final Bot bot : bots) {
             try {
-                World.removePlayer(bot.player());
+                bot.player().logoutBot();
             } catch (final Exception e) {
                 log.warn("Could not remove soak bot {}", bot.player().getUsername(), e);
             }
@@ -145,7 +150,7 @@ public final class SoakTest {
         ticks++;
         final ThreadLocalRandom random = ThreadLocalRandom.current();
         for (final Bot bot : bots) {
-            final FakePlayer player = bot.player();
+            final SoakBot player = bot.player();
             if (player.isNulled() || player.isFinished()) continue;
             try {
                 if (ticks % 5 == 0) {
@@ -178,7 +183,7 @@ public final class SoakTest {
         final ThreadLocalRandom random = ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 6; attempt++) {
             final Player other = bots.get(random.nextInt(bots.size())).player();
-            if (other != player && !other.isNulled() && other.isCanPvp() && other.getPlane() == player.getPlane()
+            if (other != player && !other.isNulled() && !other.isFinished() && other.isCanPvp() && other.getPlane() == player.getPlane()
                     && player.getLocation().withinDistance(other.getLocation(), 8)) {
                 return other;
             }

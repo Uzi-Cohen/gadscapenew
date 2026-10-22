@@ -522,9 +522,26 @@ public class TreasureTrail {
         return findAndProgress(player, SearchRequest.class, clue -> CollectionUtils.findMatching(clue.getValidObjects(), s -> s.getTile().matches(object) && option.equalsIgnoreCase(s.getOption())) != null, entry -> progress(player, entry, Optional.empty()));
     }
 
+    /**
+     * Key step on an object without an "Open" option of its own (crates and the like, handled by ClueScrollObject).
+     * Drawers, wardrobes and chests check and take the key when opened and then call {@link #searchKeyObject};
+     * here the search itself needs the key, and uses it up.
+     */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public static final boolean searchWithkey(@NotNull final Player player, @NotNull final WorldObject object, @NotNull final String option) {
-        return searchKeyObject(player, object, option);
+        final Optional<ClueEntry> entry = findClueScroll(player, KeyRequest.class, clue -> CollectionUtils.findMatching(clue.getValidObjects(), s -> s.getTile().matches(object) && option.equalsIgnoreCase(s.getOption())) != null);
+        if (!entry.isPresent()) {
+            return false;
+        }
+        final int keyId = ((KeyRequest) entry.get().getChallenge()).getKeyId();
+        if (!player.getInventory().containsItem(keyId, 1)) {
+            final String name = object.getName();
+            player.sendMessage((name == null || name.isEmpty() || name.equalsIgnoreCase("null") ? "It" : "The " + name.toLowerCase()) + " is locked. Perhaps a key would help.");
+            return true;
+        }
+        player.getInventory().deleteItem(keyId, 1);
+        progress(player, entry.get(), Optional.empty());
+        return true;
     }
 
     private static final boolean talkChallenge(@NotNull final Player player, @NotNull final NPC npc) {

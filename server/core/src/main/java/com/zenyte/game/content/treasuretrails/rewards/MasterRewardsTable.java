@@ -35,6 +35,7 @@ public class MasterRewardsTable extends ClueRewardTable {
             item(DRAGON_HALBERD),
             item(NATURE_RUNE, 100, 200),
             item(DEATH_RUNE, 100, 200),
+            item(BLOOD_RUNE, 100, 200),
             item(SOUL_RUNE, 100, 200),
             item(ONYX_BOLTS_E, 15, 25),
             notedItem(MANTA_RAY, 15, 25),
@@ -45,10 +46,8 @@ public class MasterRewardsTable extends ClueRewardTable {
             notedItem(GRIMY_SNAPDRAGON, 5, 10),
             notedItem(RUNITE_ORE, 5, 8),
             notedItem(RUNITE_BAR, 5, 7),
-            notedItem(BLACK_DRAGONHIDE, 5, 25),
-            //OSRS wiki (Reward casket (master)) supplies missing here.
-            item(BLOOD_RUNE, 83, 500),
-            notedItem(RAW_MANTA_RAY, 2, 15)
+            notedItem(BLACK_DRAGONHIDE, 5, 25)
+            // Blood rune 83-500 / raw manta ray 2-15 are Mimic-only (TheMimicCasket.bonusLoot), not standard.
     );
 
     private final List<ImmutableItem> uncommonItemsTable = tableOf(

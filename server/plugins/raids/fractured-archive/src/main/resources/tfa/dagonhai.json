@@ -1,0 +1,189 @@
+{
+  "_comment": "The Dagon'hai trio (room 4, spec 4.6). The spec's house block plus the implementation keys; override any key in data/raids/tfa/dagonhai.json. Tiles are static [x, y, plane]. List keys confirmed by a public source in \"$verified\".",
+  "pool2": 640,
+  "breaks": 5,
+  "stability": 1000,
+  "stabilityPerBreak": 200,
+  "ritualQuarters": 4,
+  "ritualResetOnBreak": false,
+  "finalHp": 7,
+  "introTicks": 3,
+  "elder": {
+    "_comment": "Auto every 6 t on a focus target (4 attacks), 50/50 ranged (4070/4071/4072) or surge by element (4103-4106, stock surges); splash on players within 1 tile.",
+    "speed": 6,
+    "rangedMax": 27,
+    "surgeMax": { "fire": 24, "water": 22, "air": 21, "earth": 23 },
+    "focusAttacks": 4,
+    "splash": 1,
+    "magicChance": 0.5,
+    "firstAttack": 2
+  },
+  "channel": {
+    "_comment": "One channel at a time across the trio: first at 15 t, then every 20-25 t, charge 12 t (headbar 85). A matching standard spell landing on the caster interrupts it.",
+    "first": 15,
+    "interval": [20, 25],
+    "length": 12,
+    "afterProtect": 15,
+    "casters": ["elder", "staff", "book"],
+    "splashCounts": true
+  },
+  "monk": {
+    "_comment": "Desk loop: walk, search 4-8 t, 'What have we here?', 5-t throw; the tome leaves at cycle 112 of the throw (sent on the throw's tick throwRelease - 1) and flies 'flight' ticks. Stand tiles are the monk's SW tile (2x2) at each desk.",
+    "searchTicks": [4, 8],
+    "throwRelease": 4,
+    "flight": 2,
+    "releaseCycle": 112,
+    "walkTimeout": 12,
+    "oneTomeAtATime": true,
+    "desks": ["n", "ne", "e", "se", "s", "sw", "w", "nw"],
+    "firstDesks": { "staff": "nw", "book": "sw" },
+    "stands": {
+      "n": [4065, 5605, 0],
+      "ne": [4070, 5603, 0],
+      "e": [4072, 5599, 0],
+      "se": [4070, 5594, 0],
+      "s": [4065, 5592, 0],
+      "sw": [4059, 5593, 0],
+      "w": [4055, 5599, 0],
+      "nw": [4060, 5604, 0]
+    }
+  },
+  "poolHeadbar": 89,
+  "tome": {
+    "_comment": "Intercepted = local effect on the blocker; else the cauldron's arena-wide version (+1 ritual quarter with addsProgress).",
+    "addsProgress": true,
+    "bandosBlocker": 55,
+    "bandosRing": 20,
+    "bandosRings": 4,
+    "bandosRingWidth": 2,
+    "zamBlocker": 25,
+    "zamBurn": [3, 3, 2, 2, 1, 1],
+    "zamBurnEvery": 4,
+    "zamBlast": 15,
+    "zamRadius": 3,
+    "zamCauldronTiles": 20,
+    "zamFuses": [3, 4, 5, 6],
+    "zamFuseLayout": "random",
+    "saraHeal": 20,
+    "saraTiles": 10,
+    "saraTileHeal": 10,
+    "saraTilePrayer": 5,
+    "saraTileDmg": 20,
+    "saraPoolHealPct": 10,
+    "saraCauldronHeal": 20,
+    "saraRadius": 20,
+    "saraHealStrikes": [5, 6],
+    "saraDamageStrike": 5
+  },
+  "protect": {
+    "_comment": "Breaks 1-4: invulnerable trio, 3 rifts x 2 imps; ends when every imp is dead or after maxTicks. An imp's killer gets demonic strength (next damaging hit x strengthMult).",
+    "rifts": 3,
+    "impsPerRift": 2,
+    "impHp": 44,
+    "impMax": 20,
+    "maxTicks": 30,
+    "strengthMult": 2.0,
+    "strengthTicks": 50,
+    "impSpeed": 4,
+    "impPfmMult": 0.5,
+    "impStyle": "stab",
+    "firstImp": 1,
+    "impInterval": 2,
+    "riftMinPlayerDistance": 3,
+    "impDespawn": 2,
+    "domeEvery": 6
+  },
+  "empowered": {
+    "speed": 5,
+    "elderHits": 2,
+    "elderMax": 45,
+    "monkMax": 30,
+    "prayerMult": 0.75,
+    "firstDelay": 2,
+    "secondProjectileCycles": 15,
+    "monkProjectile": true
+  },
+  "explosion": {
+    "monkStun": 6,
+    "elderStun": 3,
+    "dies": "book",
+    "deathTicks": 5,
+    "cauldronTicks": 2
+  },
+  "finale": {
+    "elderAttacks": true,
+    "deathTicks": 5
+  },
+  "projectiles": {
+    "_comment": "Flight = delay + duration + perTile x distance cycles; the hit lands max(1 + floor((hitOffset + d) / hitDivisor), flight) ticks after the cast. Heights in the server's old units, slope in client units.",
+    "elderRanged": { "startHeight": 60, "endHeight": 31, "delay": 41, "slope": 15, "perTile": 5, "duration": 0, "hitOffset": 3, "hitDivisor": 6 },
+    "surge": { "startHeight": 60, "endHeight": 31, "delay": 51, "slope": 16, "perTile": 10, "duration": -5, "hitOffset": 1, "hitDivisor": 3 },
+    "empoweredElder": { "startHeight": 60, "endHeight": 31, "delay": 51, "slope": 16, "perTile": 10, "duration": -5, "hitOffset": 1, "hitDivisor": 3 },
+    "monkSurge": { "startHeight": 50, "endHeight": 31, "delay": 51, "slope": 16, "perTile": 10, "duration": -5, "hitOffset": 1, "hitDivisor": 3 },
+    "tome": { "startHeight": 70, "endHeight": 31, "delay": 0, "slope": 10, "perTile": 0, "duration": 0, "hitOffset": 1, "hitDivisor": 1 },
+    "zamFireball": { "startHeight": 90, "endHeight": 0, "delay": 30, "slope": 30, "perTile": 5, "duration": 30, "hitOffset": 1, "hitDivisor": 1 }
+  },
+  "heights": {
+    "surgeImpact": 124,
+    "rangedImpact": 92,
+    "tomeImpact": 92,
+    "healImpact": 0,
+    "buff": 0
+  },
+  "arena": {
+    "elder": [4069, 5599, 0],
+    "staff": [4062, 5602, 0],
+    "book": [4062, 5596, 0],
+    "cauldron": [4064, 5598, 0]
+  },
+  "hud": {
+    "recolourExtraBar": true,
+    "extraBarColours": [2828071, 10130688, 14209792]
+  },
+  "traits": {
+    "defenceFloorPct": null,
+    "weakness": "none",
+    "weaknessPct": 0,
+    "rangedDef": [80, 80, 80],
+    "immunePoison": true,
+    "immuneVenom": true,
+    "immuneCannon": true,
+    "freezeResistPct": 0,
+    "immuneAncients": false,
+    "demonbanePct": null,
+    "flatArmour": 0,
+    "magicResist": 0,
+    "magicDrainInverted": false,
+    "flying": false
+  },
+  "impTraits": {
+    "defenceFloorPct": null,
+    "weakness": "none",
+    "weaknessPct": 0,
+    "rangedDef": [0, 0, 0],
+    "immunePoison": false,
+    "immuneVenom": false,
+    "immuneCannon": true,
+    "freezeResistPct": 0,
+    "immuneAncients": false,
+    "demonbanePct": null,
+    "flatArmour": 0,
+    "magicResist": 0,
+    "magicDrainInverted": false,
+    "flying": false
+  },
+  "stats": {
+    "_comment": "Cache 2746 npcs 16643-16648: levels att/str/def/mag/rng, attack bonuses stab/slash/crush/magic/ranged, defence (ranged = standard), strength melee/ranged/magic %.",
+    "levels": [1, 1, 100, 290, 260],
+    "attack": [0, 0, 0, 250, 180],
+    "defence": [50, 50, 50, 100, 80],
+    "strength": [1, 0, 0]
+  },
+  "impStats": {
+    "_comment": "Cache 2746 npc 16650.",
+    "levels": [250, 195, 50, 125, 66],
+    "attack": [0, 0, 0, 1, 6],
+    "defence": [0, 0, 0, 0, 0],
+    "strength": [0, 0, 0]
+  }
+}

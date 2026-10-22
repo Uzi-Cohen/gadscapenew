@@ -58,22 +58,40 @@ public final class ConstructionController extends Controller {
 		return true;
 	}
 
+	/**
+	 * Op4 "Remove-room" (staircases 13497-13505, dungeon entrance 4529): owner in building mode only, like Build/Remove.
+	 */
+	@Override
+	public boolean processObjectClick4(final WorldObject object) {
+		final String option = object.getDefinitions().getOption(4);
+		if (option != null && option.equalsIgnoreCase("Remove-room")) {
+			return checkBuildingRights();
+		}
+		return true;
+	}
+
+	/** Whether the player may change the house (owner, building mode); tells them why not. */
+	private boolean checkBuildingRights() {
+		final Construction house = house();
+		if (house == null || !house.isOwner(player)) {
+			player.sendMessage("You can only do that in your own house.");
+			return false;
+		}
+		if (!house.isBuildingMode()) {
+			player.sendMessage("You can only do that in building mode.");
+			return false;
+		}
+		return true;
+	}
+
 	@Override
 	public boolean processObjectClick5(final WorldObject object) {
 		final String option = object.getDefinitions().getOption(5);
 		if (option == null) {
 			return true;
 		}
-		if (option.equalsIgnoreCase("Build") || option.equals("Remove")) {
-			final Construction house = house();
-			if (house == null || !house.isOwner(player)) {
-				player.sendMessage("You can only do that in your own house.");
-				return false;
-			}
-			if (!house.isBuildingMode()) {
-				player.sendMessage("You can only do that in building mode.");
-				return false;
-			}
+		if ((option.equalsIgnoreCase("Build") || option.equals("Remove")) && !checkBuildingRights()) {
+			return false;
 		}
 		if (option.equalsIgnoreCase("Build")) {
 			if (ConstructionConstants.isDoor(object)) {
@@ -154,7 +172,11 @@ public final class ConstructionController extends Controller {
 		final boolean fight = house.getCombat().canFightAt(player.getLocation());
 		if (fight != fighting) {
 			fighting = fight;
-			player.setCanPvp(fight, true);
+			if (fight) {
+				player.setCanPvp(true, true);
+			} else {
+				clearFightOption();
+			}
 		}
 		house.getCombat().onPlayerTick(player);
 	}
@@ -163,8 +185,19 @@ public final class ConstructionController extends Controller {
 	public void forceStop() {
 		if (fighting) {
 			fighting = false;
-			player.setCanPvp(false, true);
+			clearFightOption();
 		}
+	}
+
+	/**
+	 * Takes the "Fight" option away without leaving "Challenge" behind. {@code setCanPvp(false, true)} clears "Fight" (the
+	 * option is looked up by the duel flag) but then puts up "Challenge" ({@code !canPvp && duel}), which would otherwise stay
+	 * on every player after leaving the ring and open duel requests anywhere; {@code setCanPvp(false)} alone would look for
+	 * "Attack" and leave "Fight" up. Both calls together clear the row.
+	 */
+	private void clearFightOption() {
+		player.setCanPvp(false, true);
+		player.setCanPvp(false);
 	}
 
 	@Override

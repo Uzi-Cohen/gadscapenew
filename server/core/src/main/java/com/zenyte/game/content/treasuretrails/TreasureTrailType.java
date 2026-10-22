@@ -56,7 +56,9 @@ public enum TreasureTrailType {
      */
     private static final Set<String> RETIRED = Set.of(
             //Coordinates the OSRS wiki no longer lists (replaced by C02_56N_34_30E and C16_48N_30_01W, or removed).
-            "C02_58N_34_30E", "C13_28N_29_43E", "C14_20N_30_45W", "C16_43N_30_01W", "C24_45N_17_24E", "C25_00N_17_18E"
+            "C02_58N_34_30E", "C13_28N_29_43E", "C14_20N_30_45W", "C16_43N_30_01W", "C24_45N_17_24E", "C25_00N_17_18E",
+            //Old wording of the Clan Cup trophy dig; CRYPTIC_284 carries the current OSRS/RuneLite text for the same spot.
+            "CRYPTIC_136"
     );
 
     public static boolean isRetired(@NotNull final Clue clue) {

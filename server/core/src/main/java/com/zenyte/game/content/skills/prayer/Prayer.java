@@ -118,6 +118,11 @@ public enum Prayer {
 		RETRIBUTION.ruinousEquivalent = RUINOUS_WRATH;
 		PROTECT_ITEM.ruinousEquivalent = RUINOUS_PROTECT_ITEM;
 		RAPID_HEAL.ruinousEquivalent = RUINOUS_REJUVENATION;
+		for (final Prayer p : VALUES) {
+			if (p.ruinousEquivalent != null) {
+				p.ruinousEquivalent.standardEquivalent = p;
+			}
+		}
 		DEADEYE.base = EAGLE_EYE;
 		MYSTIC_VIGOUR.base = MYSTIC_MIGHT;
 		ZEAL.base = PIETY;
@@ -179,6 +184,8 @@ public enum Prayer {
 	private final int bookSlot;
 	/** The Ruinous Powers prayer that counts as this standard prayer while active (Dampen Magic for Protect from Magic...). */
 	private Prayer ruinousEquivalent;
+	/** The reverse of {@link #ruinousEquivalent}: the standard prayer a Ruinous prayer counts as (Protect from Magic for Dampen Magic...). */
+	private Prayer standardEquivalent;
 
 	Prayer(final Book book, final int slot, final int varbit, final int level, final int headIcon, final float drainRate, final int soundEffect) {
 		this.book = book;
@@ -253,6 +260,14 @@ public enum Prayer {
 	/** The Ruinous Powers prayer that counts as this (standard) prayer, or null. */
 	public Prayer getRuinousEquivalent() {
 		return ruinousEquivalent;
+	}
+
+	/**
+	 * The standard prayer this Ruinous Powers prayer counts as (Protect from Melee for Dampen Melee, Redemption for
+	 * Vindication...), or null: restrictions on a standard prayer (Sever, areas that disable prayers) apply to it too.
+	 */
+	public Prayer getStandardEquivalent() {
+		return standardEquivalent;
 	}
 
 	private static final Prayer[] RUINOUS_BY_SLOT = new Prayer[24];

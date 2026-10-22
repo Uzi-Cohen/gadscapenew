@@ -179,6 +179,13 @@ public class PrayerManager {
 				return Prayer.PROTECT_FROM_MISSILES;
 			case PROTECT_FROM_MAGIC:
 				return Prayer.PROTECT_FROM_MELEE;
+			// the Nightmare's curse shuffles the Ruinous Powers protection prayers the same way
+			case RUINOUS_DAMPEN_RANGED:
+				return Prayer.RUINOUS_DAMPEN_MAGIC;
+			case RUINOUS_DAMPEN_MELEE:
+				return Prayer.RUINOUS_DAMPEN_RANGED;
+			case RUINOUS_DAMPEN_MAGIC:
+				return Prayer.RUINOUS_DAMPEN_MELEE;
 			default:
 				return input;
 		}
@@ -666,7 +673,9 @@ public class PrayerManager {
 			player.sendMessage("You cannot turn prayers on right now.");
 			return false;
 		}
-		if (player.getTemporaryAttributes().get("SeverEffect") != null && (long) player.getTemporaryAttributes().get("SeverEffect") > Utils.currentTimeMillis() && (prayer.equals(Prayer.PROTECT_FROM_MAGIC) || prayer.equals(Prayer.PROTECT_FROM_MISSILES) || prayer.equals(Prayer.PROTECT_FROM_MELEE))) {
+		// Dampen Melee/Ranged/Magic (Ruinous Powers) count as the protection prayers here too.
+		final Prayer standard = prayer.getStandardEquivalent() != null ? prayer.getStandardEquivalent() : prayer;
+		if (player.getTemporaryAttributes().get("SeverEffect") != null && (long) player.getTemporaryAttributes().get("SeverEffect") > Utils.currentTimeMillis() && (standard.equals(Prayer.PROTECT_FROM_MAGIC) || standard.equals(Prayer.PROTECT_FROM_MISSILES) || standard.equals(Prayer.PROTECT_FROM_MELEE))) {
 			player.sendMessage("You can't activate this prayer due to the effect of the special attack Sever.");
 			return false;
 		}

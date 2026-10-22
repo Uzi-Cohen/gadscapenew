@@ -407,7 +407,7 @@ public abstract class BaseNightmareNPC extends NPC implements CombatScript {
 			player.sendMessage("<col=229628>You feel the effects of the Nightmare's curse wear off.");
 			for (Prayer prayerType : protectionPrayers) {
 				if (player.getPrayerManager().isActive(prayerType)) {
-					player.getPrayerManager().activatePrayer(PrayerManager.cursePrayerTypeReverse(prayerType));
+					player.getPrayerManager().activatePrayer(PrayerManager.cursePrayerTypeReverse(inBook(player, prayerType)));
 					break;
 				}
 			}
@@ -415,13 +415,18 @@ public abstract class BaseNightmareNPC extends NPC implements CombatScript {
 
 		for (Prayer prayerType : protectionPrayers) {
 			if (player.getPrayerManager().isActive(prayerType)) {
-				player.getPrayerManager().activatePrayer(cursePrayerType(prayerType));
+				player.getPrayerManager().activatePrayer(cursePrayerType(inBook(player, prayerType)));
 				break;
 			}
 		}
 	}
 
 	public static final Prayer[] protectionPrayers = { Prayer.PROTECT_FROM_MAGIC, Prayer.PROTECT_FROM_MISSILES, Prayer.PROTECT_FROM_MELEE };
+
+	/** The protection prayer of the player's prayer book: Dampen x (Ruinous Powers) for Protect from x. */
+	public static Prayer inBook(final Player player, final Prayer protection) {
+		return player.getPrayerManager().isRuinousBook() && protection.getRuinousEquivalent() != null ? protection.getRuinousEquivalent() : protection;
+	}
 
 	public static Prayer cursePrayerType(Prayer input) {
 		switch (input) {
@@ -431,6 +436,13 @@ public abstract class BaseNightmareNPC extends NPC implements CombatScript {
 				return Prayer.PROTECT_FROM_MELEE;
 			case PROTECT_FROM_MELEE:
 				return Prayer.PROTECT_FROM_MAGIC;
+			// Ruinous Powers: the Dampen prayers are shuffled the same way
+			case RUINOUS_DAMPEN_MAGIC:
+				return Prayer.RUINOUS_DAMPEN_RANGED;
+			case RUINOUS_DAMPEN_RANGED:
+				return Prayer.RUINOUS_DAMPEN_MELEE;
+			case RUINOUS_DAMPEN_MELEE:
+				return Prayer.RUINOUS_DAMPEN_MAGIC;
 			default:
 				return input;
 		}

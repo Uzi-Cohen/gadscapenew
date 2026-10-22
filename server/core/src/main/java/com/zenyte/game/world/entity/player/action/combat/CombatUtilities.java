@@ -328,10 +328,34 @@ public class CombatUtilities {
     public static boolean isDemon(@NotNull final Entity target) {
         if (!(target instanceof final NPC npc))
             return false;
+        final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+        if (traits != null && traits.isDemon() != null) {
+            return traits.isDemon(); // Raids 4 E9
+        }
         final String name = npc.getDefinitions().getName().toLowerCase();
         return ArrayUtils.contains(DEMON_NPCS, name)
                 || ArrayUtils.contains(OTHER_DEMON_NPCS, name)
                 || isUndeadCombatDummy(target);
+    }
+
+    /**
+     * The demonbane effectiveness of {@code target} in percent: its {@link com.zenyte.game.world.entity.npc.combat.NpcCombatTraits}
+     * value, else 100 (Raids 4 E9; Dreadnoth 25, Xarth and Ocellus 80).
+     */
+    public static int demonbanePercent(final Entity target) {
+        if (target instanceof final NPC npc) {
+            final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+            if (traits != null) {
+                return traits.demonbanePercent();
+            }
+        }
+        return 100;
+    }
+
+    /** The combat traits of {@code target} when it is an NPC with traits, else null. */
+    @org.jetbrains.annotations.Nullable
+    public static com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traitsOf(final Entity target) {
+        return target instanceof final NPC npc ? npc.getCombatTraits() : null;
     }
 
     public static void delayHit(final NPC npc, int delay, final Entity target, final Hit... hits) {

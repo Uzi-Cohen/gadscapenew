@@ -33,6 +33,13 @@ public final class BossLairDisplay implements ObjectInteraction, ItemOnObjectAct
 
     @Override
     public void handleObjectAction(Player player, Construction construction, RoomReference reference, WorldObject object, int optionId, String option) {
+        // Guests share the instance: only the owner may change the (saved) display or its jars.
+        if (!construction.isOwner(player)) {
+            if (option.equals("jars") || option.equals("configure")) {
+                player.sendMessage("Only the owner of the house can do that.");
+            }
+            return;
+        }
         if (option.equals("jars")) {
             player.getDialogueManager().start(new JarDialogue(player, reference, object));
             return;
@@ -45,6 +52,11 @@ public final class BossLairDisplay implements ObjectInteraction, ItemOnObjectAct
     @Override
     public void handleItemOnObjectAction(Player player, Item item, int slot, WorldObject object) {
         final int id = item.getId();
+        final Construction house = player.getCurrentHouse();
+        if (house == null || !house.isOwner(player)) {
+            player.sendMessage("You can only do that in your own house.");
+            return;
+        }
         if (!ConfigurationD.MAP.containsKey(id)) {
             player.sendMessage("You can only store jars with boss souls in them here.");
             return;

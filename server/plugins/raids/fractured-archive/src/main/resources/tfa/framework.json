@@ -1,0 +1,31 @@
+{
+  "_comment": "Fractured Archive raid framework (WU-12..WU-18) keys that tfa.json does not hold. Tiles are static [x, y, plane].",
+  "spectate": {
+    "maxSpectators": 100,
+    "specificNeedsFriend": true,
+    "mirrorInventory": 1031,
+    "pingTicks": 7,
+    "pingScript": -1,
+    "deadFollowMember": true
+  },
+  "death": {
+    "wipeItemLoss": "server_default",
+    "feeKcThreshold": 5,
+    "feeReducedPct": 25,
+    "spectateDelayTicks": 3
+  },
+  "nexus": {
+    "navigatorWalkTicks": 6,
+    "talkToAllies": true,
+    "armacusTile": [4122, 5583, 0],
+    "evaTile": [4124, 5579, 0],
+    "campAllies": false,
+    "campArmacusTile": [4133, 5590, 0],
+    "campEvaTile": [4121, 5590, 0],
+    "campMeritScroll": true
+  },
+  "raid": {
+    "maxConcurrentRaids": 64,
+    "landingSearchRadius": 3
+  }
+}

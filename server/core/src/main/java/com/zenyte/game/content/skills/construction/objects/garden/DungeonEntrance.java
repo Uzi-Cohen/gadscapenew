@@ -33,11 +33,16 @@ public final class DungeonEntrance implements ObjectInteraction {
             }
             player.getDialogueManager().start(new DungeonEnterD(player, reference, object));
         } else if (optionId == 4) {
+            // "Remove-room": the owner, in building mode (the controller checks this too).
+            if (!construction.isOwner(player) || !construction.isBuildingMode()) {
+                player.sendMessage(construction.isOwner(player) ? "You can only do that in building mode." : "You can only do that in your own house.");
+                return;
+            }
             final int roomX = player.getLocation().getChunkX() - construction.getChunkX() + construction.getYardOffset();
             final int roomY = player.getLocation().getChunkY() - construction.getChunkY() + construction.getYardOffset();
             final RoomReference ref = construction.getReference(roomX, roomY, 0);
             if (ref != null)
-                player.getDialogueManager().start(new RoomRemovingD(player, ref));
+                player.getDialogueManager().start(new RoomRemovingD(player, construction, ref));
             else
                 player.sendMessage("You haven't built anything under here!");
         }

@@ -4,6 +4,7 @@ import com.google.common.eventbus.Subscribe;
 import com.zenyte.game.item.ItemId;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.action.combat.AmmunitionDefinitions;
+import com.zenyte.game.world.entity.player.action.combat.GadScapeWeaponIds;
 import com.zenyte.game.world.entity.player.action.combat.PlayerCombat;
 import com.zenyte.game.world.entity.player.action.combat.PlayerCombat.IPlayerCombatAttackHook;
 import com.zenyte.game.world.entity.player.container.impl.equipment.EquipmentSlot;
@@ -30,14 +31,15 @@ public final class MoonSets {
     }
 
     /*
-     * GadScape's own copies (user cache): ids the cache converter may move (idmap); rewrite them here if it does.
+     * GadScape's own copies (user cache) at ids 2746 uses for other items: the ids live in GadScapeWeaponIds, the class
+     * the converter's idmap step rewrites, so one rewrite covers them here too.
      */
     /** GadScape "Blood Moon chestplate" copies. */
-    public static final int BLOOD_MOON_CHESTPLATE_GADSCAPE = 33340;
-    public static final int BLOOD_MOON_CHESTPLATE_GADSCAPE_33374 = 33374;
+    public static final int BLOOD_MOON_CHESTPLATE_GADSCAPE = GadScapeWeaponIds.BLOOD_MOON_CHESTPLATE_33340;
+    public static final int BLOOD_MOON_CHESTPLATE_GADSCAPE_33374 = GadScapeWeaponIds.BLOOD_MOON_CHESTPLATE_33374;
     /** GadScape "Eclipse atlatl" copies. */
-    public static final int ECLIPSE_ATLATL_GADSCAPE = 33342;
-    public static final int ECLIPSE_ATLATL_GADSCAPE_33376 = 33376;
+    public static final int ECLIPSE_ATLATL_GADSCAPE = GadScapeWeaponIds.ECLIPSE_ATLATL_33342;
+    public static final int ECLIPSE_ATLATL_GADSCAPE_33376 = GadScapeWeaponIds.ECLIPSE_ATLATL_33376;
 
     private static final IntSet BLOOD_HELMS = set(ItemId.BLOOD_MOON_HELM, ItemId.BLOOD_MOON_HELM_29047, ItemId.BLOOD_MOON_HELM_29848, ItemId.BLOOD_MOON_HELM_BROKEN);
     private static final IntSet BLOOD_CHESTS = set(ItemId.BLOOD_MOON_CHESTPLATE, ItemId.BLOOD_MOON_CHESTPLATE_29043, ItemId.BLOOD_MOON_CHESTPLATE_29846, ItemId.BLOOD_MOON_CHESTPLATE_BROKEN,

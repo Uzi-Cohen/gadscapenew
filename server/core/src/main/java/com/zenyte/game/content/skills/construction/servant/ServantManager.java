@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.construction.servant;
 
+import com.google.common.eventbus.Subscribe;
 import com.google.gson.annotations.Expose;
 import com.zenyte.game.content.skills.construction.Construction;
 import com.zenyte.game.content.skills.construction.Plank;
@@ -17,7 +18,8 @@ import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.SkillConstants;
 import com.zenyte.game.world.entity.player.dialogue.Dialogue;
 import com.zenyte.game.world.entity.player.container.ContainerResult;
-import com.zenyte.game.world.entity.player.container.RequestResult;
+import com.zenyte.game.world.entity.player.privilege.GameMode;
+import com.zenyte.plugins.events.LoginEvent;
 import mgi.types.config.items.ItemDefinitions;
 
 /**
@@ -31,6 +33,10 @@ import mgi.types.config.items.ItemDefinitions;
  * <li>a wage (equal to the hiring fee) every 8 trips, taken from the servant's moneybag first, then from the inventory;</li>
  * <li>items a servant still holds go to the bank when the owner is not in the house when it returns.</li>
  * </ul>
+ * The items a servant carries are saved with the house ({@link ServantData} "pending" fields) from the moment they leave the
+ * bank or the inventory until they are handed over, so logging out (or a crash) mid-trip loses nothing: the trip of a
+ * logged-out owner does nothing, and the items are handed over at the next login. Ultimate ironmen can't send the servant to
+ * the bank or the sawmill (OSRS wiki "Ultimate Ironman Mode"), only unnote; bank tasks need the bank PIN entered.
  */
 public final class ServantManager {
 
@@ -47,6 +53,14 @@ public final class ServantManager {
         private int lastItem;
         @Expose
         private int lastAmount;
+        /** Item the servant is carrying (0 = nothing): saved so that a logout or crash mid-trip loses nothing. */
+        @Expose
+        private int pendingItem;
+        @Expose
+        private int pendingAmount;
+        /** Whether the carried items are going to the bank (take-to-bank) rather than back to the owner. */
+        @Expose
+        private boolean pendingToBank;
 
         public ServantData(final ServantType type) {
             this.type = type;
@@ -161,6 +175,13 @@ public final class ServantManager {
     public void fire() {
         final ServantType type = getType();
         if (type == null) {
+            return;
+        }
+        // Whatever the servant is carrying is handed over before they go (inventory, then bank).
+        handOver(owner(), true);
+        final ServantData data = data();
+        if (data != null && data.pendingItem > 0 && data.pendingAmount > 0) {
+            owner().sendMessage("Make some room for the items your servant is holding before you fire them.");
             return;
         }
         house.setServantData(null);
@@ -301,12 +322,38 @@ public final class ServantManager {
             player.sendMessage("Your servant is already out on an errand.");
             return false;
         }
+        final ServantData data = data();
+        if (data.pendingItem > 0 && data.pendingAmount > 0) {
+            // Left over from an earlier trip (no room then, or saved mid-trip): hand it over first.
+            handOver(player, isHome(player) && !data.pendingToBank);
+            if (data.pendingItem > 0 && data.pendingAmount > 0) {
+                player.sendMessage("Your servant is still holding " + data.pendingAmount + " x " + ItemDefinitions.getOrThrow(data.pendingItem).getName().toLowerCase() + " for you; make some room first.");
+                return false;
+            }
+        }
         return payIfDue(player);
+    }
+
+    /** Bank and sawmill tasks: not for ultimate ironmen; the bank ones also need the bank PIN entered this session. */
+    private static boolean canUseBank(final Player player, final boolean bank) {
+        if (player.getGameMode() == GameMode.ULTIMATE_IRON_MAN) {
+            player.sendMessage("As an Ultimate Iron Man, you can't send your servant to the " + (bank ? "bank." : "sawmill."));
+            return false;
+        }
+        if (bank && player.getBankPin().getPin() != -1 && !player.getBankPin().isUnlocked()) {
+            player.sendMessage("You need to enter your bank PIN at a bank before your servant can use your bank.");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isHome(final Player player) {
+        return !player.isFinished() && house.isLoaded() && house.isOwnerInside() && player.getCurrentHouse() == house;
     }
 
     /** Fetches up to the servant's capacity of an item from the bank. */
     public void fetchFromBank(final Player player, final int itemId, final int requested) {
-        if (!ready(player)) {
+        if (!canUseBank(player, true) || !ready(player)) {
             return;
         }
         final int inBank = player.getBank().getAmountOf(itemId);
@@ -324,21 +371,23 @@ public final class ServantManager {
         data.lastTask = TASK_FETCH;
         data.lastItem = itemId;
         data.lastAmount = requested;
-        startTrip(player, new Item(itemId, taken), "Very good, I shall return with your items shortly.");
+        startTrip(player, new Item(itemId, taken), false, "Very good, I shall return with your items shortly.");
     }
 
     /** Takes inventory items (noted or not) to the bank. */
     public void takeToBank(final Player player, final Item item) {
-        if (!ready(player)) {
+        if (!canUseBank(player, true) || !ready(player)) {
             return;
         }
         final int amount = Math.min(getType().getCapacity(), player.getInventory().getAmountOf(item.getId()));
         if (amount <= 0) {
             return;
         }
-        player.getInventory().deleteItem(item.getId(), amount);
-        final Item carried = new Item(item.getId(), amount);
-        startTrip(player, null, "Very well, I shall take that to the bank for you.", () -> deposit(player, carried));
+        final int removed = player.getInventory().deleteItem(item.getId(), amount).getSucceededAmount();
+        if (removed <= 0) {
+            return;
+        }
+        startTrip(player, new Item(item.getId(), removed), true, "Very well, I shall take that to the bank for you.");
     }
 
     /** Returns unnoted items for a noted stack. */
@@ -354,14 +403,20 @@ public final class ServantManager {
         if (amount <= 0) {
             return;
         }
-        player.getInventory().deleteItem(noted.getId(), amount);
-        startTrip(player, new Item(defs.getUnnotedOrDefault(), amount), "Very well, I shall return with those unnoted shortly.");
+        final int removed = player.getInventory().deleteItem(noted.getId(), amount).getSucceededAmount();
+        if (removed <= 0) {
+            return;
+        }
+        startTrip(player, new Item(defs.getUnnotedOrDefault(), removed), false, "Very well, I shall return with those unnoted shortly.");
     }
 
     /** Cook, butler and demon butler: logs (noted or not) to planks at the sawmill, paying the usual sawmill fee. */
     public void sawmill(final Player player, final Item logs) {
         if (getType() == null || !getType().canUseSawmill()) {
             player.sendMessage("Your servant can't take logs to the sawmill.");
+            return;
+        }
+        if (!canUseBank(player, false)) {
             return;
         }
         final int unnotedId = logs.getDefinitions() == null ? logs.getId() : logs.getDefinitions().getUnnotedOrDefault();
@@ -385,13 +440,16 @@ public final class ServantManager {
         if (!ready(player)) {
             return;
         }
-        player.getInventory().deleteItem(logs.getId(), amount);
-        player.getInventory().deleteItem(ItemId.COINS_995, amount * plank.getCost());
+        final int removed = player.getInventory().deleteItem(logs.getId(), amount).getSucceededAmount();
+        if (removed <= 0) {
+            return;
+        }
+        player.getInventory().deleteItem(ItemId.COINS_995, removed * plank.getCost());
         final ServantData data = data();
         data.lastTask = TASK_SAWMILL;
         data.lastItem = logs.getId();
-        data.lastAmount = amount;
-        startTrip(player, new Item(plank.getProduct().getId(), amount), "Very well, I shall take those logs to the sawmill.");
+        data.lastAmount = removed;
+        startTrip(player, new Item(plank.getProduct().getId(), removed), false, "Very well, I shall take those logs to the sawmill.");
     }
 
     public String describeLastTask() {
@@ -420,17 +478,20 @@ public final class ServantManager {
         }
     }
 
-    private void startTrip(final Player player, final Item delivery, final String line) {
-        startTrip(player, delivery, line, null);
-    }
-
     /**
-     * The servant leaves for {@link ServantType#getTripTicks()} ticks, then hands over {@code delivery} (overflow and absent
-     * owners: to the bank) and runs {@code onReturn}.
+     * The servant leaves for {@link ServantType#getTripTicks()} ticks carrying {@code carried} (saved as pending at once), then
+     * hands it over: to the owner when they are home (overflow to the bank), otherwise, or for take-to-bank trips, to the
+     * bank. A trip whose owner logged out does nothing; the saved items are handed over at the next login.
      */
-    private void startTrip(final Player player, final Item delivery, final String line, final Runnable onReturn) {
+    private void startTrip(final Player player, final Item carried, final boolean toBank, final String line) {
         final ServantType type = getType();
-        data().tripsSincePayment++;
+        final ServantData data = data();
+        data.tripsSincePayment++;
+        if (carried != null && carried.getAmount() > 0) {
+            data.pendingItem = carried.getId();
+            data.pendingAmount = carried.getAmount();
+            data.pendingToBank = toBank;
+        }
         onTrip = true;
         if (npc != null && !npc.isFinished()) {
             npc.setForceTalk(line);
@@ -441,17 +502,13 @@ public final class ServantManager {
             @Override
             public void run() {
                 onTrip = false;
-                final boolean home = !player.isFinished() && house.isLoaded() && house.isOwnerInside() && player.getCurrentHouse() == house;
-                if (onReturn != null) {
-                    onReturn.run();
+                // Logged out: this Player is gone; the items are saved with the house and handed over at the next login.
+                // Fired meanwhile: fire() already handed them over.
+                if (player.isFinished() || data != data()) {
+                    return;
                 }
-                if (delivery != null) {
-                    if (home) {
-                        deliver(player, delivery);
-                    } else {
-                        deposit(player, delivery);
-                    }
-                }
+                final boolean home = isHome(player);
+                handOver(player, home && !data.pendingToBank);
                 if (home && type == getType()) {
                     spawnNpc(freeTileNear(player.getLocation()));
                     if (npc != null) {
@@ -463,30 +520,108 @@ public final class ServantManager {
         }, type.getTripTicks());
     }
 
-    private void deliver(final Player player, final Item item) {
-        final ItemDefinitions defs = item.getDefinitions();
-        final boolean stackable = defs != null && defs.isStackable();
-        final int fits = stackable ? item.getAmount() : Math.min(item.getAmount(), player.getInventory().getFreeSlots());
-        if (fits > 0) {
-            player.getInventory().addItem(new Item(item.getId(), fits));
+    /**
+     * Hands over what the servant is carrying. {@code toOwner}: inventory first, the rest to the bank; otherwise the bank first,
+     * the rest to the inventory. Ultimate ironmen never use the bank: what doesn't fit comes back noted. Whatever fits nowhere
+     * stays with the servant (saved) and is handed over the next time the servant is used, called, or the owner logs in.
+     */
+    private void handOver(final Player player, final boolean toOwner) {
+        final ServantData data = data();
+        if (data == null || data.pendingItem <= 0 || data.pendingAmount <= 0) {
+            return;
         }
-        if (fits < item.getAmount()) {
-            deposit(player, new Item(item.getId(), item.getAmount() - fits));
-            player.sendMessage("Your servant puts the items you had no room for in your bank.");
+        final int id = data.pendingItem;
+        final boolean toBank = data.pendingToBank;
+        int left = data.pendingAmount;
+        data.pendingItem = 0;
+        data.pendingAmount = 0;
+        data.pendingToBank = false;
+        final boolean bankAllowed = player.getGameMode() != GameMode.ULTIMATE_IRON_MAN;
+        int banked = 0;
+        int carried = 0;
+        if (toOwner || !bankAllowed) {
+            int notAdded = addToInventory(player, id, left);
+            carried += left - notAdded;
+            left = notAdded;
+            if (left > 0 && bankAllowed) {
+                notAdded = addToBank(player, id, left);
+                banked += left - notAdded;
+                left = notAdded;
+            }
+            if (left > 0 && !bankAllowed) {
+                final ItemDefinitions defs = ItemDefinitions.get(id);
+                final int notedId = defs == null ? id : defs.getNotedOrDefault();
+                if (notedId != id) {
+                    notAdded = addToInventory(player, notedId, left);
+                    carried += left - notAdded;
+                    left = notAdded;
+                }
+            }
+        } else {
+            int notAdded = addToBank(player, id, left);
+            banked += left - notAdded;
+            left = notAdded;
+            if (left > 0) {
+                notAdded = addToInventory(player, id, left);
+                carried += left - notAdded;
+                left = notAdded;
+            }
+        }
+        if (left > 0) {
+            data.pendingItem = id;
+            data.pendingAmount = left;
+            data.pendingToBank = toBank;
+        }
+        if (player.isFinished()) {
+            return;
+        }
+        final String name = ItemDefinitions.getOrThrow(id).getName().toLowerCase();
+        if (banked > 0) {
+            player.sendMessage(toOwner && carried > 0 ? "Your servant puts the items you had no room for in your bank."
+                    : "Your servant has put " + banked + " x " + name + " in your bank.");
+        }
+        if (!toOwner && carried > 0) {
+            player.sendMessage(bankAllowed ? "Your bank is full, so your servant gives the items back to you." : "Your servant hands you " + carried + " x " + name + ".");
+        }
+        if (left > 0) {
+            player.sendMessage("Your servant is still holding " + left + " x " + name + " for you; make some room and call them.");
         }
     }
 
-    private void deposit(final Player player, final Item item) {
-        final ContainerResult result = player.getBank().add(item);
-        if (result.getResult() != RequestResult.SUCCESS || result.getSucceededAmount() < item.getAmount()) {
-            final int left = item.getAmount() - Math.max(0, result.getSucceededAmount());
-            if (left > 0) {
-                player.getInventory().addOrDrop(new Item(item.getId(), left));
-                player.sendMessage("Your bank is full, so your servant gives the items back to you.");
-            }
-        } else if (!player.isFinished()) {
-            player.sendMessage("Your servant has put " + item.getAmount() + " x " + item.getName().toLowerCase() + " in your bank.");
+    /** Adds as many as fit (stackable, or one per free slot); returns how many didn't fit. */
+    private static int addToInventory(final Player player, final int id, final int amount) {
+        final ItemDefinitions defs = ItemDefinitions.get(id);
+        final boolean stackable = defs != null && (defs.isStackable() || defs.isNoted());
+        final int fits = stackable ? amount : Math.min(amount, player.getInventory().getFreeSlots());
+        if (fits <= 0) {
+            return amount;
         }
+        final ContainerResult result = player.getInventory().addItem(new Item(id, fits));
+        return amount - Math.max(0, Math.min(fits, result.getSucceededAmount()));
+    }
+
+    /** Banks as many as fit; returns how many didn't. */
+    private static int addToBank(final Player player, final int id, final int amount) {
+        final ContainerResult result = player.getBank().add(new Item(id, amount));
+        return amount - Math.max(0, Math.min(amount, result.getSucceededAmount()));
+    }
+
+    /**
+     * Login: items the servant was carrying when the owner logged out (or the server stopped) are handed over now, to the bank
+     * (ultimate ironmen: the inventory).
+     */
+    @Subscribe
+    public static void onLogin(final LoginEvent event) {
+        final Player player = event.getPlayer();
+        final Construction construction = player.getConstruction();
+        if (construction == null || construction.getServantData() == null) {
+            return;
+        }
+        final ServantData data = construction.getServantData();
+        if (data.pendingItem <= 0 || data.pendingAmount <= 0) {
+            return;
+        }
+        construction.getServantManager().handOver(player, false);
     }
 
     /* --------------------------------------------------------------------------------------------------------------------
@@ -523,6 +658,9 @@ public final class ServantManager {
     }
 
     static void openFetchMenu(final Player player, final ServantManager manager) {
+        if (!canUseBank(player, true)) {
+            return;
+        }
         final String[] names = new String[BANK_FETCHABLE.length];
         for (int i = 0; i < BANK_FETCHABLE.length; i++) {
             names[i] = ItemDefinitions.getOrThrow(BANK_FETCHABLE[i]).getName() + " (" + player.getBank().getAmountOf(BANK_FETCHABLE[i]) + " in bank)";

@@ -116,7 +116,9 @@ public class MeleeCombat extends PlayerCombat {
         if (isDemonbaneWeapon(weaponId) && CombatUtilities.isDemon(target)) {
             if(target instanceof NPC npc && npc.getId() == NpcId.DUKE_SUCELLUS_12191) {
                 result *= 1.5F;
-            } else result *= weaponId == ItemId.ARCLIGHT ? 1.7F : 1.6F;
+            } else if (CombatUtilities.traitsOf(target) != null) {
+                result *= demonbaneWeaponMultiplier(weaponId, target); // Raids 4 E9: scaled by demonbane effectiveness
+            } else result *= weaponId == ItemId.ARCLIGHT || weaponId == ItemId.EMBERLIGHT ? 1.7F : 1.6F;
         }
         //Berserker necklace
         if ((amuletId == ItemId.BERSERKER_NECKLACE || amuletId == ItemId.BERSERKER_NECKLACE_OR) && wieldingObsidianWeapon) {
@@ -181,6 +183,10 @@ public class MeleeCombat extends PlayerCombat {
         if (CombatUtilities.isAlwaysTakeMaxHit(target, HitType.MELEE) || CombatUtilities.isWardenCore(target)) {
             return maxhit;
         }
+        if (isGuaranteedHit(target)) {
+            // Raids 4 E8 (Bork dazed): the accuracy roll is skipped, the damage roll is not.
+            return Utils.random(calculateMinimumHit(player, maxhit), maxhit);
+        }
         final int accuracy = getAccuracy(player, target, modifier);
         final int targetRoll = getTargetDefenceRoll(player, target, attackType);
         sendDebug(accuracy, targetRoll, maxhit);
@@ -232,7 +238,9 @@ public class MeleeCombat extends PlayerCombat {
         if (isDemonbaneWeapon(weaponId) && CombatUtilities.isDemon(target)) {
             if(target instanceof NPC npc && npc.getId() == NpcId.DUKE_SUCELLUS_12191) {
                 result *= 1.5F;
-            } else result *= weaponId == ItemId.ARCLIGHT ? 1.7F : 1.6F;
+            } else if (CombatUtilities.traitsOf(target) != null) {
+                result *= demonbaneWeaponMultiplier(weaponId, target); // Raids 4 E9
+            } else result *= weaponId == ItemId.ARCLIGHT || weaponId == ItemId.EMBERLIGHT ? 1.7F : 1.6F;
         }
         if (obsidianWeaponry.contains(weaponId) && CombatUtilities.hasFullObisidian(player)) {
             result *= 1.1F;
@@ -313,6 +321,9 @@ public class MeleeCombat extends PlayerCombat {
                 player.sendMessage("You cannot use melee against this creature.");
                 return false;
             }
+            if (!canReachFlying()) {
+                return false;
+            }
         }
         if (player.isFrozen()) {
             player.sendMessage("A magical force stops you from moving.");
@@ -352,7 +363,36 @@ public class MeleeCombat extends PlayerCombat {
         player.setAnimation(animation);
     }
 
+    /**
+     * The demonbane modifier of Silverlight/Darklight (+60%) or Arclight/Emberlight (+70%) against a target with
+     * {@link com.zenyte.game.world.entity.npc.combat.NpcCombatTraits}, scaled by its demonbane effectiveness.
+     */
+    private static double demonbaneWeaponMultiplier(final int weaponId, final Entity target) {
+        final double bonus = weaponId == ItemId.ARCLIGHT || weaponId == ItemId.EMBERLIGHT ? 0.7 : 0.6;
+        return com.zenyte.game.world.entity.npc.combat.CombatTraitRules.demonbaneMultiplier(bonus, CombatUtilities.demonbanePercent(target));
+    }
+
+    /**
+     * Raids 4 E9: a flying NPC (its combat traits) can only be hit in melee with a halberd. Sends the refusal and
+     * returns false otherwise.
+     */
+    protected final boolean canReachFlying() {
+        if (!(target instanceof final NPC npc)) {
+            return true;
+        }
+        final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+        final Item weapon = player.getWeapon();
+        if (traits == null || !traits.flying()
+                || (weapon != null && com.zenyte.game.world.entity.npc.combat.CombatTraitRules.meleeReachesFlying(weapon.getName()))) {
+            return true;
+        }
+        final String message = traits.flyingMessage();
+        player.sendMessage(message != null ? message : "The " + npc.getDefinitions().getName() + " is flying too high to hit.");
+        return false;
+    }
+
     protected boolean canAttack() {
+        if (!canReachFlying()) return false;
         if (!attackable()) return false;
         if (!target.canAttack(player)) {
             return false;

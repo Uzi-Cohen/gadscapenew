@@ -47,6 +47,27 @@ object TfaModule {
         event.worldThread.hook<PlayerEvent.Process> { e ->
             if (TfaDebug.isGodmode(e.player)) TfaDebug.restore(e.player)
         }
+        installRaidFramework()
+    }
+
+    /**
+     * Raid side (fw-core: WU-12..WU-18, see `raids4-impl/FRAMEWORK-core.md`): the raid registry, contribution, the boss
+     * HP HUD, the framework config sections, the 974 triggers, the music unlock varp and the `::tfa start / skipto
+     * <room> / raid` commands.
+     */
+    private fun installRaidFramework() {
+        try {
+            TfaConfig.register(com.gadscape.raids.tfa.points.PointsConfig)
+            TfaConfig.register(com.gadscape.raids.tfa.raid.FrameworkConfig)
+            TfaServices.raids = com.gadscape.raids.tfa.raid.TfaRaids
+            TfaServices.contribution = com.gadscape.raids.tfa.points.ContributionService
+            TfaServices.bossHud = com.gadscape.raids.tfa.hud.BossHpHud
+            com.gadscape.raids.tfa.spectate.SpectatorService.registerTriggers()
+            com.gadscape.raids.tfa.hud.MusicUnlock.install()
+            com.gadscape.raids.tfa.raid.RaidCommands.install()
+        } catch (e: Throwable) {
+            log.error("Fractured Archive: installing the raid framework failed", e)
+        }
     }
 
     /** Resolves ids, loads config and installs the commands. Safe to call more than once. */
