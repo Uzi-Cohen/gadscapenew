@@ -298,8 +298,8 @@ object AnimCatalog {
             val s = try { anims.seq(id) } catch (e: Exception) { null } ?: continue
             val r = if (s.skeletalModel != -1) {
                 val k = s.skeletalModel
-                lib.data(0, k ushr 16, k and 0xFFFF)?.let { if (it.size >= 3) ((it[1].toInt() and 255) shl 8) or (it[2].toInt() and 255) else null }
-                    ?.let { 0x100000 or it }
+                // keyframe sets: archive 22 in build 241, archive 0 in rev 211 (AnimCache knows which)
+                anims.keyframeData(k ushr 16, k and 0xFFFF)?.let { Keyframes.skeletonOf(it) }?.let { 0x100000 or it }
             } else s.frameIds.firstOrNull()?.let { f ->
                 groupRig.getOrPut(f ushr 16) {
                     val b = lib.data(0, f ushr 16, f and 0xFFFF)
@@ -428,24 +428,6 @@ object AnimCatalog {
 
     private fun clean(s: String) = s.replace(Regex("<[^>]*>"), "").trim()
 
-    /** The animation a graphic (spot animation) plays, or null. */
-    private fun spotSequence(b: ByteArray): Int? {
-        var p = 0
-        fun u8() = b[p++].toInt() and 255
-        fun u16() = (u8() shl 8) or u8()
-        try {
-            while (p < b.size) {
-                when (u8()) {
-                    0 -> return null
-                    1 -> u16()
-                    2 -> return u16().takeIf { it != 65535 }
-                    4, 5, 6 -> u16()
-                    7, 8, 9 -> u8()
-                    40, 41 -> { val n = u8(); p += 4 * n }
-                    else -> return null
-                }
-            }
-        } catch (e: Exception) {}
-        return null
-    }
+    /** The animation a graphic (spot animation) plays, or null; either format (see [SpotCodec]). */
+    private fun spotSequence(b: ByteArray): Int? = SpotCodec.sequenceOf(b)
 }

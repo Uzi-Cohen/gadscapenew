@@ -269,7 +269,7 @@ class SideMapWindow(
 
     fun show() {
         val stage = Stage()
-        val txtDir = TextField(configuration.getProp("side-map-dir")).apply { promptText = "Other cache folder (e.g. C:\\GadScape\\RoatPkz)"; HBox.setHgrow(this, Priority.ALWAYS) }
+        val txtDir = TextField(configuration.getProp("side-map-dir")).apply { promptText = "Other cache folder (any cache, e.g. a 317-format one)"; HBox.setHgrow(this, Priority.ALWAYS) }
         val btnBrowse = Button("Browse...").apply {
             setOnAction {
                 val d = DirectoryChooser().apply { title = "Folder with the other cache"

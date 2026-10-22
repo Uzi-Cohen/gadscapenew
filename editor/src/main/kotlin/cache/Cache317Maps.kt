@@ -7,7 +7,7 @@ import java.util.zip.GZIPInputStream
 
 /**
  * Reads map files out of an old-style cache (main_file_cache.dat + idx0..idx4), the format most
- * 317-based private-server clients use (Roat Pkz and others), even when they carry OSRS maps.
+ * 317-based private-server clients use, even when they carry OSRS maps.
  *  - idx0 file 5 is the "versionlist" archive with "map_index": region -> terrain file, object file
  *  - idx4 holds the map files themselves (gzipped)
  */
@@ -60,7 +60,7 @@ class Cache317Maps(dir: File, private val looksLikeTerrain: ((Int, ByteArray) ->
             val raw = readFile(0, a) ?: continue
             val entries = try { archiveEntries(raw) } catch (e: Exception) { continue }
             for ((i, raw) in entries.withIndex()) {
-                // some clients gzip their map list inside the archive (Roat Pkz does)
+                // some clients gzip their map list inside the archive
                 val b = try { gunzipIfNeeded(raw) } catch (e: Exception) { raw }
                 try { mapIndex.clear(); parseMapIndex(b) } catch (e: Exception) { mapIndex.clear(); continue }
                 if (mapIndex.size in 50..20000 && accept("archive $a entry $i")) return

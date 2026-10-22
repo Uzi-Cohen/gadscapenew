@@ -44,11 +44,9 @@ class CacheCompareWindow(
         else -> "objects differ"
     }
 
-    private fun jhash(s: String): Int { var h = 0; for (c in s) h = h * 31 + c.toInt(); return h }
-
-    /** name hash -> crc of every map file (m = ground, l = objects) in index 5. */
-    private fun mapCrcs(lib: CacheLibrary): Map<Int, Int> =
-        lib.index(5).archives().associate { it.hashName to it.crc }
+    /** Ground (levels 0-3; build 241's trailer left out so rev 211 and 241 squares compare) and objects of [id] differ? */
+    private fun differs(theirs: ByteArray?, mine: ByteArray?, terrain: Boolean): Boolean = theirs != null &&
+            (mine == null || !(if (terrain) cache.TerrainCodec.levels(theirs).contentEquals(cache.TerrainCodec.levels(mine)) else theirs.contentEquals(mine)))
 
     fun show() {
         val txtDir = TextField(configuration.getProp("compare-dir")).apply { promptText = "The other cache folder"; HBox.setHgrow(this, Priority.ALWAYS) }
@@ -100,32 +98,51 @@ class CacheCompareWindow(
                     val myKeys = try { cache.XteaManager(GadTools.editorDir.path) } catch (e: Exception) { null }
                     try {
                         val diffs = ArrayList<Diff>()
+                        // map files of one region here; the decompressed data isn't kept (a whole map would not fit)
+                        fun myFiles(id: Int): Pair<ByteArray?, ByteArray?> {
+                            val m = cache.MapStore.terrain(mine, id)
+                            val l = cache.MapStore.locs(mine, id, myKeys?.getKeys(id))?.bytes
+                            cache.MapStore.release(mine, id)
+                            return Pair(m, l)
+                        }
+                        fun theirFiles(id: Int): Pair<ByteArray?, ByteArray?> {
+                            val m = try { other.rawTerrain(id) } catch (e: Exception) { null }
+                            val l = try { other.rawObjects(id) } catch (e: Exception) { null }
+                            other.release(id)
+                            return Pair(m, l)
+                        }
+                        fun compareFiles(id: Int) {
+                            val (oM, oL) = theirFiles(id)
+                            if (oM == null && oL == null) return
+                            val (myM, myL) = myFiles(id)
+                            val ground = differs(oM, myM, true)
+                            val objs = differs(oL, myL, false)
+                            if (ground || objs) diffs.add(Diff(id, label(myM == null && myL == null, ground, objs)))
+                        }
                         if (!other.oldStyle) {
-                            // same format: compare the file checksums (fast)
                             val oLib = CacheLibrary(other.folder.path)
-                            val a = try { mapCrcs(oLib) } finally { oLib.close() }
-                            val b = mapCrcs(mine)
-                            for (rx in 0 until 256) for (ry in 0 until 256) {
-                                val m = jhash("m${rx}_$ry"); val l = jhash("l${rx}_$ry")
-                                if (!a.containsKey(m) && !a.containsKey(l)) continue
-                                val ground = a[m] != null && a[m] != b[m]
-                                val objs = a[l] != null && a[l] != b[l]
-                                val newHere = !b.containsKey(m) && !b.containsKey(l)
-                                if (ground || objs) diffs.add(Diff((rx shl 8) or ry, label(newHere, ground, objs)))
+                            val (a, sameLayout) = try {
+                                Pair(cache.MapStore.tableCrcs(oLib), cache.MapStore.layout(oLib) == cache.MapStore.layout(mine))
+                            } finally { oLib.close() }
+                            val b = cache.MapStore.tableCrcs(mine)
+                            val namedBoth = sameLayout && cache.MapStore.layout(mine) == cache.MapStore.Layout.NAMED
+                            for ((id, crcs) in a.toSortedMap()) {
+                                val my = b[id]
+                                if (namedBoth) {
+                                    // rev 211 both: the ground and objects groups' checksums say it all (fast)
+                                    val ground = crcs.first != null && crcs.first != my?.first
+                                    val objs = crcs.second != null && crcs.second != my?.second
+                                    if (ground || objs) diffs.add(Diff(id, label(my == null, ground, objs)))
+                                } else {
+                                    // build 241 groups also hold the lighting files, and rev 211 and 241 squares are
+                                    // stored differently: same group checksum = same, else compare ground and objects
+                                    if (sameLayout && my != null && my == crcs) continue
+                                    compareFiles(id)
+                                }
                             }
                         } else {
                             // old-style cache: compare the map files themselves, region by region
-                            for (id in other.regionIds!!.sorted()) {
-                                val name = "${id shr 8}_${id and 0xFF}"
-                                val myM = try { mine.data(5, "m$name") } catch (e: Exception) { null }
-                                val myL = try { mine.data(5, "l$name", myKeys?.getKeys(id)) ?: mine.data(5, "l$name") } catch (e: Exception) { null }
-                                val oM = try { other.rawTerrain(id) } catch (e: Exception) { null }
-                                val oL = try { other.rawObjects(id) } catch (e: Exception) { null }
-                                if (oM == null && oL == null) continue
-                                val ground = oM != null && (myM == null || !oM.contentEquals(myM))
-                                val objs = oL != null && (myL == null || !oL.contentEquals(myL))
-                                if (ground || objs) diffs.add(Diff(id, label(myM == null && myL == null, ground, objs)))
-                            }
+                            for (id in other.regionIds!!.sorted()) compareFiles(id)
                         }
                         Pair(diffs, "${diffs.size} regions are different in that cache (${other.describe}).")
                     } finally { other.close(); try { mine.close() } catch (e: Exception) {} }

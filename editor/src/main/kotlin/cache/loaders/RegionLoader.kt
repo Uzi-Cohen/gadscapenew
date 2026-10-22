@@ -1,15 +1,14 @@
 package cache.loaders
 
-import cache.IndexType
+import cache.MapStore
+import cache.TerrainCodec
 import cache.definitions.RegionDefinition
-import cache.definitions.RegionDefinition.Companion.X
-import cache.definitions.RegionDefinition.Companion.Y
-import cache.definitions.RegionDefinition.Companion.Z
-import cache.utils.readUnsignedByte
 import com.displee.cache.CacheLibrary
-import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 
+/**
+ * Terrain of map squares, from either map layout (rev 211 named "m{x}_{y}" groups, build 241 region-id groups: see
+ * [MapStore]); the file format itself is [TerrainCodec].
+ */
 class RegionLoader(
     private val cacheLibrary: CacheLibrary,
     private val regionDefinitionCache: HashMap<Int, RegionDefinition> = HashMap()
@@ -37,114 +36,50 @@ class RegionLoader(
 
     /** Terrain from a raw terrain (m) file, e.g. a server's custom map .dat. Tries both tile formats. */
     fun fromBytes(regionId: Int, bytes: ByteArray): RegionDefinition? {
-        val def = parse(regionId, bytes, wideFormat) ?: parse(regionId, bytes, !wideFormat) ?: return null
+        val def = TerrainCodec.decode(regionId, bytes, wideFormat, false)
+            ?: TerrainCodec.decode(regionId, bytes, !wideFormat, false) ?: return null
         def.calculateTerrain()
         return def
     }
 
-    private fun loadRegion(regionId: Int, keep: Boolean = true): RegionDefinition? {
-        val regionX = (regionId shr 8) and 0xFF
-        val regionY = regionId and 0xFF
-        val map = cacheLibrary.data(IndexType.MAPS.id, "m${regionX}_${regionY}") ?: return null
+    @Synchronized private fun loadRegion(regionId: Int, keep: Boolean = true): RegionDefinition? {
+        val map = MapStore.terrain(cacheLibrary, regionId) ?: return null
+        val keyed = MapStore.keyedByRegion(cacheLibrary)
 
-        var regionDefinition = parse(regionId, map, true)
+        var regionDefinition = TerrainCodec.decode(regionId, map, true, keyed)
         if (regionDefinition != null) {
             wideFormat = true
-        } else {
-            regionDefinition = parse(regionId, map, false)
+        } else if (!keyed) {
+            // build 241 terrain is always wide; older caches may use single-byte tiles
+            regionDefinition = TerrainCodec.decode(regionId, map, false, false)
             if (regionDefinition != null) wideFormat = false
         }
         if (regionDefinition == null) {
             println("Region $regionId: map file could not be read in either format")
             return null
         }
+        if (keyed) regionDefinition.environment = MapStore.environment(cacheLibrary, regionId).takeIf { it.isNotEmpty() }
 
         regionDefinition.calculateTerrain()
         if (keep) regionDefinitionCache[regionId] = regionDefinition
         return regionDefinition
     }
 
-    private fun parse(regionId: Int, map: ByteArray, wide: Boolean): RegionDefinition? {
-        val regionDefinition = RegionDefinition(regionId)
-        val inputStream = ByteBuffer.wrap(map)
-        try {
-            for (z in 0 until Z) {
-                for (x in 0 until X) {
-                    for (y in 0 until Y) {
-                        val tile = RegionDefinition.Tile()
-                        regionDefinition.tiles[z][x][y] = tile
-                        while (true) {
-                            val attribute: Int = if (wide) inputStream.short.toInt() and 0xFFFF else inputStream.readUnsignedByte()
-                            if (attribute == 0) {
-                                break
-                            } else if (attribute == 1) {
-                                val height: Int = inputStream.readUnsignedByte()
-                                tile.cacheHeight = height
-                                tile.height = height
-                                break
-                            } else if (attribute <= 49) {
-                                tile.attrOpcode = attribute
-                                tile.overlayId = if (wide) inputStream.short.toInt() and 0xFFFF else inputStream.get().toInt() and 0xFF
-                                tile.overlayPath = ((attribute - 2) / 4).toByte()
-                                tile.overlayRotation = (attribute - 2 and 3).toByte()
-                            } else if (attribute <= 81) {
-                                tile.settings = (attribute - 49).toByte()
-                            } else {
-                                tile.underlayId = attribute - 81
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            return null
-        }
-        // some private-server clients leave a byte of padding at the end (Roat Pkz does)
-        return if (inputStream.remaining() <= 2) regionDefinition else null
-    }
-
     fun findRegionForWorldCoordinates(x: Int, y: Int): RegionDefinition? {
         return get((x ushr 6) shl 8 or (y ushr 6))
     }
 
+    /** The terrain file of [regionDefinition] in the format of [library]'s maps archive. */
+    fun encode(library: CacheLibrary, regionDefinition: RegionDefinition): ByteArray =
+        TerrainCodec.encode(regionDefinition, wideFormat, MapStore.keyedByRegion(library))
+
+    /**
+     * Writes the region's terrain into [outputLibrary], in that cache's layout: group "m{x}_{y}" (rev 211) or file 0 of
+     * group regionId (build 241; a square new there also gets environment files 2-4, see [MapStore.putTerrain]).
+     */
     fun writeRegion(outputLibrary: CacheLibrary, regionDefinition: RegionDefinition) {
-        val outputStream = ByteArrayOutputStream()
-
-        for (z in 0 until Z) {
-            for (x in 0 until X) {
-                for (y in 0 until Y) {
-                    val tile: RegionDefinition.Tile = regionDefinition.tiles[z][x][y]!!
-                    fun op(v: Int) {
-                        if (wideFormat) outputStream.write(byteArrayOf((v shr 8).toByte(), v.toByte()))
-                        else outputStream.write(byteArrayOf(v.toByte()))
-                    }
-                    if (tile.attrOpcode > 0) {
-                        op(tile.attrOpcode)
-                        op(tile.overlayId)
-                    }
-
-                    if (tile.settings > 0) {
-                        op(tile.settings + 49)
-                    }
-
-                    if ((tile.underlayId) > 0) {
-                        op((tile.underlayId) + 81)
-                    }
-
-                    val cacheHeight = tile.cacheHeight
-                    if (cacheHeight != null) {
-                        op(1)
-                        // write the stored value: upper planes are relative to the plane below,
-                        // so tile.height (absolute) would stack every floor on export
-                        outputStream.write(byteArrayOf(cacheHeight.coerceIn(0, 255).toByte()))
-                    } else {
-                        op(0)
-                    }
-                }
-            }
-        }
-
-        outputLibrary.put(5, "m${regionDefinition.regionX}_${regionDefinition.regionY}", outputStream.toByteArray())
+        MapStore.putTerrain(outputLibrary, regionDefinition.regionId, encode(outputLibrary, regionDefinition),
+            regionDefinition.environment)
         val status = outputLibrary.index(5).update()
         println(status)
     }

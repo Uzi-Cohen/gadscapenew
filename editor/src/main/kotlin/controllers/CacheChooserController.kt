@@ -135,7 +135,8 @@ class CacheChooserController @Inject constructor(
                     val edited = File(txtCacheLocation.text, "cache-out/main_file_cache.dat2").isFile
                     cacheLibraryProvider.setLibraryLocation("${txtCacheLocation.text}/" + if (edited) "cache-out" else "cache")
                     lblStatusText.isVisible = true
-                    lblStatusText.text = if (edited) "Your edited map (cache-out) will open." else "Original map (cache) will open."
+                    lblStatusText.text = (if (edited) "Your edited map (cache-out) will open." else "Original map (cache) will open.") +
+                            (if (cache.CachePaths.is241) " (build 241 cache)" else " (rev 211 cache)")
                 }  catch (e: Exception) {
                     e.printStackTrace()
                     lblErrorText.text = e.message

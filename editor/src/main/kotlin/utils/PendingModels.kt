@@ -19,8 +19,9 @@ object PendingModels {
     fun add(lib: CacheLibrary, name: String, data: ByteArray, model: ModelDefinition): Pending {
         // the same file again: the same model
         byId.values.firstOrNull { it.data.contentEquals(data) }?.let { return it }
-        val used = lib.index(7).archiveIds().toHashSet()
-        val id = (0..65535).firstOrNull { it !in used && it !in byId } ?: error("There are no free model ids left (model ids only go up to 65535).")
+        // the highest free id up to 65534 in a 241 cache (the client fetches models with 16-bit ids), the first run
+        // of 50 free ids up to 65534 in a 211 cache
+        val id = cache.IdAllocator(lib, cache.IdKind.MODEL, byId.keys).next()
         return Pending(id, name, data, model).also { byId[id] = it }
     }
 
@@ -29,7 +30,7 @@ object PendingModels {
 
     /** A cache model or a pending one: null when [id] is neither (or out of range). */
     fun model(models: ModelLoader, id: Int): ModelDefinition? {
-        if (id < 0 || id > 65535) return null
+        if (id < 0) return null
         get(id)?.let { return it.model }
         return try { models.get(id) } catch (e: Exception) { null }
     }
@@ -45,12 +46,13 @@ object PendingModels {
         val todo = ids.filter { it in byId }.distinct()
         if (todo.isEmpty()) return moved
         val used = lib.index(7).archiveIds().toHashSet()
+        val free = cache.IdAllocator(lib, cache.IdKind.MODEL, byId.keys)
         var wrote = false
         for (id in todo) {
             val p = byId[id] ?: continue
             val there = if (id in used) lib.data(7, id, 0) else null
             if (there != null && there.contentEquals(p.data)) continue
-            val target = if (id !in used) id else ((0..65535).firstOrNull { it !in used && it !in byId } ?: error("There are no free model ids left."))
+            val target = if (id !in used) id else free.next()
             lib.put(7, target, 0, p.data)
             used.add(target); wrote = true
             if (target != id) {

@@ -107,8 +107,9 @@ object BigArchive {
      * An animation without what comes after its end marker (padding): the game and the server both stop reading at
      * the end marker, so it's the same animation to them.
      */
-    fun trimSeq(id: Int, raw: ByteArray): ByteArray {
-        val s = SeqDef.decode(id, raw)
+    fun trimSeq(id: Int, raw: ByteArray, rev: Int): ByteArray {
+        // read in the cache's own layout: the other one can stop at a byte that isn't the end marker
+        val s = SeqDef.decode(id, raw, rev)
         return if (s.end in 1 until raw.size) raw.copyOf(s.end) else raw
     }
 
@@ -129,9 +130,10 @@ object BigArchive {
      */
     fun repairAnimations(lib: CacheLibrary): Int? {
         val files = readFiles(lib, 2, 12) ?: return null
+        val rev = cache.CacheIO.revision(lib)
         var trimmed = 0
         for ((id, raw) in files) {
-            val keep = trimSeq(id, raw)
+            val keep = trimSeq(id, raw, rev)
             if (keep.size != raw.size) trimmed++
             lib.put(2, 12, id, keep)
         }

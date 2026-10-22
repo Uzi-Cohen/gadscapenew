@@ -5,7 +5,8 @@ import controllers.AnimClip
 
 /**
  * Skeletal (2021+, "animaya") animations, ported from the 211 client so the editor poses models the way the game
- * does: keyframe sets (index 0, file = id), the bone hierarchy at the end of the skeleton (index 1), curves sampled at
+ * does: keyframe sets (archive 22 in build 241, archive 0 in rev 211; group = id >> 16, file = id & 0xFFFF, the same
+ * bytes in both, see [Keyframes]), the bone hierarchy at the end of the skeleton (index 1), curves sampled at
  * whole client cycles, and vertices skinned with their per-vertex bone weights. Floats are kept as Float and the sums
  * in the client's order, so the result matches the game's pose.
  */
@@ -452,13 +453,16 @@ object SkeletalAnims {
         /** [legacy group][slot]: transparency (type 4) curves live in slot 0. */
         val groupCurves: Array<Array<Curve?>?>
         var hasAlpha = false
+        /** The range the header holds (read and ignored by the client; the sequence's range, see [Keyframes.headerRange]). */
+        val headerStart: Int
+        val headerEnd: Int
 
         init {
             val b = Buf(raw)
             b.u8() // version
             skeletonId = b.u16()
             skeleton = SkeletonData(skeletonRaw(skeletonId) ?: error("skeleton $skeletonId is missing"))
-            b.u16(); b.u16() // read and ignored by the client
+            headerStart = b.u16(); headerEnd = b.u16()
             poseIndex = b.u8()
             val count = b.u16()
             val bones = skeleton.hierarchy?.bones?.size ?: 0
@@ -556,7 +560,7 @@ object SkeletalAnims {
         fun shortSmart(): Int = if ((b[p].toInt() and 0xFF) < 128) u8() - 64 else u16() - 0xC000
     }
 
-    /** The keyframe set of a skeletal animation id (group = id >> 16, file = id & 0xFFFF in index 0). */
+    /** The keyframe set of a skeletal animation id (group = id >> 16, file = id & 0xFFFF; archive 22 in 241, 0 in 211). */
     fun load(anims: AnimCache, seq: SeqDef): KeyframeSet? {
         val id = seq.skeletalModel
         val raw = anims.keyframeData(id ushr 16 and 0xFFFF, id and 0xFFFF) ?: return null
@@ -566,10 +570,26 @@ object SkeletalAnims {
     /** A playable clip of [seq] on [md], one frame per client cycle. */
     fun clip(md: ModelDefinition, seq: SeqDef, anims: AnimCache): Pair<AnimClip?, String> {
         val set = try { load(anims, seq) } catch (e: Exception) { return null to "Animation ${seq.id}'s skeletal data couldn't be read: ${e.message}" }
-            ?: return null to "Animation ${seq.id}'s skeletal data (keyframe set ${seq.skeletalModel ushr 16}:${seq.skeletalModel and 0xFFFF}) isn't in the cache."
-        val length = (seq.skeletalEnd - seq.skeletalStart).coerceAtLeast(1)
-        if (md.animayaGroups == null) return SkeletalClip(md, set, length) to "That model has no skeletal weights, so it can't move with this animation."
-        return SkeletalClip(md, set, length) to ""
+            ?: return null to "Animation ${seq.id}'s skeletal data (keyframe set ${seq.skeletalModel ushr 16}:${seq.skeletalModel and 0xFFFF}) isn't in the cache" +
+                    (if (seq.is241) " (archive 22)." else ".")
+        // the game plays it for end - start cycles, with no fallback: none (no range setting, a 211 -> 241 merge left 289
+        // like this) plays nothing. The preview shows the range its keyframes hold then (what the stock record has).
+        val range = seq.skeletalEnd - seq.skeletalStart
+        val held = set.headerEnd - set.headerStart
+        val length = if (range > 0) range else held.coerceAtLeast(1)
+        val noLength = when {
+            range > 0 -> ""
+            held > 0 -> "It has no length (no skeletal range), so the game plays it for 0 cycles; shown here with the $held " +
+                    "cycles its keyframes hold. Importing or saving any animation, or Deploy, gives it that length. "
+            else -> "It has no length (no skeletal range), so the game plays it for 0 cycles, and its keyframes don't say " +
+                    "how long it is (shown here as 1 cycle). It needs its stock record (audit BOSS-X1). "
+        }
+        // a 241 cache whose keyframe set is only in archive 0 (left there by a 211 -> 241 merge): shown, but the game won't find it
+        val stranded = seq.is241 && anims.keyframeArchive(seq.skeletalModel ushr 16 and 0xFFFF, seq.skeletalModel and 0xFFFF) == cache.CacheIO.FRAMES
+        val note = noLength + if (stranded) "Its keyframes are only in archive 0, where build 241 doesn't look, so the game won't " +
+                "find them until they're copied to archive 22 (importing or saving any animation, or Deploy, does that). " else ""
+        if (md.animayaGroups == null) return SkeletalClip(md, set, length) to note + "That model has no skeletal weights, so it can't move with this animation."
+        return SkeletalClip(md, set, length) to note.trim()
     }
 
     class SkeletalClip(private val md: ModelDefinition, val set: KeyframeSet, private val length: Int) : AnimClip {

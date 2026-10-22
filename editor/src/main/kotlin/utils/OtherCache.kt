@@ -11,8 +11,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Another cache opened for reading maps from, in either format:
- *  - new (main_file_cache.dat2, OSRS style, optional xteas.json)
- *  - old (main_file_cache.dat, 317-style private-server clients like Roat Pkz)
+ *  - new (main_file_cache.dat2, OSRS style: rev 211 named map groups with optional xteas.json, or build 241
+ *    region-id groups without encryption)
+ *  - old (main_file_cache.dat, 317-style private-server clients)
  * [access] gives its regions; nothing is ever written to it.
  */
 class OtherCache private constructor(
@@ -26,7 +27,9 @@ class OtherCache private constructor(
     val rawTerrain: (Int) -> ByteArray?,
     val rawObjects: (Int) -> ByteArray?,
     private val closer: () -> Unit,
-    val describe: String
+    val describe: String,
+    /** Frees the map data the cache keeps after a [rawTerrain] / [rawObjects] read of a region. */
+    val release: (Int) -> Unit = {}
 ) : AutoCloseable {
 
     private val r = ConcurrentHashMap<Int, java.util.Optional<RegionDefinition>>()
@@ -62,11 +65,15 @@ class OtherCache private constructor(
                 val xtea = cache.XteaManager(keysDir.path)
                 val regions = RegionLoader(lib)
                 val locs = LocationsLoader(lib, xtea)
+                // rev 211 (named m/l groups, XTEA) or build 241 (region-id groups): cache.MapStore reads both
+                val layout = cache.MapStore.layout(lib)
                 return OtherCache(newDat.parentFile, false,
                     { regions.peek(it) }, { locs.peek(it) }, null,
-                    { id -> lib.data(5, "m${id shr 8}_${id and 0xFF}") },
-                    { id -> lib.data(5, "l${id shr 8}_${id and 0xFF}", xtea.getKeys(id)) ?: lib.data(5, "l${id shr 8}_${id and 0xFF}") },
-                    { lib.close() }, "new-style cache")
+                    { id -> cache.MapStore.terrain(lib, id) },
+                    { id -> cache.MapStore.locs(lib, id, xtea.getKeys(id))?.bytes },
+                    { lib.close() },
+                    if (layout == cache.MapStore.Layout.REGION) "new-style cache, build 241 maps" else "new-style cache",
+                    { id -> cache.MapStore.release(lib, id) })
             }
             if (oldDat != null) {
                 val c = cache.Cache317Maps(oldDat.parentFile) { id, b -> myRegions.fromBytes(id, b) != null }

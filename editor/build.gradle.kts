@@ -20,7 +20,8 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.displee:rs-cache-library:6.4")
+    // the cache library: a fork of com.displee:rs-cache-library:6.4 that also reads/writes build 241 caches
+    implementation(project(":rs-cache-library"))
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.bitbucket.akornilov.kotlin:binary-streams:0.33")
     // 3D view: LWJGL 3 (OpenGL 4.5 core, GLFW for the context), natives for every desktop OS in the one jar
@@ -35,6 +36,10 @@ dependencies {
     implementation("org.jsoup:jsoup:1.11.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7")
     implementation("org.apache.commons:commons-compress:1.20")
+
+    // tests: the cache library and codecs, on generated caches and (with -Pgadscape.test.caches=...) on real ones
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1")
 }
 
 java {
@@ -51,6 +56,25 @@ kotlin {
 tasks {
     build {
         dependsOn("fatJar")
+    }
+}
+
+// The cache tests always run on small generated caches. Given real caches they also check those, read-only, and
+// write into copies:  ./gradlew test --offline -Pgadscape.test.caches=/path/cache241:/path/cache211
+// (-Pgadscape.test.work=<folder> for the copies, default build/cache-test-work; -Dgadscape.cache.revision forces one).
+tasks.test {
+    useJUnitPlatform()
+    maxHeapSize = "2g"
+    for (p in listOf("gadscape.test.caches", "gadscape.test.work", "gadscape.cache.revision")) {
+        (findProperty(p) ?: System.getProperty(p))?.let { systemProperty(p, it.toString()) }
+    }
+    if (!project.hasProperty("gadscape.test.work") && System.getProperty("gadscape.test.work") == null) {
+        systemProperty("gadscape.test.work", layout.buildDirectory.dir("cache-test-work").get().asFile.path)
+    }
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
 

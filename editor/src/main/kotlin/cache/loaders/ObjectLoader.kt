@@ -25,10 +25,17 @@ class ObjectLoader @Inject constructor(
 
     // Caches from revision 220+ store one extra byte in the ambient sound opcodes (78/79). The GadScape client
     // reads that byte only for objects above 47337 (newer objects added to a 211 cache): mode 2. Mode 1 = every
-    // object has it, 0 = none. Picked on load: whichever reads the most objects.
+    // object has it, 0 = none. Picked on load for a rev 211 cache: whichever reads the most objects; a build 241
+    // cache is always mode 1.
     private var soundMode = 2
     private fun wideSounds(id: Int) = when (soundMode) { 0 -> false; 1 -> true; else -> id > utils.ObjDefs.WIDE_SOUNDS_ABOVE }
     private var loadingId = -1
+
+    /**
+     * Build 241 format: model ids are 4-byte ints in opcodes 6 and 7 (1 and 5 carry no data there), and there are
+     * newer opcodes (42, 96, 100-102, long params). Set from the cache on load.
+     */
+    private var rev241 = false
 
     @Synchronized fun load(id: Int, b: ByteArray?): ObjectDefinition {
         val def = ObjectDefinition()
@@ -47,7 +54,41 @@ class ObjectLoader @Inject constructor(
     }
 
     private fun processOp(opcode: Int, def: ObjectDefinition, inputStream: ByteBuffer) {
-        if (opcode == 1) {
+        if (rev241 && (opcode == 1 || opcode == 5)) {
+            // the 241 client ignores these (no data); no 241 cache has them
+        } else if (rev241 && opcode == 6) {
+            val length: Int = inputStream.readUnsignedByte()
+            if (length > 0) {
+                val modelTypes = IntArray(length)
+                val modelIds = IntArray(length)
+                for (index in 0 until length) {
+                    modelIds[index] = inputStream.int
+                    modelTypes[index] = inputStream.readUnsignedByte()
+                }
+                def.modelTypes = modelTypes
+                def.modelIds = modelIds
+            }
+        } else if (rev241 && opcode == 7) {
+            val length: Int = inputStream.readUnsignedByte()
+            if (length > 0) {
+                def.modelTypes = null
+                def.modelIds = IntArray(length) { inputStream.int }
+            }
+        } else if (rev241 && opcode == 96) {
+            inputStream.readUnsignedByte() // raise
+        } else if (rev241 && opcode == 100) {
+            inputStream.readUnsignedByte(); inputStream.readUnsignedByte(); inputStream.readString() // sub-option
+        } else if (rev241 && opcode == 101) {
+            // conditional option: op, varp, varbit, min, max, text
+            inputStream.readUnsignedByte(); inputStream.readUnsignedShort(); inputStream.readUnsignedShort(); inputStream.int; inputStream.int
+            inputStream.readString()
+        } else if (rev241 && opcode == 102) {
+            // conditional sub-option: op, sub-option, varp, varbit, min, max, text
+            inputStream.readUnsignedByte(); inputStream.readUnsignedShort(); inputStream.readUnsignedShort(); inputStream.readUnsignedShort()
+            inputStream.int; inputStream.int; inputStream.readString()
+        } else if (opcode == 42) {
+            inputStream.readUnsignedShort() // full recolour
+        } else if (opcode == 1) {
             val length: Int = inputStream.readUnsignedByte()
             if (length > 0) {
                 val modelTypes = IntArray(length)
@@ -103,10 +144,10 @@ class ObjectLoader @Inject constructor(
             def.contrast = inputStream.get() * 25
         } else if (opcode in 30..34) {
             val actions: Array<String?> = def.actions
-            actions[opcode - 30] = inputStream.readString()
-            if (actions[opcode - 30].equals("Hidden", ignoreCase = true)) {
-                actions[opcode - 30] = null
-            }
+            val action = inputStream.readString()
+            // "Hidden" clears the option in 211; the 241 client skips it (the option stays as it was)
+            if (!action.equals("Hidden", ignoreCase = true)) actions[opcode - 30] = action
+            else if (!rev241) actions[opcode - 30] = null
         } else if (opcode == 40) {
             val length: Int = inputStream.readUnsignedByte()
             val recolorToFind = ShortArray(length)
@@ -224,12 +265,12 @@ class ObjectLoader @Inject constructor(
             val length: Int = inputStream.readUnsignedByte()
             val params: MutableMap<Int, Any> = java.util.HashMap(length)
             for (i in 0 until length) {
-                val isString = inputStream.readUnsignedByte() == 1
+                val type = inputStream.readUnsignedByte()
                 val key: Int = inputStream.read24BitInt()
-                val value = if (isString) {
-                    inputStream.readString()
-                } else {
-                    inputStream.int
+                val value: Any = when {
+                    type == 1 -> inputStream.readString().toString()
+                    type == 2 && rev241 -> inputStream.long // long params: build 241 only
+                    else -> inputStream.int
                 }
                 params[key] = value as Any
             }
@@ -266,6 +307,7 @@ class ObjectLoader @Inject constructor(
     }
 
     init {
+        rev241 = cache.CacheIO.is241(cacheLibrary)
         val index = cacheLibrary.index(IndexType.CONFIGS.id)
         val archive = index.archive(ConfigType.OBJECT.id)
         val entries = archive!!.fileIds().map { it to cacheLibrary.data(IndexType.CONFIGS.id, ConfigType.OBJECT.id, it) }
@@ -287,15 +329,15 @@ class ObjectLoader @Inject constructor(
             return out to failures
         }
 
-        var (defs, failures) = parseAll(2)
-        var mode = 2
-        if (failures > 0) for (m in intArrayOf(0, 1)) {
+        var (defs, failures) = parseAll(if (rev241) 1 else 2)
+        var mode = if (rev241) 1 else 2
+        if (failures > 0 && !rev241) for (m in intArrayOf(0, 1)) {
             val (alt, altFailures) = parseAll(m)
             if (altFailures < failures) { defs = alt; failures = altFailures; mode = m }
         }
         soundMode = mode
         objectDefinitionCache.putAll(defs)
-        println("Loaded ${defs.size} object definitions (sound format: ${listOf("211", "220+", "GadScape: wide above 47337")[soundMode]}, unreadable: $failures)")
+        println("Loaded ${defs.size} object definitions (${if (rev241) "build 241" else "rev 211"}, sound format: ${listOf("211", "220+", "GadScape: wide above 47337")[soundMode]}, unreadable: $failures)")
         index.unCache()
     }
 }

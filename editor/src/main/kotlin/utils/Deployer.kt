@@ -14,7 +14,10 @@ class Deployer(private val log: (String) -> Unit) {
     private val host = cfg.deployHost!!
     private val port = (cfg.deployPort ?: 22).toString()
     private val user = cfg.deployUser!!
-    private val remoteCache = cfg.deployRemoteCache!!.trimEnd('/')
+    /** The live server's cache folder: the deployRemoteCache setting, or found on the server ("auto", [findServerCache]). */
+    private val remoteCache: String by lazy { resolveRemoteCache() }
+    /** The live server's working folder, when [findServerCache] found it. */
+    private var remoteServerDir: String? = null
     private val service = cfg.deployService!!
     private val sudo = if (user == "root") "" else "sudo -n "
     private val remoteData = cfg.deployRemoteData!!.trimEnd('/')
@@ -46,10 +49,76 @@ class Deployer(private val log: (String) -> Unit) {
         val ok = ssh("echo connected && ${sudo}systemctl is-active $service; ls -la $remoteCache | head -30") == 0
         log(if (ok) "Connection OK. Check that the listing above shows main_file_cache.dat2." else
             "Connection failed. Key login is needed (see the setup steps).")
+        if (ok) remoteRevision()?.let { log("The server's cache ($remoteCache) is a ${revisionName(it)} cache.") }
         return ok
     }
 
+    // ---------------- which cache folder, which format (build 241) ----------------
+
+    private fun resolveRemoteCache(): String {
+        val set = cfg.deployRemoteCache?.trim()?.trimEnd('/').orEmpty()
+        if (set.isNotEmpty() && !set.equals(GadTools.AUTO, ignoreCase = true)) return set
+        val found = findServerCache()
+        if (found != null) { log("The server's cache folder: $found"); return found }
+        log("Couldn't tell which cache folder the server uses; using ${GadTools.LEGACY_REMOTE_CACHE} (set deployRemoteCache in the Settings file to change it).")
+        return GadTools.LEGACY_REMOTE_CACHE
+    }
+
+    /**
+     * Finds the cache folder the live server reads: -Dgadscape.cache.dir of the running server process (the build 241
+     * server is started with it), else of the service's start command or the script it runs, else the server's default,
+     * cache/data/cache in its working folder. Null if none of that can be found.
+     */
+    private fun findServerCache(): String? {
+        val probe = listOf(
+            "echo '#SERVICE'; ${sudo}systemctl cat $service 2>/dev/null",
+            "echo '#PROCS'; for p in \$(pgrep -f java); do echo \"PID \$p CWD \$(readlink /proc/\$p/cwd)\"; tr '\\0' ' ' < /proc/\$p/cmdline; echo; done",
+            "echo '#END'"
+        ).joinToString("; ")
+        val (code, out) = capture(listOf("ssh") + sshOpts("-p") + listOf("$user@$host", probe), echo = false)
+        if (code != 0) return null
+        val (dir, serverDir) = serverCacheFrom(out)
+        remoteServerDir = serverDir
+        return dir
+    }
+
+    /** 241 or 211: the format of the cache in the server's cache folder (archive 24 = build 241), null if unknown. */
+    private fun remoteRevision(): Int? {
+        val f = "$remoteCache/main_file_cache.idx255"
+        // idx255 entry 24 (bytes 144..149): a non-zero length means the cache has archive 24 (gamevals), i.e. build 241
+        val cmd = "if ${sudo}test -f $f; then if [ \$(${sudo}stat -c %s $f) -ge 150 ] && [ \"\$(${sudo}od -An -tu1 -j144 -N3 $f | tr -d ' \\n')\" != \"000\" ]; " +
+                "then echo GADSCAPE_REV=241; else echo GADSCAPE_REV=211; fi; else echo GADSCAPE_REV=none; fi"
+        val (code, out) = capture(listOf("ssh") + sshOpts("-p") + listOf("$user@$host", cmd), echo = false)
+        if (code != 0) return null
+        return Regex("GADSCAPE_REV=(\\d+)").find(out)?.groupValues?.get(1)?.toIntOrNull()
+    }
+
+    private fun revisionName(rev: Int) = if (rev >= cache.CacheIO.REV_241) "build 241" else "rev 211"
+
+    /**
+     * Before a cache goes up: the exported cache and the server's must be the same format (a rev 211 cache on the build
+     * 241 server, or the other way round, breaks every client). False (with the reason logged) stops the deploy.
+     */
+    private fun sameCacheFormat(): Boolean {
+        val local = cache.CacheIO.revisionOf(GadTools.exportCacheDir)
+        if (local == null) { log("Can't read the exported cache in ${GadTools.exportCacheDir.path}. Nothing was sent."); return false }
+        val remote = remoteRevision()
+        if (remote == null) {
+            log("Couldn't read the format of the server's cache in $remoteCache. Nothing was sent (check deployRemoteCache in the Settings file).")
+            return false
+        }
+        if (local != remote) {
+            log("Stopping: your cache is a ${revisionName(local)} cache but the server's ($remoteCache) is ${revisionName(remote)}. " +
+                    "Nothing was sent. If the server runs from another folder, set deployRemoteCache in the Settings file.")
+            return false
+        }
+        log("Cache format: ${revisionName(local)} here and on the server.")
+        return true
+    }
+
     fun deploy(): Boolean {
+        if (!CacheEdits.fixBeforeShipping(log)) return false
+        if (File(GadTools.exportCacheDir, "main_file_cache.dat2").isFile && !sameCacheFormat()) return false
         val local = GadTools.exportCacheDir
         val files = local.listFiles()?.filter { it.isFile && it.name.startsWith("main_file_cache") }?.sortedBy { it.name }
         if (files.isNullOrEmpty() || files.none { it.name == "main_file_cache.dat2" }) {
@@ -219,8 +288,7 @@ class Deployer(private val log: (String) -> Unit) {
         if (pending.isEmpty()) { log("No edited shop or NPC spawn files yet. Save a shop (Tools > Shops) or your NPC spawns first."); return null }
         // entries are full paths (newer), paths from the server folder, or just a shop file name (oldest)
         // older entries are relative to whichever folder was picked back then: try every folder the server could be in
-        val roots = listOfNotNull(serverDirGuess, NpcSpawns.serverDir,
-            File(System.getProperty("user.home"), "Downloads/RSPS-NEAR-REALITY-main/RSPS-NEAR-REALITY-main/near-reality-server-main"),
+        val roots = listOfNotNull(serverDirGuess, NpcSpawns.serverDir, ServerSource.guess(),
             File("C:/GadScape")).filter { it.isDirectory }.distinct()
         val deep = roots.flatMap { r -> r.walkTopDown().maxDepth(3).filter { it.isDirectory && (File(it, "gradlew.bat").isFile || File(it, "gradlew").isFile) }.toList() }
         val allRoots = (roots + deep).distinct()
@@ -355,6 +423,8 @@ if len(sys.argv) > 5 and os.path.isfile(sys.argv[4]):
      */
     fun deployBundle(includeMap: Boolean, shopClasses: File?, serverDir: File? = null): Boolean {
         val jar: File? = shopClasses
+        if (includeMap && !CacheEdits.fixBeforeShipping(log)) return false
+        if (includeMap && File(GadTools.exportCacheDir, "main_file_cache.dat2").isFile && !sameCacheFormat()) return false
         val cacheFiles = if (includeMap) GadTools.exportCacheDir.listFiles()?.filter { it.isFile && it.name.startsWith("main_file_cache") }?.sortedBy { it.name } ?: emptyList() else emptyList()
         if (includeMap && cacheFiles.none { it.name == "main_file_cache.dat2" }) { log("No saved map in ${GadTools.exportCacheDir.path}. Save first."); return false }
         if (!includeMap && jar == null) { log("Nothing to deploy."); return false }
@@ -373,7 +443,7 @@ if len(sys.argv) > 5 and os.path.isfile(sys.argv[4]):
         if (sourceRoot != null) log("The server builds itself from $sourceRoot: your ${shopFiles.size} shop files go into its source, then it restarts and rebuilds.")
         val remoteShops = sourceRoot?.takeIf { shopFiles.isNotEmpty() }
         // the server's plugin list (new shop / spawn classes must be added to it, or the server never loads them)
-        val remotePlugins = remoteCache.removeSuffix("/").removeSuffix("/cache/data/cache") + "/data/plugins.dat"
+        val remotePlugins = remoteCache.let { rc -> (remoteServerDir?.trimEnd('/') ?: rc.removeSuffix("/").removeSuffix("/cache/data/cache")) + "/data/plugins.dat" }
 
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
         val staging = "/tmp/gadscape-deploy-$stamp"
@@ -459,6 +529,8 @@ if len(sys.argv) > 5 and os.path.isfile(sys.argv[4]):
     fun deployItemStats(server: File, withCache: Boolean = false): Boolean {
         val json = ItemStats.pendingJson(server)
         val others = ServerItems.pending().map { it to File(ServerItems.dataDir(server), it) }.filter { it.second.isFile }
+        if (withCache && !CacheEdits.fixBeforeShipping(log)) return false
+        if (withCache && File(GadTools.exportCacheDir, "main_file_cache.dat2").isFile && !sameCacheFormat()) return false
         val cacheFiles = if (withCache) GadTools.exportCacheDir.listFiles()?.filter { it.isFile && it.name.startsWith("main_file_cache") }?.sortedBy { it.name } ?: emptyList() else emptyList()
         if (withCache && cacheFiles.none { it.name == "main_file_cache.dat2" }) { log("No exported cache in ${GadTools.exportCacheDir.path}. Save first."); return false }
         if (json == null && others.isEmpty() && cacheFiles.isEmpty()) { log("Nothing to send. Save stats in the Items tab first."); return false }
@@ -560,6 +632,33 @@ print('MERGED %d item(s)' % len(P))
     }
 
     companion object {
+        /**
+         * Reads the output of [findServerCache]'s probe (the service unit after "#SERVICE", then "PID <pid> CWD <dir>"
+         * and the command line of each java process after "#PROCS"): the server's cache folder (null if it can't be
+         * told) and its working folder.
+         */
+        fun serverCacheFrom(out: String): Pair<String?, String?> {
+            val serviceText = out.substringAfter("#SERVICE").substringBefore("#PROCS")
+            val procs = out.substringAfter("#PROCS").substringBefore("#END")
+            val workDir = serviceText.lines().lastOrNull { it.trim().startsWith("WorkingDirectory=") }?.substringAfter("=")?.trim()
+            fun resolve(path: String, base: String?) = (if (path.startsWith("/") || base == null) path else "${base.trimEnd('/')}/$path").trimEnd('/')
+            val prop = Regex("""-Dgadscape\.cache\.dir=("[^"]+"|'[^']+'|\S+)""")
+            fun cacheDirIn(text: String) = prop.find(text)?.groupValues?.get(1)?.trim('"', '\'')
+            // 1. the running game server: a java process started with -Dgadscape.cache.dir, else (as detectServer does)
+            // the java process with the longest command line
+            val javas = procs.lines().windowed(2, 1).map { it[0] to it[1] }
+                .filter { it.first.startsWith("PID ") && !it.second.contains("pgrep") && !it.second.contains("GradleDaemon") && !it.second.contains("GradleWrapperMain") && !it.second.contains("kotlin-daemon") }
+            val game = javas.filter { prop.containsMatchIn(it.second) }.maxByOrNull { it.second.length } ?: javas.maxByOrNull { it.second.length }
+            val cwd = game?.first?.substringAfter("CWD ")?.trim()?.takeIf { it.isNotEmpty() }
+            val serverDir = cwd ?: workDir
+            game?.second?.let { cmd -> cacheDirIn(cmd)?.let { return resolve(it, cwd) to serverDir } }
+            // 2. the service's start command (or its Environment= lines, e.g. JAVA_OPTS)
+            cacheDirIn(serviceText)?.let { return resolve(it, workDir) to serverDir }
+            // 3. the server's default: cache/data/cache in the folder it runs in
+            val base = serverDir ?: return null to null
+            return resolve("cache/data/cache", base) to serverDir
+        }
+
         /** The shop editor calls this when a shop file is saved, so only edited shops get deployed. */
         fun markShopEdited(name: String) {
             val f = File(System.getProperty("user.home"), ".uzis-map-editor/shops-pending.txt")
@@ -567,7 +666,7 @@ print('MERGED %d item(s)' % len(P))
             val now = (if (f.isFile) f.readLines() else emptyList()).map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
             now.add(name); f.writeText(now.joinToString("\n"))
         }
-        /** The shops folder: com/gadscape/... in the current server, com/near_reality/... in older copies. */
+        /** The shops folder: com/gadscape/... (see [ServerSource.pkg]). */
         fun shopsPath(server: File?): String = ServerSource.pkgPath(server, "plugins/shops/src/main/kotlin", "plugins/shops")
         @Volatile var lastBackup: String? = null
         fun settingsFile(): File = GadTools.templatesPath

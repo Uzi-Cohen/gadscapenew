@@ -36,9 +36,8 @@ class NpcWindow(private val gadToolsModel: GadToolsModel, private val configurat
         }
         val DIRS = controllers.worldRenderer.NpcModels.DIRECTIONS
 
-        /** The server folder: picked before, or the usual download location. */
+        /** The server folder: picked before, or found in the usual places (see [utils.ServerSource]). */
         fun serverDir(configuration: Configuration): File? = utils.ServerSource.dir(configuration)
-            ?: File(System.getProperty("user.home"), "Downloads/RSPS-NEAR-REALITY-main/RSPS-NEAR-REALITY-main/near-reality-server-main").takeIf { it.isDirectory }
     }
 
     private val stage = Stage()

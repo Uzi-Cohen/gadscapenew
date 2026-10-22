@@ -9,10 +9,13 @@ import java.nio.ByteBuffer
 import java.util.zip.GZIPInputStream
 
 /**
- * Items from the newest Old School cache, brought into this (211) cache: the item list, item data and models are
- * read from the OpenRS2 cache archive (archive.openrs2.org), one piece at a time, and kept in the user folder.
- * Newer items are written in a format the 211 game doesn't read (model ids as ints, new settings), so each one is
- * turned into a 211 item first ([convert]); its server stats come from the item's own params ([stats]).
+ * Items from the newest Old School cache of build 241 or older ([NEWEST_BUILD], the build GadScape's game runs; when
+ * the live game moves past it, the newest 241 cache is used and the import says so), brought into this cache (build
+ * 241 or rev 211): the item list, item data and models are read from the OpenRS2 cache archive (archive.openrs2.org),
+ * one piece at a time, and kept in the user folder. Live items are read as they are, in the build 241 layout ([read]); [ItemCopy] writes each one in the format
+ * of the cache it goes into: the live bytes unchanged in a build 241 cache, a 211 item (2-byte model ids, the newer
+ * settings left out and reported) only in a rev 211 cache. Live content keeps its live ids where they are free (the
+ * converter's id policy, see [ItemCopy.copyInto]). The item's server stats come from its own params ([stats]).
  */
 object LiveOsrs {
     private const val ARCHIVE = "https://archive.openrs2.org"
@@ -20,25 +23,57 @@ object LiveOsrs {
 
     class Entry(val id: Int, val name: String) { override fun toString() = "$name  ($id)" }
 
-    /** The newest live Old School cache in the archive: (its archive id, game build). */
-    fun latestCache(): Pair<Int, Int> {
-        val all = JsonParser.parseString(text("$ARCHIVE/caches.json")).asJsonArray
-        val best = all.map { it.asJsonObject }
+    /**
+     * The newest game build whose content this editor brings in: build 241, the build GadScape's game client runs.
+     * Later builds can add item and animation settings, model and keyframe encodings the 241 client can't read, so
+     * live content always comes from a cache of this build or older (see [latestCache]).
+     */
+    const val NEWEST_BUILD = ConfigRev.R241
+
+    /** A live cache in the archive: its archive id and game build, and the newest live build the archive has. */
+    class Latest(val cacheId: Int, val build: Int, val newestBuild: Int)
+
+    /**
+     * The newest live Old School cache in the archive of game build [maxBuild] or older, and the newest live build
+     * there is (when the live game has moved past [maxBuild], the import says so). A cache the archive lists under
+     * more than one build counts as the newest of them up to [maxBuild]; caches without a known build are skipped.
+     */
+    fun latestCache(maxBuild: Int = NEWEST_BUILD): Latest = pickLatest(text("$ARCHIVE/caches.json"), maxBuild)
+
+    /** [latestCache] from the archive's cache list ([cachesJson], its caches.json). */
+    fun pickLatest(cachesJson: String, maxBuild: Int = NEWEST_BUILD): Latest {
+        val all = JsonParser.parseString(cachesJson).asJsonArray
+        fun builds(c: JsonObject): List<Int> = c["builds"]?.takeIf { it.isJsonArray }?.asJsonArray?.mapNotNull { b ->
+            b.takeIf { it.isJsonObject }?.asJsonObject?.get("major")?.takeIf { it.isJsonPrimitive }?.asInt?.takeIf { it > 0 }
+        } ?: emptyList()
+        val live = all.filter { it.isJsonObject }.map { it.asJsonObject }
             .filter { it["game"]?.asString == "oldschool" && it["environment"]?.asString == "live" && it["language"]?.asString == "en" }
-            .maxByOrNull { c ->
-                val build = c["builds"]?.takeIf { it.isJsonArray }?.asJsonArray?.lastOrNull()?.asJsonObject?.get("major")?.asInt ?: 0
-                build * 10_000_000_000L + (c["id"]?.asLong ?: 0L)
-            } ?: error("the cache archive has no Old School cache")
-        val build = best["builds"]?.takeIf { it.isJsonArray }?.asJsonArray?.lastOrNull()?.asJsonObject?.get("major")?.asInt ?: 0
-        return best["id"].asInt to build
+        if (live.isEmpty()) error("the cache archive has no Old School cache")
+        val newest = live.maxOf { c -> builds(c).maxOrNull() ?: 0 }
+        val best = live.mapNotNull { c -> builds(c).filter { it <= maxBuild }.maxOrNull()?.let { b -> c to b } }
+            .maxByOrNull { (c, b) -> b * 10_000_000_000L + (c["id"]?.asLong ?: 0L) }
+            ?: error("the cache archive has no live Old School cache of build $maxBuild or older")
+        return Latest(best.first["id"].asInt, best.second, newest)
     }
 
-    /** All of a cache's items, by id (the raw newer-format data), with their names for searching. */
-    class Catalog(val cacheId: Int, val build: Int, val raw: Map<Int, ByteArray>) {
-        val entries: List<Entry> = raw.mapNotNull { (id, b) ->
-            val p = peek(b)
+    /**
+     * All of a cache's items, by id (the raw newer-format data), with their names for searching. [newestBuild]: the
+     * newest live build there is (newer than [build] when the live game has moved past what this editor brings in).
+     */
+    class Catalog(val cacheId: Int, val build: Int, val raw: Map<Int, ByteArray>, val newestBuild: Int = build) {
+        private val peeks = raw.mapValues { (_, b) -> peek(b) }
+        val entries: List<Entry> = peeks.mapNotNull { (id, p) ->
             if (p.noted || p.name == null || p.name == "null") null else Entry(id, p.name)
         }.sortedBy { it.name.lowercase() }
+
+        /** Items that can't be read as build [NEWEST_BUILD] items (so the game couldn't read them either): not listed. */
+        val unreadable: Int = peeks.values.count { !it.ok }
+
+        /** "Build 241: 17734 items.", with the items left out and whether the live game is on a newer build. */
+        fun describe(): String = "Build $build: ${entries.size} items." +
+                (if (unreadable > 0) " $unreadable item(s) can't be read as build $NEWEST_BUILD items, so they aren't listed." else "") +
+                (if (newestBuild > build) " The live game is on build $newestBuild now; these are from the newest build $build cache " +
+                        "(cache $cacheId), because GadScape's game runs build $NEWEST_BUILD and can't read newer content." else "")
 
         fun search(q: String): List<Entry> {
             val t = q.trim().lowercase()
@@ -56,11 +91,11 @@ object LiveOsrs {
     /** The newest cache's items (downloaded once per cache build; later calls are instant). */
     fun catalog(progress: (String) -> Unit = {}): Catalog {
         catalog?.let { return it }
-        progress("Finding the newest Old School cache...")
-        val (id, build) = latestCache()
-        progress("Getting the item list from the build $build cache...")
-        val files = groupFiles(id, 2, 10)
-        return Catalog(id, build, files).also { catalog = it }
+        progress("Finding the newest Old School cache of build $NEWEST_BUILD or older...")
+        val latest = latestCache()
+        progress("Getting the item list from the build ${latest.build} cache...")
+        val files = groupFiles(latest.cacheId, 2, 10)
+        return Catalog(latest.cacheId, latest.build, files, latest.newestBuild).also { catalog = it }
     }
 
     // ---------------- reading the cache archive ----------------
@@ -138,105 +173,33 @@ object LiveOsrs {
         return fileIds.indices.associate { fileIds[it] to parts[it].toByteArray() }
     }
 
-    // ---------------- newer item format -> 211 ----------------
+    // ---------------- live items (build 241 layout) ----------------
 
-    private class Peek(val name: String?, val noted: Boolean)
+    private class Peek(val name: String?, val noted: Boolean, val ok: Boolean = true)
 
     private fun peek(b: ByteArray): Peek = try {
-        val it = convert(-1, b).item
+        val it = read(-1, b).item
         Peek(it.name, it.noteTemplate >= 0)
-    } catch (e: Exception) { Peek(null, false) }
+    } catch (e: Exception) { Peek(null, false, ok = false) }
 
     /** [animations]: the item's own animation list (setting 161, build 241 on), when it has one. */
     class Converted(val item: ItemFull, val examine: String?, val animations: IntArray? = null)
 
     /**
-     * A newer item as a 211 item. Model ids are kept as they are (ints: [ItemCopy] gives one over 65535 a free id),
-     * settings the 211 game doesn't have are left out (examine goes to the server stats instead).
+     * A live item, read in the build 241 layout and kept that way: 4-byte model ids, and the newer settings (not
+     * tradeable 15, 99, 160, its animation list 161, sub-options 200-202, 251, long params) byte for byte, so it goes
+     * into a build 241 cache exactly as the game has it. Throws when it uses a setting newer than build 241, which the
+     * game's 241 client doesn't read either.
      */
-    fun convert(id: Int, b: ByteArray): Converted {
-        val d = ItemFull(id)
-        var examine: String? = null
-        var animations: IntArray? = null
-        var p = 0
-        fun u8() = b[p++].toInt() and 0xFF
-        fun s8() = b[p++].toInt()
-        fun u16() = (u8() shl 8) or u8()
-        fun s16() = u16().let { if (it > 32767) it - 65536 else it }
-        fun i32() = (u8() shl 24) or (u8() shl 16) or (u8() shl 8) or u8()
-        fun u24() = (u8() shl 16) or u16()
-        fun str(): String { val s = p; while (b[p].toInt() != 0) p++; return String(b, s, p - s, Charsets.ISO_8859_1).also { p++ } }
-        while (true) {
-            when (val o = u8()) {
-                0 -> break
-                1 -> d.inventoryModel = u16()
-                44 -> d.inventoryModel = i32()
-                2 -> d.name = str()
-                3 -> examine = str()
-                4 -> d.zoom2d = u16()
-                5 -> d.xan2d = u16()
-                6 -> d.yan2d = u16()
-                7 -> d.offsetX2d = s16()
-                8 -> d.offsetY2d = s16()
-                9 -> d.op9 = str()
-                11 -> d.stackable = true
-                12 -> d.cost = i32()
-                13 -> d.wearPos1 = u8()
-                14 -> d.wearPos2 = u8()
-                15, 160, 251 -> {} // newer flags with no data
-                16 -> d.members = true
-                23 -> { d.maleModel0 = u16(); d.maleOffset = u8() }
-                24 -> d.maleModel1 = u16()
-                25 -> { d.femaleModel0 = u16(); d.femaleOffset = u8() }
-                26 -> d.femaleModel1 = u16()
-                27 -> d.wearPos3 = u8()
-                45 -> { d.maleModel0 = i32(); d.maleOffset = u8() }
-                46 -> d.maleModel1 = i32()
-                47 -> d.maleModel2 = i32()
-                48 -> { d.femaleModel0 = i32(); d.femaleOffset = u8() }
-                49 -> d.femaleModel1 = i32()
-                50 -> d.femaleModel2 = i32()
-                51 -> d.maleHead = i32()
-                52 -> d.maleHead2 = i32()
-                53 -> d.femaleHead = i32()
-                54 -> d.femaleHead2 = i32()
-                in 30..34 -> d.groundOptions[o - 30] = str().takeUnless { it.equals("Hidden", true) }
-                in 35..39 -> d.inventoryOptions[o - 35] = str()
-                40 -> { val n = u8(); d.recolorFrom = ShortArray(n); d.recolorTo = ShortArray(n)
-                    for (i in 0 until n) { d.recolorFrom[i] = u16().toShort(); d.recolorTo[i] = u16().toShort() } }
-                41 -> { val n = u8(); d.retextureFrom = ShortArray(n); d.retextureTo = ShortArray(n)
-                    for (i in 0 until n) { d.retextureFrom[i] = u16().toShort(); d.retextureTo[i] = u16().toShort() } }
-                42 -> d.shiftClickIndex = s8().coerceAtLeast(0)
-                43 -> { val st = p; u8(); while (u8() != 0) str(); d.subOptions43.add(b.copyOfRange(st, p)) }
-                65 -> d.tradeable = true
-                75 -> d.weight = s16()
-                78 -> d.maleModel2 = u16()
-                79 -> d.femaleModel2 = u16()
-                90 -> d.maleHead = u16()
-                91 -> d.femaleHead = u16()
-                92 -> d.maleHead2 = u16()
-                93 -> d.femaleHead2 = u16()
-                94 -> d.category = u16()
-                95 -> d.zan2d = u16()
-                97 -> d.noteLinked = u16()
-                98 -> d.noteTemplate = u16()
-                in 100..109 -> {
-                    if (d.countObj == null) { d.countObj = IntArray(10); d.countCo = IntArray(10) }
-                    d.countObj!![o - 100] = u16(); d.countCo!![o - 100] = u16()
-                }
-                110 -> d.resizeX = u16()
-                111 -> d.resizeY = u16()
-                112 -> d.resizeZ = u16()
-                113 -> d.ambient = s8() and 0xFF
-                114 -> d.contrast = s8() and 0xFF
-                115 -> d.team = u8()
-                139, 140, 148, 149 -> u16() // bought / placeholder links: other items, not copied
-                161 -> { val n = u16(); animations = IntArray(n) { u16() } } // the item's own animations (build 241 on); kept for LiveAnims
-                249 -> { val n = u8(); repeat(n) { val isStr = u8() == 1; val k = u24(); d.params[k] = if (isStr) str() else i32() } }
-                else -> error("it uses a setting ($o) this editor can't convert yet")
-            }
+    fun read(id: Int, b: ByteArray): Converted {
+        val d = ItemFull.decodeAs(id, b, ConfigRev.R241)
+        require(d.readOk) { "it can't be read as a build 241 item (${d.problem}), so the game couldn't read it either" }
+        val animations = d.newerSettings.firstOrNull { it.first == 161 }?.second?.let { s ->
+            fun u16(p: Int) = ((s[p].toInt() and 0xFF) shl 8) or (s[p + 1].toInt() and 0xFF)
+            val n = u16(0)
+            if (s.size >= 2 + 2 * n) IntArray(n) { u16(2 + 2 * it) } else null
         }
-        return Converted(d, examine, animations)
+        return Converted(d, d.examine3, animations)
     }
 
     // ---------------- server stats from the item's params ----------------
@@ -336,12 +299,18 @@ object LiveOsrs {
             .maxByOrNull { it.value.size }!!.value.first().deepCopy()
     }
 
-    /** Everything [ItemCopy] needs to copy items from the newest cache. */
+    /** Everything [ItemCopy] needs to copy items from the newest cache (live content: build 241 layout, live ids). */
     class Source(private val cat: Catalog, private val server: File?) : ItemCopy.Source {
+        init {
+            require(cat.build <= NEWEST_BUILD) {
+                "the live cache is build ${cat.build}, newer than build $NEWEST_BUILD (GadScape's game), which can't read its content"
+            }
+        }
         private val converted = HashMap<Int, Converted?>()
         /** Live item id -> its own animations, already in this cache (LiveAnims.importFor). */
         val animations = HashMap<Int, Map<String, Int>>()
-        fun conv(id: Int) = converted.getOrPut(id) { cat.raw[id]?.let { convert(id, it) } }
+        fun conv(id: Int) = converted.getOrPut(id) { cat.raw[id]?.let { read(id, it) } }
+        override fun format(): Int = ConfigRev.R241
         override fun item(id: Int): ItemFull? = conv(id)?.item
         override fun model(id: Int): ByteArray? = cat.model(id)
         override fun stats(id: Int): String? = conv(id)?.let { stats(it, server, animations[id])?.toString() }
