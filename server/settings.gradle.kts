@@ -136,6 +136,7 @@ include(
     ":plugins:excluded:skills:agility",
     ":plugins:excluded:skills:agility:priffdinasrooftop",
     ":plugins:excluded:theatreofblood",
+    ":plugins:raids:fractured-archive",
     ":plugins:excluded:tools",
     ":plugins:excluded:tools:analyzer",
     ":plugins:excluded:tools:backups",
