@@ -15,6 +15,11 @@ class CacheModule : AbstractModule() {
 
 object CachePaths {
     var cacheDir: String = "cache-181"
+
+    /** The format of the cache in [cacheDir] (CacheIO.REV_211 or CacheIO.REV_241), set when it is opened. */
+    @Volatile var revision: Int = CacheIO.REV_211
+
+    val is241: Boolean get() = revision >= CacheIO.REV_241
 }
 
 @Singleton
@@ -23,13 +28,16 @@ class CacheLibraryProvider : Provider<CacheLibrary?> {
 
     @Throws(IOException::class)
     fun setLibraryLocation(f: String) {
-        library = CacheLibrary(f)
+        val lib = CacheIO.open(f)
+        library = lib
         CachePaths.cacheDir = f
+        CachePaths.revision = CacheIO.revision(lib)
+        println("Opened ${CacheIO.describe(lib)} cache: $f")
     }
 
     override fun get(): CacheLibrary? {
         if (library == null) {
-            library = CacheLibrary("cache-181")
+            library = CacheIO.open("cache-181").also { CachePaths.revision = CacheIO.revision(it) }
         }
         return library
     }

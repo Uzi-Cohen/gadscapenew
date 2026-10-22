@@ -26,7 +26,9 @@ typealias Comp = InterfaceCodec.Comp
 /** otherCache: look at another cache's interfaces (read-only, nothing can be saved into it). */
 class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val log: (String) -> Unit,
                             private val otherCache: java.io.File? = null) {
-    private fun decode(g: Int, id: Int, d: ByteArray) = InterfaceCodec.decode(g, id, d)
+    /** The open cache's format (211 or 241): build 241 keeps model ids in 4 bytes (see [InterfaceCodec.decode]). */
+    private var rev = cache.CacheIO.REV_211
+    private fun decode(g: Int, id: Int, d: ByteArray) = InterfaceCodec.decode(g, id, d, rev)
 
 
     // ---------------- patching ----------------
@@ -72,6 +74,7 @@ class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val 
             ids = old!!.screens()
         } else {
             lib = try { CacheLibrary(otherCache?.path ?: CachePaths.cacheDir) } catch (e: Exception) { log("Can't open the cache: ${e.message}"); return }
+            rev = try { cache.CacheIO.revision(lib!!) } catch (e: Exception) { cache.CacheIO.REV_211 }
             if (otherCache != null) try { spriteLoader = SpriteLoader(lib!!) } catch (e: Exception) { log("That cache's sprites couldn't be read: ${e.message}") }
             ids = try { lib!!.index(3).archiveIds().sorted() } catch (e: Exception) { emptyList<Int>() }
         }
@@ -80,7 +83,7 @@ class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val 
         val search = TextField().apply { promptText = "Interface id" }
         val list = ListView<Int>()
         // find text anywhere in the game's interfaces
-        val findText = TextField().apply { promptText = "Find text (e.g. GadScape)" }
+        val findText = TextField().apply { promptText = "Find text (e.g. an old server name)" }
         val findResults = ListView<String>().apply { prefHeight = 160.0 }
         val btnFind = Button("Find").apply {
             setOnAction {
@@ -254,7 +257,7 @@ class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val 
                 3 -> if (c.filled) { g.fill = rgb(c.color); g.fillRect(x, y, w, h) } else { g.stroke = rgb(c.color); g.strokeRect(x + .5, y + .5, w - 1, h - 1) }
                 4 -> { g.fill = rgb(c.color); g.font = Font.font("Verdana", 11.0); g.fillText(c.text?.replace(Regex("<[^>]*>"), "") ?: "", x + 1, y + 12, maxOf(w, 1.0)) }
                 5 -> (c.image ?: spriteImage(c.sprite))?.let { g.drawImage(it, x, y, if (w > 0) w else it.width, if (h > 0) h else it.height) }
-                6 -> { g.stroke = Color.web("#5a4d3b"); g.strokeRect(x, y, w, h); g.fill = Color.web("#5a4d3b"); g.fillText("model", x + 2, y + 12) }
+                6 -> { g.stroke = Color.web("#5a4d3b"); g.strokeRect(x, y, w, h); g.fill = Color.web("#5a4d3b"); g.fillText(if (c.model >= 0) "model ${c.model}" else "model", x + 2, y + 12) }
                 9 -> { g.stroke = rgb(c.color); g.strokeLine(x, y, x + w, y + h) }
             }
             c.children.forEach { paint(it) }
@@ -308,6 +311,14 @@ class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val 
         val out = GadTools.ensureExportCache()
         try {
             val outLib = CacheLibrary(out.path)
+            // the parts were read (and patched in place) in the open cache's format; the saved map must be the same one
+            val outRev = cache.CacheIO.revision(outLib)
+            if (cache.CacheIO.is241(outLib) != (rev >= cache.CacheIO.REV_241)) {
+                outLib.close()
+                lblInfo.text = "Not saved: the saved map (${out.path}) is a ${if (outRev >= cache.CacheIO.REV_241) "build 241" else "rev 211"} cache " +
+                        "but these interfaces were read from a ${if (rev >= cache.CacheIO.REV_241) "build 241" else "rev 211"} one."
+                return
+            }
             for (c in comps.filter { it.id in dirty }) outLib.put(3, groupId, c.id, c.data)
             outLib.index(3).update()
             outLib.close()
@@ -335,6 +346,8 @@ object InterfaceCodec {
         var color = 0
         var filled = false
         var sprite = -1
+        /** Model components (type 6): the model id, or -1. */
+        var model = -1
         var name: String = ""
         /** Picture for old-style caches (their sprites are found by name). */
         var image: javafx.scene.image.WritableImage? = null
@@ -349,7 +362,8 @@ object InterfaceCodec {
 
         override fun toString(): String {
             val kind = when (type) { 0 -> "box"; 3 -> "rect"; 4 -> "text"; 5 -> "sprite"; 6 -> "model"; 9 -> "line"; else -> "type $type" }
-            val label = text?.takeIf { it.isNotBlank() }?.let { "\"${it.take(24)}\"" } ?: name.takeIf { it.isNotBlank() } ?: ""
+            val label = text?.takeIf { it.isNotBlank() }?.let { "\"${it.take(24)}\"" } ?: name.takeIf { it.isNotBlank() }
+                ?: (if (type == 6 && model >= 0) "model $model" else "")
             return "$id  $kind  $label" + (if (!editable) "  (view only)" else "")
         }
     }
@@ -368,9 +382,15 @@ object InterfaceCodec {
         fun done() = p == b.size
     }
 
-    fun decode(group: Int, id: Int, data: ByteArray): Comp {
+    /**
+     * Reads one part. [rev] is the cache's format: from rev 237 on (build 241) model ids are 4 bytes, in IF3 model
+     * parts (type 6) and in old-style (IF1) ones; in rev 211 they are 2 bytes (65535 = none). Nothing else in the
+     * part formats changed between 211 and 241 (checked on every interface of the stock 241 and GadScape caches).
+     */
+    fun decode(group: Int, id: Int, data: ByteArray, rev: Int = cache.CacheIO.REV_211): Comp {
         val c = Comp(group, id, data)
         val r = Reader(data)
+        val intModels = rev >= 237
         try {
             if (data.isNotEmpty() && data[0].toInt() == -1) {
                 c.if3 = true
@@ -386,7 +406,13 @@ object InterfaceCodec {
                 when (c.type) {
                     0 -> { r.u16(); r.u16(); r.u8() }
                     5 -> { c.offSprite = r.p; c.sprite = r.i32(); r.u16(); r.u8(); r.u8(); r.u8(); r.i32(); r.u8(); r.u8() }
-                    6 -> { r.u16(); r.s16(); r.s16(); r.u16(); r.u16(); r.u16(); r.u16(); r.u16(); r.u8(); r.s16(); if (c.wMode != 0) r.u16() }
+                    6 -> {
+                        c.model = if (intModels) r.i32() else r.u16().let { if (it == 0xFFFF) -1 else it }
+                        r.s16(); r.s16(); r.u16(); r.u16(); r.u16(); r.u16(); r.u16(); r.u8(); r.s16()
+                        // the client reads the width override when the width mode is set and a short when the height mode is
+                        if (c.wMode != 0) r.u16()
+                        if (c.hMode != 0) r.s16()
+                    }
                     4 -> {
                         r.u16() // font
                         c.offText = r.p; c.text = r.str(); c.textLen = r.p - c.offText
@@ -404,7 +430,10 @@ object InterfaceCodec {
                 r.str()
                 repeat(18) { r.listener() }
                 repeat(3) { r.triggers() }
-                c.editable = r.done()
+                // model parts with only one of the width/height modes set: the cache tool wrote both overrides, the
+                // client reads one, so they end 2 bytes early (the server's ComponentDefinitions accepts this too)
+                val quirk = c.type == 6 && (c.wMode != 0) != (c.hMode != 0) && r.b.size - r.p == 2
+                c.editable = r.done() || quirk
             } else {
                 // old (if1) format: only the position/size header is understood
                 c.type = r.u8(); r.u8(); r.u16()

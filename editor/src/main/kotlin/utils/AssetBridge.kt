@@ -127,8 +127,8 @@ class AssetBridge(private val log: (String) -> Unit) {
 
     private fun ints(e: JsonElement?): List<Int>? = e?.takeIf { it.isJsonArray }?.asJsonArray?.map { it.asInt }
 
-    /** Applies the cache fields in [o] to [d] (only the ones given). */
-    private fun applyItem(d: ItemFull, o: JsonObject) {
+    /** Applies the cache fields in [o] to [d] (only the ones given); [lib] is the cache the item is read from and saved to. */
+    private fun applyItem(d: ItemFull, o: JsonObject, lib: CacheLibrary) {
         fun has(k: String) = o.has(k) && !o[k].isJsonNull
         if (has("name")) d.name = o["name"].asString
         if (has("cost")) d.cost = o["cost"].asInt
@@ -140,7 +140,7 @@ class AssetBridge(private val log: (String) -> Unit) {
         if (has("team")) d.team = o["team"].asInt.coerceIn(0, 255)
         fun opts(k: String, into: Array<String?>) { if (has(k)) { val a = o[k].asJsonArray; for (i in 0 until 5) into[i] = a.getOrNull(i)?.takeIf { !it.isJsonNull }?.asString?.ifBlank { null } } }
         opts("inventoryOptions", d.inventoryOptions); opts("groundOptions", d.groundOptions)
-        if (has("inventoryModel")) d.inventoryModel = o["inventoryModel"].asInt.coerceIn(0, 65535)
+        if (has("inventoryModel")) d.inventoryModel = o["inventoryModel"].asInt.coerceIn(0, cache.CacheIO.maxModelId(lib))
         if (has("zoom2d")) d.zoom2d = o["zoom2d"].asInt.coerceIn(1, 65535)
         if (has("xan2d")) d.xan2d = o["xan2d"].asInt and 2047
         if (has("yan2d")) d.yan2d = o["yan2d"].asInt and 2047
@@ -227,7 +227,9 @@ class AssetBridge(private val log: (String) -> Unit) {
         if (statsIn != null && srv == null) fail("The server folder isn't set in the editor (Tools > NPCs or Shops), so server stats can't be saved.")
         if (statsIn != null) ServerItems.definitionsFile(srv!!).also { if (!it.isFile) fail("${it.path} isn't there.") }
         // everything is worked out and checked with the cache open; it's written after it's closed
+        var rev = ConfigRev.R211 // the format of the cache the item is read from (and saved to)
         val (base, st, oldEnergy) = withCache { lib, _, _ ->
+            rev = ConfigRev.of(lib)
             val b: ItemFull = when {
                 o.has("copyOf") -> (ItemStore.read(lib, o.int("copyOf")) ?: fail("There's no item ${o.int("copyOf")}.")).let { src ->
                     src.copy(ItemStore.nextFreeId(lib)).also { it.noteLinked = -1; it.placeholderLink = -1; it.placeholderTemplate = -1; it.boughtLink = -1; it.boughtTemplate = -1 } }
@@ -235,8 +237,8 @@ class AssetBridge(private val log: (String) -> Unit) {
                 else -> (ItemStore.read(lib, o.int("id")) ?: fail("There's no item ${o.int("id")}; use \"new\": true or \"copyOf\" to make one.")).let { it.copy(it.id) }
             }
             if (!b.readOk) fail("Item ${b.id} can't be edited: ${b.problem}.")
-            applyItem(b, o)
-            for (m in b.modelIds()) if (m > 65535 || lib.index(7).archive(m) == null) fail("model $m isn't in the cache")
+            applyItem(b, o, lib)
+            for (m in b.modelIds()) if (m > cache.CacheIO.maxModelId(lib) || lib.index(7).archive(m) == null) fail("model $m isn't in the cache")
             val energy = ServerItems.specialEnergy(lib, b.id)
             // a copy starts from the stats of the item it copies (what it really has in game)
             // (only looked at when server stats were sent: without them the server's files may not even be there)
@@ -252,8 +254,8 @@ class AssetBridge(private val log: (String) -> Unit) {
             } else null
             Triple(b, stats, energy)
         }
-        val enc = base.encode(); val back = ItemFull.decode(base.id, enc)
-        if (!back.readOk || !back.encode().contentEquals(enc)) fail("The item didn't read back the same; nothing was written.")
+        val enc = base.encode(rev); val back = ItemFull.decode(base.id, enc, rev)
+        if (!back.readOk || !back.encode(rev).contentEquals(enc)) fail("The item didn't read back the same; nothing was written.")
         if (dry) return mapOf("ok" to true, "dryRun" to true, "item" to itemJson(base) + ("server" to st?.let { statsJson(it) }))
         ItemStore.save(listOf(base), "ai-item-${base.id}")
         val notes = ArrayList<String>()
@@ -325,7 +327,7 @@ class AssetBridge(private val log: (String) -> Unit) {
      */
     private fun modelOnPlayer(q: Map<String, String>): ByteArray = withCache { lib, models, anims ->
         val id = q.int("model")
-        if (id !in 0..65535) fail("model ids go from 0 to 65535")
+        if (id !in 0..cache.CacheIO.maxModelId(lib)) fail("model ids go from 0 to ${cache.CacheIO.maxModelId(lib)} in this ${cache.CacheIO.describe(lib)} cache")
         val md0 = try { models.get(id) } catch (e: Exception) { null } ?: fail("There's no model $id.")
         if (md0.faceCount == 0) fail("Model $id has no faces.")
         val item = q["item"]?.let { s -> s.trim().toIntOrNull()?.let { ItemStore.read(lib, it) } ?: fail("There's no item $s.") }
@@ -540,7 +542,7 @@ class AssetBridge(private val log: (String) -> Unit) {
             - GET /api/items?q=whip&limit=50 - search by name or id.
             - GET /api/item?id=4151 - every cache field, plus "server": bonuses, attack speed, weapon animations, requirements, special.
             - POST /api/item {"id": 4151, "name": "...", ...} - change fields (only the ones given). {"copyOf": 4151, ...} or {"new": true, ...}
-              makes a new item. Cache fields: name, cost, weight (kg), stackable, members, tradeable, inventoryOptions[5], groundOptions[5],
+              makes a new item. Cache fields: name, cost, weight (kg), stackable, members, tradeable, inventoryOptions[5], groundOptions[5] ("Hidden" removes a ground option in rev 211 only; build 241 ignores it),
               inventoryModel, zoom2d, xan2d, yan2d, zan2d, offsetX2d, offsetY2d, resize[3], ambient, contrast, slot, hides[2],
               maleModels[3], femaleModels[3], maleOffset, femaleOffset, maleHeads[2], femaleHeads[2], recolours [[from, to]], params {key: value}.
               "server": {"bonuses": {"Slash att": 82, "Strength": 82} or [14 numbers], "requirements": {"Attack": 70},

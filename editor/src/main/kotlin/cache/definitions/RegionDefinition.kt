@@ -18,6 +18,19 @@ class RegionDefinition(
     val overlayRotations: Array<Array<IntArray>> = Array(Z) { Array(X) { IntArray(Y) } }
     val underlayIds: Array<Array<IntArray>> = Array(Z) { Array(X) { IntArray(Y) } }
 
+    /**
+     * Build 241 terrain trailer (see cache.TerrainCodec): the flags byte after level 3 and, when its bit 0 is set, the
+     * raw fifth "underwater" level. Not shown or edited; written back as read into build 241 caches, left out of rev 211.
+     */
+    var terrainFlags: Int = 0
+    var underwater: ByteArray? = null
+
+    /**
+     * Environment files 2-4 (lighting, fog, sky) of the square in the build 241 cache it was read from, or null (rev
+     * 211 caches have none). Used when the square is written into a build 241 cache that doesn't have it yet.
+     */
+    var environment: Map<Int, ByteArray>? = null
+
     fun calculateTerrain() {
         for (z in 0 until Z) {
             for (x in 0 until X) {

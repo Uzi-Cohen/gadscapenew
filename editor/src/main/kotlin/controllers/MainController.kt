@@ -46,8 +46,8 @@ class MainController @Inject constructor(
             // NPC spawns live in the server's files, saved along with the map
             if (utils.NpcSpawns.dirty) try { println(utils.NpcSpawns.save()) } catch (e: Exception) { println("NPC spawns not saved: ${e.message}") }
             toolsModel.unsaved.set(false)
-            println((if (auto) "Autosaved" else "Saved") + " $n regions to " + utils.GadTools.exportCacheDir.path)
-            toolsModel.message = if (auto) "Autosaved ($n regions)." else "Saved $n regions (not sent to the server)."
+            println((if (auto) "Autosaved" else "Saved") + " ${n.regions} regions to " + utils.GadTools.exportCacheDir.path)
+            toolsModel.message = (if (auto) "Autosaved (${n.regions} regions)." else "Saved ${n.regions} regions (not sent to the server).") + n.warning
         } catch (e: Exception) {
             e.printStackTrace()
         }

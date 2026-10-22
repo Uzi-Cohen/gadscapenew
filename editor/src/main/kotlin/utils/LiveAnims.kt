@@ -1,19 +1,20 @@
 package utils
 
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URI
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * A live Old School item's own animations, brought into this (211) cache with it.
+ * A live Old School item's own animations, brought into this cache (build 241 or rev 211) with it.
  *
  * Which animations an item uses isn't in the item: newer items (build 241 on) list them (item setting 161), and for
  * the rest Jagex's own animation names (RuneLite's gameval list, e.g. SCYTHE_OF_VITUR_READY) carry the item's name.
  * Each name says what the animation is for (READY = standing, WALK_F = walking, ATTACK...), which is how they're
- * matched to the server's weapon animations. The animations are written the way 211 reads them ([to211]) and
- * imported with their frames and skeletons through [CacheEdits.importBundle].
+ * matched to the server's weapon animations. The animations are bundled in the live cache's own (build 241) layout,
+ * with their frames, skeletons and skeletal keyframe sets (archive 22 in the live cache), and imported through
+ * [CacheEdits.importBundle], which converts them to the target cache's layout ([SeqConv]) and puts keyframe sets
+ * where that cache keeps them (archive 22 in 241, archive 0 in 211).
  */
 object LiveAnims {
     private const val NAMES_URL = "https://raw.githubusercontent.com/runelite/runelite/master/runelite-api/src/main/java/net/runelite/api/gameval/AnimationID.java"
@@ -102,57 +103,31 @@ object LiveAnims {
     }
 
     /**
-     * A newer (226+) animation definition written the way 211 reads it. Moved settings go back to their 211 numbers
-     * (skeletal 13 -> 14, its range 15 -> 16); sounds, height offset (16), debug name (18) and 19 are left out:
-     * 211 has nothing to play them with.
+     * A newer (226+, build 241) animation definition written the way 211 reads it (see [SeqConv.to211]: skeletal
+     * 13 -> 14, its range 15 -> 16, sounds back to 211 records; height offset, debug name and 19 left out).
      */
-    fun to211(b: ByteArray): ByteArray {
-        var p = 0
-        fun u8() = b[p++].toInt() and 0xFF
-        fun u16() = (u8() shl 8) or u8()
-        fun i32() = (u16() shl 16) or u16()
-        val out = ByteArrayOutputStream()
-        fun w8(v: Int) = out.write(v)
-        fun w16(v: Int) { out.write(v shr 8); out.write(v) }
-        fun w32(v: Int) { w16(v ushr 16); w16(v and 0xFFFF) }
-        while (p < b.size) {
-            when (val o = u8()) {
-                0 -> break
-                1 -> { val n = u16(); w8(1); w16(n); repeat(n * 3) { w16(u16()) } }
-                2, 6, 7 -> { w8(o); w16(u16()) }
-                3 -> { val n = u8(); w8(3); w8(n); repeat(n) { w8(u8()) } }
-                4 -> w8(4)
-                5, 8, 9, 10, 11 -> { w8(o); w8(u8()) }
-                12 -> { val n = u8(); w8(12); w8(n); repeat(n * 2) { w16(u16()) } }
-                13 -> { w8(14); w32(i32()) }
-                14 -> { val n = u16(); repeat(n) { p += 2 + 6 } }
-                15 -> { w8(16); w16(u16()); w16(u16()) }
-                16 -> p++
-                17 -> { val n = u8(); w8(17); w8(n); repeat(n) { w8(u8()) } }
-                18 -> { while (b[p].toInt() != 0) p++; p++ }
-                19 -> {}
-                else -> error("animation setting $o isn't known")
-            }
-        }
-        out.write(0)
-        return out.toByteArray()
-    }
+    fun to211(b: ByteArray): ByteArray = SeqConv.to211(-1, b).bytes
 
     /**
      * An animation bundle (the editor's own format, see [CacheEdits.exportBundle]) of live animations [ids], with
-     * their frames, skeletal keyframes and skeletons, ready for [CacheEdits.importBundle].
+     * their frames, skeletal keyframes and skeletons, ready for [CacheEdits.importBundle]. The sequences stay in the
+     * live cache's layout: bundle.txt names the live cache's own build ("format 241"), and the import converts them
+     * for a 211 cache and refuses a build newer than 241 ([CacheEdits.requireKnownFormat]). Only caches of build 241
+     * or older are bundled ([LiveOsrs.NEWEST_BUILD]); an older one is read and checked as 241 and says "format 241".
      */
     fun bundle(cat: LiveOsrs.Catalog, ids: Collection<Int>, out: File) {
+        require(cat.build <= LiveOsrs.NEWEST_BUILD) {
+            "the live cache is build ${cat.build}, newer than build ${LiveOsrs.NEWEST_BUILD} (GadScape's game), which can't read its animations"
+        }
         val seqs = LiveOsrs.groupFiles(cat.cacheId, 2, 12)
         val groups = HashSet<Int>(); val keyframes = HashSet<Int>(); val skels = HashSet<Int>()
         ZipOutputStream(out.outputStream()).use { z ->
             fun put(n: String, b: ByteArray) { z.putNextEntry(ZipEntry(n)); z.write(b); z.closeEntry() }
             for (id in ids.distinct().sorted()) {
                 val raw = seqs[id] ?: error("animation $id isn't in the live cache")
-                val conv = to211(raw)
-                val s = SeqDef.decode(id, conv)
-                require(s.readOk) { "animation $id didn't convert" }
-                put("seq/$id.dat", conv)
+                val s = SeqDef.decode(id, raw, ConfigRev.R241)
+                require(s.readOk) { "animation $id has settings newer than build 241, which this editor can't read" }
+                put("seq/$id.dat", raw)
                 (s.frameIds.toList() + (s.chatFrameIds?.toList() ?: emptyList())).forEach { groups.add(it ushr 16) }
                 if (s.skeletalModel != -1) keyframes.add(s.skeletalModel)
             }
@@ -160,13 +135,18 @@ object LiveAnims {
                 put("frames/$g/$f.dat", b)
                 if (b.size >= 2) skels.add(((b[0].toInt() and 255) shl 8) or (b[1].toInt() and 255))
             }
+            // skeletal keyframe sets are in archive 22 of the live (226+) cache, not archive 0 with the frame sets
             for (k in keyframes) {
-                val b = LiveOsrs.groupFiles(cat.cacheId, 0, k ushr 16)[k and 0xFFFF] ?: error("keyframes $k aren't in the live cache")
+                val b = LiveOsrs.groupFiles(cat.cacheId, cache.CacheIO.KEYFRAMES, k ushr 16)[k and 0xFFFF]
+                    ?: error("keyframes ${k ushr 16}:${k and 0xFFFF} aren't in the live cache's archive 22")
                 put("keyframes/${k ushr 16}/${k and 0xFFFF}.dat", b)
                 if (b.size >= 3) skels.add(((b[1].toInt() and 255) shl 8) or (b[2].toInt() and 255))
             }
             for (s in skels) put("skeletons/$s.dat", LiveOsrs.group(cat.cacheId, 1, s))
-            put("bundle.txt", ("# Uzi's Map Editor animation bundle (live OSRS)\n" + ids.joinToString("\n") { "seq $it" } + "\n").toByteArray())
+            // the live build, or 241 for an older cache (its sequences were read and checked as 241 ones above)
+            val format = maxOf(cat.build, ConfigRev.R241)
+            put("bundle.txt", ("# Uzi's Map Editor animation bundle (live OSRS cache ${cat.cacheId}, build ${cat.build})\nformat $format\n" +
+                    ids.joinToString("\n") { "seq $it" } + "\n").toByteArray())
         }
     }
 
@@ -182,11 +162,15 @@ object LiveAnims {
         return Prepared(roles, zip)
     }
 
-    /** Imports prepared animations into the exported cache; the item's weapon animations with this cache's ids. */
+    /**
+     * Imports prepared animations into the exported cache; the item's weapon animations with this cache's ids. They
+     * are live content, so they keep their live ids where those are free (and an animation that is already here under
+     * its own id is used as it is); see [CacheEdits.importInto].
+     */
     fun apply(p: Prepared): Map<String, Int> {
         try {
             val live = p.roles.values.distinct().sorted()
-            val r = CacheEdits.importBundle(p.zip, null)
+            val r = CacheEdits.importBundle(p.zip, null, keepIds = true)
             val newId = live.zip(r.newSeqIds).toMap()
             return p.roles.mapValues { (_, v) -> newId[v] ?: v }
         } finally { p.zip.delete() }

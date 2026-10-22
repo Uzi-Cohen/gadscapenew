@@ -17,10 +17,11 @@ class ItemDef(val id: Int) {
 object ItemDefs {
     fun load(lib: CacheLibrary): Map<Int, ItemDef> {
         val out = HashMap<Int, ItemDef>()
+        val rev = ConfigRev.of(lib)
         val archive = lib.index(2).archive(10) ?: return out
         for (id in archive.fileIds()) {
             val data = lib.data(2, 10, id) ?: continue
-            out[id] = decode(id, data)
+            out[id] = decode(id, data, rev)
         }
         // noted items have no name or picture of their own: borrow the real item's
         for (d in out.values) if (d.noted) out[d.link]?.let { real ->
@@ -31,39 +32,44 @@ object ItemDefs {
         return out
     }
 
-    private fun decode(id: Int, b: ByteArray): ItemDef {
+    /** Reads the few fields the shop builder needs, in the item format of a [rev] cache (see [ItemFull] for both). */
+    fun decode(id: Int, b: ByteArray, rev: Int): ItemDef {
         val d = ItemDef(id)
-        var p = 0
-        fun u8() = b[p++].toInt() and 0xFF
-        fun u16() = (u8() shl 8) or u8()
-        fun i32() = (u8() shl 24) or (u8() shl 16) or (u8() shl 8) or u8()
-        fun u24() = (u8() shl 16) or (u8() shl 8) or u8()
-        fun str(): String { val s = p; while (b[p].toInt() != 0) p++; val r = String(b, s, p - s, Charsets.ISO_8859_1); p++; return r }
+        val r241 = ConfigRev.is241(rev)
+        val i = CfgIn(b)
         try {
-            while (p < b.size) {
-                when (val op = u8()) {
-                    0 -> return d
-                    1 -> d.model = u16()
-                    2 -> d.name = str()
-                    3, 9 -> str()
-                    4, 5, 6, 7, 8 -> u16()
-                    11, 16, 65 -> {}
-                    12 -> d.cost = i32()
-                    13, 14, 27, 115 -> u8()
-                    23, 25 -> { u16(); u8() }
-                    24, 26, 78, 79, 90, 91, 92, 93, 94, 95, 110, 111, 112, 139, 140, 148, 149 -> u16()
-                    in 30..39 -> str()
-                    40 -> { val n = u8(); d.recolorFrom = ShortArray(n); d.recolorTo = ShortArray(n)
-                        for (i in 0 until n) { d.recolorFrom!![i] = u16().toShort(); d.recolorTo!![i] = u16().toShort() } }
-                    41 -> { val n = u8(); repeat(n) { u16(); u16() } }
-                    42 -> u8()
-                    43 -> { val n = u8(); repeat(n) { u8(); str() } } // newer sub-options; harmless if absent
-                    75 -> u16()
-                    97 -> d.link = u16()
-                    98 -> { u16(); d.noted = true }
-                    in 100..109 -> { u16(); u16() }
-                    113, 114 -> u8()
-                    249 -> { val n = u8(); repeat(n) { val isStr = u8() == 1; u24(); if (isStr) str() else i32() } }
+            while (i.p < b.size) {
+                val op = i.u8()
+                when {
+                    op == 0 -> return d
+                    op == 2 -> d.name = i.str()
+                    op == 3 || op == 9 || op in 30..39 -> i.skipStr()
+                    op in 4..8 || op == 75 || op == 94 || op == 95 || op in 110..112 || op == 139 || op == 140 || op == 148 || op == 149 -> i.skip(2)
+                    op == 11 || op == 16 || op == 65 -> {}
+                    op == 12 -> d.cost = i.i32()
+                    op == 13 || op == 14 || op == 27 || op == 42 || op in 113..115 -> i.skip(1)
+                    op == 40 -> { val n = i.u8(); d.recolorFrom = ShortArray(n); d.recolorTo = ShortArray(n)
+                        for (k in 0 until n) { d.recolorFrom!![k] = i.u16().toShort(); d.recolorTo!![k] = i.u16().toShort() } }
+                    op == 41 -> i.skip(4 * i.u8())
+                    op == 43 -> { i.u8(); while (i.u8() != 0) i.skipStr() }
+                    op == 97 -> d.link = i.u16()
+                    op == 98 -> { i.u16(); d.noted = true }
+                    op in 100..109 -> i.skip(4)
+                    op == 249 -> CfgParams.read(i, rev)
+                    // model ids: 2 bytes in rev 211 (1, 23-26, 78, 79, 90-93), ints in build 241 (44-54)
+                    !r241 && op == 1 -> d.model = i.u16()
+                    !r241 && (op == 23 || op == 25) -> i.skip(3)
+                    !r241 && (op == 24 || op == 26 || op == 78 || op == 79 || op in 90..93) -> i.skip(2)
+                    r241 && op == 44 -> d.model = i.i32()
+                    r241 && (op == 45 || op == 48) -> i.skip(5)
+                    r241 && op in 46..54 -> i.skip(4)
+                    // build 241's newer settings
+                    r241 && (op == 15 || op == 160 || op == 251) -> {}
+                    r241 && op == 99 -> i.skip(2)
+                    r241 && op == 161 -> i.skip(2 * i.u16())
+                    r241 && op == 200 -> { i.skip(2); i.skipStr() }
+                    r241 && op == 201 -> { i.skip(13); i.skipStr() }
+                    r241 && op == 202 -> { i.skip(15); i.skipStr() }
                     else -> return d // unknown opcode: keep what we have (the name comes early)
                 }
             }

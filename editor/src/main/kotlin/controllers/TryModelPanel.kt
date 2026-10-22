@@ -169,8 +169,10 @@ class TryModelPanel(
     private fun pickId() {
         val t = modelId.text.trim()
         val m = models() ?: return say("Open a cache first.")
-        val id = t.toIntOrNull() ?: return say(if (t.isEmpty()) "Type a model id." else "\"$t\" isn't a model id (a whole number from 0 to 65535).")
-        if (id !in 0..65535) return say("Model ids go from 0 to 65535.")
+        // 0-65535 in both formats: 211 configs hold 2-byte model ids, and the 241 client fetches models with 16-bit ids
+        val max = lib()?.let { cache.CacheIO.maxModelId(it) } ?: 65535
+        val id = t.toIntOrNull() ?: return say(if (t.isEmpty()) "Type a model id." else "\"$t\" isn't a model id (a whole number from 0 to $max).")
+        if (id !in 0..max) return say("Model ids go from 0 to $max.")
         val md = PendingModels.model(m, id) ?: return say("There's no model $id in the cache.")
         if (md.faceCount == 0) return say("Model $id has no faces, so there's nothing to see.")
         tried = id

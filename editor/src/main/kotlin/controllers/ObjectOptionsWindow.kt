@@ -65,7 +65,9 @@ class ObjectOptionsWindow(
         for (i in 0 until 5) optFields[i].text = d.options[i] ?: ""
         val placed = gadToolsModel.selectedObject?.takeIf { it.loc.objId == id }
         lblInfo.text = "Object $id: ${d.name}" + (placed?.let { " (picked at ${it.worldX}, ${it.worldY})" } ?: "") +
-                if (!d.readOk) "\nThis object has settings the editor doesn't know (made by another tool). Saving adds your name and options after them, everything else stays as it is." else ""
+                if (!d.readOk) "\nThis object has settings the editor doesn't know (made by another tool). Saving adds your name and options after them, everything else stays as it is." +
+                    (if (utils.ConfigRev.is241(d.rev)) " In a build 241 cache options can only be replaced this way, not removed (options set after the unknown settings aren't shown and stay)." else "")
+                else ""
     }
 
     private fun currentOptions() = Array(5) { optFields[it].text.trim().takeIf { s -> s.isNotEmpty() } }

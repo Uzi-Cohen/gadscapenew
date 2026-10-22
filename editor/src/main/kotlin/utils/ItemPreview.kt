@@ -166,33 +166,10 @@ object ItemPreview {
 
     class Kit(val bodyPart: Int, val models: IntArray, val selectable: Boolean, val from: ShortArray, val to: ShortArray)
 
-    private fun kits(lib: CacheLibrary): Map<Int, Kit> {
-        val out = HashMap<Int, Kit>()
-        val arch = lib.index(2).archive(3) ?: return out
-        for (id in arch.fileIds()) {
-            val b = lib.data(2, 3, id) ?: continue
-            var p = 0
-            fun u8() = b[p++].toInt() and 0xFF
-            fun u16() = (u8() shl 8) or u8()
-            var part = -1; var models = IntArray(0); var sel = true; var from = ShortArray(0); var to = ShortArray(0)
-            try {
-                loop@ while (p < b.size) {
-                    when (val o = u8()) {
-                        0 -> break@loop
-                        1 -> part = u8()
-                        2 -> { val n = u8(); models = IntArray(n) { u16() } }
-                        3 -> sel = false
-                        40 -> { val n = u8(); from = ShortArray(n); to = ShortArray(n); for (i in 0 until n) { from[i] = u16().toShort(); to[i] = u16().toShort() } }
-                        41 -> { val n = u8(); repeat(n) { u16(); u16() } }
-                        in 60..69 -> u16()
-                        else -> { part = -1; break@loop }
-                    }
-                }
-            } catch (e: Exception) { continue }
-            if (part >= 0) out[id] = Kit(part, models, sel, from, to)
-        }
-        return out
-    }
+    /** The identity kits of [lib], in either format (rev 211: models in opcode 2; build 241: 4-byte ids in 5). */
+    private fun kits(lib: CacheLibrary): Map<Int, Kit> =
+        KitCodec.all(lib).filterValues { it.readOk && it.bodyPart >= 0 }
+            .mapValues { (_, k) -> Kit(k.bodyPart, k.models, k.selectable, k.recolorFrom, k.recolorTo) }
 
     /**
      * A plain player (the first kit of each body part) wearing [item]: the parts the item covers or hides are left

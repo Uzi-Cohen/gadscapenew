@@ -168,7 +168,8 @@ class ItemsTab(
         d.category = idOrNone(fCategory); d.team = int(fTeam, 0).coerceIn(0, 255)
         d.stackable = fStack.isSelected; d.members = fMembers.isSelected; d.tradeable = fTrade.isSelected
         for (i in 0 until 5) { d.inventoryOptions[i] = fInv[i].text.trim().ifEmpty { null }; d.groundOptions[i] = fGround[i].text.trim().ifEmpty { null } }
-        d.inventoryModel = int(fModel, d.inventoryModel).coerceIn(0, 65535)
+        // the limit of the cache the item is read from and saved to (no cache lookup while typing)
+        d.inventoryModel = int(fModel, d.inventoryModel).coerceIn(0, lib()?.let { cache.CacheIO.maxModelId(it) } ?: cache.CacheIO.MAX_MODEL_ID)
         d.zoom2d = int(fZoom, d.zoom2d).coerceIn(1, 65535); d.xan2d = int(fXan, d.xan2d) and 2047; d.yan2d = int(fYan, d.yan2d) and 2047; d.zan2d = int(fZan, d.zan2d) and 2047
         d.offsetX2d = int(fOffX, d.offsetX2d).coerceIn(-32768, 32767); d.offsetY2d = int(fOffY, d.offsetY2d).coerceIn(-32768, 32767)
         d.resizeX = int(fRx, 128).coerceIn(1, 65535); d.resizeY = int(fRy, 128).coerceIn(1, 65535); d.resizeZ = int(fRz, 128).coerceIn(1, 65535)
@@ -534,7 +535,7 @@ class ItemsTab(
     private fun copyFromOther() {
         val dir = javafx.stage.DirectoryChooser().apply { title = "Folder with the other cache (main_file_cache.dat2)" }.showDialog(stage) ?: return
         val dat = dir.walkTopDown().maxDepth(4).firstOrNull { it.isFile && it.name.equals("main_file_cache.dat2", true) }
-            ?: return say("No 211-style cache (main_file_cache.dat2) in ${dir.path}.")
+            ?: return say("No cache (main_file_cache.dat2) in ${dir.path}.")
         val ids = TextInputDialog("").apply { title = "Copy items"; headerText = null; contentText = "Item ids to copy (e.g. 22325, 27275-27280)"; initOwner(stage) }.showAndWait().orElse(null) ?: return
         val list = ids.split(',', ' ', ';').filter { it.isNotBlank() }.flatMap { p ->
             val r = p.trim().split('-')
@@ -542,12 +543,16 @@ class ItemsTab(
             else listOfNotNull(p.trim().toIntOrNull())
         }
         if (list.isEmpty()) return say("No ids given.")
-        val keep = Alert(Alert.AlertType.CONFIRMATION, "Keep the same item ids where they're free here?\n\nYes: item 22325 stays 22325 if that id is free (so the server's item names match).\nNo: always add them after the last item.",
+        val keep = Alert(Alert.AlertType.CONFIRMATION, "Keep the same item ids where they're free here?\n\n" +
+                "Yes (an Old School cache): item 22325 stays 22325 if that id is free (so the server's item names match), its models keep their ids, " +
+                "and items already here under their own id aren't copied again.\n" +
+                "No (another server's own items): always add them after the last item; new models go to GadScape's model range.",
             ButtonType.YES, ButtonType.NO).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.NO) == ButtonType.YES
         try {
-            val other = CacheLibrary(dat.parentFile.path)
+            // read-only: nothing is ever written into the other cache; items are converted to this cache's format
+            val other = cache.CacheIO.openReadOnly(dat.parentFile.path)
             val r = try { ItemCopy.fromOtherCache(other, list, keep) } finally { other.close() }
-            afterWrite(r.newIds.firstOrNull())
+            afterWrite(r.newIds.firstOrNull() ?: r.alreadyHere.firstOrNull())
             say(r.message + " Undo last change puts the cache back.")
         } catch (e: Exception) { say("Couldn't copy: ${e.message}") }
     }
@@ -563,18 +568,21 @@ class ItemsTab(
 
     private fun importBundle() {
         val f = javafx.stage.FileChooser().apply { title = "Item bundle (.zip)"; extensionFilters.add(javafx.stage.FileChooser.ExtensionFilter("Item bundle", "*.zip")) }.showOpenDialog(stage) ?: return
-        val keep = Alert(Alert.AlertType.CONFIRMATION, "Keep the item ids from the bundle where they're free here?\n\nNo: add them after the last item.",
+        val keep = Alert(Alert.AlertType.CONFIRMATION, "Keep the item ids from the bundle where they're free here?\n\n" +
+                "Yes (Old School items): the items and their models keep their ids where they're free, and items already here under their own id aren't copied again.\n" +
+                "No (custom items): add them after the last item; new models go to GadScape's model range.",
             ButtonType.YES, ButtonType.NO).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.NO) == ButtonType.YES
         try {
             val r = ItemCopy.importBundle(f, keep)
-            afterWrite(r.newIds.firstOrNull())
+            afterWrite(r.newIds.firstOrNull() ?: r.alreadyHere.firstOrNull())
             say(r.message + " Undo last change puts the cache back.")
         } catch (e: Exception) { say("Couldn't import: ${e.message}") }
     }
 
     /**
      * Search the newest Old School cache and copy items from it into this cache: models, noted version and server
-     * stats included (see [LiveOsrs]).
+     * stats included (see [LiveOsrs]). Into a build 241 cache the items go in exactly as the game has them; live ids
+     * are kept where free (the "keep" box), and items already here under their own id aren't copied again.
      */
     private fun importFromLiveOsrs() {
         val win = Stage().apply { initOwner(this@ItemsTab.stage); title = "Import from live OSRS" }
@@ -597,7 +605,7 @@ class ItemsTab(
             val c = cat ?: return@addListener
             val found = c.search(q)
             results.items.setAll(found.take(200))
-            status.text = if (q.isBlank()) "Build ${c.build}: ${c.entries.size} items. Type a name." else "${found.size} match(es)" + (if (found.size > 200) ", showing 200" else "") + ". Pick one or more, then Import."
+            status.text = if (q.isBlank()) c.describe() + " Type a name." else "${found.size} match(es)" + (if (found.size > 200) ", showing 200" else "") + ". Pick one or more, then Import."
         }
         results.selectionModel.selectedItems.addListener(javafx.collections.ListChangeListener {
             go.isDisable = results.selectionModel.selectedItems.isEmpty(); statsOnly.isDisable = go.isDisable
@@ -610,7 +618,7 @@ class ItemsTab(
             for (e in picked) {
                 try {
                     val raw = c.raw[e.id] ?: continue
-                    val st = LiveOsrs.stats(LiveOsrs.convert(e.id, raw), srv)
+                    val st = LiveOsrs.stats(LiveOsrs.read(e.id, raw), srv)
                     if (st == null) { skipped.add(e.name); continue }
                     // keep what the server's entry has that the cache doesn't say (custom animations, special settings)
                     val old = ItemStats.get(srv, e.id)
@@ -651,7 +659,12 @@ class ItemsTab(
                     val haveTex = l?.index(9)?.archive(0)?.fileIds()?.toSet() ?: emptySet()
                     for (e in picked) {
                         val it = try { src.item(e.id) } catch (x: Exception) { problems.add("${e.name}: ${x.message}"); null } ?: continue
-                        if (it.wearPos1 == 3) try {
+                        // already here under its own id (so not copied again) with server stats: its animations would go unused
+                        val hereWithStats = keep && l != null && server != null && try {
+                            ItemStore.read(l, e.id)?.let { h -> h.readOk && h.name.trim().equals(it.name.trim(), true) } == true &&
+                                    ItemStats.get(server, e.id) != null
+                        } catch (x: Exception) { false }
+                        if (it.wearPos1 == 3 && !hereWithStats) try {
                             javafx.application.Platform.runLater { status.text = "Getting ${e.name}'s animations..." }
                             LiveAnims.prepare(c, e.name, src.conv(e.id)?.animations)?.let { p -> anims[e.id] = p }
                                 ?: animNotes.add("${e.name} has no animations of its own in the live cache, so it got the usual ones for its weapon type")
@@ -672,7 +685,7 @@ class ItemsTab(
                         for ((id, p) in anims) if (ok.any { it.id == id }) try { src.animations[id] = LiveAnims.apply(p) }
                             catch (x: Exception) { animNotes.add("${ok.first { it.id == id }.name}'s animations couldn't be imported (${x.message})") }
                         val r = ItemCopy.copy(src, ok.map { it.id }, keep)
-                        afterWrite(r.newIds.firstOrNull())
+                        afterWrite(r.newIds.firstOrNull() ?: r.alreadyHere.firstOrNull())
                         val warn = (if (missingTex.isNotEmpty()) " Its models use texture(s) ${missingTex.joinToString(", ")}, which this cache doesn't have: those parts may look wrong in game." else "") +
                                 (if (problems.isNotEmpty()) " Not imported: " + problems.joinToString("; ") + "." else "") +
                                 (if (src.animations.isNotEmpty()) " Brought their own animations: " + src.animations.entries.joinToString("; ") { (id, a) ->
@@ -695,7 +708,7 @@ class ItemsTab(
                 javafx.application.Platform.runLater {
                     cat = c
                     query.isDisable = false; query.requestFocus()
-                    status.text = "Build ${c.build}: ${c.entries.size} items. Type a name."
+                    status.text = c.describe() + " Type a name."
                 }
             } catch (x: Exception) {
                 javafx.application.Platform.runLater { status.text = "Couldn't get the OSRS item list: ${x.message}" }
@@ -780,7 +793,8 @@ class ItemsTab(
             Separator(),
             Label("Inventory options (empty = none; the game puts Drop or Examine on its own)").apply { isWrapText = true },
             HBox(4.0, *fInv),
-            Label("Ground options (empty = the default; 3rd is Take)"),
+            Label("Ground options (empty = the default; 3rd is Take). \"Hidden\" removes one in a rev 211 cache only: " +
+                "the build 241 game ignores it, so Take can't be removed there.").apply { isWrapText = true },
             HBox(4.0, *fGround),
             Separator(),
             Label("Inventory picture"),

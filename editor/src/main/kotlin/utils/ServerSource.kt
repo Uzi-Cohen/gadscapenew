@@ -36,9 +36,7 @@ object ServerSource {
 
     private fun knownPlaces(): List<File> {
         val home = File(System.getProperty("user.home"))
-        return listOf(
-            File(home, "Downloads"), File(home, "Desktop"), File(home, "Documents"), File("C:/GadScape")
-        )
+        return listOf(File("C:/GadScape"), File(home, "GadScape"), File(home, "Downloads"), File(home, "Desktop"), File(home, "Documents"))
     }
 
     /** The server source folder: the saved one if it really is one, otherwise found and saved. */
@@ -65,9 +63,15 @@ object ServerSource {
                            else "${picked.path} has no server code (no NpcId.java). Pick your server folder (the one with gradlew and settings.gradle.kts).")
     }
 
-    /** The package the server's own code uses (com.gadscape), so files the editor writes match the code they go into. */
-    @Suppress("UNUSED_PARAMETER")
-    fun pkg(server: File?): String = "gadscape"
+    /**
+     * The package the server's own code uses (com.<pkg>): "gadscape". Found from the shops folder, so files the editor
+     * writes match the code they go into; an older copy of the source with one other package there gets that one.
+     */
+    fun pkg(server: File?): String {
+        val com = server?.let { File(it, "plugins/shops/src/main/kotlin/com") } ?: return "gadscape"
+        if (File(com, "gadscape").isDirectory) return "gadscape"
+        return com.listFiles()?.filter { it.isDirectory }?.map { it.name }?.singleOrNull() ?: "gadscape"
+    }
 
     /** [base]/com/<pkg>/[sub] for this server, e.g. pkgPath(s, "plugins/shops/src/main/kotlin", "plugins/shops"). */
     fun pkgPath(server: File?, base: String, sub: String): String = "$base/com/${pkg(server)}/$sub"

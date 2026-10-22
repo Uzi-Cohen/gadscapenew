@@ -18,7 +18,7 @@ import java.io.File
 import models.Configuration as EditorConfiguration
 
 /**
- * Models and animations, like Mallyyy's rsps-cache-viewer but on this editor's cache (rev 211):
+ * Models and animations, like Mallyyy's rsps-cache-viewer but on this editor's cache (build 241 or rev 211):
  * look at every model, export OBJ / model files, import OBJ or model files as new models or over old ones,
  * recolour and resize; play every animation on a model or an NPC, change its timing, and copy animations
  * between caches as bundles; make and edit items (Items tab). Everything is written to the exported cache, which Deploy
@@ -523,20 +523,28 @@ class ModelAnimWindow(private val log: (String) -> Unit, owner: Stage) {
         } catch (e: Exception) { say("Couldn't import: ${e.message}") }
     }
 
-    /** Copy animations straight from another cache (e.g. a newer OSRS cache) into this one. */
+    /**
+     * Copy animations straight from another cache (rev 211 or build 241, e.g. a newer OSRS cache) into this one: they
+     * are converted to this cache's layout, keyframe sets go to this cache's keyframe archive, and nothing here is
+     * written over (see [CacheEdits.importInto]).
+     */
     private fun fromOtherCache() {
         val d = javafx.stage.DirectoryChooser().apply { title = "Folder with the other cache (main_file_cache.dat2)" }.showDialog(stage) ?: return
         val dat = d.walkTopDown().maxDepth(4).firstOrNull { it.isFile && it.name.equals("main_file_cache.dat2", true) }
-            ?: return say("No 211-style cache (main_file_cache.dat2) in ${d.path}.")
+            ?: return say("No cache (main_file_cache.dat2) in ${d.path}.")
         val ids = askText("Animation ids to copy (e.g. 808, 819, 7000-7010)", "") ?: return
         val list = parseIds(ids)
         if (list.isEmpty()) return say("No ids given.")
+        val keep = Alert(Alert.AlertType.CONFIRMATION, "Is that an Old School cache (Jagex's own animations)?\n\n" +
+                "Yes: the animations keep their ids where they're free here, and ones already here are used as they are.\n" +
+                "No (another server's own animations): they get new ids from GadScape's range (40000 and up).",
+            ButtonType.YES, ButtonType.NO).apply { initOwner(stage); headerText = null }.showAndWait().orElse(ButtonType.NO) == ButtonType.YES
         try {
             val tmp = File.createTempFile("anims", ".zip")
-            val other = CacheLibrary(dat.parentFile.path)
+            // read-only: nothing is ever written into the other cache
+            val other = cache.CacheIO.openReadOnly(dat.parentFile.path)
             val msg = try { CacheEdits.exportBundle(other, list, tmp) } finally { other.close() }
-            val r = CacheEdits.importBundle(tmp, null)
-            tmp.delete()
+            val r = try { CacheEdits.importBundle(tmp, null, keep) } finally { tmp.delete() }
             reopen(); refreshSeqIds(); r.newSeqIds.firstOrNull()?.let { loadSeq(it) }
             say("$msg ${r.message} Undo last change puts the cache back.")
         } catch (e: Exception) { say("Couldn't copy: ${e.message}") }

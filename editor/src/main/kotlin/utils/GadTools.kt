@@ -23,7 +23,11 @@ data class ToolTemplates(
     val deployPort: Int? = 22,
     val deployUser: String? = "root",
     val deployKey: String? = "",
-    val deployRemoteCache: String? = "/opt/gadscape/cache/data/cache",
+    /**
+     * The live server's cache folder. "auto" (the default) = the folder the server runs with: its
+     * -Dgadscape.cache.dir (the build 241 server), else cache/data/cache in its working folder (the server's default).
+     */
+    val deployRemoteCache: String? = GadTools.AUTO,
     val deployService: String? = "gadscape",
     /** Path of the server jar on the server; empty = read it from the systemd service. */
     val deployJar: String? = "",
@@ -33,6 +37,11 @@ data class ToolTemplates(
 
 object GadTools {
     private val gson = GsonBuilder().setPrettyPrinting().create()
+
+    /** deployRemoteCache value: find the live server's cache folder on the server (see [ToolTemplates.deployRemoteCache]). */
+    const val AUTO = "auto"
+    /** The rev 211 server's cache folder, the fixed default before build 241. */
+    const val LEGACY_REMOTE_CACHE = "/opt/gadscape/cache/data/cache"
 
     /** Folder picked in the launcher (the one holding cache\ and xteas.json). */
     val editorDir: File get() = File(CachePaths.cacheDir).absoluteFile.parentFile
@@ -161,7 +170,9 @@ object GadTools {
         val merged = ToolTemplates(
             t.tele ?: d.tele, t.npcSpawn ?: d.npcSpawn, t.objectSpawn ?: d.objectSpawn,
             t.deployHost ?: d.deployHost, t.deployPort ?: d.deployPort, t.deployUser ?: d.deployUser,
-            t.deployKey ?: d.deployKey, t.deployRemoteCache ?: d.deployRemoteCache, t.deployService ?: d.deployService,
+            t.deployKey ?: d.deployKey,
+            // the old fixed default (the rev 211 server's folder) was written into every settings file: it means "auto"
+            (t.deployRemoteCache?.takeUnless { it.trimEnd('/') == LEGACY_REMOTE_CACHE } ?: d.deployRemoteCache), t.deployService ?: d.deployService,
             t.deployJar ?: d.deployJar, t.deployRemoteData ?: d.deployRemoteData
         )
         // write back so new settings show up in the file
@@ -174,9 +185,28 @@ object GadTools {
     /** Regions edited this session. Kept so edits survive moving the view away before exporting. */
     val dirtyRegions: MutableSet<Int> = java.util.Collections.synchronizedSet(HashSet<Int>())
 
-    /** Write every loaded region, plus any region edited this session, into cache-out (auto-backup first). Returns regions written. */
+    /**
+     * What [exportLoaded] did: [regions] written (terrain, and objects unless listed in [objectsNotSaved]);
+     * [objectsNotSaved] = squares whose objects file couldn't be read from the editor's cache (rev 211 without a
+     * working XTEA key, or damaged), so their objects were left in cache-out as they were and objects placed there in
+     * the editor were not saved (cache.loaders.LocationsLoader.objectsUnreadable).
+     */
+    class ExportResult(val regions: Int, val objectsNotSaved: List<Int>) {
+        /** "" when everything was saved, else a sentence (with a leading space) for the save status. */
+        val warning: String get() {
+            if (objectsNotSaved.isEmpty()) return ""
+            val shown = objectsNotSaved.take(6).joinToString(", ") { cache.MapStore.describe(it) } +
+                    (if (objectsNotSaved.size > 6) " and ${objectsNotSaved.size - 6} more" else "")
+            val one = objectsNotSaved.size == 1
+            return " Objects of map square${if (one) "" else "s"} $shown not saved: ${if (one) "its" else "their"} objects " +
+                    "file${if (one) "" else "s"} can't be read (missing or wrong XTEA key in xteas.json, or damaged). " +
+                    "Objects you placed there are not kept; the ones already saved are left as they were."
+        }
+    }
+
+    /** Write every loaded region, plus any region edited this session, into cache-out (auto-backup first). */
     fun exportLoaded(scene: Scene, locationsLoader: cache.loaders.LocationsLoader,
-                     regionLoader: cache.loaders.RegionLoader, xtea: XteaManager): Int {
+                     regionLoader: cache.loaders.RegionLoader, xtea: XteaManager): ExportResult {
         val loaded = loadedRegionIds(scene)
         val ids = LinkedHashSet(loaded)
         synchronized(dirtyRegions) { ids.addAll(dirtyRegions) }
@@ -187,13 +217,16 @@ object GadTools {
         }
         val out = CacheLibrary(ensureExportCache().path)
         var count = 0
+        val notSaved = java.util.TreeSet<Int>()
         try {
             val done = HashSet<Int>()
             for (col in scene.getRegions()) for (sr in col) {
                 if (sr == null) continue
+                val id = sr.regionDefinition.regionId
+                if (locationsLoader.objectsUnreadable(id)) notSaved.add(id)
                 locationsLoader.writeLocations(out, sr.locationsDefinition)
                 regionLoader.writeRegion(out, sr.regionDefinition)
-                done.add(sr.regionDefinition.regionId)
+                done.add(id)
                 count++
             }
             // edited regions that are no longer in view still live in the loaders' caches
@@ -202,13 +235,14 @@ object GadTools {
                 val region = regionLoader.get(id) ?: continue
                 val locs = try { locationsLoader.get(id) } catch (e: Exception) { null }
                 if (locs != null) locationsLoader.writeLocations(out, locs)
+                else if (locationsLoader.objectsUnreadable(id)) notSaved.add(id)
                 regionLoader.writeRegion(out, region)
                 count++
             }
         } finally {
             out.close()
         }
-        return count
+        return ExportResult(count, notSaved.toList()).also { if (it.warning.isNotEmpty()) println(it.warning.trim()) }
     }
 
     fun fill(template: String, values: Map<String, Any>): String {
@@ -257,15 +291,11 @@ object GadTools {
         return out
     }
 
-    private fun readLandscape(lib: CacheLibrary, name: String, keys: IntArray?): Pair<ByteArray, Boolean>? {
-        val withKey = try { lib.data(5, name, keys) } catch (e: Exception) { null }
-        if (withKey != null) return Pair(withKey, keys != null)
-        try { lib.index(5).unCache() } catch (e: Exception) {}
-        val plain = try { lib.data(5, name) } catch (e: Exception) { null } ?: return null
-        return Pair(plain, false)
-    }
-
-    /** Snapshot the terrain + objects of the given regions from cache-out. Returns the backup folder. */
+    /**
+     * Snapshot the terrain + objects of the given regions from cache-out. Returns the backup folder. Files are named
+     * m{x}_{y}.dat / l{x}_{y}.dat in both map layouts (rev 211 named groups, build 241 region groups: cache.MapStore);
+     * the terrain is stored as the cache has it, "l{x}_{y}.enc" marks objects that were XTEA-encrypted (rev 211).
+     */
     fun backupRegions(regionIds: Collection<Int>, xtea: XteaManager, label: String = "manual"): File? {
         if (regionIds.isEmpty()) return null
         val cacheDir = ensureExportCache()
@@ -275,15 +305,14 @@ object GadTools {
         val lib = CacheLibrary(cacheDir.path)
         try {
             for (id in regionIds) {
-                val rx = (id shr 8) and 0xFF
-                val ry = id and 0xFF
-                val m = try { lib.data(5, "m${rx}_${ry}") } catch (e: Exception) { null }
-                if (m != null) File(dir, "m${rx}_${ry}.dat").writeBytes(m)
-                val l = readLandscape(lib, "l${rx}_${ry}", xtea.getKeys(id))
+                val m = cache.MapStore.terrain(lib, id)
+                if (m != null) File(dir, "${cache.MapStore.terrainName(id)}.dat").writeBytes(m)
+                val l = cache.MapStore.locs(lib, id, xtea.getKeys(id))
                 if (l != null) {
-                    File(dir, "l${rx}_${ry}.dat").writeBytes(l.first)
-                    if (l.second) File(dir, "l${rx}_${ry}.enc").writeText("encrypted")
+                    File(dir, "${cache.MapStore.locsName(id)}.dat").writeBytes(l.bytes)
+                    if (l.encrypted) File(dir, "${cache.MapStore.locsName(id)}.enc").writeText("encrypted")
                 }
+                cache.MapStore.release(lib, id)
             }
         } finally {
             lib.close()
@@ -295,20 +324,26 @@ object GadTools {
     fun listBackups(): List<File> =
         backupsDir.listFiles()?.filter { it.isDirectory }?.sortedByDescending { it.name } ?: emptyList()
 
-    /** Write a backup's files back into cache-out. Returns number of files restored. */
+    /**
+     * Write a backup's files back into cache-out, in its map layout (a backup made from a rev 211 cache restores into
+     * a build 241 one and the other way round: the terrain gets or loses the 241 flags byte). Returns number of files
+     * restored.
+     */
     fun restoreBackup(dir: File, xtea: XteaManager): Int {
         val lib = CacheLibrary(ensureExportCache().path)
         var count = 0
         try {
-            dir.listFiles()?.filter { it.name.endsWith(".dat") }?.forEach { f ->
-                val name = f.nameWithoutExtension
+            val keyed = cache.MapStore.keyedByRegion(lib)
+            val nameRx = Regex("^([ml])(\\d+)_(\\d+)$")
+            dir.listFiles()?.filter { it.name.endsWith(".dat") }?.sortedBy { it.name.startsWith("l") }?.forEach { f ->
+                val match = nameRx.find(f.nameWithoutExtension) ?: return@forEach
+                val id = cache.MapStore.regionId(match.groupValues[2].toInt(), match.groupValues[3].toInt())
                 val bytes = f.readBytes()
-                if (name.startsWith("l") && File(dir, "$name.enc").exists()) {
-                    val parts = name.substring(1).split("_")
-                    val id = (parts[0].toInt() shl 8) or parts[1].toInt()
-                    lib.put(5, name, bytes, xtea.getKeys(id))
+                if (match.groupValues[1] == "m") {
+                    cache.MapStore.putTerrain(lib, id, cache.TerrainCodec.forLayout(bytes, keyed))
                 } else {
-                    lib.put(5, name, bytes)
+                    val encrypted = File(dir, "${f.nameWithoutExtension}.enc").exists()
+                    cache.MapStore.putLocs(lib, id, bytes, if (encrypted) xtea.getKeys(id) else null)
                 }
                 count++
             }

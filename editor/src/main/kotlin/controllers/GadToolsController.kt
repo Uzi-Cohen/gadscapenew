@@ -285,9 +285,9 @@ class GadToolsController @Inject constructor(
             items.addAll(
                 MenuItem("Interfaces (view + edit)...").apply { setOnAction { InterfaceEditorWindow(spriteLoader, ::log).show() } },
                 MenuItem("Look at another cache's interfaces...").apply { setOnAction {
-                    val d = javafx.stage.DirectoryChooser().apply { title = "Folder with the other cache (e.g. C:\\GadScape\\OtherCache)" }
+                    val d = javafx.stage.DirectoryChooser().apply { title = "Folder with the other cache (main_file_cache.dat2, or a 317-format main_file_cache.dat)" }
                         .showDialog(tabs.scene?.window) ?: return@setOnAction
-                    // either format: new (.dat2) or old-style (.dat, 317-format clients)
+                    // either format: new (.dat2) or old-style (.dat, 317-format private-server clients)
                     val dat = d.walkTopDown().maxDepth(6).filter { it.isFile && (it.name.equals("main_file_cache.dat2", true) || it.name.equals("main_file_cache.dat", true)) }
                         .sortedBy { it.path.length }.firstOrNull()
                         ?: return@setOnAction status("No game cache found in ${d.path}")
@@ -317,7 +317,7 @@ class GadToolsController @Inject constructor(
                     accelerator = javafx.scene.input.KeyCombination.keyCombination("Ctrl+Shift+I")
                     setOnAction { ModelAnimWindow.show(::log, 2) }
                 },
-                MenuItem("Rebrand the cache (old server names -> GadScape)...").apply { setOnAction { rebrandCache() } },
+                MenuItem("Rebrand the cache to GadScape (old server names)...").apply { setOnAction { rebrandCache() } },
                 MenuItem("Object options + works like (picked object)...").apply {
                     accelerator = javafx.scene.input.KeyCombination.keyCombination("Ctrl+Shift+O")
                     setOnAction { ObjectOptionsWindow.show(gadToolsModel, configuration, objectLoader, locationsLoader, ::log) }
@@ -541,7 +541,10 @@ class GadToolsController @Inject constructor(
         }
     }
 
-    /** Swap the old server name in the cache's text (interfaces, scripts, item / NPC / object names) in cache-out. */
+    /**
+     * Swap the old server names in the cache's text (interfaces, scripts, item / NPC / object names, enums, structs)
+     * for GadScape, in cache-out (either cache format; see [utils.CacheRebrand]).
+     */
     fun rebrandCache() {
         val dir = GadTools.ensureExportCache()
         status("Looking for old server names in the cache's text...")
@@ -549,11 +552,11 @@ class GadToolsController @Inject constructor(
             val hits = try { utils.CacheRebrand.scan(dir) { m -> Platform.runLater { status(m) } } } catch (e: Exception) { e.printStackTrace(); null }
             Platform.runLater {
                 if (hits == null) { status("Couldn't read the cache."); return@runLater }
-                if (hits.isEmpty()) { status("No old server names left in the cache."); return@runLater }
+                if (hits.isEmpty()) { status("No old server names left in the cache's text."); return@runLater }
                 val list = ListView(javafx.collections.FXCollections.observableArrayList(hits)).apply { prefHeight = 360.0; prefWidth = 760.0 }
                 val a = Alert(Alert.AlertType.CONFIRMATION, "", ButtonType.OK, ButtonType.CANCEL).apply {
                     title = "Rebrand the cache"
-                    headerText = "${hits.size} cache file(s) still carry an old server name. Swap them for GadScape (web addresses become gadscape.com)?\n" +
+                    headerText = "${hits.size} cache file(s) still name an old server. Swap the names for GadScape (web addresses become gadscape.com)?\n" +
                             "Changes the exported map cache; deploy the map to send it. Back up first if unsure (Server tab)."
                     dialogPane.content = list
                     isResizable = true
@@ -1880,7 +1883,7 @@ class GadToolsController @Inject constructor(
 
     private fun buildDeploy(): Node {
         val cfg = GadTools.templates()
-        val lblTarget = Label("${cfg.deployUser}@${cfg.deployHost}:${cfg.deployRemoteCache}  (service: ${cfg.deployService})").apply { isWrapText = true }
+        val lblTarget = Label("${cfg.deployUser}@${cfg.deployHost}:${if (cfg.deployRemoteCache.equals(GadTools.AUTO, true)) "(the cache folder the server runs with)" else cfg.deployRemoteCache}  (service: ${cfg.deployService})").apply { isWrapText = true }
 
         val btnTest = Button("Test connection").apply {
             setOnAction { runJob("test") { Deployer(::log).test() } }
@@ -1891,10 +1894,11 @@ class GadToolsController @Inject constructor(
                         "This restarts the ${cfg.deployService} service, so anyone online gets disconnected. The current live cache is backed up on the server first.")) return@setOnAction
                 val ids = GadTools.loadedRegionIds(this@GadToolsController.scene)
                 val n = try { GadTools.exportLoaded(this@GadToolsController.scene, locationsLoader, regionLoader, xteaProvider.get()) } catch (e: Exception) {
-                    e.printStackTrace(); -1
+                    e.printStackTrace(); null
                 }
-                if (n < 0) return@setOnAction status("Export failed, see console. Nothing was deployed.")
-                status("Exported $n of ${ids.size} regions.")
+                if (n == null) return@setOnAction status("Export failed, see console. Nothing was deployed.")
+                status("Exported ${n.regions} of ${ids.size} regions.${n.warning}")
+                if (n.warning.isNotEmpty()) log(n.warning.trim())
                 // NPC spawns are server code, not map: save them, and send them in the same deploy if you want
                 if (utils.NpcSpawns.dirty) try { log(utils.NpcSpawns.save()) } catch (e: Exception) { log("NPC spawns not saved: ${e.message}") }
                 val dir = NpcWindow.serverDir(configuration)
@@ -1955,9 +1959,10 @@ class GadToolsController @Inject constructor(
                 if (!confirm("Save the map, build the server, deploy both?",
                         "Saves your map, builds ${dir.name} on this PC, uploads the map and the server jar, and restarts ${cfg.deployService} once. " +
                         "Both are backed up on the server first; Rollback restores them.")) return@setOnAction
-                val n = try { GadTools.exportLoaded(this@GadToolsController.scene, locationsLoader, regionLoader, xteaProvider.get()) } catch (e: Exception) { e.printStackTrace(); -1 }
-                if (n < 0) return@setOnAction status("Saving the map failed, see console. Nothing was deployed.")
-                status("Saved $n regions.")
+                val n = try { GadTools.exportLoaded(this@GadToolsController.scene, locationsLoader, regionLoader, xteaProvider.get()) } catch (e: Exception) { e.printStackTrace(); null }
+                if (n == null) return@setOnAction status("Saving the map failed, see console. Nothing was deployed.")
+                status("Saved ${n.regions} regions.${n.warning}")
+                if (n.warning.isNotEmpty()) log(n.warning.trim())
                 runJob("deploy-all") {
                     val d = Deployer(::log)
                     val classes = if (d.pendingShops().isEmpty()) null else d.buildShopClasses(dir) ?: return@runJob
@@ -2003,7 +2008,7 @@ class GadToolsController @Inject constructor(
                     val sc = this@GadToolsController.scene
                     try {
                         val n = GadTools.exportLoaded(sc, locationsLoader, regionLoader, xteaProvider.get())
-                        status("Exported $n regions.")
+                        status("Exported ${n.regions} regions.${n.warning}")
                     } catch (e: Exception) {
                         e.printStackTrace(); return@setOnAction status("Export failed: ${e.message}")
                     }
@@ -2038,7 +2043,7 @@ class GadToolsController @Inject constructor(
                 if (withMap || full) {
                     val n = try { GadTools.exportLoaded(this@GadToolsController.scene, locationsLoader, regionLoader, xteaProvider.get()) }
                         catch (e: Exception) { status("Saving before publish failed: ${e.message}"); return@setOnAction }
-                    status("Saved $n regions before publishing.")
+                    status("Saved ${n.regions} regions before publishing.${n.warning}")
                 }
                 runJob("publish") {
                     val dir = java.io.File(GadTools.editorDir, "publish/" + java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(java.util.Date()))

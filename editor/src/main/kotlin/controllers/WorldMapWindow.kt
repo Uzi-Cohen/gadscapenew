@@ -280,10 +280,10 @@ class WorldMapWindow(
             val regions = RegionLoader(lib)
             val locations = LocationsLoader(lib, xtea)
             val ryRange = LAYERS[layerIndex].second..LAYERS[layerIndex].third
+            // the squares the cache lists (rev 211 "m{x}_{y}" groups or build 241 region groups), from the table only
             val found = ArrayList<Int>()
-            for (rx in 0 until 128) for (ry in ryRange) {
-                val has = try { lib.data(5, "m${rx}_${ry}") != null } catch (e: Exception) { false }
-                if (has) found.add((rx shl 8) or ry)
+            for (id in cache.MapStore.squareIds(lib)) {
+                if ((id shr 8) < 128 && (id and 0xFF) in ryRange) found.add(id)
             }
             if (found.isEmpty()) throw IllegalStateException("no map files in this layer")
             val minRx = found.map { it shr 8 }.minOrNull()!!
@@ -305,6 +305,7 @@ class WorldMapWindow(
                 if (def != null) drawRegion(def, px, side, ox, oyTop)
                 val locs = try { mainLocations.cached(id) ?: locations.peek(id) } catch (e: Exception) { null }
                 if (locs != null) drawWalls(locs.locations, px, side, ox, oyTop)
+                cache.MapStore.release(lib, id) // drawn: don't keep the decompressed square
                 done++
                 if (done % 20 == 0) onProgress(done.toDouble() / found.size)
             }
