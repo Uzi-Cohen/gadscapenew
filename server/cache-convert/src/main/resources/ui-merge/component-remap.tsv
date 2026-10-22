@@ -3479,39 +3479,39 @@
 214	skill_guide	23	24	high	12	x,y,transmitop,op1,xmode,anchor,parent,anchored
 214	skill_guide	24	25	high	13	x,y,transmitop,op1,xmode,anchor,parent,anchored
 214	skill_guide	25	30	medium	close	parent
-215	ntk_scores	0	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	1	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	2	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	3	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	4	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	5	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	6	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	7	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	8	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	9	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	10	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	11	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	12	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	13	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	14	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	15	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	16	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	17	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	18	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	19	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	20	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	21	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	22	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	23	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	24	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	25	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	26	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	27	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	28	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	29	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	30	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	31	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
-215	ntk_scores	32	-1	none		ui-merge: 241 reuses the id (ntk_scores); GadScape's 211 interface is unused
+215	ntk_scores	0	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	1	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	2	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	3	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	4	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	5	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	6	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	7	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	8	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	9	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	10	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	11	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	12	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	13	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	14	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	15	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	16	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	17	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	18	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	19	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	20	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	21	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	22	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	23	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	24	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	25	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	26	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	27	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	28	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	29	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	30	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	31	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
+215	ntk_scores	32	-1	none		ui-merge: 241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606
 216	emote	0	0	high	universe	
 216	emote	1	1	high	scrollable	
 216	emote	2	2	high	contents	
@@ -4129,12 +4129,12 @@
 308	cata_boss	6	6	high	altar2	
 308	cata_boss	7	7	high	altar3	
 308	cata_boss	8	8	high	altar4	
-310	gryphon_boss	0	0	high	universe	content: 0.94
-310	gryphon_boss	1	4	high	content	content: 0.85
-310	gryphon_boss	2	5	medium	title	content: 0.81
-310	gryphon_boss	3	6	medium	title_text	content: 0.66
-310	gryphon_boss	4	7	medium	stats	content: 0.79
-310	gryphon_boss	5	-1	low		content: no match
+310	gryphon_boss	0	-1	none		ui-merge: 241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls
+310	gryphon_boss	1	-1	none		ui-merge: 241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls
+310	gryphon_boss	2	-1	none		ui-merge: 241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls
+310	gryphon_boss	3	-1	none		ui-merge: 241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls
+310	gryphon_boss	4	-1	none		ui-merge: 241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls
+310	gryphon_boss	5	-1	none		ui-merge: 241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls
 311	league_combat_mastery	0	0	high	infinity	
 311	league_combat_mastery	1	-1	low		unmatched
 311	league_combat_mastery	2	-1	low		unmatched
@@ -4630,19 +4630,19 @@
 335	trademain	31	31	high	title	
 335	trademain	32	32	high	tooltip	
 336	tradeside	0	0	high	side_layer	
-345	sailing_intro_hud	0	0	high	universe	content: 0.89
-345	sailing_intro_hud	1	-1	low		content: no match
-345	sailing_intro_hud	2	1	medium	dodger_hints	content: 0.94, parent differs
-345	sailing_intro_hud	3	-1	low		content: no match
-345	sailing_intro_hud	4	2	medium	hint_layer	content: 0.79
-345	sailing_intro_hud	5	-1	low		content: no match
-345	sailing_intro_hud	6	-1	low		content: no match
-345	sailing_intro_hud	7	-1	low		content: no match
-345	sailing_intro_hud	8	-1	low		content: no match
-345	sailing_intro_hud	9	6	low	hint_text_1	content: 0.57
-345	sailing_intro_hud	10	7	medium	hint_text_2	content: 0.74
-345	sailing_intro_hud	11	-1	low		content: no match
-345	sailing_intro_hud	12	-1	low		content: no match
+345	sailing_intro_hud	0	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	1	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	2	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	3	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	4	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	5	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	6	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	7	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	8	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	9	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	10	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	11	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
+345	sailing_intro_hud	12	-1	none		ui-merge: 241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls
 363	tob_scoreboard	0	0	high	universe	
 363	tob_scoreboard	1	1	high	contents	
 363	tob_scoreboard	2	2	high	frame	
@@ -5238,20 +5238,20 @@
 399	questlist	9	9	high	completed	
 399	questlist	10	10	high	questpoints	
 399	questlist	11	11	high	settings_button	
-400	trr_display	0	0	medium	universe	content: 0.78
-400	trr_display	1	1	high	contents	content: 0.91
-400	trr_display	2	-1	low		content: no match
-400	trr_display	3	2	high	frame	content: 0.95
-400	trr_display	4	3	medium	title	content: 0.75
-400	trr_display	5	4	medium	main	content: 0.76
-400	trr_display	6	-1	low		content: no match
-400	trr_display	7	5	medium	left	content: 0.88, parent differs
-400	trr_display	8	-1	low		content: no match
-400	trr_display	9	-1	low		content: no match
-400	trr_display	10	6	medium	model_layer	content: 0.75
-400	trr_display	11	9	medium	right	content: 0.91, parent differs
-400	trr_display	12	-1	low		content: no match
-400	trr_display	13	10	medium	text_layer	content: 0.75
+400	trr_display	0	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	1	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	2	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	3	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	4	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	5	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	6	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	7	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	8	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	9	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	10	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	11	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	12	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
+400	trr_display	13	-1	none		ui-merge: 241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls
 402	ge_collect	0	0	high	universe	onload,geometry-match
 402	ge_collect	1	1	high	container	
 402	ge_collect	2	2	high	frame	
@@ -7004,40 +7004,40 @@
 621	collection	91	98	high	gadscape_91	ui-merge: GadScape component appended
 621	collection	92	99	high	gadscape_92	ui-merge: GadScape component appended
 621	collection	93	100	high	gadscape_93	ui-merge: GadScape component appended
-629	side_journal	0	0	high	universe	onload,geometry-match
-629	side_journal	1	1	high	tabs	
-629	side_journal	2	-1	low		unmatched
-629	side_journal	3	2	high	summary_list	
-629	side_journal	4	4	high	tab_1_1	
-629	side_journal	5	6	high	tab_1_2	
-629	side_journal	6	8	high	tab_1_3	
-629	side_journal	7	9	high	tab_icon_1	
-629	side_journal	8	10	high	quest_list	
-629	side_journal	9	12	high	tab_2_1	
-629	side_journal	10	14	high	tab_2_2	
-629	side_journal	11	16	high	tab_2_3	
-629	side_journal	12	17	high	tab_icon_2	
-629	side_journal	13	18	high	task_list	
-629	side_journal	14	20	high	tab_3_1	ui-merge override (by role)
-629	side_journal	15	22	high	tab_3_2	ui-merge override (by role)
-629	side_journal	16	24	high	tab_3_3	ui-merge override (by role)
-629	side_journal	17	25	high	tab_icon_3	ui-merge override (by role)
-629	side_journal	18	-1	none		ui-merge override (by role)
-629	side_journal	19	-1	none		ui-merge override (by role)
-629	side_journal	20	-1	none		ui-merge override (by role)
-629	side_journal	21	-1	none		ui-merge override (by role)
-629	side_journal	22	-1	none		ui-merge override (by role)
-629	side_journal	23	26	high	adventurepath_list	ui-merge override (by role)
-629	side_journal	24	28	high	tab_4_1	ui-merge override (by role)
-629	side_journal	25	30	high	tab_4_2	ui-merge override (by role)
-629	side_journal	26	32	high	tab_4_3	ui-merge override (by role)
-629	side_journal	27	33	high	tab_icon_4	ui-merge override (by role)
-629	side_journal	28	34	high	league_list	ui-merge override (by role)
-629	side_journal	29	37	high	tab_5_1	ui-merge override (by role)
-629	side_journal	30	39	high	tab_5_2	ui-merge override (by role)
-629	side_journal	31	41	high	tab_5_3	ui-merge override (by role)
-629	side_journal	32	42	high	tab_icon_5	ui-merge override (by role)
-629	side_journal	33	43	high	tab_container	ui-merge override (by role)
+629	side_journal	0	0	high	universe	table
+629	side_journal	1	1	high	tabs	table
+629	side_journal	2	-1	low		table
+629	side_journal	3	2	high	summary_list	table
+629	side_journal	4	4	high	tab_1_1	table
+629	side_journal	5	6	high	tab_1_2	table
+629	side_journal	6	8	high	tab_1_3	table
+629	side_journal	7	9	high	tab_icon_1	table
+629	side_journal	8	10	high	quest_list	table
+629	side_journal	9	12	high	tab_2_1	table
+629	side_journal	10	14	high	tab_2_2	table
+629	side_journal	11	16	high	tab_2_3	table
+629	side_journal	12	17	high	tab_icon_2	table
+629	side_journal	13	18	high	task_list	table
+629	side_journal	14	20	high	tab_3_1	ui-merge override
+629	side_journal	15	22	high	tab_3_2	ui-merge override
+629	side_journal	16	24	high	tab_3_3	ui-merge override
+629	side_journal	17	25	high	tab_icon_3	ui-merge override
+629	side_journal	18	26	high	adventurepath_list	ui-merge override
+629	side_journal	19	28	high	tab_4_1	ui-merge override
+629	side_journal	20	30	high	tab_4_2	ui-merge override
+629	side_journal	21	32	high	tab_4_3	ui-merge override
+629	side_journal	22	33	high	tab_icon_4	ui-merge override
+629	side_journal	23	-1	none		ui-merge override
+629	side_journal	24	-1	none		ui-merge override
+629	side_journal	25	-1	none		ui-merge override
+629	side_journal	26	-1	none		ui-merge override
+629	side_journal	27	-1	none		ui-merge override
+629	side_journal	28	34	high	league_list	ui-merge override
+629	side_journal	29	37	high	tab_5_1	ui-merge override
+629	side_journal	30	39	high	tab_5_2	ui-merge override
+629	side_journal	31	41	high	tab_5_3	ui-merge override
+629	side_journal	32	42	high	tab_icon_5	ui-merge override
+629	side_journal	33	43	high	tab_container	ui-merge override
 630	seed_vault_deposit	0	1	medium	locked_slot	parent
 630	seed_vault_deposit	1	2	low	inv	onload,parent
 631	seed_vault	0	0	high	infinity	

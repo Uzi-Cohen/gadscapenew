@@ -103,7 +103,7 @@ The reserved ranges come from the spec, corrected where the 241 client or protoc
 | sprite | 20000-29999 | |
 | dbrow | 60000-64999 | |
 | dbtable | 4000-4999 | added; used only when a user table id clashes with BASE (none today) |
-| model | BASE max + 1 to 65535 (62776-65535 on 2746) | not 100000-199999: the 241 client's JS5 requests and replies carry 16-bit group ids, so model 100000 would be requested as sprite group 34464. `Ctx.open` sets the range from BASE (`Kind.modelRange`). After this build 1,421 ids remain, and the next stock cache needs them too. |
+| model | BASE max + 1 to 65535 (62776-65535 on 2746) | not 100000-199999: the 241 client's JS5 requests and replies carry 16-bit group ids, so model 100000 would be requested as sprite group 34464. `Ctx.open` sets the range from BASE (`Kind.modelRange`). After this build 1,758 ids remain, and the next stock cache needs them too. |
 | loc | 64500-65534 | not 70000-79999: loc ids are u16 on the 241 wire (rsprot `OpLoc1V2Decoder` g2, `LocAddChangeV2Encoder` p2) and in multiloc transform lists |
 | varbit | 30000-34999 | |
 | varp | 9000-9999 | |
@@ -123,10 +123,20 @@ the allocator skips those ids. idmap.json has this shape:
 ```json
 {"seq": {"15000": 40000}, "frame": {}, "...": {},
  "_reasons": {"seq": {"15000": "raid seq clash"}}, "_aliases": {"model": [58013]},
- "_ranges": {"seq": [40000, 49999]}, "_format": 1}
+ "_vanilla": {"seq": [189, 195], "model": [292]}, "_new": {"script": {"adapter:98": 47999}, "dbrow": {"slayer-reward:53": 60587}},
+ "_newReasons": {"script": {"adapter:98": "..."}}, "_ranges": {"seq": [40000, 49999]}, "_format": 1}
 ```
 
 Every kind key is always present. Keys that start with `_` are metadata.
+
+* **`_vanilla`** lists relocations that are *ports of a vanilla 211 entry Jagex reused or re-rigged by 241*: model 292
+  (an NPC torso on 211, the Cat mask in 241), seqs 189/195 (the gnome walk/stand on 211, player emotes on framemap 0
+  in 241), GNOME_CATCH 200 (re-rigged onto framemap 2402). GadScape content that used the 211 entry was rewritten to the
+  copy; stock 241 content keeps the id. The server applies these entries only where its code means the 211 animation or
+  model on GadScape's own (211-era) content, never for stock content.
+* **`_new`** lists ids the build created that replace nothing, by name: the clientscript adapters for vanilla procs
+  whose 241 signature changed (`adapter:TARGET`, allocated from the top of the script range) and GadScape's slayer
+  reward rows (`slayer-reward:INDEX`). `IdMap.allocate` never hands their ids out again.
 
 How the kinds are keyed, and what the server rewrite must know:
 
@@ -145,6 +155,13 @@ How the kinds are keyed, and what the server rewrite must know:
 * **`script`, `interface`**: custom UI at ids BASE uses (10034-10121 -> 47000+, interface 866 -> 5200). The ports of
   211 vanilla scripts (2122 -> 47034, 2174 -> 47035) apply only to server calls that mean the 211 behaviour.
 * **`loc`**: user locs that BASE squares place (64500+). The map squares written by `maps` already use the new ids.
+
+**Rev-225 imports** (`core.Rev225`, resource `config/rev225.tsv`): GadScape's DataMigration copied Jagex content from
+rev 225 (OpenRS2 1943) into its 211 cache. Those entries are absent from VAN211, so they look user-added, but BASE holds
+Jagex's newer version: the converter treats them as vanilla (BASE's entry, BASE's models), and re-applies a user edit of
+one onto BASE's entry (Duke Sucellus 12166 "Attack", locs 47567/47568 "Take"). The table is generated from the rev-225
+evidence cache by `dev/run.sh config.Rev225Gen` and keyed by the CRC of the USER bytes, so a later user edit makes the
+entry user content again. `--rev225.table=FILE|none` replaces it.
 
 **`Report`** writes report.json. Log one entry per decision:
 
@@ -231,21 +248,23 @@ before the steps that write references to those ids, and those steps map the ref
 | 3 | `fonts` | `sprite` | user fonts (all vanilla today: BASE's) | |
 | 4 | `sprites` | `sprite` | user sprites; GadScape art at ids BASE's UI uses moves to 20000+; edited vanilla sprites are merged frame by frame | `--sprites.sameThing` |
 | 5 | `db-plan` | `db` | user dbrows at BASE ids (whole tables) move to 60000+ in order | `--db.tableRange` |
-| 6 | `models` | `model` | user models; clashes move to the top of the model range or onto an identical twin | `--models-range=LO-HI`, `--models-pack=top\|bottom`, `--models-dedup`, `--models-changed=auto\|relocate\|override`, `--models-prev-idmap=FILE`, `--models-census` |
+| 6 | `models` | `model` | user models; clashes move to the top of the model range or onto an identical twin; vanilla / rev-225 models GadScape content uses whose id Jagex reused are ported (`_vanilla`); a user edit of a vanilla model that BASE-only content also uses moves, its 211-era users follow it | `--models-range=LO-HI`, `--models-pack=top\|bottom`, `--models-dedup`, `--models-changed=auto\|relocate\|override`, `--models-prev-idmap=FILE`, `--models-census` |
 | 7 | `configs-plan` | `config` | UI configs at BASE ids, Raids 4 protected ids, GadScape vars without a USER definition | `--configs.range.KIND=LO-HI`, `--configs.portRemovedVanilla`, `--configs.serverVarps` |
 | 8 | `maps-plan` | `map` | user locs that BASE squares place move to 64500+ | `--maps.locRange=LO-HI` |
-| 9 | `anim` | `anim` | seqs, frames (archive 0), framemaps (1), keyframes (22); BASE's groups never change; hand objs follow configs-plan | `--anim.takeBase=IDS`, `--anim.portRemovedVanilla`, `--anim.forcePort` |
+| 9 | `anim` | `anim` | seqs, frames (archive 0), framemaps (1), keyframes (22); BASE's groups never change; hand objs follow configs-plan; vanilla seqs whose BASE record animates another skeleton are ported (`_vanilla`); user frames byte-identical to BASE frames keep BASE's framemap | `--anim.takeBase=IDS`, `--anim.portRemovedVanilla`, `--anim.portRiggedVanilla`, `--anim.forcePort` |
 | 10 | `configs` | `config` | archive 2 except seqs: vanilla = BASE, user entries converted, references mapped, three-way merges, enum unions, varc/varp slots | `--configs.varcSlots`, `--configs.varpSlots`, `--configs.lossy`, `--configs.enumRemovals` |
 | 10b | `config-sprites` | `sprite` | vanilla 211 sprites BASE deleted that the written configs still name are copied from USER (enum 11001 -> sprite 4567) | |
 | 11 | `mapscene` | `sprite` | mapscene sheet: BASE's plus custom frames user locs use (none today) | `--mapscene.merge=auto\|never` |
 | 12 | `ui-merge` | `uimerge` | the 14 interfaces and 31 scripts the user modified, three-way merged (data in `resources/ui-merge`) | `--uimerge.data=DIR` |
 | 13 | `ui-convert` | `ui` | GadScape's own interfaces and scripts converted and written at the ids ui-relocate chose | `--ui.copyAssets`, `--ui.componentRemap=TSV`, `--ui.fixups` |
 | 14 | `maps` | `map` | user squares from the stored allow-list, loc ids mapped | `--maps.mode=merge\|overlay` |
+| 14b | `db-slayer-rewards` | `db` | GadScape's own slayer rewards (USER enum 834 keys VAN211 lacks: 'Slayer Statues') as rows of 241's reward table 117, reward id from 95 down | |
 | 15 | `db-index` | `db` | archive 21 rebuilt from the rows written | `--db.syncObjCopies` |
 | 16 | `rebrand` | `rebrand` | branding replacement table applied to config, interface and script strings (no table yet: no-op) | `--rebrand.table=FILE\|none` |
+| 16b | `models-prune` | `model` | vanilla model ports nothing in the finished output references are removed again (id freed, mapping dropped) | `--models.prune` |
 | 17-19 | `configs-oracle`, `configs-refcheck`, `configs-expect` | `config` | the server's strict decoders on every written entry; references resolve; audit expectations | |
-| 20 | `models-refcheck` | `model` | every model reference resolves; nothing still points at a moved model | |
-| 21 | `anim-refcheck` | `anim` | frames/framemaps/keyframes resolve, BASE's animation data unchanged, BOSS-X1 lists, NPC/spotanim seqs | |
+| 20 | `models-refcheck` | `model` | every model reference resolves; nothing still points at a moved model; user entries written with their own model lists show the models the user saw (decode-equal) | |
+| 21 | `anim-refcheck` | `anim` | frames/framemaps/keyframes resolve, BASE's animation data unchanged, BOSS-X1 lists, NPC/spotanim seqs; user NPC/spotanim seqs animate the skeleton they had in USER | |
 | 22 | `ui-check` | `ui` | custom scripts/interfaces read back; gosub targets and arg counts; assets exist | |
 | 23 | `verify` | `verify` | the whole-cache verifier with BASE as baseline (refs, anims, interfaces, maps, scripts, brand, strict) | `--verify.checks=a,b`, `--verify.oracle`, `--brand-errors` |
 

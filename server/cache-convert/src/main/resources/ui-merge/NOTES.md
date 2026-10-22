@@ -39,7 +39,7 @@ change the specs and regenerate; `UiMergeMain check` fails when the stored data 
 | interface | 476 | user | GadScape replaced br_settings (6 components) with its own duel confirmation screen (84 components); BASE's 476 is byte-identical to 211's... |
 | interface | 548 | merged | fixed toplevel: same third op on the spellbook side stone |
 | interface | 621 | merged | collection log: GadScape's 'Log Completion Rewards' panel (11 components) and two resized scroll layers |
-| interface | 629 | base | not re-applied: GadScape's journal tab bar ('Game Noticeboard' on 211's Kourend Favour tab, 'Events' on the Leagues tab, quests and adven... |
+| interface | 629 | merged | journal tabs: the quest list hidden, 'Game Noticeboard' (icon sprite 4524) on the Adventure Paths tab 629:26 that took 211's Kourend Favo... |
 | script | 37 | base | scrollbar_vertical_doscroll: USER's version is an older vanilla revision (no saved scroll positions for varcs 1082-1084, horizontal scrol... |
 | script | 205 | user | duel_initworn: GadScape's version fills its own duel screen 2000 (equipment slots) |
 | script | 336 | user | godwars_hideshow: the GWD kill-count overlay shows when the server sets varp 3625 (GadScape's GWD instances) instead of checking coordina... |
@@ -66,7 +66,7 @@ change the specs and regenerate; `UiMergeMain check` fails when the stored data 
 | script | 2186 | user | spectator_keypress: GadScape's tournament spectator keys |
 | script | 2200 | user | diary_completion_info: GadScape's achievement diary sizes |
 | script | 2735 | merged | collection_category_count: GadScape's kill counts: varp 2048 (the count the server sends for the open category) for Callisto, Venenatis a... |
-| script | 3178 | base | side_journal_additional: not re-applied: GadScape rewrote the journal tab bar (Character Summary, Achievement Diaries, 'Game Noticeboard'... |
+| script | 3178 | merged | side_journal_additional: GadScape's journal tab bar: Character Summary, Achievement Diaries, 'Events' (the server's Server Events) and 'G... |
 | script | 3310 | merged | summary_sidepanel_draw: GadScape's 'Completionist overview' entry (sprite 10037, varbits 6347/11877, onOp hook 10707) in the character su... |
 | script | 4073 | user | summary_diary_total: GadScape's diary totals |
 | script | 4104 | base | emote_set_graphic: USER's version is an older revision without the Relic-unlock (emote 50) variants; GadScape's emotes take their graphic... |
@@ -74,8 +74,9 @@ change the specs and regenerate; `UiMergeMain check` fails when the stored data 
 
 ## Open issues (not re-applied, or needing work elsewhere)
 
-- **Journal tabs (629 + scripts 2797/3178)**: GadScape's tab bar (Character Summary, Achievement Diaries, 'Game Noticeboard' on 211's Kourend Favour tab 629:18, 'Server Events' on the Leagues tab 629:28 relabelled 'Events' by 3178; quests and adventure paths hidden) is not re-applied. 241 removed the Kourend tab, moved Adventure Paths into its slot (629:26), added a backing sprite per tab and passes 44 components to 3178 (211: 33). Port plan: put 'Game Noticeboard' on 629:26 and 'Server Events' on 629:34, re-do USER 3178's layout (4 tabs, 42 px) against 241's argument list (2797 passes 629:0's onLoad list unchanged), and check varbit 8168's tab values (server: summary 0, diaries 2, noticeboard 3, events 5). Server: JournalHeaderTabInterface ids 3/8/13/18/28 -> 2/10/18/26/34.
-- **Slayer rewards (414, 423, 426, 1090, 1092)**: GadScape's 53rd slayer reward (211 enum 834 index 53) needs a dbrow in dbtable 117 on 241.
+- **Journal tabs (629 + 3178)**: GadScape's tab bar is re-applied on 241 (quest list hidden, 'Game Noticeboard' on the Adventure Paths tab 629:26 that took 211's Kourend Favour slot, 'Events' on the Leagues tab 629:34, four 44 px tabs). Server side: JournalHeaderTabInterface components 3/13/18/28 -> 2/18/26/34 (component-remap.tsv; the quest tab 8 -> 10 is hidden), and InterfaceHandler.Journal.SERVER_EVENTS should send 4 (241's Leagues slot): 3178 reads the old 5 as 4, so both work meanwhile.
+- **Slayer rewards (414, 423, 426, 1090, 1092)**: GadScape's 53rd reward 'Slayer Statues' (211 enum 834 index 53) is a row of 241's reward table 117 (step db-slayer-rewards, idmap.json _new dbrow 'slayer-reward:53') with reward id 95 (varp 5587 bit 31), since 241 gave id 53 to 'Revenenenenenants'. The server's Slayer unlocks (a 64-bit set over the 211 indices, varps 1076/1344) must unlock it as reward id 95; 211 indices 0-52 are 241's ids 0-52.
+- **Poll screens (310, 345, 400)**: 241 reuses these ids for other interfaces (gryphon_boss, sailing_intro_hud, trr_display) and has no polls; component-remap.tsv maps them to -1. PollManager needs its own copies of the 211 screens (like 215 -> 1606) or has to be disabled on 241.
 - **Emotes (699/701/702)** follow the config merge of enums 1000-1002 (USER wins keys 52-57, so 241's Fortis Salute, Sit down and Crab dance are not in the list). If the emote enums are ever merged differently (e.g. GadScape's emotes moved after 241's), the counts (57) and the switch keys 52-57 in these recipes must follow.
 - **218 home teleport ops** are placed on the home teleports (6/109/153) although GadScape's 211 edit sat two components early (Kourend home teleport, Ghorrock teleport, Spin Flax); check in game that 'Lumbridge' / 'Lunar Isle' / 'Arceuus' reach SpellbookTeleport.
 - **Makeover (205)**: the pronoun row (241-only) is hidden with the body type buttons; the server's MAKEOVER handler still uses 211 ids (see component-remap.tsv: 211 2/6 -> 241 2/8).
@@ -221,7 +222,30 @@ Added:
 
 ### Interface 629 (side_journal)
 
-VAN211 34, USER 34, BASE 44 components. **base**: not re-applied: GadScape's journal tab bar ('Game Noticeboard' on 211's Kourend Favour tab, 'Events' on the Leagues tab, quests and adventure paths hidden, wider tabs) is laid out by script 3178, and 241 removed the Kourend tab and put Adventure Paths in its slot; the interface and scripts 2797/3178 have to be ported together (NOTES.md, open issues). BASE's 629 is kept meanwhile.
+VAN211 34, USER 34, BASE 44 components. **merge**: journal tabs: the quest list hidden, 'Game Noticeboard' (icon sprite 4524) on the Adventure Paths tab 629:26 that took 211's Kourend Favour slot, 'Events' on the Leagues tab 629:34; script 3178 lays out the four tabs.
+
+- the tab widths GadScape set on 211 (629:3 37 px, the middle sprites 629:5/15 relative 40 px) are not applied: 241 sizes each tab's sprites from the tab width (script 2596), and script 3178 sets the tab widths (44 px, 241's four-tab bar)
+
+- varbit 8168 tab values: summary 0, diaries 2, Game Noticeboard 3 (241's Adventure Paths slot, as on 211's Kourend slot), Events 4 (241's Leagues slot; 211's was 5, which 3178 now reads as 4). Server: JournalHeaderTabInterface 3/13/18/28 -> 2/18/26/34 (component-remap.tsv) and Journal.SERVER_EVENTS 5 -> 4
+
+Re-applied:
+- 629:8 -> BASE 629:10 hidden: 0 -> 1
+- 629:22 -> BASE 629:33 y: 1 -> 4
+- 629:22 -> BASE 629:33 width: 18 -> 13
+- 629:22 -> BASE 629:33 height: 18 -> 13
+
+Conflicts:
+- 629:18 -> BASE 629:26 ops: ["Kourend Favour"] -> ["Game Noticeboard"]: BASE changed the same op slot (op1 BASE "Adventure Paths" / USER "Game Noticeboard"): USER op used
+- 629:22 -> BASE 629:33 sprite: 1297 -> 4524: BASE changed it too (2219): USER value used
+- 629:32 -> BASE 629:42 sprite: 3610 -> 3609: BASE changed it too (3611): USER value used
+
+Not re-applied:
+- 629:3 width: skipped by the merge spec
+- 629:5 width: skipped by the merge spec
+- 629:5 widthMode: skipped by the merge spec
+- 629:15 width: skipped by the merge spec
+- 629:15 widthMode: skipped by the merge spec
+- 629:23 [hidden]: no BASE counterpart (ui-merge override)
 
 ## Clientscripts
 
@@ -251,15 +275,15 @@ Re-applied onto BASE:
 
 ### Script 414 (slayer_rewards_unlock_confirm)
 
-VAN211 322, USER 338, BASE 276 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward needs a dbrow in table 117 (config/dbrow work), not a script change.
+VAN211 322, USER 338, BASE 276 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward is a row of table 117 (step db-slayer-rewards: 'Slayer Statues', reward id 95), not a script change.
 
 ### Script 423 (slayer_rewards_tasks_canceltask)
 
-VAN211 194, USER 194, BASE 184 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward needs a dbrow in table 117 (config/dbrow work), not a script change.
+VAN211 194, USER 194, BASE 184 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward is a row of table 117 (step db-slayer-rewards: 'Slayer Statues', reward id 95), not a script change.
 
 ### Script 426 (slayer_rewards_tasks_blocked_draw)
 
-VAN211 269, USER 269, BASE 275 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward needs a dbrow in table 117 (config/dbrow work), not a script change.
+VAN211 269, USER 269, BASE 275 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward is a row of table 117 (step db-slayer-rewards: 'Slayer Statues', reward id 95), not a script change.
 
 ### Script 687 (lunar_contact_npc_draw (211: ironman setup))
 
@@ -318,11 +342,11 @@ Re-applied onto BASE:
 
 ### Script 1090 (slayer_rewards_unlock_draw)
 
-VAN211 468, USER 488, BASE 561 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward needs a dbrow in table 117 (config/dbrow work), not a script change.
+VAN211 468, USER 488, BASE 561 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward is a row of table 117 (step db-slayer-rewards: 'Slayer Statues', reward id 95), not a script change.
 
 ### Script 1092 (slayer_rewards_etcetera_draw)
 
-VAN211 218, USER 258, BASE 218 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward needs a dbrow in table 117 (config/dbrow work), not a script change.
+VAN211 218, USER 258, BASE 218 instructions. BASE changed the script since 211. **base**: 241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the 211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward is a row of table 117 (step db-slayer-rewards: 'Slayer Statues', reward id 95), not a script change.
 
 ### Script 1261 (deadman_tournament_fogcolour: GadScape's tournament fog (other components and colours when varbit 1497 = 2))
 
@@ -383,7 +407,11 @@ Re-applied onto BASE:
 
 ### Script 3178 (side_journal_additional)
 
-VAN211 525, USER 139, BASE 483 instructions. BASE changed the script since 211. **base**: not re-applied: GadScape rewrote the journal tab bar (Character Summary, Achievement Diaries, 'Game Noticeboard' on 211's Kourend Favour tab, 'Events' on the Leagues tab; quests and adventure paths hidden). 241 removed the Kourend tab, put Adventure Paths in its slot and passes 44 components (211: 33), and varbit 8168's tab values changed with it; porting needs 629, 2797 and 3178 together plus the server's JournalHeaderTabInterface ids (see NOTES.md, open issues). BASE's journal is kept meanwhile.
+VAN211 525, USER 139, BASE 483 instructions. BASE changed the script since 211. **merged**: GadScape's journal tab bar: Character Summary, Achievement Diaries, 'Events' (the server's Server Events) and 'Game Noticeboard', no quest list. On 211 it sat on the Kourend Favour tab (noticeboard, tab value 3) and the Leagues tab (events, value 5); 241 removed the Kourend tab and put Adventure Paths (value 3) in its slot, so the noticeboard takes the Adventure Paths tab 629:26 and the events the Leagues tab 629:34 (value 4), laid out like 241's own four-tab bar.
+
+Re-applied onto BASE:
+- inserted 196 instruction(s) before BASE instruction 337: GadScape's journal tab bar on the normal world branch (196 instructions; USER's 211 layout on 241's arguments, hooks copied from BASE's Leagues and Adventure Paths branches); it falls through into BASE's shared tail
+- removed BASE instructions 533..609 (77): BASE's default-branch layout (quest list, three tabs of 58 px; Adventure Paths and Leagues tabs hidden), replaced by GadScape's
 
 ### Script 3310 (summary_sidepanel_draw)
 

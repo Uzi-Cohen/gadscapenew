@@ -107,6 +107,32 @@ public final class ScriptEdit {
         log.add("instruction " + at + " (" + CsText.name(in.op) + ") operand " + old + " -> " + value + ": " + why);
     }
 
+    /**
+     * Removes BASE instructions [from, to) that GadScape's edit replaced and nothing reaches any more: no jump or switch
+     * case outside the range may land inside it (one landing on {@code from} is refused too; insert the replacement
+     * before {@code from} first, so those land on it). Jumps inside the range go with it.
+     */
+    public void remove(int from, int to, String why) {
+        List<Cs2.Ins> code = doc.s.code;
+        if (from < 0 || to > code.size() || from >= to) throw new IllegalStateException("script " + doc.id + ": bad range " + from + ".." + to);
+        for (int k = 0; k < code.size(); k++) {
+            if (k >= from && k < to) continue;
+            Cs2.Ins in = code.get(k);
+            if (Cs2.BRANCH.contains(in.op)) {
+                int t = k + 1 + in.i;
+                if (t >= from && t < to) throw new IllegalStateException("script " + doc.id + ": instruction " + k + " jumps into the removed range " + from + ".." + to);
+            } else if (in.op == Cs2.SWITCH) {
+                for (int off : doc.s.switches.get(in.i).values()) {
+                    int t = k + 1 + off;
+                    if (t >= from && t < to) throw new IllegalStateException("script " + doc.id + ": switch at " + k + " lands in the removed range " + from + ".." + to);
+                }
+            }
+        }
+        for (int k = from; k < to; k++) if (code.get(k).op == Cs2.SWITCH) throw new IllegalStateException("script " + doc.id + ": cannot remove a switch (its table would stay)");
+        for (int k = from; k < to; k++) Cs2.splice(doc.s, from, new ArrayList<>());
+        log.add("removed BASE instructions " + from + ".." + (to - 1) + " (" + (to - from) + "): " + why);
+    }
+
     /** Appends a block after the last instruction (reached only through jumps or switch cases); returns its first index. */
     public int append(List<Cs2.Ins> ins, String why) {
         int at = doc.s.code.size();

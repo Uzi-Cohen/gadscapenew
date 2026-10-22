@@ -168,7 +168,7 @@ public final class ModelsStep implements Step {
                 if (changedMode.equals("override") || baseUnchanged) {
                     // decided after the loop: written in place unless BASE content added after 211 uses the model too
                     overrideCand.put(id, conv);
-                    overrideWhy.put(id, why + (baseUnchanged ? "" : "; forced by --models-changed=override"));
+                    overrideWhy.put(id, "differs from BASE's copy in " + why + (baseUnchanged ? "" : "; forced by --models-changed=override"));
                     continue;
                 }
             }
