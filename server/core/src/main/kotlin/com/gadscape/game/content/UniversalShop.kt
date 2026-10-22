@@ -229,6 +229,28 @@ object UniversalShop {
         }
     }
 
+    /**
+     * What [category] pays, in its own currency, for one [itemId], or -1 when it doesn't buy the item.
+     *
+     * A category doesn't buy an item that another category sells: otherwise the shop turns one currency into another
+     * (the Slayer tab paid 275 slayer points for Darklight, 1688 coins in the Melee tab; 500 for the rune pouch and herb
+     * sack, 35/24 vote points in the Vote tab; 5 for 11738, 1 vote point).
+     */
+    fun sellPrice(category: UniversalShopCategory, itemId: Int): Int {
+        val row = category.table.items.firstOrNull { it.id == itemId } ?: return -1
+        if (!row.canSell || soldByAnotherCategory(category, itemId)) return -1
+        return row.sellPrice
+    }
+
+    private fun soldByAnotherCategory(category: UniversalShopCategory, itemId: Int): Boolean =
+        Categories.any { other ->
+            other.uniqueIndex != category.uniqueIndex && (
+                other.table.items.any { it.id == itemId && it.canBuy } ||
+                    // The purchase side reads the cache tables (1001-1014): check them too, in case they gain rows.
+                    runCatching { DBRowDefinition.findItemOnTable(other.tableId, itemId) }.getOrDefault(false)
+                )
+        }
+
 
     fun defaultBuyLocation(itemId: Int): Pair<Int, Int> {
         if(cachedMappings.contains(itemId))

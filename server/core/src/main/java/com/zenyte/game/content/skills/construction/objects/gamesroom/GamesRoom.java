@@ -56,22 +56,39 @@ public final class GamesRoom implements ObjectInteraction {
                 player.setForceTalk(score == 0 ? "Missed!" : score == 50 ? "Bullseye!" : "I scored " + score + "!");
             }, 2);
         } else if (id == 13390 || id == 13391) {
-            World.sendObjectAnimation(object, JESTER_OUT);
-            spawnTemporary(construction, JESTER_NPC, object, JOKES[Utils.random(JOKES.length - 1)]);
+            if (spawnTemporary(construction, JESTER_NPC, object, JOKES[Utils.random(JOKES.length - 1)])) {
+                World.sendObjectAnimation(object, JESTER_OUT);
+            } else {
+                player.sendMessage("Jacky Jester is already out of his box.");
+            }
         } else if (id >= 13395 && id <= 13397) {
-            spawnTemporary(construction, ELEMENTAL_BALANCE_NPC, object, null);
-            player.sendMessage("The elemental balance appears. Cast elemental spells at it to keep it in balance.");
+            if (spawnTemporary(construction, ELEMENTAL_BALANCE_NPC, object, null)) {
+                player.sendMessage("The elemental balance appears. Cast elemental spells at it to keep it in balance.");
+            } else {
+                player.sendMessage("The elemental balance is already out.");
+            }
         } else if (id >= 13392 && id <= 13394) {
             player.sendMessage("You set up the attack stone. Strike it to test your strength!");
             player.setForceTalk("Hyah!");
         }
     }
 
-    /** Puts an NPC next to the furniture for a while (one per piece of furniture). */
-    private static void spawnTemporary(final Construction house, final int npcId, final WorldObject object, final String line) {
+    /**
+     * Puts an NPC next to the furniture for a while: at most one per piece of furniture (tracked by the house, removed with
+     * it), spawned so it never respawns.
+     *
+     * @return false when this furniture's NPC is still out.
+     */
+    private static boolean spawnTemporary(final Construction house, final int npcId, final WorldObject object, final String line) {
+        final int key = object.getPositionHash();
+        final NPC existing = house.getFurnitureNpcs().get(key);
+        if (existing != null && !existing.isFinished()) {
+            return false;
+        }
         final Location tile = new Location(object.getX(), object.getY() - 1, object.getPlane());
-        final NPC npc = new NPC(npcId, World.isFloorFree(tile, 1) ? tile : new Location(object), Direction.NORTH, 0);
+        final NPC npc = new NPC(npcId, World.isFloorFree(tile, 1) ? tile : new Location(object), Direction.NORTH, 0, true);
         npc.spawn();
+        house.getFurnitureNpcs().put(key, npc);
         if (line != null) {
             WorldTasksManager.schedule(() -> {
                 if (!npc.isFinished()) {
@@ -80,10 +97,12 @@ public final class GamesRoom implements ObjectInteraction {
             }, 1);
         }
         WorldTasksManager.schedule(() -> {
+            house.getFurnitureNpcs().remove(key, npc);
             if (!npc.isFinished()) {
                 npc.finish();
             }
         }, npcId == JESTER_NPC ? 10 : 200);
+        return true;
     }
 
     @Override

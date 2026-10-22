@@ -14,10 +14,13 @@ import java.util.EnumSet;
  * <ul>
  * <li>Tome of Fire: fire spells +10% damage against NPCs, +50% against players (Project Rebalance, May 2024).</li>
  * <li>Tome of Water: water spells +10% accuracy and damage against NPCs, +20% against players; curses and binds
- * (Confuse ... Stun, Bind, Snare, Entangle) +20% accuracy.</li>
+ * (Confuse ... Stun, Bind, Snare, Entangle) +20% accuracy; the stat-draining curses (Confuse, Weaken, Curse,
+ * Vulnerability, Enfeeble, Stun) are also 50% more effective: Confuse drains 7% instead of 5%, Stun 15% instead of
+ * 10%.</li>
  * <li>Tome of Earth: earth spells +10% damage against NPCs.</li>
  * </ul>
- * A boosted cast uses one charge; other spells (or using the runes for non-combat spells) use none.
+ * A boosted cast uses one charge (after the hit, so the last charge still boosts its cast); other spells (or using the
+ * runes for non-combat spells) use none.
  */
 public final class ElementalTomes {
 
@@ -28,6 +31,8 @@ public final class ElementalTomes {
     private static final EnumSet<CombatSpell> WATER = EnumSet.of(CombatSpell.WATER_STRIKE, CombatSpell.WATER_BOLT, CombatSpell.WATER_BLAST, CombatSpell.WATER_WAVE, CombatSpell.WATER_SURGE);
     private static final EnumSet<CombatSpell> EARTH = EnumSet.of(CombatSpell.EARTH_STRIKE, CombatSpell.EARTH_BOLT, CombatSpell.EARTH_BLAST, CombatSpell.EARTH_WAVE, CombatSpell.EARTH_SURGE);
     private static final EnumSet<CombatSpell> CURSES = EnumSet.of(CombatSpell.CONFUSE, CombatSpell.WEAKEN, CombatSpell.CURSE, CombatSpell.VULNERABILITY, CombatSpell.ENFEEBLE, CombatSpell.STUN, CombatSpell.BIND, CombatSpell.SNARE, CombatSpell.ENTANGLE);
+    /** The stat-draining curses whose drain the Tome of Water raises by 50% (not the binds, not Tele Block). */
+    private static final EnumSet<CombatSpell> STAT_CURSES = EnumSet.of(CombatSpell.CONFUSE, CombatSpell.WEAKEN, CombatSpell.CURSE, CombatSpell.VULNERABILITY, CombatSpell.ENFEEBLE, CombatSpell.STUN);
 
     private static Item chargedTome(final Player player) {
         final Item shield = player.getEquipment().getItem(EquipmentSlot.SHIELD);
@@ -63,6 +68,23 @@ public final class ElementalTomes {
             return target instanceof Player ? 1.2 : 1.1;
         }
         return CURSES.contains(spell) ? 1.2 : 1;
+    }
+
+    /** Effect multiplier of a stat-draining curse: 1.5 with a charged Tome of Water worn, else 1. */
+    public static double curseEffectMultiplier(final Player player, final CombatSpell spell) {
+        if (spell == null || !STAT_CURSES.contains(spell)) {
+            return 1;
+        }
+        final Item tome = chargedTome(player);
+        return tome != null && tome.getId() == ItemId.TOME_OF_WATER ? 1.5 : 1;
+    }
+
+    /**
+     * Drain percentage of a stat-draining curse after the Tome of Water, rounded down to a whole percent as the wiki
+     * gives it: 5 -> 7 (Confuse, Weaken, Curse), 10 -> 15 (Vulnerability, Enfeeble, Stun).
+     */
+    public static int curseDrainPercentage(final Player player, final CombatSpell spell, final int percentage) {
+        return (int) Math.floor(percentage * curseEffectMultiplier(player, spell));
     }
 
     /** Uses one charge if the equipped tome boosted this cast. */

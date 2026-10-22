@@ -143,13 +143,10 @@ object RsprotIncoming {
                 m.selectedSub, m.targetSub, m.selectedObj, m.targetObj,
             )
         }
-        // Newer than 211 (no server handler existed): logged and dropped.
-        builder.on<IfScriptTrigger> { _, m ->
-            try {
-                logger.debug("IF_SCRIPT_TRIGGER {}:{} sub {} obj {}", m.interfaceId, m.componentId, m.sub, m.obj)
-            } finally {
-                m.release()
-            }
+        // Newer than 211: dispatched by crc to the handlers registered with IfScriptTriggerRouter (typed
+        // arguments); unknown crcs are logged at debug and dropped. The router always releases the buffer.
+        builder.on<IfScriptTrigger> { player, m ->
+            IfScriptTriggerRouter.dispatch(player, m)
             null
         }
         builder.on<EventMouseScroll> { _, m ->

@@ -1,0 +1,16 @@
+{
+  "_comment": "Fractured Archive contribution points (spec 3.10, U4/U5; WU-16). Pools are per room and independent of party size; paired rooms must be equal. Shares are pool x damage / total damage, capped at the target's HP; each death removes deathPenaltyPct of the banked points.",
+  "pools": {
+    "guardian": 4000,
+    "ezekiel": 6000,
+    "bork_smorks": 6000,
+    "moia": 6000,
+    "dreadnoth": 6000,
+    "dagonhai": 7000,
+    "xarth": 7000,
+    "ocellus": 12000
+  },
+  "deathPenaltyPct": 20,
+  "poorPerformancePct": 10,
+  "failureShopPct": 25
+}

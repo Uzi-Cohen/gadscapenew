@@ -112,7 +112,8 @@ public final class ObligatorCombat extends MeleeCombat {
         final int accuracy = getAccuracy(player, victim, 1);
         final int defence = getTargetDefenceRoll(player, victim, AttackType.CRUSH);
         sendDebug(accuracy, defence, maxHit);
-        if ((accuracy > 0 ? Utils.random(accuracy) : 0) <= (defence > 0 ? Utils.random(defence) : 0)) {
+        if (!isGuaranteedHit(victim) // Raids 4 E8: e.g. Bork dazed skips the accuracy roll
+                && (accuracy > 0 ? Utils.random(accuracy) : 0) <= (defence > 0 ? Utils.random(defence) : 0)) {
             return 0;
         }
         final int rolls = damageRolls(victim);

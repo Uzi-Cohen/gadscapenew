@@ -9,7 +9,6 @@ import com.zenyte.game.content.skills.construction.constants.RoomType;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
 import com.zenyte.game.task.WorldTasksManager;
-import com.zenyte.game.util.Direction;
 import com.zenyte.game.util.Utils;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.WorldThread;
@@ -20,20 +19,24 @@ import com.zenyte.game.world.entity.masks.HitType;
 import com.zenyte.game.world.entity.npc.NPC;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.SkillConstants;
+import com.zenyte.game.world.entity.player.container.impl.equipment.EquipmentSlot;
 import com.zenyte.game.world.object.WorldObject;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fighting in a house (CON-9): combat room rings, the dungeon's challenge mode (guards, treasure monsters, traps) and dungeon
  * PvP, and the throne room lever.
  * <ul>
- * <li>Rings: players inside the same ring can fight each other ("Fight"); boxing ring unarmed or with boxing gloves only,
- * fencing ring melee only, combat ring anything. Nothing is lost on death (see {@link Construction#onDeath}).</li>
+ * <li>Rings: players inside the same ring can fight each other ("Fight"); boxing ring unarmed or with boxing gloves only and
+ * no armour or jewellery, fencing ring melee only, combat ring anything. Nothing is lost on death (see
+ * {@link Construction#onDeath}), and hitting a player in a house gives no combat XP ({@code Player#getXpModifier}).</li>
  * <li>Challenge mode (throne room lever "Challenge-mode", owner only): the built guards and treasure room monsters come alive
- * as aggressive NPCs and traps go off; off again turns them back into furniture. Dungeon PvP lets everyone in the dungeon
- * fight.</li>
+ * as aggressive {@link HouseMonsterNPC}s (no drops, no respawn) and traps go off; a killed monster turns back into its
+ * furniture, and challenge mode off turns them all back. Dungeon PvP lets everyone in the dungeon fight.</li>
  * <li>Lever "Pull": drops everyone standing on a throne room trapdoor into the oubliette below, or holds them in the cage.</li>
  * </ul>
  */
@@ -43,7 +46,8 @@ public final class HouseCombat {
     private static final Animation TRAP_HIT = new Animation(3626);
 
     private final Construction house;
-    private final List<NPC> monsters = new ArrayList<>();
+    /** Live challenge-mode monsters and the furniture object each one replaced (put back when it dies). */
+    private final Map<NPC, WorldObject> monsters = new LinkedHashMap<>();
     private boolean challengeMode;
     private boolean dungeonPvp;
 
@@ -118,7 +122,8 @@ public final class HouseCombat {
     }
 
     public void onHouseLoaded() {
-        monsters.clear();
+        // Monsters of the previous instance (a rebuild) go away with it; they never respawn.
+        finishMonsters();
         if (challengeMode && !house.isBuildingMode()) {
             spawnMonsters();
         } else if (house.isBuildingMode()) {
@@ -128,7 +133,7 @@ public final class HouseCombat {
     }
 
     public void onHouseClosed() {
-        monsters.clear();
+        finishMonsters();
         challengeMode = false;
         dungeonPvp = false;
     }
@@ -142,22 +147,42 @@ public final class HouseCombat {
                     continue;
                 }
                 final Location tile = house.getRoomTile(room, data.getLocation().getX(), data.getLocation().getY());
-                World.removeObject(new WorldObject(data.getFurniture().getObjectId(), data.getType(), data.getRotation(), tile));
-                final NPC npc = new NPC(npcId, tile, Direction.SOUTH, 3);
-                npc.setForceAggressive(true);
+                final WorldObject furniture = new WorldObject(data.getFurniture().getObjectId(), data.getType(), data.getRotation(), tile);
+                World.removeObject(furniture);
+                // No drops, slayer credit, kill count or respawn (OSRS: house monsters drop nothing); guards give no XP.
+                final boolean guard = data.getSpace() != FurnitureSpace.MONSTER_SPACE;
+                final HouseMonsterNPC npc = new HouseMonsterNPC(npcId, tile, this, guard);
                 npc.spawn();
-                monsters.add(npc);
+                monsters.put(npc, furniture);
+            }
+        }
+    }
+
+    /**
+     * A challenge-mode monster died: it stays dead (no respawn) and its furniture comes back, until challenge mode is turned
+     * on again. Monsters no longer tracked (challenge mode turned off, house rebuilt or closed) are ignored.
+     */
+    void onMonsterDied(final HouseMonsterNPC npc) {
+        final WorldObject furniture = monsters.remove(npc);
+        if (furniture == null || !challengeMode || !house.isLoaded() || !house.contains(furniture)) {
+            return;
+        }
+        World.spawnObject(furniture);
+    }
+
+    /** Removes every tracked monster, alive or in its death animation, so none of them can come back. */
+    private void finishMonsters() {
+        final List<NPC> list = new ArrayList<>(monsters.keySet());
+        monsters.clear();
+        for (final NPC npc : list) {
+            if (npc != null && !npc.isFinished()) {
+                npc.finish();
             }
         }
     }
 
     private void despawnMonsters() {
-        for (final NPC npc : monsters) {
-            if (npc != null && !npc.isFinished()) {
-                npc.finish();
-            }
-        }
-        monsters.clear();
+        finishMonsters();
         if (!house.isLoaded()) {
             return;
         }
@@ -227,6 +252,15 @@ public final class HouseCombat {
                     attacker.sendMessage("Only boxing is allowed in a boxing ring: fight unarmed or with boxing gloves.");
                     return false;
                 }
+                // OSRS wiki "Boxing ring": "Combat magic, armour, and jewellery are not allowed".
+                if (wearsArmourOrJewellery(attacker)) {
+                    attacker.sendMessage("You can't wear armour or jewellery in a boxing ring.");
+                    return false;
+                }
+                if (wearsArmourOrJewellery(target)) {
+                    attacker.sendMessage("Your opponent needs to take off their armour and jewellery first.");
+                    return false;
+                }
             } else if (ring == Furniture.FENCING_RING && !"Melee".equals(style)) {
                 attacker.sendMessage("Only melee is allowed in a fencing ring.");
                 return false;
@@ -237,6 +271,19 @@ public final class HouseCombat {
             return true;
         }
         attacker.sendMessage("You can't attack that player here.");
+        return false;
+    }
+
+    /** Anything worn besides the weapon (boxing gloves) and ammunition: armour, capes and jewellery. */
+    private static boolean wearsArmourOrJewellery(final Player player) {
+        for (final EquipmentSlot slot : EquipmentSlot.values()) {
+            if (slot == EquipmentSlot.WEAPON || slot == EquipmentSlot.AMMUNITION) {
+                continue;
+            }
+            if (player.getEquipment().getItem(slot) != null) {
+                return true;
+            }
+        }
         return false;
     }
 

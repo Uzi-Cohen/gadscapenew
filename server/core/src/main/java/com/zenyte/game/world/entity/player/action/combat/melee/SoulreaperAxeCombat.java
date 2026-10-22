@@ -58,7 +58,8 @@ public final class SoulreaperAxeCombat extends MeleeCombat {
             final int attackRoll = getAccuracy(player, target, accuracy);
             final int defenceRoll = getTargetDefenceRoll(player, target, player.getCombatDefinitions().getAttackType());
             sendDebug(attackRoll, defenceRoll, maxHit);
-            final boolean accurate = (attackRoll > 0 ? Utils.random(attackRoll) : 0) > (defenceRoll > 0 ? Utils.random(defenceRoll) : 0);
+            final boolean accurate = isGuaranteedHit(target) // Raids 4 E8
+                    || (attackRoll > 0 ? Utils.random(attackRoll) : 0) > (defenceRoll > 0 ? Utils.random(defenceRoll) : 0);
             damage = accurate ? Utils.random(minimum, maxHit) : 0;
         }
         final Hit hit = new Hit(player, damage, HitType.MELEE);

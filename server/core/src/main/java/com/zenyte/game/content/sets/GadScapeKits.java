@@ -1,18 +1,23 @@
 package com.zenyte.game.content.sets;
 
-import com.gadscape.game.rev241.Gad211;
+import com.zenyte.game.item.Item;
+import com.zenyte.game.item.ItemId;
+import com.zenyte.game.model.item.enums.DismantleableItem;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
+import com.zenyte.plugins.itemonitem.ItemAttaching;
 
 /**
- * GadScape's own ornament kits (collection-log rewards, CollectionLogRewards.kt): each recolours the three pieces of
- * an armour set and is attached/dismantled like any other kit (DismantleableItem rows).
+ * GadScape's own boot ornament kits, one per completed collection log (CollectionLogRewards.kt: Tombs of Amascut
+ * "masori themed pegasian boot kit", Chambers of Xeric "ancestral themed eternal boot kit", Nex "torva themed primordial
+ * boot kit"). A kit is used on (or "Apply"-ed to) a pair of the matching boss boots and turns them into a themed copy
+ * with the same stats; "Dismantle" gives the kit and the boots back, and a PvP death splits them like a Jagex kit
+ * (DismantleableItem rows).
  * <p>
- * The kits are GadScape items of the user cache (31350-31352, inherit 21202, op "Apply"). The nine result items are
- * objs gadconv adds to the 241 cache (content-work/sets-prayers/CACHE_NEEDS.md, section "custom kits"): recoloured
- * copies of the base pieces, listed in the cache's idmap.json under {@code _new.obj} as {@code "sksp-15:<name>"}
- * (cacheV: 60000-60008). The constants resolve through {@link Gad211#newObj}, so they follow the cache; the
- * fallbacks are the planned ids. Their server stats are the base pieces' (gadscape/items/sets.json, whose entries name
- * the same {@code _new} keys). They are therefore not compile-time constants (no {@code case} labels).
+ * The kits are GadScape items of the user cache (31350-31352, inherit 21202, op "Apply"). The three results are new objs
+ * the GadScape 241 cache adds (content-work/sets-prayers/CACHE_NEEDS.md section 3): copies of the boots, claimed at the
+ * top of the converter's GadScape obj range and listed under {@code _new} in idmap.json, so they never meet the ids the
+ * converter gives relocated objs (allocated from 60000 upwards). Every use also checks the cache name of the result
+ * ({@link DismantleableItem#isAvailable()}), so a result id the cache holds another item at does nothing.
  */
 public final class GadScapeKits {
 
@@ -23,27 +28,38 @@ public final class GadScapeKits {
     public static final int ANCESTRAL_ETERNAL_ORNAMENT_KIT = 31351;
     public static final int TORVA_PRIMORDIAL_ORNAMENT_KIT = 31352;
 
-    /** Masori (f) + Masori Pegasian kit. */
-    public static final int PEGASIAN_MASORI_MASK_F = Gad211.newObj("sksp-15:Pegasian masori mask (f)", 60000);
-    public static final int PEGASIAN_MASORI_BODY_F = Gad211.newObj("sksp-15:Pegasian masori body (f)", 60001);
-    public static final int PEGASIAN_MASORI_CHAPS_F = Gad211.newObj("sksp-15:Pegasian masori chaps (f)", 60002);
-    /** Ancestral + Ancestral Eternal kit. */
-    public static final int ETERNAL_ANCESTRAL_HAT = Gad211.newObj("sksp-15:Eternal ancestral hat", 60003);
-    public static final int ETERNAL_ANCESTRAL_ROBE_TOP = Gad211.newObj("sksp-15:Eternal ancestral robe top", 60004);
-    public static final int ETERNAL_ANCESTRAL_ROBE_BOTTOM = Gad211.newObj("sksp-15:Eternal ancestral robe bottom", 60005);
-    /** Torva + Torva Primordial kit. */
-    public static final int PRIMORDIAL_TORVA_FULL_HELM = Gad211.newObj("sksp-15:Primordial torva full helm", 60006);
-    public static final int PRIMORDIAL_TORVA_PLATEBODY = Gad211.newObj("sksp-15:Primordial torva platebody", 60007);
-    public static final int PRIMORDIAL_TORVA_PLATELEGS = Gad211.newObj("sksp-15:Primordial torva platelegs", 60008);
+    /** Pegasian boots + Masori Pegasian Ornament Kit. */
+    public static final int MASORI_PEGASIAN_BOOTS = 64997;
+    public static final String MASORI_PEGASIAN_BOOTS_NAME = "Masori pegasian boots";
+    /** Eternal boots + Ancestral Eternal Ornament Kit. */
+    public static final int ANCESTRAL_ETERNAL_BOOTS = 64998;
+    public static final String ANCESTRAL_ETERNAL_BOOTS_NAME = "Ancestral eternal boots";
+    /** Primordial boots + Torva Primordial Ornament Kit. */
+    public static final int TORVA_PRIMORDIAL_BOOTS = 64999;
+    public static final String TORVA_PRIMORDIAL_BOOTS_NAME = "Torva primordial boots";
 
-    /** "Apply" on a kit: OSRS-style hint (the kit is used on the armour). */
+    /** The boots a kit is applied to. */
+    public static int baseOf(final int kit) {
+        return kit == MASORI_PEGASIAN_ORNAMENT_KIT ? ItemId.PEGASIAN_BOOTS
+                : kit == ANCESTRAL_ETERNAL_ORNAMENT_KIT ? ItemId.ETERNAL_BOOTS
+                : kit == TORVA_PRIMORDIAL_ORNAMENT_KIT ? ItemId.PRIMORDIAL_BOOTS : -1;
+    }
+
+    /** "Apply" on a kit: attaches it to the matching boots in the inventory, or says which boots it is for. */
     public static final class KitItem extends ItemPlugin {
         @Override
         public void handle() {
             bind("Apply", (player, item, slotId) -> {
-                final String target = item.getId() == MASORI_PEGASIAN_ORNAMENT_KIT ? "a piece of Masori armour (f)"
-                        : item.getId() == ANCESTRAL_ETERNAL_ORNAMENT_KIT ? "a piece of Ancestral robes" : "a piece of Torva armour";
-                player.sendMessage("Use the kit on " + target + " to apply it. It can be dismantled again at any time.");
+                final int base = baseOf(item.getId());
+                final int baseSlot = base == -1 ? -1 : player.getInventory().getContainer().getSlotOf(base);
+                if (baseSlot == -1) {
+                    final String boots = base == ItemId.PEGASIAN_BOOTS ? "a pair of Pegasian boots"
+                            : base == ItemId.ETERNAL_BOOTS ? "a pair of Eternal boots" : "a pair of Primordial boots";
+                    player.sendMessage("Use the kit on " + boots + " to apply it. It can be dismantled again at any time.");
+                    return;
+                }
+                final Item boots = player.getInventory().getItem(baseSlot);
+                new ItemAttaching().handleItemOnItemAction(player, item, boots, slotId, baseSlot);
             });
         }
 

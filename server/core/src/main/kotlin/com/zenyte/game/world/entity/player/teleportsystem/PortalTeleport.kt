@@ -753,6 +753,14 @@ enum class PortalTeleport(
         "Location: Tyras Camp",
         UnlockType.DEFAULT,
         Location(2186, 3147, 0)
+    ),
+    /** Raids 4 (spec §3.1, audit R4-16): the temple outside the raid entrance (4050,4567); fractured-archive `tiles.templeExit`. */
+    FRACTURED_ARCHIVE(
+        TeleportCategory.MINIGAMES,
+        "The Fractured Archive",
+        "Location: Ancient Guthixian Temple, by the Archive entrance",
+        UnlockType.DEFAULT,
+        Location(4051, 4564, 0)
     );
 
     val largeDescription = largeDescription + "<br>Unlocked by: " + unlockType.formatted

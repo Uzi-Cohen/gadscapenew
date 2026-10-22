@@ -1,6 +1,7 @@
 package com.zenyte.game.content.treasuretrails.plugins;
 
 import com.zenyte.game.content.treasuretrails.ClueItem;
+import com.zenyte.game.content.treasuretrails.ClueStackLimit;
 import com.zenyte.game.content.treasuretrails.TreasureTrail;
 import com.zenyte.game.content.treasuretrails.clues.Clue;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
@@ -51,6 +52,9 @@ public class ClueScrollItem extends ItemPlugin implements FloorItemPlugin {
                 player.sendMessage("You can only carry one of those at a time.");
                 return;
             }
+            if (atStackLimit(player, item)) {
+                return;
+            }
             World.takeFloorItem(player, item);
         }
     }
@@ -61,7 +65,21 @@ public class ClueScrollItem extends ItemPlugin implements FloorItemPlugin {
             player.sendMessage("You can only carry one of those at a time.");
             return false;
         }
-        return true;
+        return !atStackLimit(player, item);
+    }
+
+    /**
+     * OSRS stackable clues: a clue scroll cannot be picked up once the player holds as many clue scrolls and scroll
+     * boxes of its tier as their limit allows (e.g. a scroll dropped, a scroll box of the tier picked up, then the
+     * scroll picked up again).
+     */
+    private static boolean atStackLimit(@NotNull final Player player, @NotNull final FloorItem item) {
+        final ClueItem type = ClueItem.getMap().get(item.getId());
+        if (type != null && !ClueStackLimit.canReceive(player, type)) {
+            player.sendMessage("You can't take any more clues of that tier.");
+            return true;
+        }
+        return false;
     }
 
     @Override

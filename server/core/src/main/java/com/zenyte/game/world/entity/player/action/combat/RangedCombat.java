@@ -257,6 +257,9 @@ public class RangedCombat extends PlayerCombat {
         if (boltSpecial == EnchantedBoltSpecial.ARMOUR_PIERCING) {
             return Utils.random(maxhit);
         }
+        if (isGuaranteedHit(target)) {
+            return Utils.random(calculateMinimumHit(player, maxhit), maxhit); // Raids 4 E8
+        }
         final int targetRoll = getTargetDefenceRollRanged(player, target, oppositeIndex);
         sendDebug(accuracy, targetRoll, maxhit);
         final int accRoll = accuracy > 0 ? Utils.random(accuracy) : 0;
@@ -277,17 +280,29 @@ public class RangedCombat extends PlayerCombat {
             effectiveLevel = actualLevel + 9;
 
             int baseBonus = npc.getCombatDefinitions().getStatDefinitions().get(StatType.getDefenceType(type));
+            final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+            if (traits != null && type == AttackType.RANGED) {
+                baseBonus = traits.rangedDefenceBonus(getRangedAttackType(), baseBonus); // Raids 4 E6
+            }
             effectiveDefenseBonus = baseBonus + 64;
         }
 
-        if(target instanceof Player player2) {
-            int actualLevel = player2.getSkills().getLevel(SkillConstants.DEFENCE);
-            effectiveLevel = actualLevel + 9;
-
-            int baseBonus = player2.getBonuses().getBonus(Bonuses.Bonus.DEF_RANGE); // the target's ranged defence (was the attacker's)
-            effectiveDefenseBonus = baseBonus + 64;
+        if(target instanceof Player) {
+            // The player defence roll melee and magic use: the target's defence prayers (Piety, Rigour, Augury, Zeal,
+            // Deadeye/Mystic Vigour +5%), stance bonus, +8, its ranged defence bonus and the PvP defence multiplier.
+            return getTargetDefenceRoll(attacker, target, type);
         }
         return (int) (effectiveLevel * (effectiveDefenseBonus));
+    }
+
+    /**
+     * Light (thrown), standard (bows) or heavy (crossbows, ballistae, chinchompas) for NPCs with per-type ranged
+     * defence (Raids 4 E6). Classified from the ammunition, then the weapon name; unknown attacks are standard.
+     */
+    public com.zenyte.game.world.entity.npc.combat.RangedAttackType getRangedAttackType() {
+        final String ammunitionName = ammunition instanceof final Enum<?> constant ? constant.name() : null;
+        final Item weapon = player.getWeapon();
+        return com.zenyte.game.world.entity.npc.combat.RangedAttackType.classify(ammunitionName, weapon == null ? null : weapon.getName());
     }
 
     @Override

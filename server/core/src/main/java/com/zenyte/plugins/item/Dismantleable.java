@@ -30,7 +30,8 @@ public class Dismantleable extends ItemPlugin {
 			player.sendMessage("You need some free inventory space to dismantle this item.");
 			return;
 		}
-		final DismantleableItem dis = DismantleableItem.MAPPED_VALUES.get(item.getId());
+		// only rows whose result the cache has (a GadScape result id holding another item must not split that item)
+		final DismantleableItem dis = DismantleableItem.forCompleteItem(item.getId());
 		if (dis == null) {
 			return;
 		}
@@ -45,6 +46,9 @@ public class Dismantleable extends ItemPlugin {
 		final IntArrayList list = new IntArrayList();
 		for (final DismantleableItem val : DismantleableItem.VALUES) {
 			final int completeItem = val.getCompleteItem();
+			if (val.isGadScapeResult() && !val.isAvailable()) {
+				continue; // never take over the Dismantle op of another item at a GadScape result id
+			}
 			if (completeItem != 26484 && completeItem != 26520) {
 				list.add(completeItem);
 			}

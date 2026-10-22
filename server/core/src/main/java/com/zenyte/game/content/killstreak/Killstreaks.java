@@ -25,16 +25,32 @@ public class Killstreaks {
         if(!WildernessArea.isWithinWilderness(victim.getLocation().getX(), victim.getLocation().getY()))
             return;
         // Anti-farm / anti-rag: same IP or client UUID, recent kill of the same victim, low risk, new account.
-        if (!PvpKillValidator.validate(attacker, victim, "blood money"))
+        // The validator only decides the killer's rewards. The victim's side (death count, streak reset, shutdown
+        // announcement) always happens, except between one person's own accounts (SELF/SAME_IP/SAME_DEVICE), so a PKer
+        // who always risks under the threshold still loses their streak and records the death (as Bounty Hunter does).
+        final PvpKillValidator.Result result = PvpKillValidator.check(attacker, victim);
+        final boolean sameOwner = result == PvpKillValidator.Result.SELF || result == PvpKillValidator.Result.SAME_IP
+                || result == PvpKillValidator.Result.SAME_DEVICE;
+        final boolean rewarded = result == PvpKillValidator.Result.OK;
+        // Read before any reset: the shutdown bonus below and the announcement use the victim's streak.
+        final int bloodmoneyBeforeBoosts = rewarded ? getTotalBloodmoneyForKill(attacker, victim) : 0;
+        if (!sameOwner) {
+            victim.getAttributes().put("WildernessDeaths", victim.getNumericAttribute("WildernessDeaths").intValue() + 1);
+            PlayerAttributesKt.setPvpDeaths(victim, PlayerAttributesKt.getPvpDeaths(victim) + 1);
+            refreshKDR(victim);
+            announceShutdown(attacker, victim);
+            resetKillstreak(victim, true);
+        }
+        if (!rewarded) {
+            PvpKillValidator.report(attacker, victim, result, "blood money");
             return;
+        }
 
         // PvP hiscores (HiscoresCategory.PVP) and the wilderness K/D varps only count validated kills (PVP-21).
         attacker.getAttributes().put("WildernessKills", attacker.getNumericAttribute("WildernessKills").intValue() + 1);
-        victim.getAttributes().put("WildernessDeaths", victim.getNumericAttribute("WildernessDeaths").intValue() + 1);
         refreshKDR(attacker);
-        refreshKDR(victim);
 
-        int totalBloodmoney = getTotalBloodmoneyForKill(attacker, victim);
+        int totalBloodmoney = bloodmoneyBeforeBoosts;
         if(World.hasBoost(XamphurBoost.BONUS_BLOOD_MONEY))
             totalBloodmoney *= 2;
         if (attacker.getVariables().getBloodMoneyBoosterLeft() > 0) {
@@ -54,13 +70,9 @@ public class Killstreaks {
         attacker.getInventory().addOrDrop(new Item(BLOODMONEY_ITEM_ID, totalBloodmoney));
 
         PlayerAttributesKt.setPvpKills(attacker, PlayerAttributesKt.getPvpKills(attacker) + 1);
-        PlayerAttributesKt.setPvpDeaths(victim, PlayerAttributesKt.getPvpDeaths(victim) + 1);
 
         attacker.getKillstreakLog().addEntry(victim);
 
-        announceShutdown(attacker, victim);
-
-        resetKillstreak(victim, true);
         announceKillstreak(attacker, attackerCurrentStreak + 1);
     }
 

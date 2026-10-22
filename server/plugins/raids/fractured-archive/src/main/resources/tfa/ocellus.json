@@ -1,0 +1,71 @@
+{
+  "_comment": "Ocellus and The Blade (spec 4.8). Bundled defaults; override any key in data/raids/tfa/ocellus.json. Keys beyond the spec block are WU-27 additions, see raids4-impl/ENC-ocellus.md.",
+  "hp": { "p1": 2500, "blade": 1000, "p3": 5250 },
+  "traits": {
+    "p1": {
+      "defenceFloorPct": 60, "weakness": "none", "weaknessPct": 0, "rangedDef": [50, 135, 50],
+      "immunePoison": true, "immuneVenom": true, "immuneCannon": true, "freezeResistPct": 0,
+      "immuneAncients": false, "demonbanePct": 80, "flatArmour": 0, "magicResist": 0,
+      "magicDrainInverted": false, "flying": false
+    },
+    "blade": {
+      "defenceFloorPct": null, "weakness": "none", "weaknessPct": 0, "rangedDef": [100, 110, 80],
+      "immunePoison": false, "immuneVenom": false, "immuneCannon": true, "freezeResistPct": 0,
+      "immuneAncients": false, "demonbanePct": null, "flatArmour": 0, "magicResist": 0,
+      "magicDrainInverted": false, "flying": false
+    },
+    "p3": {
+      "defenceFloorPct": 60, "weakness": "none", "weaknessPct": 0, "rangedDef": [250, 250, 250],
+      "immunePoison": true, "immuneVenom": true, "immuneCannon": true, "freezeResistPct": 100,
+      "immuneAncients": false, "demonbanePct": 80, "flatArmour": 0, "magicResist": 0,
+      "magicDrainInverted": false, "flying": false
+    }
+  },
+  "arena": {
+    "introTile": [4126, 5668, 1],
+    "centreTile": [4126, 5672, 1],
+    "anchorTiles": [[4119, 5665, 1], [4119, 5679, 1], [4133, 5679, 1], [4133, 5665, 1]]
+  },
+  "p1": {
+    "speed": 5, "autoMax": 30, "anchors": ["SW", "NW", "NE", "SE"], "tendrilInterval": 3, "tendrilLife": 4,
+    "tendrilsPerAnchor": 7, "blockDmg": 5, "meterPerUnblocked": 8, "slamRadius": 2, "slamMax": 35,
+    "thresholds": [66, 25], "annihilationAt": 50, "annihilation": [80, 90], "deathAwaits": [17, 18], "bindable": true,
+    "meterMax": 100, "firstAutoDelay": 5, "castTicks": 2, "autosWhileChannelling": true, "arrivalPause": 1,
+    "slamDelay": 1, "postSlamPause": 2, "walkTimeout": 30, "centrePairGap": 1, "chargeTicks": 4, "releaseTicks": 3,
+    "teleportTicks": 2, "crackSegment": 5,
+    "crackRotations": { "n": 0, "ne": 0, "e": 1, "se": 1, "s": 2, "sw": 2, "w": 3, "nw": 3 },
+    "slamFloorRotations": { "n": 0, "e": 1, "s": 2, "w": 3 },
+    "slamFloorOffset": 3, "chargeSpotEvery": 2
+  },
+  "p2": {
+    "barrages": [{ "speed": 4, "col": 2, "row": 2 }, { "speed": 3, "col": 1, "row": 3 }, { "speed": 2, "col": 3, "row": 1 }],
+    "randomize": true, "volleys": 5, "laneDmg": [25, 35], "pools": 8, "poolDmg": [15, 25], "portalDelay": 6,
+    "quadrantAttackDelay": 8, "quadrantAttackDmg": 60, "bladeSkipsBarrages": true,
+    "quadrants": ["SW", "NW", "NE"], "firstVolleyDelay": 2, "shotTicks": 4, "poolTicks": 6, "barrageGap": 2,
+    "gatherIntoQuadrant": true, "floorPortalSize": 1
+  },
+  "transitions": { "p1ToP2": 7, "p2Form": 6, "bladeDrop": 8, "p2ToP3Part1": 8, "p2ToP3Part2": 5, "armSpotDelay": 5 },
+  "projectiles": {
+    "p1Magic": { "startHeight": 70, "endHeight": 31, "delay": 0, "angle": 15, "base": 10, "perTile": 5 },
+    "p1Ranged": { "startHeight": 70, "endHeight": 31, "delay": 0, "angle": 15, "base": 10, "perTile": 5 },
+    "p1Release": { "startHeight": 80, "endHeight": 31, "delay": 0, "angle": 15, "base": 15, "perTile": 4 },
+    "p2Shot": { "startHeight": 10, "endHeight": 10, "delay": 0, "angle": 0, "base": 120, "perTile": 0 }
+  },
+  "p3": {
+    "speed": 6, "meleeMax": 30, "waveDmg": [25, 35], "waveWidth": 3, "voidShot": [20, 28], "spinCheckDmg": 25,
+    "sawMax": 50, "sawPfmMult": 0.2, "untetherEvery": 3, "vineTicks": 12, "vineDmg": [50, 55],
+    "addCharge": 15, "riftDetonate": [20, 25], "siphonHealPct": 5, "augmenterBuffPct": 10,
+    "insolenceDmg": [30, 40], "crackDmg": 4, "crackLife": 10, "untetherBombs": [15, 20], "untether": 45,
+    "obliterationTicks": 10, "thresholds": [75, 50, 25], "pools": 2, "poolDmg": 3, "poolLife": 15
+  },
+  "p4": {
+    "chainCount": 6, "chainInterval": 2, "chainDmg": [15, 20], "damageTakenMult": 0.5, "orbStages": [6, 12],
+    "orbHeal": [0.5, 0.75, 1.0], "orbLife": 20, "blast": 45, "blastPrayed": [6, 7], "soulSplitPct": 25,
+    "voidFloorDmg": 10, "deflectReflectPct": 10
+  },
+  "p3InheritP1Pfm": false,
+  "p3PfmWhileMoving": true,
+  "planeShift": 0,
+  "combatLevel": { "p1": null, "p3": 1601 },
+  "death": { "ticks": 15 }
+}

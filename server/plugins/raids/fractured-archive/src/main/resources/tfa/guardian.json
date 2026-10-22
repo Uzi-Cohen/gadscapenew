@@ -1,0 +1,82 @@
+{
+  "_comment": "Archive Guardian (room 1, spec 4.1). HP bases are the 2-player values (scaling.json scales them). House values are listed at load until a file marks them verified in \"$verified\". Override any key in data/raids/tfa/guardian.json.",
+  "shieldHp": 550,
+  "mainHp": 1100,
+  "enragePct": 30,
+  "lift": { "mainStepPct": 35, "maxGroundedTicks": 24 },
+  "slamMax": 30,
+  "slamHitDelay": 2,
+  "rangedMax": 25,
+  "attackSpeed": 5,
+  "firstAttackDelay": 2,
+  "mushroomEveryNthAttack": 3,
+  "enragedFirst": "mushrooms",
+  "mushrooms": {
+    "base": 3, "perTwoAlive": 1, "minDist": 2, "maxDist": 6, "lifetime": 30, "cap": 12,
+    "dmgMin": 3, "dmgMax": 10, "poison": 10, "wearyTicks": 25, "spawnDelay": 1
+  },
+  "tendril": { "firstDelay": 6, "interval": 3, "swipes": 3, "max": 25, "maxPrayed": 11 },
+  "laser": { "perAlive": 45, "pfmMult": 0.8, "length": 18, "killRangePct": 10, "windup": 3 },
+  "_rangedProjectile": "Projectile 4201: end cycle = startDelay + flight + perTile x distance; heights in the server unit (x4 on the wire).",
+  "rangedProjectile": {
+    "startDelay": 30, "flight": 82, "perTile": 0, "startHeight": 100, "endHeight": 31, "slope": 15, "impactHeight": 124
+  },
+  "rangedCone": false,
+  "coneWidth": 2,
+  "tailSwipe": false,
+  "tailMax": 15,
+  "movement": { "followRange": 6, "box": [4116, 5585, 4138, 5613] },
+  "aggroWindowTicks": 10,
+  "landingUntargetable": true,
+  "enragingInvulnerable": true,
+  "corpseLingerTicks": 10,
+  "bossSpawn": [4125, 5597, 0],
+  "battery": {
+    "hp": 180,
+    "shieldPct": 40,
+    "earthWeaknessPct": 50,
+    "startStates": { "NW": "active", "SW": "active", "NE": "active", "SE": "inactive" },
+    "tiles": { "NW": [4114, 5605, 0], "SW": [4114, 5592, 0], "NE": [4139, 5605, 0], "SE": [4139, 5592, 0] },
+    "attackableBeforeStart": false
+  },
+  "traits": {
+    "flying": {
+      "defenceFloorPct": 60, "weakness": "fire", "weaknessPct": 80, "rangedDef": [75, 120, 50],
+      "immunePoison": true, "immuneVenom": true, "immuneCannon": true, "freezeResistPct": 100,
+      "immuneAncients": true, "demonbanePct": null, "flatArmour": 0, "magicResist": 0,
+      "magicDrainInverted": true, "flying": true
+    },
+    "grounded": {
+      "defenceFloorPct": 60, "weakness": "fire", "weaknessPct": 40, "rangedDef": [50, 115, 50],
+      "immunePoison": true, "immuneVenom": true, "immuneCannon": true, "freezeResistPct": 100,
+      "immuneAncients": true, "demonbanePct": null, "flatArmour": 0, "magicResist": 0,
+      "magicDrainInverted": true, "flying": false
+    },
+    "enraged": {
+      "defenceFloorPct": 60, "weakness": "fire", "weaknessPct": 80, "rangedDef": [75, 120, 50],
+      "immunePoison": true, "immuneVenom": true, "immuneCannon": true, "freezeResistPct": 100,
+      "immuneAncients": true, "demonbanePct": null, "flatArmour": 0, "magicResist": 0,
+      "magicDrainInverted": true, "flying": true
+    }
+  },
+  "stats": {
+    "flying": {
+      "levels": [250, 240, 260, 250, 280],
+      "attackBonuses": [0, 0, 0, 350, 350],
+      "defenceBonuses": [120, 110, 20, 130, 120],
+      "otherBonuses": [0, 55, 55]
+    },
+    "grounded": {
+      "levels": [250, 240, 260, 250, 280],
+      "attackBonuses": [0, 0, 0, 350, 350],
+      "defenceBonuses": [120, 90, 20, 130, 115],
+      "otherBonuses": [0, 55, 55]
+    },
+    "battery": {
+      "levels": [1, 1, 50, 50, 1],
+      "attackBonuses": [0, 0, 0, 0, 0],
+      "defenceBonuses": [0, 20, -20, -20, 0],
+      "otherBonuses": [0, 0, 0]
+    }
+  }
+}

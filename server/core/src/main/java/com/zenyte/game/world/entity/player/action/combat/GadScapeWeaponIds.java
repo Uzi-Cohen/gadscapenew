@@ -36,6 +36,13 @@ public final class GadScapeWeaponIds {
     /** "Gad obligator" (live 34726 is the Zorya's tome placeholder). */
     public static final int GAD_OBLIGATOR = Gad211.obj(34726);
 
+    /** GadScape "Blood Moon chestplate" copies (live 33340 is the Radiant slayer helmet); used by combat.moon.MoonSets. */
+    public static final int BLOOD_MOON_CHESTPLATE_33340 = 33340;
+    public static final int BLOOD_MOON_CHESTPLATE_33374 = 33374;
+    /** GadScape "Eclipse atlatl" copies (live 33342 is the Demonic quill); used by combat.moon.MoonSets. */
+    public static final int ECLIPSE_ATLATL_33342 = 33342;
+    public static final int ECLIPSE_ATLATL_33376 = 33376;
+
     /** GadScape's Obligator copies: same mechanics as the Obligator, but they have no charges (always charged). */
     public static boolean isGadScapeObligator(final int id) {
         return id == OBLIGATOR_RECOLOUR || id == GAD_OBLIGATOR;

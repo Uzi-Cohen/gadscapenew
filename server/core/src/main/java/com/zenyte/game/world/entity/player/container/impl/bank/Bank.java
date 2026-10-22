@@ -39,6 +39,10 @@ public abstract class Bank {
         unbankableItems.add(ItemId.DARK_ESSENCE_FRAGMENTS);
         unbankableItems.add(ItemId.HERB_BOX);
         unbankableItems.add(ItemId.OPENED_HERB_BOX);
+        // OSRS: loot keys "cannot be banked" (keeps the 5-key limit and the always-lost-on-death rule).
+        for (final int lootKey : com.zenyte.game.content.lootkeys.LootkeyConstants.LOOT_KEY_IDS) {
+            unbankableItems.add(lootKey);
+        }
     }
 
     int[] tabSizes = new int[10];

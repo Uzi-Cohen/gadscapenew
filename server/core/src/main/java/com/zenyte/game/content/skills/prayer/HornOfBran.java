@@ -7,6 +7,7 @@ import com.zenyte.game.world.entity.npc.NPC;
 import com.zenyte.game.world.entity.npc.NpcId;
 import com.zenyte.game.world.entity.npc.actions.NPCPlugin;
 import com.zenyte.game.world.entity.player.Player;
+import com.zenyte.game.world.entity.player.SkillConstants;
 import com.zenyte.game.world.entity.player.dialogue.Dialogue;
 import com.zenyte.plugins.dialogue.ItemChat;
 
@@ -27,7 +28,30 @@ public final class HornOfBran {
         return player.getInventory().containsItem(PrayerItemIds.HORN_OF_BRAN, 1);
     }
 
+    /**
+     * Zeal replaces Piety for good once unlocked (the 2746 prayer scripts show the alternate whenever its unlock varbit
+     * is set), so the horn is only accepted from a player who can use Zeal: 84 Prayer, 75 Attack, 75 Strength and 70
+     * Defence (script 10193 + Zeal's level). Otherwise a player below those levels would lose Piety without gaining Zeal.
+     */
+    static boolean meetsZealRequirements(final Player player) {
+        return player.getSkills().getLevelForXp(SkillConstants.PRAYER) >= Prayer.ZEAL.getLevel()
+                && player.getSkills().getLevelForXp(SkillConstants.ATTACK) >= 75
+                && player.getSkills().getLevelForXp(SkillConstants.STRENGTH) >= 75
+                && player.getSkills().getLevelForXp(SkillConstants.DEFENCE) >= 70;
+    }
+
     static void present(final Player player, final NPC arthur) {
+        if (!player.getPrayerManager().isUnlocked(Prayer.ZEAL) && !meetsZealRequirements(player)) {
+            player.getDialogueManager().start(new Dialogue(player, arthur) {
+                @Override
+                public void buildDialogue() {
+                    npc("The Horn of Bran! One of the Thirteen Treasures of Britain, lost for longer than Camelot has stood.");
+                    npc("Its blessing would be wasted on you as you are now. Return when you have a Prayer level of " + Prayer.ZEAL.getLevel()
+                            + ", Attack and Strength levels of 75 and a Defence level of 70.");
+                }
+            });
+            return;
+        }
         if (player.getPrayerManager().isUnlocked(Prayer.ZEAL)) {
             player.getDialogueManager().start(new Dialogue(player, arthur) {
                 @Override
@@ -53,7 +77,7 @@ public final class HornOfBran {
     }
 
     private static void unlock(final Player player) {
-        if (player.getPrayerManager().isUnlocked(Prayer.ZEAL)) {
+        if (player.getPrayerManager().isUnlocked(Prayer.ZEAL) || !meetsZealRequirements(player)) {
             return;
         }
         if (!player.getInventory().deleteItem(new Item(PrayerItemIds.HORN_OF_BRAN, 1)).isFailure()) {

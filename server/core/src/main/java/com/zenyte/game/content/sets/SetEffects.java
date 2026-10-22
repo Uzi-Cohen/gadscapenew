@@ -23,11 +23,11 @@ public final class SetEffects {
     private SetEffects() {
     }
 
-    private static final IntSet TORVA_HELMS = new IntOpenHashSet(new int[] {ItemId.TORVA_FULLHELM, ItemId.SANGUINE_TORVA_FULL_HELM, GadScapeKits.PRIMORDIAL_TORVA_FULL_HELM});
-    private static final IntSet TORVA_BODIES = new IntOpenHashSet(new int[] {ItemId.TORVA_PLATEBODY, ItemId.SANGUINE_TORVA_PLATEBODY, GadScapeKits.PRIMORDIAL_TORVA_PLATEBODY});
-    private static final IntSet TORVA_LEGS = new IntOpenHashSet(new int[] {ItemId.TORVA_PLATELEGS, ItemId.SANGUINE_TORVA_PLATELEGS, GadScapeKits.PRIMORDIAL_TORVA_PLATELEGS});
+    private static final IntSet TORVA_HELMS = new IntOpenHashSet(new int[] {ItemId.TORVA_FULLHELM, ItemId.SANGUINE_TORVA_FULL_HELM});
+    private static final IntSet TORVA_BODIES = new IntOpenHashSet(new int[] {ItemId.TORVA_PLATEBODY, ItemId.SANGUINE_TORVA_PLATEBODY});
+    private static final IntSet TORVA_LEGS = new IntOpenHashSet(new int[] {ItemId.TORVA_PLATELEGS, ItemId.SANGUINE_TORVA_PLATELEGS});
 
-    /** Torva full helm, platebody and platelegs, in any of their variants (Sanguine, GadScape Primordial). */
+    /** Torva full helm, platebody and platelegs, normal or Sanguine. */
     public static boolean wearingFullTorva(final Equipment equipment) {
         return TORVA_HELMS.contains(equipment.getId(EquipmentSlot.HELMET))
                 && TORVA_BODIES.contains(equipment.getId(EquipmentSlot.PLATE))

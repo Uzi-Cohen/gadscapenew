@@ -34,10 +34,14 @@ import java.util.stream.Stream;
  * <ul>
  *     <li><b>pvp</b>: every character keeps skills, items and progress, but loses PvP stats and PvP currency:
  *     wilderness/PvP kills, deaths and streaks, Bounty Hunter points/kills/deaths/streak/skips/last target, black
- *     skull, duel wins/losses, the killstreak (anti-farm) log, loot key statistics; blood money, loot keys, BH emblems
- *     and target teleports are removed from every item container. The loot key enchantment itself is kept.</li>
+ *     skull, duel wins/losses, the killstreak (anti-farm) log, loot key statistics, and the PvP hiscores (the "PVP"
+ *     category of every characters-hiscores file); blood money, BH emblems and target teleports are removed from every
+ *     item container. Unclaimed loot is real loot, not PvP currency, so loot keys and the old 211 chest loot
+ *     (lootkeySettings.currentItemsInChest) are KEPT; only PvP currency inside them is removed (a key left empty is
+ *     removed). The loot key enchantment itself is kept.</li>
  *     <li><b>economy</b>: pvp + every item container is emptied (inventory, worn, bank, pouches, looting bag,
- *     storage, gravestone/Death's office, seed vault, gauntlet storage, ...) and Grand Exchange history; global GE
+ *     storage, gravestone/Death's office, seed vault, gauntlet storage, ...), every loot key and the old chest loot
+ *     are deleted with their contents, and Grand Exchange history; global GE
  *     offers, middleman trades, the ToB global chest and the well are reset. Skills, quests, diaries, collection log,
  *     ranks and settings stay.</li>
  *     <li><b>full</b>: complete wipe of all player data: characters, hiscores, hardware ids, GE offers (prices are
@@ -57,15 +61,25 @@ public final class SeasonReset {
             "bountyHunterPoints", "bountyHunterKills", "bountyHunterDeaths", "bountyHunterKillstreak",
             "bountyHunterSkipCount", "bountyHunterLastTarget", "blackSkulled", "DuelsWon", "DuelsLost");
 
-    /** PvP currency / PvP-only items removed in every mode. */
+    /** PvP currency / PvP-only items removed in every mode (also from inside loot keys and the old chest loot). */
     static final Set<Integer> PVP_ITEMS = new HashSet<>(List.of(
             13307, // blood money
-            26651, 26652, 26653, 26654, 26655, // loot keys
             12746, 12748, 12749, 12750, 12751, 12752, 12753, 12754, 12755, 12756, // mysterious emblems (old BH)
             24277, 24279, 24281, 24283, 24285, // mysterious emblems (2020)
             24565, 24567, 24569, 24571, 24573, 24575, 24577, 24579, 24581, 24583, // antique emblems (BH2020)
             24336 // target teleport
     ));
+
+    /**
+     * Loot keys (wildy_loot_key0..4). pvp mode keeps them (they hold real, unclaimed loot) and only strips PvP
+     * currency from their contents; economy mode deletes them with their contents.
+     */
+    static final Set<Integer> LOOT_KEYS = new HashSet<>(List.of(26651, 26652, 26653, 26654, 26655));
+    /** Loot key item attribute holding the loot as a JSON string (LootkeyConstants.LOOT_KEY_ITEM_LOOT_ITEMS_ATTR). */
+    static final String LOOT_KEY_ITEMS_ATTR = "loot-key-loot-items";
+
+    /** Hiscores category keys (HiscoresCategory names) cleared in pvp and economy modes. */
+    static final List<String> PVP_HISCORE_CATEGORIES = List.of("PVP");
 
     /** Character keys whose "container.items" are emptied in economy mode. */
     static final List<String> ECONOMY_CONTAINERS = List.of(
@@ -147,6 +161,7 @@ public final class SeasonReset {
             fullWipe();
         } else {
             resetCharacters();
+            resetPvpHiscores();
             if (mode == Mode.ECONOMY) {
                 resetGlobalEconomy();
             }
@@ -221,12 +236,77 @@ public final class SeasonReset {
             settings.addProperty("keysClaimed", 0);
             settings.addProperty("totalValueClaimed", 0);
             settings.addProperty("destroyedValue", 0);
-            settings.remove("currentItemsInChest");
+            final JsonElement chest = settings.get("currentItemsInChest");
+            if (chest != null && chest.isJsonObject() && chest.getAsJsonObject().size() > 0) {
+                if (mode == Mode.ECONOMY) {
+                    changes.add("old chest loot deleted (" + chest.getAsJsonObject().size() + " stacks)");
+                    settings.remove("currentItemsInChest");
+                } else {
+                    final int stripped = removeItems(chest.getAsJsonObject(), PVP_ITEMS);
+                    changes.add("old chest loot kept (" + chest.getAsJsonObject().size() + " stacks"
+                            + (stripped > 0 ? ", " + stripped + " PvP stacks removed" : "") + ")");
+                }
+            }
             changes.add("loot key stats");
         }
         final int[] removedItems = {0};
-        forEachContainer(root, items -> removedItems[0] += removeItems(items, PVP_ITEMS));
+        final int[] keys = {0, 0, 0}; // kept, emptied+removed, deleted (economy)
+        forEachContainer(root, items -> {
+            removedItems[0] += removeItems(items, PVP_ITEMS);
+            if (mode == Mode.ECONOMY) {
+                keys[2] += removeItems(items, LOOT_KEYS);
+            } else {
+                stripLootKeys(items, keys);
+            }
+        });
         if (removedItems[0] > 0) changes.add(removedItems[0] + " PvP item stacks");
+        if (keys[0] > 0) changes.add(keys[0] + " loot key(s) kept with their loot");
+        if (keys[1] > 0) changes.add(keys[1] + " loot key(s) that only held PvP currency removed");
+        if (keys[2] > 0) changes.add(keys[2] + " loot key(s) deleted with their loot");
+    }
+
+    /**
+     * pvp mode: removes PvP currency from inside every loot key in this container. A key whose loot is now empty is
+     * removed; any other key is kept (its stored value may read a little high until the chest next rewrites it).
+     */
+    private void stripLootKeys(final JsonObject items, final int[] keys) {
+        for (final String slot : new ArrayList<>(items.keySet())) {
+            final JsonElement element = items.get(slot);
+            if (element == null || !element.isJsonObject()) continue;
+            final JsonObject item = element.getAsJsonObject();
+            if (!item.has("id") || !LOOT_KEYS.contains(item.get("id").getAsInt())) continue;
+            final JsonObject attributes = item.has("attributes") && item.get("attributes").isJsonObject()
+                    ? item.getAsJsonObject("attributes") : null;
+            final JsonElement raw = attributes == null ? null : attributes.get(LOOT_KEY_ITEMS_ATTR);
+            JsonObject loot = null;
+            try {
+                if (raw != null && raw.isJsonPrimitive()) {
+                    final JsonElement parsed = JsonParser.parseString(raw.getAsString());
+                    loot = parsed.isJsonObject() ? parsed.getAsJsonObject() : null;
+                } else if (raw != null && raw.isJsonObject()) {
+                    loot = raw.getAsJsonObject();
+                }
+            } catch (Exception e) {
+                System.err.println("  unreadable loot key contents in slot " + slot + " kept as is: " + e.getMessage());
+                keys[0]++;
+                continue;
+            }
+            if (loot == null) {
+                keys[0]++;
+                continue;
+            }
+            final int before = loot.size();
+            removeItems(loot, PVP_ITEMS);
+            if (loot.size() == 0 && before > 0) {
+                items.remove(slot);
+                keys[1]++;
+                continue;
+            }
+            if (loot.size() != before) {
+                attributes.addProperty(LOOT_KEY_ITEMS_ATTR, loot.toString());
+            }
+            keys[0]++;
+        }
     }
 
     private void resetEconomy(final JsonObject root, final List<String> changes) {
@@ -309,6 +389,48 @@ public final class SeasonReset {
             }
         }
         return removed;
+    }
+
+    /* ------------------------------------------------------------------ hiscores */
+
+    /**
+     * pvp and economy modes: clears the PvP category of every data/characters-hiscores/&lt;mode&gt;/*.json file. The
+     * server only rewrites a player's PVP entry when they have at least one kill (HiscoresCategory.PVP), so without this
+     * last season's kills and deaths would stay on the leaderboard.
+     */
+    private void resetPvpHiscores() throws IOException {
+        final Path dir = data.resolve("characters-hiscores");
+        if (!Files.isDirectory(dir)) return;
+        final List<Path> files = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(dir, 2)) {
+            walk.filter(p -> Files.isRegularFile(p) && p.getFileName().toString().endsWith(".json")).sorted().forEach(files::add);
+        }
+        for (final Path file : files) {
+            final JsonElement parsed;
+            try {
+                parsed = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                System.err.println("  SKIP unreadable hiscores " + dir.relativize(file) + ": " + e.getMessage());
+                continue;
+            }
+            if (!parsed.isJsonObject()) continue;
+            final JsonObject root = parsed.getAsJsonObject();
+            final List<String> cleared = new ArrayList<>();
+            for (final String category : PVP_HISCORE_CATEGORIES) {
+                final JsonElement entries = root.get(category);
+                if (entries == null || entries.isJsonObject() && entries.getAsJsonObject().size() == 0) continue;
+                root.add(category, new JsonObject());
+                cleared.add(category);
+            }
+            if (cleared.isEmpty()) continue;
+            changedFiles++;
+            System.out.println("  characters-hiscores/" + dir.relativize(file) + ": " + String.join(", ", cleared) + " cleared");
+            if (apply) {
+                final Path tmp = file.resolveSibling(file.getFileName() + ".reset.tmp");
+                Files.writeString(tmp, gson.toJson(root), StandardCharsets.UTF_8);
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            }
+        }
     }
 
     /* ------------------------------------------------------------------ global files */

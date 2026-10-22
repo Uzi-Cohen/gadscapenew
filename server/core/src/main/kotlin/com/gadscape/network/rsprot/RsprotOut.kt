@@ -121,12 +121,18 @@ object RsprotOut {
     // ------------------------------------------------------------------------------------- misc
 
     /**
-     * RUNCLIENTSCRIPT; rsprot infers the argument types from the values (int, string, long, int array).
+     * RUNCLIENTSCRIPT; rsprot infers the argument types from the values (int, string, long, int array,
+     * string array).
      *
      * The 241 client binds the arguments positionally per type (the n-th int to int argument n, the n-th
      * string/array to object argument n, the n-th long to long argument n) into local arrays sized by the
      * script, so a surplus argument of any type throws before the first instruction. The arguments are
      * checked against the script's header in the cache the server serves (see [checkClientScript]).
+     *
+     * Arrays (E2): every int-typed cs2 array (`intarray`, `graphicarray`, `objarray`, `componentarray`, ...)
+     * goes out as an int array ('W'), every `stringarray` as a string array ('X'); the 241 client only tells
+     * strings from non-strings, so the element type needs no other marker. See [toClientScriptValue] for the
+     * accepted JVM types.
      *
      * @return the message, or `null` (dropped) when the script does not exist in the cache.
      */
@@ -135,21 +141,62 @@ object RsprotOut {
         val values = ArrayList<Any>(arguments?.size ?: 0)
         if (arguments != null) {
             for (argument in arguments) {
-                values += when (argument) {
-                    null -> -1
-                    is String -> argument
-                    is Long -> argument
-                    is Int -> argument
-                    is Number -> argument.toInt()
-                    is Boolean -> if (argument) 1 else 0
-                    is Char -> argument.code
-                    is IntArray -> argument
-                    else -> argument.toString()
-                }
+                values += toClientScriptValue(argument)
             }
         }
         if (!checkClientScript(scriptId, values)) return null
         return RunClientScript(scriptId, values)
+    }
+
+    /**
+     * One RUNCLIENTSCRIPT argument as rsprot's [RunClientScript] accepts it: Int, String, Long, IntArray
+     * or Array<String>.
+     * - null -> -1 (the cs2 null of every int type);
+     * - Boolean -> 1/0, Char -> its code, other Numbers -> toInt();
+     * - IntArray as is; ShortArray/ByteArray and Array/Collection of Numbers (or nulls, sent as -1) -> IntArray;
+     * - Array/Collection of Strings (or nulls, sent as "") -> Array<String>; an empty Array/Collection is an
+     *   empty int array (pass `emptyArray<String>()` for an empty string array);
+     * - anything else -> toString().
+     */
+    @JvmStatic
+    fun toClientScriptValue(argument: Any?): Any = when (argument) {
+        null -> -1
+        is String -> argument
+        is Long -> argument
+        is Int -> argument
+        is Number -> argument.toInt()
+        is Boolean -> if (argument) 1 else 0
+        is Char -> argument.code
+        is IntArray -> argument
+        is ShortArray -> IntArray(argument.size) { argument[it].toInt() }
+        is ByteArray -> IntArray(argument.size) { argument[it].toInt() }
+        is Array<*> -> arrayValue(argument.asList(), argument.isArrayOf<String>())
+        is Collection<*> -> arrayValue(argument, false)
+        else -> argument.toString()
+    }
+
+    private fun arrayValue(elements: Collection<*>, declaredStrings: Boolean): Any {
+        val strings = declaredStrings || (elements.isNotEmpty() && elements.all { it == null || it is CharSequence } &&
+            elements.any { it != null })
+        if (strings) {
+            val out = arrayOfNulls<String>(elements.size)
+            var i = 0
+            for (element in elements) out[i++] = element?.toString() ?: ""
+            @Suppress("UNCHECKED_CAST")
+            return out as Array<String>
+        }
+        val out = IntArray(elements.size)
+        var i = 0
+        for (element in elements) {
+            out[i++] = when (element) {
+                null -> -1
+                is Number -> element.toInt()
+                is Boolean -> if (element) 1 else 0
+                is Char -> element.code
+                else -> throw IllegalArgumentException("RUNCLIENTSCRIPT array element $element (${element.javaClass.name}) is neither a number nor a string")
+            }
+        }
+        return out
     }
 
     /** Script ids already reported by [checkClientScript] (one WARN per script id per boot). */
@@ -220,6 +267,7 @@ object RsprotOut {
         is String -> "\"" + value + "\""
         is Long -> value.toString() + "L"
         is IntArray -> "int[" + value.size + "]"
+        is Array<*> -> "string[" + value.size + "]"
         else -> value.toString()
     }
 

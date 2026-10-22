@@ -176,6 +176,9 @@ public final class Construction {
 
     private final transient List<com.zenyte.game.world.entity.npc.NPC> roamingPets = new ArrayList<>();
 
+    /** Games room NPCs (Jacky Jester, elemental balance) by furniture tile hash: at most one per piece of furniture. */
+    private final transient Map<Integer, com.zenyte.game.world.entity.npc.NPC> furnitureNpcs = new HashMap<>();
+
     private transient AllocatedArea allocatedArea;
 
     /** Whether the owner is inside the loaded instance. */
@@ -409,6 +412,15 @@ public final class Construction {
 
     private boolean build(final boolean building, Location spawnTile) {
         final AllocatedArea previous = allocatedArea;
+        // State to restore when building the new instance fails before anyone was moved into it.
+        final boolean previousBuildingMode = buildingMode;
+        final Boolean previousNextBuildingMode = nextBuildingMode;
+        final Location previousPortal = portal;
+        final int previousChunkX = chunkX;
+        final int previousChunkY = chunkY;
+        final int previousYardSpace = yardSpace;
+        final int previousYardOffset = yardOffset;
+        boolean moved = false;
         final AllocatedArea area;
         try {
             area = MapBuilder.findEmptyChunk(generateYardSpace(), generateYardSpace());
@@ -448,6 +460,7 @@ public final class Construction {
                     ? getWorldTile(spawnTile.getX() - yardOffset * 8, spawnTile.getY() - yardOffset * 8, spawnTile.getPlane())
                     : getPortalTile();
             ownerInside = true;
+            moved = true;
             enterInstance(player, destination);
             for (final Player guest : new ArrayList<>(guests)) {
                 if (guest == null || guest.isFinished()) {
@@ -460,6 +473,7 @@ public final class Construction {
                 scheduleDestroy(previous);
             }
             combat.onHouseLoaded();
+            finishFurnitureNpcs();
             roamingPets.clear();
             com.zenyte.game.content.skills.construction.objects.menagerie.PetHouse.spawnPets(this);
             servantManager.onHouseLoaded();
@@ -467,7 +481,30 @@ public final class Construction {
             return true;
         } catch (Exception e) {
             log.error("", e);
-            return true;
+            if (moved) {
+                // The players are in the new instance already; only an extra (monsters, pets, servant) failed.
+                return true;
+            }
+            // Nobody was moved: drop the half-built instance and keep the previous one (if any) as it was.
+            allocatedArea = previous;
+            buildingMode = previousBuildingMode;
+            nextBuildingMode = previousNextBuildingMode;
+            portal = previousPortal;
+            chunkX = previousChunkX;
+            chunkY = previousChunkY;
+            yardSpace = previousYardSpace;
+            yardOffset = previousYardOffset;
+            player.getTemporaryAttributes().put("yard", yardOffset);
+            if (area != previous) {
+                try {
+                    MapBuilder.destroy(area);
+                } catch (Exception destroyError) {
+                    log.error("", destroyError);
+                }
+            }
+            player.unlock();
+            player.sendMessage("Your house could not be loaded right now, please try again.");
+            return false;
         }
     }
 
@@ -679,8 +716,19 @@ public final class Construction {
         locked = false;
         servantManager.onHouseClosed();
         combat.onHouseClosed();
+        finishFurnitureNpcs();
         roamingPets.clear();
         scheduleDestroy(area);
+    }
+
+    private void finishFurnitureNpcs() {
+        final List<com.zenyte.game.world.entity.npc.NPC> npcs = new ArrayList<>(furnitureNpcs.values());
+        furnitureNpcs.clear();
+        for (final com.zenyte.game.world.entity.npc.NPC npc : npcs) {
+            if (npc != null && !npc.isFinished()) {
+                npc.finish();
+            }
+        }
     }
 
     private void scheduleDestroy(final AllocatedArea area) {
@@ -871,7 +919,29 @@ public final class Construction {
         }
     }
 
-    public void removeRoom(final RoomReference reference) {
+    /**
+     * Removes a room of this house (door hotspot, staircase or dungeon entrance "Remove-room"). Only the owner may, standing in
+     * the house in building mode (guests can't be inside then), so the saved layout and the live instance never disagree.
+     */
+    public void removeRoom(final Player p, final RoomReference reference) {
+        if (p != player || !ownerInside || player.getCurrentHouse() != this || !contains(player.getLocation())) {
+            p.sendMessage("You can only do that in your own house.");
+            return;
+        }
+        if (!buildingMode || hasGuests()) {
+            p.sendMessage("You can only do that in building mode.");
+            return;
+        }
+        boolean found = false;
+        for (final RoomReference room : references) {
+            if (room == reference) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return;
+        }
         references.remove(reference);
         enterHouse(true, getRelationalSpawnTile());
     }
@@ -908,7 +978,7 @@ public final class Construction {
         }
         final RoomReference reference = getReference(roomX, roomY, object.getPlane());
         if (reference != null) {
-            player.getDialogueManager().start(new RoomRemovingD(player, reference));
+            player.getDialogueManager().start(new RoomRemovingD(player, this, reference));
         } else {
             if (object.getPlane() == 2) {
                 final RoomReference bottomRef = getReference(roomX, roomY, 1);
@@ -1781,6 +1851,10 @@ public final class Construction {
 
     public List<Integer> getMenageriePets() {
         return menageriePets;
+    }
+
+    public Map<Integer, com.zenyte.game.world.entity.npc.NPC> getFurnitureNpcs() {
+        return furnitureNpcs;
     }
 
     public List<com.zenyte.game.world.entity.npc.NPC> getRoamingPets() {

@@ -44,11 +44,8 @@ public class EliteRewardsTable extends ClueRewardTable {
             notedItem(OAK_PLANK, 60, 80),
             notedItem(TEAK_PLANK, 40, 50),
             notedItem(MAHOGANY_PLANK, 20, 30),
-            notedItem(RUNITE_BAR, 1, 3),
-            //OSRS wiki (Reward casket (elite)) supplies missing here.
-            notedItem(GRIMY_RANARR_WEED, 5, 25),
-            notedItem(WINE_OF_ZAMORAK, 5, 25),
-            notedItem(RAW_MANTA_RAY, 3, 15)
+            notedItem(RUNITE_BAR, 1, 3)
+            // Grimy ranarr / wine of zamorak / raw manta ray are Mimic-only (TheMimicCasket.bonusLoot), not standard.
     );
 
     private final List<ImmutableItem> uncommonItemsTable = tableOf(

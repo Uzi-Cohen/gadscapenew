@@ -38,6 +38,10 @@ public final class Demon {
 
 	private static boolean isDemon(final NPC npc, String[] demonList) {
 		if (npc == null) return false;
+		final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+		if (traits != null && traits.isDemon() != null) {
+			return traits.isDemon(); // Raids 4 E9: the traits decide (Dreadnoth, Xarth, Ocellus, jellies)
+		}
 		final String name = npc.getDefinitions().getName();
 		if (name == null) return false;
 		final String lowerCaseName = name.toLowerCase();

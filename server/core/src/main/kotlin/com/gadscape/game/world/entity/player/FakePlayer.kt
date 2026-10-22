@@ -6,7 +6,8 @@ import com.zenyte.game.world.entity.player.PlayerInformation
 import com.zenyte.net.Session
 import com.zenyte.net.game.ServerEvent
 
-class FakePlayer(username: String) : Player(
+// open: the soak test's bots (com.gadscape.tools.soak.SoakBot) extend it to be unkillable.
+open class FakePlayer(username: String) : Player(
     fakePlayerInformation(username),
     null
 ) {

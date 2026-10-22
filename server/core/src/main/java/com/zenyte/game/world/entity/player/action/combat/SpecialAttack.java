@@ -38,6 +38,7 @@ import com.zenyte.game.world.entity.masks.HitType;
 import com.zenyte.game.world.entity.npc.NPC;
 import com.zenyte.game.world.entity.npc.combatdefs.AttackType;
 import com.zenyte.game.world.entity.npc.combatdefs.NPCCDLoader;
+import com.zenyte.game.world.entity.npc.combatdefs.NPCCombatDefinitions;
 import com.zenyte.game.world.entity.npc.combatdefs.StatType;
 import com.zenyte.game.world.entity.npc.race.Demon;
 import com.zenyte.game.world.entity.player.Player;
@@ -1273,6 +1274,12 @@ public enum SpecialAttack implements ISpecialAttack {
                 playerTarget.getSkills().drainPercentageStatically(SkillConstants.DEFENCE, 0.15);
                 playerTarget.getSkills().drainPercentageStatically(SkillConstants.MAGIC, 0.15);
             }
+        } else if (target instanceof final NPC npcTarget && hit.isAccurate()) {
+            // Condemn drains NPCs too (15% of the base level). Through NPC#drainSkill, so the Raids 4 defence floor
+            // holds and the Archive Guardian's inverted magic drain raises its Magic instead.
+            final NPCCombatDefinitions base = npcTarget.getBaseCombatDefinitions() != null ? npcTarget.getBaseCombatDefinitions() : npcTarget.getCombatDefinitions();
+            npcTarget.drainSkill(SkillConstants.DEFENCE, (int) (base.getStatDefinitions().get(StatType.DEFENCE) * 0.15));
+            npcTarget.drainSkill(SkillConstants.MAGIC, (int) (base.getStatDefinitions().get(StatType.MAGIC) * 0.15));
         }
     }),
 

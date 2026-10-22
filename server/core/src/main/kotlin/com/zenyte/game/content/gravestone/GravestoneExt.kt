@@ -23,6 +23,13 @@ import kotlin.math.min
  */
 object GravestoneExt {
 
+    /**
+     * Persistent player attribute: percent taken off the fee of the current gravestone (absent / 0 = full fee). Set
+     * after a death by content with its own fee rule (the Fractured Archive: 75 in its death zone below 5 KC, script
+     * 1797); cleared whenever a new gravestone is made.
+     */
+    const val FEE_DISCOUNT_ATTRIBUTE = "gravestone_fee_discount_pct"
+
     private fun Player.reclaim() {
         for (slotId in 0 until retrievalService.container.size) {
             val item = retrievalService.container[slotId] ?: continue
@@ -98,6 +105,8 @@ object GravestoneExt {
     }
 
     fun Player.createGravestone(location: Location, killer: Player? = null): Pair<List<Item>, List<Item>> {
+        // A new gravestone pays the normal fee unless its creator sets a discount again (e.g. the Fractured Archive).
+        attributes.remove(FEE_DISCOUNT_ATTRIBUTE)
         val (itemsLost, gravestoneItems) = calculateGravestoneItems(killer != null)
         gravestone.createGravestone(location, gravestoneItems.subList(0, min(120, gravestoneItems.size)))
         retrievalService.isLocked = true
@@ -260,7 +269,9 @@ object GravestoneExt {
         val highCost = sorted.filter { getItemReclaimCost(it) == 100_000 }
         val mediumCost = sorted.filter { getItemReclaimCost(it) == 10_000 }
         val lowCost = sorted.filter { getItemReclaimCost(it) == 1_000 }
-        val totalSum = highCost.sumOf { it.amount * 100_000 } + mediumCost.sumOf { it.amount * 10_000 } + lowCost.sumOf { it.amount * 1_000 }
+        val fullSum = highCost.sumOf { it.amount * 100_000 } + mediumCost.sumOf { it.amount * 10_000 } + lowCost.sumOf { it.amount * 1_000 }
+        val discount = ((attributes[FEE_DISCOUNT_ATTRIBUTE] as? Number)?.toInt() ?: 0).coerceIn(0, 100)
+        val totalSum = if (discount == 0) fullSum else (fullSum.toLong() * (100 - discount) / 100).toInt()
         return RetrievalServiceStatus(
             freeItems,
             highCost,

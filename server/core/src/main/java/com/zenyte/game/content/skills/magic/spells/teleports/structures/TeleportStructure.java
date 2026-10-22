@@ -332,31 +332,14 @@ public interface TeleportStructure {
 
 	/**
 	 * When the destination tile itself is blocked (a map update put scenery on it, or it was never walkable), returns the
-	 * closest walkable tile within {@link #BLOCKED_DESTINATION_SEARCH_RADIUS}: first one in line of sight of the destination,
-	 * then any. Otherwise returns the destination unchanged, so {@link #verifyLocation} behaves as before.
+	 * closest tile within {@link BlockedDestinationFallback#SEARCH_RADIUS} of the destination's own open area: reachable on
+	 * foot from an open side of the destination, never across a wall, fence, gate or door, and not a small pocket. When
+	 * there is none (or the blocked tile splits two areas), returns the destination unchanged so {@link #verifyLocation}
+	 * fails the teleport as before. Blocked destinations are logged once so they can be fixed in the data.
 	 */
-	int BLOCKED_DESTINATION_SEARCH_RADIUS = 4;
-
 	default Location nearestFreeTile(final Player player, final Location destination) {
-		World.loadRegion(destination.getRegionId());
-		if (World.isFloorFree(destination, player.getSize())) {
-			return destination;
-		}
-		for (int pass = 0; pass < 2; pass++) {
-			for (int radius = 1; radius <= BLOCKED_DESTINATION_SEARCH_RADIUS; radius++) {
-				for (int dx = -radius; dx <= radius; dx++) {
-					for (int dy = -radius; dy <= radius; dy++) {
-						if (Math.max(Math.abs(dx), Math.abs(dy)) != radius) continue;
-						final Location tile = destination.transform(dx, dy, 0);
-						World.loadRegion(tile.getRegionId());
-						if (!World.isFloorFree(tile, player.getSize())) continue;
-						if (pass == 0 && ProjectileUtils.isProjectileClipped(player, null, destination, tile, true)) continue;
-						return tile;
-					}
-				}
-			}
-		}
-		return destination;
+		final Location tile = BlockedDestinationFallback.find(destination, player.getSize());
+		return tile != null ? tile : destination;
 	}
 
 	default Location invalidTeleport(final Player player, final Location location) throws InvalidLocationException {

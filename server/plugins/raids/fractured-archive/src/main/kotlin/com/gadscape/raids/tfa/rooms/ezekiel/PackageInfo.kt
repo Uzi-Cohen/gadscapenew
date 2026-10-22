@@ -1,12 +1,12 @@
 /*
  * Package com.gadscape.raids.tfa.rooms.ezekiel
  *
- * Owner: WU-21 Ezekiel (spec §4.2).
- * Planned files (spec §2.1): EzekielRoom, EzekielNpc, Cleave, Star, AnimatedSword, SwordPatterns, Finale (+ ezekiel.json spec).
- * Registers TfaEncounters.register(TfaRoomId.EZEKIEL).
+ * Owner: WU-21 Ezekiel (spec §4.2), room 2, section 1 west, static region 16214. Notes: raids4-impl/ENC-ezekiel.md.
  *
- * Created empty by WU-08 (module skeleton). Read raids4-impl/ARCHITECTURE.md for the extension points; do not
- * edit the WU-08 core files (TfaModule, ids/, config/, encounter/{TfaEncounter,TfaNpc,TfaBossNpc,Scaling,CombatTraits},
- * raid/{TfaRoomId,TfaInstance,StaticTile}, debug/, TfaServices) except through those extension points.
+ * - EzekielModule: registers `ezekiel.json` (EzekielConfig), TfaEncounters.register(TfaRoomId.EZEKIEL), `::tfa ezekiel`.
+ * - EzekielRoom: the TfaEncounter and the world side (EzekielHost) of EzekielFight, the pure state machine.
+ * - EzekielNpcs: Ezekiel 16652, Animated Sword 16653, sword fence 16654, finale sword 16655, death sword 16656.
+ * - Cleave / Star (EzekielGeometry), SwordPatterns, SwordFlight, Finale, TankOrder: pure rules, unit-tested.
+ * - EzekielIds: every id used with its evidence; Bridge: the one adapter to other units' capabilities.
  */
 package com.gadscape.raids.tfa.rooms.ezekiel

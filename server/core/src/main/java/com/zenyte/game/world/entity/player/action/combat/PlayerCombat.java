@@ -206,9 +206,37 @@ public abstract class PlayerCombat extends Action {
             if (player.getBooleanTemporaryAttribute("nightmare_drowsy_phosanis")) {
                 speed++;
             }
+        } else if (com.gadscape.game.world.entity.player.status.Weary.isWeary(player)) {
+            speed = com.gadscape.game.world.entity.player.status.Weary.adjustAttackSpeed(speed, true); // Raids 4 Weary
         }
 
         return speed;
+    }
+
+    /** The style of this combat's own attacks for {@link com.zenyte.game.world.entity.npc.combat.NpcCombatTraits#guaranteedHit}. */
+    protected HitType traitsAttackStyle() {
+        return this instanceof MagicCombat ? HitType.MAGIC : this instanceof RangedCombat ? HitType.RANGED : HitType.MELEE;
+    }
+
+    /** Whether {@code target}'s combat traits make this combat's attacks skip the accuracy roll (Raids 4 E8). */
+    protected boolean isGuaranteedHit(final Entity target) {
+        final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = CombatUtilities.traitsOf(target);
+        return traits != null && traits.guaranteedHit(traitsAttackStyle());
+    }
+
+    /**
+     * Flat armour (melee and ranged) or magic resistance (magic) of an NPC's combat traits, taken off a successful
+     * player hitsplat; never below 1 (Raids 4 E8, OSRS wiki "Flat armour").
+     */
+    public static void applyTraitArmour(final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits, final Hit hit) {
+        final int armour = switch (hit.getHitType()) {
+            case MELEE, RANGED -> traits.flatArmour();
+            case MAGIC -> traits.magicResistance();
+            default -> 0;
+        };
+        if (armour != 0) {
+            hit.setDamage(com.zenyte.game.world.entity.npc.combat.CombatTraitRules.applyFlatArmour(hit.getDamage(), armour));
+        }
     }
 
     @Override
@@ -924,6 +952,9 @@ public abstract class PlayerCombat extends Action {
 
     public boolean isSuccessful(Player player, final Entity target, final double modifier,
                                 final AttackType oppositeIndex) {
+        if (isGuaranteedHit(target)) {
+            return true;
+        }
         final int accuracy = getAccuracy(player, target, modifier);
         final int targetRoll = getTargetDefenceRoll(player, target, oppositeIndex);
         final int accRoll = Utils.random(accuracy);
@@ -1146,6 +1177,40 @@ public abstract class PlayerCombat extends Action {
         return false;
     }
 
+    /**
+     * Runs the checks a normal melee swing at this action's target makes (safe zone, single/multi-way
+     * {@link #attackable()}, the target's own canAttack (Wilderness level range, ...), the area's
+     * {@link EntityAttackPlugin} and PlayerCombatPlugin with style "Melee" (duel No Melee), and the controllers) and,
+     * when they all pass, the area's onAttack (skulling). For off-hand attacks that hit outside this action's own
+     * attack cycle (Rondache Shield Slam). Returns false, after the usual message, when the attack is not allowed.
+     */
+    public final boolean prepareOffhandMeleeAttack() {
+        if (target == null || target.isDead() || target.isFinished() || target.isCantInteract() || target.isDying()) {
+            return false;
+        }
+        if (target instanceof Player targetPlayer && (!player.isCanPvp() || !targetPlayer.isCanPvp())) {
+            player.sendMessage("You can't attack someone in a safe zone.");
+            return false;
+        }
+        if (!attackable() || !target.canAttack(player)) {
+            return false;
+        }
+        final RegionArea area = player.getArea();
+        if (area instanceof EntityAttackPlugin attackPlugin && !attackPlugin.attack(player, target, this)) {
+            return false;
+        }
+        if (area instanceof com.zenyte.game.world.region.area.plugins.PlayerCombatPlugin combatPlugin && !combatPlugin.processCombat(player, target, "Melee")) {
+            return false;
+        }
+        if (!player.getControllerManager().processPlayerCombat(target, "Melee")) {
+            return false;
+        }
+        if (area instanceof com.zenyte.game.world.region.area.plugins.PlayerCombatPlugin combatPlugin) {
+            combatPlugin.onAttack(player, target, "Melee", null, false);
+        }
+        return true;
+    }
+
     protected boolean withinRange(final Position targetPosition,
                                   final int maximumDistance,
                                   final int targetSize) {
@@ -1244,6 +1309,10 @@ public abstract class PlayerCombat extends Action {
             }
 
             if (target instanceof final NPC npc) {
+                final com.zenyte.game.world.entity.npc.combat.NpcCombatTraits traits = npc.getCombatTraits();
+                if (traits != null) {
+                    applyTraitArmour(traits, hit);
+                }
                 final int cap = npc.getDamageCap();
                 if (cap >= 0 && hit.getDamage() > cap) {
                     hit.setDamage(cap);
@@ -1469,6 +1538,7 @@ public abstract class PlayerCombat extends Action {
             case ItemId.SILVERLIGHT:
             case ItemId.DARKLIGHT:
             case ItemId.ARCLIGHT:
+            case ItemId.EMBERLIGHT:
                 return true;
             default:
                 return false;

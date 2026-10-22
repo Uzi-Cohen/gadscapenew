@@ -109,16 +109,11 @@ public enum DismantleableItem {
 	ELDER_CHAOS_TOP_OR(ItemId.ELDER_CHAOS_TOP_OR, ItemId.ELDER_CHAOS_ROBES_ORNAMENT_KIT, ItemId.ELDER_CHAOS_TOP),
 	ELDER_CHAOS_ROBE_OR(ItemId.ELDER_CHAOS_ROBE_OR, ItemId.ELDER_CHAOS_ROBES_ORNAMENT_KIT, ItemId.ELDER_CHAOS_ROBE),
 	ELDER_CHAOS_HOOD_OR(ItemId.ELDER_CHAOS_HOOD_OR, ItemId.ELDER_CHAOS_ROBES_ORNAMENT_KIT, ItemId.ELDER_CHAOS_HOOD),
-	/* GadScape custom kits (SKSP-15): see com.zenyte.game.content.sets.GadScapeKits. */
-	PEGASIAN_MASORI_MASK_F(com.zenyte.game.content.sets.GadScapeKits.PEGASIAN_MASORI_MASK_F, com.zenyte.game.content.sets.GadScapeKits.MASORI_PEGASIAN_ORNAMENT_KIT, ItemId.MASORI_MASK_F),
-	PEGASIAN_MASORI_BODY_F(com.zenyte.game.content.sets.GadScapeKits.PEGASIAN_MASORI_BODY_F, com.zenyte.game.content.sets.GadScapeKits.MASORI_PEGASIAN_ORNAMENT_KIT, ItemId.MASORI_BODY_F),
-	PEGASIAN_MASORI_CHAPS_F(com.zenyte.game.content.sets.GadScapeKits.PEGASIAN_MASORI_CHAPS_F, com.zenyte.game.content.sets.GadScapeKits.MASORI_PEGASIAN_ORNAMENT_KIT, ItemId.MASORI_CHAPS_F),
-	ETERNAL_ANCESTRAL_HAT(com.zenyte.game.content.sets.GadScapeKits.ETERNAL_ANCESTRAL_HAT, com.zenyte.game.content.sets.GadScapeKits.ANCESTRAL_ETERNAL_ORNAMENT_KIT, ItemId.ANCESTRAL_HAT),
-	ETERNAL_ANCESTRAL_ROBE_TOP(com.zenyte.game.content.sets.GadScapeKits.ETERNAL_ANCESTRAL_ROBE_TOP, com.zenyte.game.content.sets.GadScapeKits.ANCESTRAL_ETERNAL_ORNAMENT_KIT, ItemId.ANCESTRAL_ROBE_TOP),
-	ETERNAL_ANCESTRAL_ROBE_BOTTOM(com.zenyte.game.content.sets.GadScapeKits.ETERNAL_ANCESTRAL_ROBE_BOTTOM, com.zenyte.game.content.sets.GadScapeKits.ANCESTRAL_ETERNAL_ORNAMENT_KIT, ItemId.ANCESTRAL_ROBE_BOTTOM),
-	PRIMORDIAL_TORVA_FULL_HELM(com.zenyte.game.content.sets.GadScapeKits.PRIMORDIAL_TORVA_FULL_HELM, com.zenyte.game.content.sets.GadScapeKits.TORVA_PRIMORDIAL_ORNAMENT_KIT, ItemId.TORVA_FULLHELM),
-	PRIMORDIAL_TORVA_PLATEBODY(com.zenyte.game.content.sets.GadScapeKits.PRIMORDIAL_TORVA_PLATEBODY, com.zenyte.game.content.sets.GadScapeKits.TORVA_PRIMORDIAL_ORNAMENT_KIT, ItemId.TORVA_PLATEBODY),
-	PRIMORDIAL_TORVA_PLATELEGS(com.zenyte.game.content.sets.GadScapeKits.PRIMORDIAL_TORVA_PLATELEGS, com.zenyte.game.content.sets.GadScapeKits.TORVA_PRIMORDIAL_ORNAMENT_KIT, ItemId.TORVA_PLATELEGS),
+	/* GadScape boot ornament kits (SKSP-15, collection-log rewards): see com.zenyte.game.content.sets.GadScapeKits. The
+	 * results are new objs of the GadScape cache: each row works only while the cache has its result under that name. */
+	MASORI_PEGASIAN_BOOTS(com.zenyte.game.content.sets.GadScapeKits.MASORI_PEGASIAN_BOOTS, com.zenyte.game.content.sets.GadScapeKits.MASORI_PEGASIAN_ORNAMENT_KIT, ItemId.PEGASIAN_BOOTS, com.zenyte.game.content.sets.GadScapeKits.MASORI_PEGASIAN_BOOTS_NAME),
+	ANCESTRAL_ETERNAL_BOOTS(com.zenyte.game.content.sets.GadScapeKits.ANCESTRAL_ETERNAL_BOOTS, com.zenyte.game.content.sets.GadScapeKits.ANCESTRAL_ETERNAL_ORNAMENT_KIT, ItemId.ETERNAL_BOOTS, com.zenyte.game.content.sets.GadScapeKits.ANCESTRAL_ETERNAL_BOOTS_NAME),
+	TORVA_PRIMORDIAL_BOOTS(com.zenyte.game.content.sets.GadScapeKits.TORVA_PRIMORDIAL_BOOTS, com.zenyte.game.content.sets.GadScapeKits.TORVA_PRIMORDIAL_ORNAMENT_KIT, ItemId.PRIMORDIAL_BOOTS, com.zenyte.game.content.sets.GadScapeKits.TORVA_PRIMORDIAL_BOOTS_NAME),
 	;
 
     public static final DismantleableItem[] VALUES = values();
@@ -127,12 +122,23 @@ public enum DismantleableItem {
     private final int completeItem, kit, baseItem;
     private final boolean splitOnDeath;
 	private final String kitName, baseName;
+	/** For a result that is a new obj of the GadScape cache: the name the cache must have at {@link #completeItem}. */
+	private final String resultName;
 
 	DismantleableItem(final int completeItem, final int kit, final int baseItem) {
 		this(completeItem, kit, baseItem, true);
 	}
 
+	DismantleableItem(final int completeItem, final int kit, final int baseItem, final String resultName) {
+		this(completeItem, kit, baseItem, true, resultName);
+	}
+
     DismantleableItem(final int completeItem, final int kit, final int baseItem, boolean splitOnDeath) {
+        this(completeItem, kit, baseItem, splitOnDeath, null);
+    }
+
+    DismantleableItem(final int completeItem, final int kit, final int baseItem, boolean splitOnDeath, final String resultName) {
+        this.resultName = resultName;
         this.completeItem = completeItem;
         this.kit = kit;
 		this.kitName = ItemDefinitions.nameOfLowercase(kit);
@@ -163,6 +169,30 @@ public enum DismantleableItem {
 
 	public String getBaseName() {
 		return baseName;
+	}
+
+	/**
+	 * Whether the loaded cache has the result item, under the expected name for a GadScape result (a new obj of the
+	 * converted cache). A row whose result is missing, or whose id holds another item, must not attach, dismantle or
+	 * split on death (it would hand out or take apart the wrong item).
+	 */
+	public boolean isAvailable() {
+		final ItemDefinitions definitions = ItemDefinitions.get(completeItem);
+		if (definitions == null) {
+			return false;
+		}
+		return resultName == null || (definitions.getName() != null && resultName.equalsIgnoreCase(definitions.getName().trim()));
+	}
+
+	/** True for the GadScape rows whose result is a new obj of the GadScape cache. */
+	public boolean isGadScapeResult() {
+		return resultName != null;
+	}
+
+	/** The available row whose result is this item, or null. */
+	public static DismantleableItem forCompleteItem(final int completeItem) {
+		final DismantleableItem dis = MAPPED_VALUES.get(completeItem);
+		return dis != null && dis.isAvailable() ? dis : null;
 	}
 
 	static {

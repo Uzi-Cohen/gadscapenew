@@ -66,7 +66,9 @@ public class MinimizedMinimapOrbsInterface extends Interface {
                 player.sendMessage("Use of special attacks has been turned off for this duel.");
                 return;
             }
-            player.getCombatDefinitions().setSpecial(!player.getCombatDefinitions().isUsingSpecial(), false);
+            // 2746 orb: op 1 "Use"/"Deactivate" (weapon special, or the Rondache when the weapon has none), op 2
+            // "Use Offhand"/"Deactivate Offhand" (Rondache Shield Slam while the weapon has its own special).
+            player.getCombatDefinitions().toggleSpecialBar(option == 2 ? 2 : 0);
         });
         bind("Experience Tracker", (player, slotId, itemId, option) -> {
             if (option == 1) {

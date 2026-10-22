@@ -1,0 +1,160 @@
+{
+  "_doc": "Xarth (spec §4.7, WU-26). The keys attackSpeed, thresholds, magicMax, meleeMax, rangedMax, blast, flames, corpses and healBlast are the spec's house block (their objects gain implementation keys); every other key is documented in raids4-impl/ENC-xarth.md. Ticks are server ticks; projectile delays are client cycles (30 per tick).",
+  "baseHp": 2600,
+  "attackSpeed": 4,
+  "firstAttackDelay": 5,
+  "thresholds": [80, 65, 50],
+  "magicMax": 30,
+  "meleeMax": 34,
+  "rangedMax": 34,
+  "magicBurn": 1,
+  "blast": {
+    "bindTicks": 3,
+    "bombDmg": [35, 45],
+    "blastDmg": [45, 65],
+    "blastBurn": 2,
+    "resolveTick": 7,
+    "coverRule": "los",
+    "bombBurn": 1,
+    "aoeTick": 3,
+    "chargeTick": 4,
+    "endTick": 9,
+    "bombsPerPlayer": 2,
+    "losTest": "ray",
+    "restoreRun": true
+  },
+  "transition": {
+    "flamesLaunchTick": 3,
+    "autosTick": 8,
+    "firstSummonTick": 10,
+    "collapseStanding": true,
+    "depleteSpot": false
+  },
+  "flames": {
+    "base": 6,
+    "perTwoScale": 1,
+    "addEvery": 25,
+    "add": 2,
+    "cap": 16,
+    "dmg": [4, 8],
+    "burnEvery": 4,
+    "minDistance": 2,
+    "spawnAnimTicks": 5
+  },
+  "corpses": {
+    "hp": [20, 27, 34, 41, 48, 55, 62],
+    "intervals": [
+      { "abovePct": 35, "ticks": 15 },
+      { "abovePct": 20, "ticks": 12 },
+      { "abovePct": 0, "ticks": 9 }
+    ],
+    "perSummonDiv": 3,
+    "cap": 12,
+    "pileFireTicks": 6,
+    "fireExtraCooldown": 3,
+    "untargetableTicks": 1,
+    "arrivalDistance": 1,
+    "absorbTicks": 2,
+    "deathTicks": 4,
+    "pileBusy": "spawned",
+    "douseOnSplash": false,
+    "fireOnSplash": true,
+    "stats": {
+      "levels": [50, 40, 100, 100, 1],
+      "attackBonuses": [0, 0, 0, 0, 0],
+      "defenceBonuses": [100, 100, 100, 0, 80],
+      "otherBonuses": [0, 0, 0]
+    },
+    "dousedStats": {
+      "levels": [50, 40, 100, 100, 1],
+      "attackBonuses": [0, 0, 0, 0, 0],
+      "defenceBonuses": [-20, -20, -20, 0, 80],
+      "otherBonuses": [0, 0, 0]
+    },
+    "traits": {
+      "defenceFloorPct": null,
+      "weakness": "water",
+      "weaknessPct": 40,
+      "rangedDef": [-20, 80, 80],
+      "immunePoison": false,
+      "immuneVenom": false,
+      "immuneCannon": true,
+      "freezeResistPct": 0,
+      "immuneAncients": false,
+      "demonbanePct": null,
+      "flatArmour": 0,
+      "magicResist": 0,
+      "magicDrainInverted": false,
+      "flying": false
+    },
+    "dousedTraits": {
+      "defenceFloorPct": null,
+      "weakness": "water",
+      "weaknessPct": 40,
+      "rangedDef": [-20, 80, 80],
+      "immunePoison": false,
+      "immuneVenom": false,
+      "immuneCannon": true,
+      "freezeResistPct": 0,
+      "immuneAncients": false,
+      "demonbanePct": null,
+      "flatArmour": 0,
+      "magicResist": 0,
+      "magicDrainInverted": false,
+      "flying": false
+    }
+  },
+  "healBlast": {
+    "threshold": 200,
+    "dmg": [40, 55],
+    "burn": 3,
+    "shieldedMult": 0.5,
+    "shieldedBurn": 1,
+    "burstTick": 2,
+    "resumeTick": 4
+  },
+  "melee": {
+    "hitDelay": 1,
+    "style": "crush"
+  },
+  "projectiles": {
+    "magic": { "startHeight": 106, "endHeight": 32, "delay": 32, "slope": 16, "duration": 10, "perTile": 5 },
+    "ranged": { "startHeight": 106, "endHeight": 32, "delay": 52, "slope": 16, "duration": 10, "perTile": 5 },
+    "bomb": { "startHeight": 106, "endHeight": 0, "delay": 0, "slope": 40, "duration": 60, "perTile": 0 }
+  },
+  "turn": {
+    "enabled": true,
+    "minAngle": 256,
+    "leadTicks": 2
+  },
+  "death": {
+    "completeTick": 5
+  },
+  "arena": {
+    "spawn": [4190, 5534, 0],
+    "spawnFacing": "west"
+  },
+  "stats": {
+    "levels": [250, 225, 170, 350, 220],
+    "attackBonuses": [150, 150, 150, 250, 250],
+    "defenceBonuses": [115, 105, 20, 205, 230],
+    "otherBonuses": [30, 30, 0]
+  },
+  "xpModifier": 2.8,
+  "traits": {
+    "defenceFloorPct": 60,
+    "weakness": "water",
+    "weaknessPct": 85,
+    "rangedDef": [125, 230, 155],
+    "immunePoison": true,
+    "immuneVenom": true,
+    "immuneCannon": true,
+    "freezeResistPct": 100,
+    "immuneAncients": false,
+    "demonbanePct": 80,
+    "flatArmour": 0,
+    "magicResist": 0,
+    "magicDrainInverted": false,
+    "flying": false
+  }
+}

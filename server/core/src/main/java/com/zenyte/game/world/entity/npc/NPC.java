@@ -18,6 +18,7 @@ import com.zenyte.game.content.skills.slayer.SlayerMaster;
 import com.zenyte.game.content.supplycaches.SupplyCache;
 import com.zenyte.game.content.tombsofamascut.AbstractTOARaidArea;
 import com.zenyte.game.content.treasuretrails.ClueItem;
+import com.zenyte.game.content.treasuretrails.ClueStackLimit;
 import com.zenyte.game.content.xamphur.XamphurBoost;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
@@ -35,6 +36,8 @@ import com.zenyte.game.world.entity.masks.Animation;
 import com.zenyte.game.world.entity.masks.Hit;
 import com.zenyte.game.world.entity.masks.HitType;
 import com.zenyte.game.world.entity.masks.UpdateFlag;
+import com.zenyte.game.world.entity.npc.combat.CombatTraitRules;
+import com.zenyte.game.world.entity.npc.combat.NpcCombatTraits;
 import com.zenyte.game.world.entity.npc.combatdefs.*;
 import com.zenyte.game.world.entity.npc.drop.matrix.Drop;
 import com.zenyte.game.world.entity.npc.drop.matrix.DropProcessor;
@@ -47,6 +50,7 @@ import com.zenyte.game.world.entity.npc.spawns.NPCSpawn;
 import com.zenyte.game.world.entity.pathfinding.Flags;
 import com.zenyte.game.world.entity.player.*;
 import com.zenyte.game.world.entity.player.action.combat.PlayerCombat;
+import com.zenyte.game.world.entity.player.action.combat.magic.CombatSpell;
 import com.zenyte.game.world.entity.player.calog.CAType;
 import com.zenyte.game.world.entity.player.container.impl.equipment.EquipmentSlot;
 import com.zenyte.game.world.entity.player.privilege.MemberRank;
@@ -189,6 +193,50 @@ public class NPC extends AbstractEntity {
     private int statReduceTimer = Utils.random(100);//Randomize the timer so all npcs don't reduce their stats at the same exact time - better balances loadp ressure.
     protected boolean dropped;
     private NpcOverhead overhead;
+
+    /**
+     * Extra combat rules of this NPC (Raids 4 E5-E9), or null for none. See {@link NpcCombatTraits}.
+     */
+    @Nullable
+    private transient NpcCombatTraits combatTraits;
+    /** Combat levels captured before the first traits-aware drain when the NPC has no loader definitions. */
+    @Nullable
+    private transient int[] traitsBaseLevels;
+
+    /**
+     * The extra combat rules the player-vs-NPC pipeline applies to this NPC (elemental weakness %, light / standard /
+     * heavy ranged defence, drain floor, flat armour, guaranteed hits, freeze resistance, demonbane %, Ancient Magicks
+     * immunity, inverted magic drain, flying). Null, the default, changes nothing. Subclasses may override this to
+     * answer dynamically; the engine asks on every hit.
+     */
+    @Nullable
+    public NpcCombatTraits getCombatTraits() {
+        return combatTraits;
+    }
+
+    /** Sets (or clears, with null) the rules {@link #getCombatTraits()} returns when it is not overridden. */
+    public void setCombatTraits(@Nullable final NpcCombatTraits combatTraits) {
+        this.combatTraits = combatTraits;
+    }
+
+    /**
+     * A player's combat spell reached this NPC (Raids 4 E17): called when the hit lands, or when the splash lands,
+     * for every {@link CombatSpell} including powered staves. {@code element} is the standard-spellbook element
+     * ({@link com.zenyte.game.world.entity.npc.combat.SpellElement#of}), null for any other spell. The default does
+     * nothing.
+     */
+    public void onSpellHit(@NotNull final Player caster, @NotNull final CombatSpell spell,
+                           @Nullable final com.zenyte.game.world.entity.npc.combat.SpellElement element,
+                           @NotNull final Hit hit, final boolean splash) {
+    }
+
+    /**
+     * Per-spell hit delay override (Raids 4 E17), in ticks after the cast: return {@code defaultDelay} to keep the
+     * projectile travel time, 0 to land the hit (and splash) on the cast tick. Called once per target per cast.
+     */
+    public int getSpellHitDelay(@NotNull final Player caster, @NotNull final CombatSpell spell, final int defaultDelay) {
+        return defaultDelay;
+    }
 
     public void setOverhead(NpcOverhead prayer) {
         this.overhead = prayer;
@@ -1411,7 +1459,9 @@ public class NPC extends AbstractEntity {
                 return;
             }
 
-            if(killer.getBoonManager().hasBoon(ClueCollector.class)
+            //Clue stack limit: clues/boxes the killer cannot hold skip the inventory routes and land on the floor.
+            final boolean overClueLimit = ClueStackLimit.exceedsLimit(killer, item);
+            if(killer.getBoonManager().hasBoon(ClueCollector.class) && !overClueLimit
                     && (Arrays.stream(ClueItem.getCluesArray()).anyMatch(it -> it == item.getId())
                     || Arrays.stream(ClueItem.getBoxesArray()).anyMatch(it -> it == item.getId()))) {
                 killer.getInventory().addOrDrop(item);
@@ -1431,7 +1481,7 @@ public class NPC extends AbstractEntity {
             if (Bonecrusher.handle(killer, item)) {
                 return;
             }
-            if(bypassGround && item.getId() != 995) {
+            if(bypassGround && item.getId() != 995 && !overClueLimit) {
                 killer.getNotificationSettings().sendDropNotification(item);
 
                 if(!killer.tryAddInventoryThenBank(item))
@@ -1599,6 +1649,12 @@ public class NPC extends AbstractEntity {
         if (!canDrainSkill(skill)) {
             return 0;
         }
+        final NpcCombatTraits traits = getCombatTraits();
+        if (traits != null) {
+            final StatType stat = levelStat(skill);
+            return stat == null ? 0 : drainWithTraits(traits, skill, stat,
+                    CombatTraitRules.percentDrainAmount(combatDefinitions.getStatDefinitions().get(stat), percentage, 0));
+        }
 
         return combatDefinitions.drainSkill(skill, percentage, 0);
     }
@@ -1607,6 +1663,12 @@ public class NPC extends AbstractEntity {
     public int drainSkill(final int skill, final double percentage, final int minimumDrain) {
         if (!canDrainSkill(skill)) {
             return 0;
+        }
+        final NpcCombatTraits traits = getCombatTraits();
+        if (traits != null) {
+            final StatType stat = levelStat(skill);
+            return stat == null ? 0 : drainWithTraits(traits, skill, stat,
+                    CombatTraitRules.percentDrainAmount(combatDefinitions.getStatDefinitions().get(stat), percentage, minimumDrain));
         }
 
         return combatDefinitions.drainSkill(skill, percentage, minimumDrain);
@@ -1617,8 +1679,78 @@ public class NPC extends AbstractEntity {
         if (!canDrainSkill(skill)) {
             return 0;
         }
+        final NpcCombatTraits traits = getCombatTraits();
+        if (traits != null) {
+            final StatType stat = levelStat(skill);
+            return stat == null ? 0 : drainWithTraits(traits, skill, stat, amount);
+        }
 
         return combatDefinitions.drainSkill(skill, amount);
+    }
+
+    /** The combat level stat of a {@link SkillConstants} skill, or null for skills an NPC does not have. */
+    @Nullable
+    private static StatType levelStat(final int skill) {
+        return switch (skill) {
+            case SkillConstants.ATTACK -> StatType.ATTACK;
+            case SkillConstants.STRENGTH -> StatType.STRENGTH;
+            case SkillConstants.DEFENCE -> StatType.DEFENCE;
+            case SkillConstants.MAGIC -> StatType.MAGIC;
+            case SkillConstants.RANGED -> StatType.RANGED;
+            default -> null;
+        };
+    }
+
+    /**
+     * A drain under {@link NpcCombatTraits} (Raids 4 E7, E9): the level never goes below the traits' floor for the skill
+     * (a level already below it is left alone), and with an inverted magic drain the Magic level rises by the amount
+     * instead. Returns the levels actually drained (0 for an inverted drain).
+     */
+    private int drainWithTraits(final NpcCombatTraits traits, final int skill, final StatType stat, final int amount) {
+        final StatDefinitions stats = combatDefinitions.getStatDefinitions();
+        final int current = stats.get(stat);
+        if (amount <= 0) {
+            return 0;
+        }
+        final boolean inverted = skill == SkillConstants.MAGIC && traits.magicDrainInverted();
+        final int floor = inverted ? 0 : traits.drainFloor(skill, baseLevel(stat));
+        final int level = CombatTraitRules.drainedLevel(current, amount, floor, inverted);
+        stats.set(stat, level);
+        return Math.max(0, current - level);
+    }
+
+    /** The unboosted level of {@code stat}: the loader definitions, else the levels captured before the first drain. */
+    private int baseLevel(final StatType stat) {
+        final NPCCombatDefinitions base = getBaseCombatDefinitions();
+        if (base != null && base.getStatDefinitions() != null) {
+            return base.getStatDefinitions().get(stat);
+        }
+        if (traitsBaseLevels == null) {
+            traitsBaseLevels = combatDefinitions.getStatDefinitions().getCombatStats().clone();
+        }
+        return traitsBaseLevels[stat.index()];
+    }
+
+    @Override
+    public boolean isFreezeable() {
+        final NpcCombatTraits traits = getCombatTraits();
+        if (traits != null && traits.freezeResistancePercent() >= 100) {
+            return false;
+        }
+        return super.isFreezeable();
+    }
+
+    @Override
+    public boolean freeze(final int freezeTicks, final int immunityTicks, @Nullable final java.util.function.Consumer<Entity> onFreezeConsumer) {
+        final NpcCombatTraits traits = getCombatTraits();
+        if (traits != null) {
+            final int resisted = CombatTraitRules.resistedFreeze(freezeTicks, traits.freezeResistancePercent());
+            if (resisted <= 0 && freezeTicks > 0) {
+                return false;
+            }
+            return super.freeze(resisted, immunityTicks, onFreezeConsumer);
+        }
+        return super.freeze(freezeTicks, immunityTicks, onFreezeConsumer);
     }
 
     public boolean canDrainSkill(final int skill) {

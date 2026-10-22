@@ -94,7 +94,7 @@ public final class GlobalItem extends FloorItem {
             if (player == null || !player.getMapRegionsIds().contains(regionId)) {
                 continue;
             }
-            player.sendZoneUpdate(location.getX(), location.getY(), new ObjAdd(this));
+            player.sendZoneUpdate(location.getX(), location.getY(), new ObjAdd(this, player));
         }
     }
 

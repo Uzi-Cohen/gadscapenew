@@ -88,7 +88,10 @@ public class HouseStructure extends RegularStructure {
 		// The house unlocks the player once its map has loaded.
 		player.blockIncomingHits();
 		player.resetFreeze();
-		house.enterHouseByTeleport();
+		if (!house.enterHouseByTeleport()) {
+			// The house could not be built (no free map space, or an error): nothing will unlock the player, so do it here.
+			structure.stop(player, teleport);
+		}
 	}
 
 	@Override

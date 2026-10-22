@@ -35,6 +35,16 @@ public class NightmareBossArea extends PolygonRegionArea implements DeathPlugin,
 	public static final int PROTECT_FROM_MAGIC_BUTTON = Interface.encode(com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MAGIC), -1);
 	public static final int PROTECT_FROM_MISSILES_BUTTON = Interface.encode(com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MISSILES), -1);
 	public static final int PROTECT_FROM_MELEE_BUTTON = Interface.encode(com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MELEE), -1);
+	// Ruinous Powers book: Dampen Magic/Ranged/Melee are buttons 9 + slot (541:18/17/16); 541:21-23 are Ruinous Grace,
+	// Wrath and Metabolise there.
+	private static final int[] CURSE_COMPONENTS = {
+			com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MAGIC),
+			com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MISSILES),
+			com.zenyte.game.model.ui.testinterfaces.PrayerTab.componentOf(Prayer.PROTECT_FROM_MELEE),
+			com.zenyte.game.model.ui.testinterfaces.PrayerTab.FIRST_PRAYER_COMPONENT + Prayer.RUINOUS_DAMPEN_MAGIC.getSlot(),
+			com.zenyte.game.model.ui.testinterfaces.PrayerTab.FIRST_PRAYER_COMPONENT + Prayer.RUINOUS_DAMPEN_RANGED.getSlot(),
+			com.zenyte.game.model.ui.testinterfaces.PrayerTab.FIRST_PRAYER_COMPONENT + Prayer.RUINOUS_DAMPEN_MELEE.getSlot(),
+	};
 
 	public static NightmareNPC boss;
 	public static NightmareTotemNE totemNE;
@@ -79,20 +89,22 @@ public class NightmareBossArea extends PolygonRegionArea implements DeathPlugin,
 		player.setViewDistance(Player.LARGE_VIEWPORT_RADIUS);
 		GameInterface.DEATHS_OFFICE_ENTER_OVERLAY.open(player);
 
-		TempIntefaceHandlerKt.tempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, PROTECT_FROM_MAGIC_BUTTON, player1 -> togglePrayer(player1, Prayer.PROTECT_FROM_MAGIC));
-		TempIntefaceHandlerKt.tempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, PROTECT_FROM_MISSILES_BUTTON, player1 -> togglePrayer(player1, Prayer.PROTECT_FROM_MISSILES));
-		TempIntefaceHandlerKt.tempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, PROTECT_FROM_MELEE_BUTTON, player1 -> togglePrayer(player1, Prayer.PROTECT_FROM_MELEE));
+		// The binds replace the prayer tab's own handler for these buttons in both books, so they do what the tab does
+		// (standard book or Ruinous Powers) and only swap the protection prayers while the curse is on.
+		for (final int component : CURSE_COMPONENTS) {
+			TempIntefaceHandlerKt.tempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, Interface.encode(component, -1), player1 -> prayerButton(player1, component));
+		}
 	}
 
-	private static void togglePrayer(Player player, Prayer prayer) {
-		final int id;
-		if (player.getBooleanTemporaryAttribute("nightmare_curse")) {
-			id = BaseNightmareNPC.cursePrayerType(prayer).ordinal();
-		} else {
-			id = prayer.ordinal();
+	private static void prayerButton(Player player, int component) {
+		final boolean ruinous = player.getPrayerManager().isRuinousBook();
+		final Prayer prayer = ruinous ? Prayer.ruinous(component - com.zenyte.game.model.ui.testinterfaces.PrayerTab.FIRST_PRAYER_COMPONENT)
+				: com.zenyte.game.model.ui.testinterfaces.PrayerTab.prayerOf(component);
+		if (prayer == null) {
+			return;
 		}
-
-		player.getPrayerManager().togglePrayer(id, false);
+		final Prayer cursed = player.getBooleanTemporaryAttribute("nightmare_curse") ? BaseNightmareNPC.cursePrayerType(prayer) : prayer;
+		player.getPrayerManager().togglePrayer(cursed);
 	}
 
 	@Override
@@ -109,9 +121,9 @@ public class NightmareBossArea extends PolygonRegionArea implements DeathPlugin,
 	public static void leaveStatic(Player player) {
 		player.getVarManager().sendBit(10151, 0);
 		player.resetViewDistance();
-		TempIntefaceHandlerKt.removeTempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, PROTECT_FROM_MAGIC_BUTTON);
-		TempIntefaceHandlerKt.removeTempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, PROTECT_FROM_MISSILES_BUTTON);
-		TempIntefaceHandlerKt.removeTempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, PROTECT_FROM_MELEE_BUTTON);
+		for (final int component : CURSE_COMPONENTS) {
+			TempIntefaceHandlerKt.removeTempInterfaceBind(player, GameInterface.PRAYER_TAB_INTERFACE, Interface.encode(component, -1));
+		}
 
 		player.getHpHud().close();
 		if (player.getInterfaceHandler().containsInterface(InterfacePosition.OVERLAY)) {

@@ -1,9 +1,10 @@
 package com.zenyte.plugins.renewednpc;
 
+import com.zenyte.game.world.entity.npc.NpcId;
 import com.zenyte.game.world.entity.npc.actions.NPCPlugin;
 
 /**
- * Teleport wizard. The legacy three-column menu (interface 1700) it used to open has no client scripts in any cache, so it
+ * Teleport wizard (GadScape Teleporter, NPC 16000). The legacy three-column menu (interface 1700) it used to open has no client scripts in any cache, so it
  * opens the GadScape teleport menu (interface 1601) instead, and "Teleport-previous" repeats the last 1601 teleport.
  *
  * @author Kris | 25/11/2018 16:11
@@ -24,6 +25,8 @@ public class ZenyteTeleporter extends NPCPlugin {
 
     @Override
     public int[] getNPCs() {
-        return new int[] {10000};
+        // 16000 is the GadScape Teleporter (cache/assets/types/home.toml: op1 Teleport, op4 Teleport-previous); 10000 is
+        // the old wizard id, undefined in every current cache, kept for old spawn files.
+        return new int[] {10000, NpcId.GADSCAPE_TELEPORTER};
     }
 }

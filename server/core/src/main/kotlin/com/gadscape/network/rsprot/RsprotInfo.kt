@@ -22,7 +22,10 @@ import net.rsprot.protocol.api.NetworkService
 import net.rsprot.protocol.common.client.OldSchoolClientType
 import net.rsprot.protocol.game.outgoing.info.InfoPackets
 import net.rsprot.protocol.game.outgoing.info.Infos
+import com.gadscape.game.world.entity.npc.MultiHeadIconNpc
+import com.gadscape.game.world.entity.npc.NpcHeadIcons
 import net.rsprot.protocol.game.outgoing.info.npcinfo.NpcAvatar
+import net.rsprot.protocol.game.outgoing.info.npcinfo.NpcAvatarExtendedInfo
 import net.rsprot.protocol.game.outgoing.info.npcinfo.NpcAvatarFactory
 import net.rsprot.protocol.game.outgoing.info.npcinfo.NpcInfo
 import net.rsprot.protocol.game.outgoing.info.npcinfo.NpcInfoPacket
@@ -123,6 +126,10 @@ object RsprotInfo {
         var ops = 31
         var overheadGroup = -1
         var overheadIndex = -1
+        /** Head icon slots 0..7 as last sent, for NPCs with [MultiHeadIconNpc] (E13); null until first used. */
+        var headIconGroups: IntArray? = null
+        var headIconIndices: IntArray? = null
+        var headIconVersion = -1
         var faceEntity = -1
         var direction = -1
     }
@@ -787,7 +794,9 @@ object RsprotInfo {
         state.ops = npc.optionMask and 0x1F
         if (state.ops != 31) RsprotExtendedInfo.applyVisibleOps(ext, state.ops)
         val overhead = npc.overhead
-        if (overhead != null) {
+        if (npc is MultiHeadIconNpc) {
+            syncHeadIcons(state, ext, npc, overhead?.archive ?: -1, overhead?.sprite ?: -1)
+        } else if (overhead != null) {
             state.overheadGroup = overhead.archive
             state.overheadIndex = overhead.sprite
             RsprotExtendedInfo.applyHeadIcon(ext, overhead.archive, overhead.sprite)
@@ -801,6 +810,43 @@ object RsprotInfo {
         state.inaccessible = npc.isFinished
         if (state.inaccessible) avatar.setInaccessible(true)
         return state
+    }
+
+    /**
+     * Head icon slots 0..7 of a [MultiHeadIconNpc] (E13): slot 0 is the holder's slot 0, or the classic
+     * `NPC.getOverhead()` while that is empty; slots 1..7 come from the holder. Only changed slots are sent.
+     */
+    private fun syncHeadIcons(
+        state: NpcState,
+        ext: NpcAvatarExtendedInfo,
+        npc: MultiHeadIconNpc,
+        overheadGroup: Int,
+        overheadIndex: Int,
+    ) {
+        val icons = npc.headIcons
+        if (icons.version == state.headIconVersion && overheadGroup == state.overheadGroup &&
+            overheadIndex == state.overheadIndex) return
+        val groups = state.headIconGroups ?: IntArray(RsprotExtendedInfo.HEAD_ICON_SLOTS) { -1 }.also { state.headIconGroups = it }
+        val indices = state.headIconIndices ?: IntArray(RsprotExtendedInfo.HEAD_ICON_SLOTS) { -1 }.also { state.headIconIndices = it }
+        for (slot in 0 until RsprotExtendedInfo.HEAD_ICON_SLOTS) {
+            var group = if (slot < NpcHeadIcons.SLOTS) icons.group(slot) else -1
+            var index = if (slot < NpcHeadIcons.SLOTS) icons.index(slot) else -1
+            if (slot == 0 && (group < 0 || index < 0)) {
+                group = overheadGroup
+                index = overheadIndex
+            }
+            if (group < 0 || index < 0) {
+                group = -1
+                index = -1
+            }
+            if (group == groups[slot] && index == indices[slot]) continue
+            RsprotExtendedInfo.applyHeadIcon(ext, slot, group, index)
+            groups[slot] = group
+            indices[slot] = index
+        }
+        state.headIconVersion = icons.version
+        state.overheadGroup = overheadGroup
+        state.overheadIndex = overheadIndex
     }
 
     private fun releaseNpc(factory: NpcAvatarFactory, index: Int, state: NpcState) {
@@ -863,7 +909,9 @@ object RsprotInfo {
         val overhead = npc.overhead
         val overheadGroup = overhead?.archive ?: -1
         val overheadIndex = overhead?.sprite ?: -1
-        if (overheadGroup != state.overheadGroup || overheadIndex != state.overheadIndex) {
+        if (npc is MultiHeadIconNpc) {
+            syncHeadIcons(state, ext, npc, overheadGroup, overheadIndex)
+        } else if (overheadGroup != state.overheadGroup || overheadIndex != state.overheadIndex) {
             RsprotExtendedInfo.applyHeadIcon(ext, overheadGroup, overheadIndex)
             state.overheadGroup = overheadGroup
             state.overheadIndex = overheadIndex

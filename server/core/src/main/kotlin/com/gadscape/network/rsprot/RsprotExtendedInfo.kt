@@ -416,11 +416,21 @@ internal object RsprotExtendedInfo {
     }
 
     /** NpcOverheadMask: one head icon in slot 0, or reset it. */
-    fun applyHeadIcon(ext: NpcAvatarExtendedInfo, group: Int, index: Int) {
-        if (group < 0) {
-            ext.resetHeadIcon(0)
+    fun applyHeadIcon(ext: NpcAvatarExtendedInfo, group: Int, index: Int) = applyHeadIcon(ext, 0, group, index)
+
+    /** Number of head icon slots in the 241 HEADICON_CUSTOMISATION block. */
+    const val HEAD_ICON_SLOTS = 8
+
+    /**
+     * One head icon slot (0..7, E13): sprite [index] of sprite [group], or reset the slot when [group] or [index]
+     * is negative. The client draws every filled slot. Out-of-range slots are ignored.
+     */
+    fun applyHeadIcon(ext: NpcAvatarExtendedInfo, slot: Int, group: Int, index: Int) {
+        if (slot !in 0 until HEAD_ICON_SLOTS) return
+        if (group < 0 || index < 0) {
+            ext.resetHeadIcon(slot)
         } else {
-            ext.setHeadIconChange(0, group, idOrMinusOne(index))
+            ext.setHeadIconChange(slot, group, idOrMinusOne(index))
         }
     }
 
@@ -433,9 +443,13 @@ internal object RsprotExtendedInfo {
         }
     }
 
-    /** CombatLevelChangeMask: -1 removes the override. */
+    /**
+     * CombatLevelChangeMask (E12): the combat level the client shows for the NPC instead of its type's level;
+     * -1 removes the override. Set it with `NPC.setCombatLevelChange(level)` (e.g. Moia 1064, Ocellus P3 1601);
+     * the block is persistent, so observers that see the NPC later get it too. Levels above 65535 are clamped.
+     */
     fun applyCombatLevel(ext: NpcAvatarExtendedInfo, level: Int) =
-        ext.setCombatLevelChange(if (level < 0) -1 else level)
+        ext.setCombatLevelChange(if (level < 0) -1 else level.coerceAtMost(0xFFFF))
 
     /** HideOptionsMask: the 5 low bits say which of op1..op5 are shown. */
     fun applyVisibleOps(ext: NpcAvatarExtendedInfo, mask: Int) = ext.setVisibleOps(mask and 0x1F)

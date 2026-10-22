@@ -29,8 +29,15 @@ public final class RuinousPowers {
     public static final String METABOLISE_START = "ruinous_metabolise_start";
     /** "Metabolise must be active for at least 15 seconds in order to take effect." */
     private static final int METABOLISE_WARMUP_TICKS = 25;
-    /** Temporary attribute guarding Cruor's Vow against several hits of one attack each counting as a kill. */
+    /**
+     * Temporary attributes guarding Cruor's Vow against several hits of one kill each counting: the last target credited
+     * and the world cycle it was credited on. Hits of one kill land within a tick of each other (a batch, and hits that
+     * land before the first one is applied); a target that respawns (NPCs respawn as the same object) or a player killed
+     * again cannot die again that soon, so a later kill of the same entity counts again.
+     */
     private static final String CRUORS_VOW_LAST_KILL = "ruinous_cruors_vow_kill";
+    private static final String CRUORS_VOW_LAST_KILL_CYCLE = "ruinous_cruors_vow_kill_cycle";
+    private static final int CRUORS_VOW_SAME_KILL_TICKS = 2;
 
     /**
      * Per-prayer unlock varbits of the book (varp 3785 bits 0-4 and 6-9, and 14977). The client greys out a prayer whose
@@ -90,27 +97,31 @@ public final class RuinousPowers {
                 manager.drainPrayerPoints(drain);
             }
         }
-        // Umbra's Vow: "Attacks drain 5% of the opponent's Defence, up to 15% of their base level".
-        if (manager.isActive(Prayer.RUINOUS_UMBRAS_VOW)) {
-            drainCapped(target, SkillConstants.DEFENCE);
+        // Umbra's Vow (2746 prayer obj 25977): "Attacks reduce your opponent's Defence by 5% of the damage dealt, up to 15%".
+        if (damage > 0 && manager.isActive(Prayer.RUINOUS_UMBRAS_VOW)) {
+            drainCapped(target, SkillConstants.DEFENCE, damage);
         }
-        // Glacies' Vow: "Attacks drain 5% of a monster's Magic, up to 15% of their base level".
-        if (target instanceof NPC && manager.isActive(Prayer.RUINOUS_GLACIES_VOW)) {
-            drainCapped(target, SkillConstants.MAGIC);
+        // Glacies' Vow (obj 25954): "Attacks reduce a monster's Magic by 5% of damage dealt, up to 15%".
+        if (damage > 0 && target instanceof NPC && manager.isActive(Prayer.RUINOUS_GLACIES_VOW)) {
+            drainCapped(target, SkillConstants.MAGIC, damage);
         }
         // Cruor's Vow: "Heals 3 Hitpoints and drains 3 Prayer points upon killing a target".
         if (damage > 0 && target.getHitpoints() - hit.getDamage() <= 0 && manager.isActive(Prayer.RUINOUS_CRUORS_VOW)) {
+            final long now = WorldThread.getCurrentCycle();
             final Object last = player.getTemporaryAttributes().get(CRUORS_VOW_LAST_KILL);
-            if (last != target) {
+            final Object lastCycle = player.getTemporaryAttributes().get(CRUORS_VOW_LAST_KILL_CYCLE);
+            final boolean sameKill = last == target && lastCycle instanceof Number && now - ((Number) lastCycle).longValue() <= CRUORS_VOW_SAME_KILL_TICKS;
+            if (!sameKill) {
                 player.getTemporaryAttributes().put(CRUORS_VOW_LAST_KILL, target);
+                player.getTemporaryAttributes().put(CRUORS_VOW_LAST_KILL_CYCLE, now);
                 player.heal(3);
                 manager.drainPrayerPoints(3);
             }
         }
     }
 
-    /** Drains 5% of the skill, never taking it below 85% of the target's base level. */
-    private static void drainCapped(final Entity target, final int skill) {
+    /** Drains 5% of the damage dealt (rounded down) from the skill, never taking it below 85% of the target's base level. */
+    private static void drainCapped(final Entity target, final int skill, final int damage) {
         final int base;
         final int current;
         if (target instanceof Player) {
@@ -130,7 +141,7 @@ public final class RuinousPowers {
             return;
         }
         final int floor = base - (int) (base * 0.15);
-        final int amount = Math.min(Math.max(1, (int) (current * 0.05)), current - floor);
+        final int amount = Math.min(damage * 5 / 100, current - floor);
         if (amount > 0) {
             target.drainSkill(skill, amount);
         }

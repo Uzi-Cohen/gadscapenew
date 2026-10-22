@@ -1,0 +1,54 @@
+{
+  "_comment": "Fractured Archive lobby, entry, Grouping Board and stats settings (spec 3.1-3.4, 3.14; fw-lobby unit). Bundled defaults; override any key in data/raids/tfa/lobby.json and reload with ::tfareload. Tiles are static cache coordinates [x, y, plane]. Raid-wide keys (entryGate, folio, introScene, party.refreshRateLimitTicks, stats.inRaidScoreboard, tiles) stay in tfa.json.",
+  "npcs": [
+    { "role": "general_montoya", "tile": [4117, 5550, 0], "facing": "s" },
+    { "role": "record_keeper", "tile": [4136, 5543, 0], "facing": "s" },
+    { "role": "wizard_apprentice", "tile": [4114, 5539, 0], "facing": "s" },
+    { "role": "banker", "tile": [4135, 5555, 0], "facing": "w" }
+  ],
+  "rocks": {
+    "tiles": [
+      [4111, 5538, 0], [4113, 5533, 0], [4116, 5535, 0],
+      [4113, 5538, 0], [4115, 5532, 0], [4116, 5537, 0],
+      [4110, 5536, 0], [4111, 5535, 0], [4114, 5539, 0], [4117, 5534, 0]
+    ],
+    "activeCount": 3,
+    "cycleTicks": 295,
+    "levelRequired": 80,
+    "xpPerShard": 15,
+    "rollIntervalTicks": 4,
+    "chanceAt80": 0.045,
+    "chanceAt99": 0.0675,
+    "toolMultipliers": [0.5, 0.6, 0.7, 0.85, 1.0],
+    "gemOneIn": 256,
+    "animTicks": 3
+  },
+  "sprite": {
+    "enabled": true,
+    "despawnTicks": 50,
+    "shards": [1, 2],
+    "xp": [50, 89],
+    "spawnRadius": 3
+  },
+  "intro": {
+    "ivy": [4052, 4563, 0],
+    "armacus": [4050, 4563, 0],
+    "eva": [4054, 4563, 0],
+    "maxTicks": 500
+  },
+  "messenger": {
+    "enabled": true,
+    "despawnTicks": 100,
+    "checkIntervalTicks": 50
+  },
+  "party": {
+    "maxParties": 45,
+    "maxMembers": 8,
+    "maxApplicants": 7,
+    "notifyLeaderOnApply": true
+  },
+  "stats": {
+    "saveIntervalTicks": 100,
+    "announcePersonalBest": true
+  }
+}

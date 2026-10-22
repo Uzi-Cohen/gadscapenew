@@ -210,7 +210,11 @@ public class NPCCombatDefinitions {
         return amt;
     }
 
-    private static final int[] statArray = new int[] {SkillConstants.ATTACK, SkillConstants.STRENGTH, SkillConstants.DEFENCE, SkillConstants.RANGED, SkillConstants.MAGIC};
+    /**
+     * Skill ids in {@link StatDefinitions#getCombatStats()} order (attack, strength, defence, magic, ranged; see
+     * {@link StatType#levelTypes}). Magic and ranged used to be swapped here, so magic drains lowered the ranged level.
+     */
+    private static final int[] statArray = new int[] {SkillConstants.ATTACK, SkillConstants.STRENGTH, SkillConstants.DEFENCE, SkillConstants.MAGIC, SkillConstants.RANGED};
 
     private int getIndex(final int skill) {
         return ArrayUtils.indexOf(statArray, skill);

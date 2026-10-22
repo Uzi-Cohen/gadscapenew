@@ -1,6 +1,9 @@
 package com.zenyte.game.world.entity.player.action.combat.melee;
 
 import com.google.common.eventbus.Subscribe;
+import com.zenyte.game.content.boss.grotesqueguardians.boss.Dawn;
+import com.zenyte.game.content.minigame.duelarena.Duel;
+import com.zenyte.game.content.minigame.duelarena.DuelSetting;
 import com.zenyte.game.content.skills.prayer.Prayer;
 import com.zenyte.game.task.WorldTask;
 import com.zenyte.game.task.WorldTasksManager;
@@ -12,6 +15,8 @@ import com.zenyte.game.world.entity.masks.Animation;
 import com.zenyte.game.world.entity.masks.Graphics;
 import com.zenyte.game.world.entity.masks.Hit;
 import com.zenyte.game.world.entity.masks.HitType;
+import com.zenyte.game.world.entity.npc.NPC;
+import com.zenyte.game.world.entity.npc.combat.NpcCombatTraits;
 import com.zenyte.game.world.entity.npc.combatdefs.AttackType;
 import com.zenyte.game.world.entity.player.Action;
 import com.zenyte.game.world.entity.player.Bonuses;
@@ -31,11 +36,16 @@ import mgi.types.config.items.ItemDefinitions;
  * <li>+2 flat armour and magic resistance: every Melee, Ranged and Magic hit taken (not typeless damage) is 2 lower.</li>
  * <li>The damage it stops becomes charges, up to 20 (player varbit rondache_charges 16438, which the 2746 client draws
  * as the Rondache special attack bar and as the small bar under the special attack orb).</li>
- * <li>Shield Bash (the off-hand special attack, sa_attack = 2): instant like the granite maul special, it uses every
- * charge x and deals x + x% damage (floor(x * (100 + x) / 100): 20 charges = 24, 16 = 18) when it hits. Accuracy is a
- * Crush roll using the Crush bonus of all gear except the weapon, +6 per charge, against the target's Crush defence.
- * Experience goes to the selected attack style. After a bash no charges are gained for a short while (the flat armour
- * keeps working).</li>
+ * <li>Shield Slam (the off-hand special attack, sa_attack = 2): instant like the granite maul special, it uses every
+ * charge x. The 2746 special attack text (enum 1739): "Consume all stored charges to quickly attack your target. This
+ * attack has +6 accuracy and +1 damage per charge consumed." So accuracy is a Crush roll using the Crush bonus of all
+ * gear except the weapon, +6 per charge, against the target's Crush defence, and a hit deals x damage (20 at 20
+ * charges; Protect from Melee applies against players). Experience goes to the selected attack style. After a slam no
+ * charges are gained for a short while (the flat armour keeps working).</li>
+ * <li>The slam is a melee attack on the combat target and goes through the same checks as a normal melee swing first
+ * ({@link PlayerCombat#prepareOffhandMeleeAttack()}: safe zone, single-way combat, Wilderness level range, area and
+ * controller rules incl. duel No Melee, skulling); a refused slam deselects the off-hand special and keeps the
+ * charges.</li>
  * </ul>
  * Not published by Jagex, so chosen here: the post-bash cooldown ({@link #BASH_COOLDOWN_TICKS}) and the minimum charges
  * for a bash, which follows the 2746 client: enum 906 gives the Rondache a cost of 10 and the bar only turns green
@@ -47,6 +57,9 @@ public final class Rondache {
     /** Unpublished ("a short cooldown"): 10 ticks. */
     public static final int BASH_COOLDOWN_TICKS = 10;
     private static final int DEFAULT_MINIMUM_CHARGES = 10;
+    /** Shield Slam: +6 Crush accuracy and +1 damage per charge consumed (2746 enum 1739 text). */
+    private static final int ACCURACY_PER_CHARGE = 6;
+    private static final int DAMAGE_PER_CHARGE = 1;
     private static final String CHARGES = "rondache charges";
     private static final String COOLDOWN = "rondache bash cooldown";
     private static final String WATCH_TASK = "rondache bash watch";
@@ -98,14 +111,14 @@ public final class Rondache {
         return damage - reduced;
     }
 
-    /** The fewest charges a Shield Bash needs: the Rondache's special cost in enum 906 (10 in 2746). */
+    /** The fewest charges a Shield Slam needs: the Rondache's special cost in enum 906 (10 in 2746). */
     public static int minimumCharges() {
         final int cost = PlayerCombat.getSpecialCost(ArchiveWeapons.RONDACHE);
         return cost > 0 ? Math.min(cost, MAX_CHARGES) : DEFAULT_MINIMUM_CHARGES;
     }
 
     /**
-     * The off-hand special was selected. Shield Bash goes off at once if the player is next to their target, else on
+     * The off-hand special was selected. Shield Slam goes off at once if the player is next to their target, else on
      * the first tick that they are, as long as it stays selected and the Rondache stays equipped.
      */
     public static void onSelected(final Player player) {
@@ -145,7 +158,11 @@ public final class Rondache {
         WorldTasksManager.schedule(task, 0, 0);
     }
 
-    /** Fires Shield Bash at the player's combat target if it's in melee reach. */
+    /**
+     * Fires Shield Slam at the player's combat target once it is in melee reach. Returns true when the wait is over: the
+     * slam went off, or the attack is not allowed (then the off-hand special is deselected and the charges are kept, so
+     * the refusal message is sent once and nothing is hit).
+     */
     private static boolean tryBash(final Player player) {
         if (player.isDead() || player.isLocked()) {
             return false;
@@ -158,7 +175,44 @@ public final class Rondache {
         if (target == null || target.isDead() || target.isFinished() || !inMeleeReach(player, target)) {
             return false;
         }
+        if (!meleeAllowed(player, target) || !combat.prepareOffhandMeleeAttack()) {
+            player.getCombatDefinitions().setOffhandSpecial(false);
+            return true;
+        }
         bash(player, combat, target);
+        return true;
+    }
+
+    /**
+     * Rules that make the slam (a melee attack) impossible even when the current combat action is ranged or magic:
+     * duel No Melee / No Special attacks, and NPCs that cannot be hit in melee (same list as MeleeCombat.start, and
+     * flying NPCs, which only a halberd reaches and a halberd cannot be wielded with a shield).
+     */
+    private static boolean meleeAllowed(final Player player, final Entity target) {
+        final Duel duel = player.getDuel();
+        if (duel != null && duel.inDuel()) {
+            if (duel.hasRule(DuelSetting.NO_MELEE)) {
+                player.sendMessage("Melee has been turned off for this duel.");
+                return false;
+            }
+            if (duel.hasRule(DuelSetting.NO_SPECIAL_ATTACK)) {
+                player.sendMessage("Use of special attacks has been turned off for this duel.");
+                return false;
+            }
+        }
+        if (target instanceof final NPC npc) {
+            final int id = npc.getId();
+            if (id >= 3162 && id <= 3183 || id == 7037 || id == 6587 || npc instanceof Dawn) {
+                player.sendMessage("You cannot use melee against this creature.");
+                return false;
+            }
+            final NpcCombatTraits traits = npc.getCombatTraits();
+            if (traits != null && traits.flying()) {
+                final String message = traits.flyingMessage();
+                player.sendMessage(message != null ? message : "The " + npc.getDefinitions().getName() + " is flying too high to hit.");
+                return false;
+            }
+        }
         return true;
     }
 
@@ -186,14 +240,14 @@ public final class Rondache {
         player.setGraphics(BASH_GRAPHICS);
         PlayerCombat.addAttackedByDelay(player, target);
         final boolean accurate = Utils.random(attackRoll(player, charges)) > Utils.random(PlayerCombat.getTargetDefenceRoll(player, target, AttackType.CRUSH));
-        int damage = accurate ? charges * (100 + charges) / 100 : 0;
+        int damage = accurate ? charges * DAMAGE_PER_CHARGE : 0;
         if (damage > 0 && target instanceof final Player victim && victim.getPrayerManager().isActive(Prayer.PROTECT_FROM_MELEE)) {
             damage = (int) Math.floor(damage * target.getMeleePrayerMultiplier());
         }
         combat.delayHit(target, 0, new Hit(player, damage, HitType.MELEE));
     }
 
-    /** Crush attack roll from every worn item but the weapon, +6 Crush per charge. */
+    /** Crush attack roll from every worn item but the weapon, +6 Crush per charge ({@link #ACCURACY_PER_CHARGE}). */
     private static int attackRoll(final Player player, final int charges) {
         final AttackStyle.AttackExperienceType type = player.getCombatDefinitions().getAttackExperienceType();
         final int styleBonus = type == AttackStyle.AttackExperienceType.ATTACK_XP ? 3 : type == AttackStyle.AttackExperienceType.SHARED_XP ? 1 : 0;
@@ -212,7 +266,7 @@ public final class Rondache {
                 bonus -= weaponBonuses[Bonuses.Bonus.ATT_CRUSH.getBonusIndex()];
             }
         }
-        bonus += 6 * charges;
+        bonus += ACCURACY_PER_CHARGE * charges;
         return (int) Math.max(0, effective * (bonus + 64));
     }
 }

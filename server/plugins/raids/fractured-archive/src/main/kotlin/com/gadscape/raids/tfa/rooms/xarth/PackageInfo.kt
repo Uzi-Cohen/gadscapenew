@@ -1,12 +1,14 @@
 /*
  * Package com.gadscape.raids.tfa.rooms.xarth
  *
- * Owner: WU-26 Xarth (spec §4.7).
- * Planned files (spec §2.1): XarthRoom, Xarth, XarthPillar, XarthCorpse, FlameField (+ xarth.json spec).
- * Registers TfaEncounters.register(TfaRoomId.XARTH); corpse HP via Scaling.hp(20, n, "xarth_corpse_hp").
+ * Owner: WU-26 Xarth (spec §4.7). Notes: raids4-impl/ENC-xarth.md.
  *
- * Created empty by WU-08 (module skeleton). Read raids4-impl/ARCHITECTURE.md for the extension points; do not
- * edit the WU-08 core files (TfaModule, ids/, config/, encounter/{TfaEncounter,TfaNpc,TfaBossNpc,Scaling,CombatTraits},
- * raid/{TfaRoomId,TfaInstance,StaticTile}, debug/, TfaServices) except through those extension points.
+ * - XarthModule: registers xarth.json (XarthConfig), TfaEncounters.register(TfaRoomId.XARTH) and `::tfa xarth`.
+ * - XarthRoom: the TfaEncounter and the world side of XarthHost (NPCs, locs, projectiles, hits, HUD).
+ * - XarthBrain: the engine-free boss script (P1 autos, 80/65/50% blasts, P2 transition, autos, summons, heal blast,
+ *   death) on a cancellable Timeline; XarthPorts: the brain/world seam.
+ * - Xarth (npc 16684), XarthCorpse + CorpseSwarm (16687/16688), XarthPillar (16685/16686 + Rubble locs),
+ *   FlameField (P2 flames 62713), XarthArena (static geometry, LOS, shield line), XarthIds (ids + evidence),
+ *   Bridge (the one adapter to other units' capabilities), XarthDebug (static-map run).
  */
 package com.gadscape.raids.tfa.rooms.xarth

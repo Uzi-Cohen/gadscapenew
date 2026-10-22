@@ -161,6 +161,26 @@ public final class ClueStackLimit {
         return type != null && type.getScrollBox() == itemId ? type : null;
     }
 
+    /**
+     * @return true if the item is a clue scroll or scroll box the player may not take now: a box stack bigger than the
+     * room left in its tier, or a clue scroll of a tier that is full or whose scroll the player already holds. Code that
+     * puts drops straight into the inventory (Clue Collector boon, bypass-ground drops) leaves those on the floor
+     * instead, where the pickup rules apply.
+     */
+    public static boolean exceedsLimit(@NotNull final Player player, @NotNull final Item item) {
+        final ClueItem type = ClueItem.getMap().get(item.getId());
+        if (type == null) {
+            return false;
+        }
+        if (type.getScrollBox() == item.getId()) {
+            return getRemaining(player, type) < item.getAmount();
+        }
+        if (type.getClue() == item.getId()) {
+            return !canReceive(player, type) || player.containsItem(item.getId());
+        }
+        return false;
+    }
+
     private static String tierName(@NotNull final ClueItem type) {
         return type.getLevel().toString().toLowerCase();
     }

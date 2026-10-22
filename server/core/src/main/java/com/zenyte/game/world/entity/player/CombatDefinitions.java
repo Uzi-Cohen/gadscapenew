@@ -352,8 +352,9 @@ public final class CombatDefinitions {
 
 	/**
 	 * Special attack buttons of the 2746 client: 0 = the special attack orb's first option or the combat tab's single
-	 * bar (593:41), 1 = the combat tab's main-hand bar (593:57), 2 = the combat tab's off-hand bar (593:67) or the
-	 * orb's second option ("Use Offhand"). Callers check duel rules and locks first.
+	 * bar (593:41; 211: 36), 1 = the combat tab's main-hand bar (593:57), 2 = the combat tab's off-hand bar (593:67) or
+	 * the orb's second option ("Use Offhand"). Callers (CombatTabInterface, OrbsInterface, MinimizedMinimapOrbsInterface)
+	 * check duel rules and locks first.
 	 */
 	public void toggleSpecialBar(final int bar) {
 		if (bar == 2) {

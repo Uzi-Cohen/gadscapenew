@@ -32,7 +32,8 @@ public class HomeShopNPC extends NPCPlugin {
             put(NpcId.FAE, 2);
             // Robin Hood and Jackie have "Trade" too but had no tab: Trade threw a NullPointerException.
             put(NpcId.ROBIN_HOOD, 2);
-            put(NpcId.JACKIE, 6);
+            // Jackie is the skilling shop (home.toml); her separate "Jewellery" op opens tab 6.
+            put(NpcId.JACKIE, 5);
             put(NpcId.BABA_YAGA, 3);
             put(NpcId.JOHN_16007, 4);
             put(NpcId.HERQUIN, 5);
@@ -46,7 +47,7 @@ public class HomeShopNPC extends NPCPlugin {
 
         put(NpcId.ROBIN_HOOD, "Ranged Store");
 
-        put(NpcId.JACKIE, "Jewellery Store");
+        put(NpcId.JACKIE, "Tools Store");
 
         put(NpcId.TRISTAN, "Melee Store");
 

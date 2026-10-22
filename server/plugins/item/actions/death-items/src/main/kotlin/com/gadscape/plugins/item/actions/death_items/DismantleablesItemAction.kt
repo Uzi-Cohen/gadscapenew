@@ -10,7 +10,8 @@ import com.zenyte.game.model.item.pluginextensions.ItemDeathStatus
  */
 class DismantleablesItemAction : ItemActionPlugin() {
     private val items = DismantleableItem.MAPPED_VALUES
-        .filter { it.value.isSplitOnDeath }
+        // only rows whose result the cache has: a GadScape kit result id that holds another item must not split it
+        .filter { it.value.isSplitOnDeath && (!it.value.isGadScapeResult || it.value.isAvailable) }
         .map { it.key }
         .toIntArray()
 

@@ -37,9 +37,9 @@ public final class ItemAttaching implements ItemOnItemAction {
 		if (dis == null) {
 			return;
 		}
-		// A result the loaded cache does not have yet (e.g. GadScape kit results before the cache adds them) would be
-		// an unknown obj for the client.
-		if (mgi.types.config.items.ItemDefinitions.get(dis.getCompleteItem()) == null) {
+		// A result the loaded cache does not have (e.g. GadScape kit results before the cache adds them) would be an unknown
+		// obj for the client, and a GadScape result id the cache holds another item at would hand out that item.
+		if (!dis.isAvailable()) {
 			player.sendMessage("Nothing interesting happens.");
 			return;
 		}

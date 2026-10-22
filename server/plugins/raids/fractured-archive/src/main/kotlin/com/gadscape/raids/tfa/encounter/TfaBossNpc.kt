@@ -5,6 +5,7 @@ import com.zenyte.game.util.Direction
 import com.zenyte.game.world.entity.Location
 import com.zenyte.game.world.entity.masks.Hit
 import com.zenyte.game.world.entity.npc.NPC
+import com.zenyte.game.world.entity.npc.combat.NpcCombatTraits
 
 /**
  * Base of every boss NPC (spec §2.2). On top of [TfaNpc]:
@@ -35,6 +36,17 @@ abstract class TfaBossNpc(
     open val scalingKey: String? get() = null
 
     override val traits: CombatTraits get() = CombatTraits.BOSS_DEFAULT
+
+    /**
+     * Engine view of [traits] (WU-04, E5-E9): weakness %, ranged defence types, defence floor, flat armour, guaranteed
+     * hits, freeze resistance, demonbane %, Ancient Magicks immunity, inverted magic drain, flying. Re-reads [traits]
+     * on every hit, so overriding [traits] with a state-dependent getter is enough (e.g. Bork dazed). Null while the
+     * `NPC` super constructor runs. Rules set explicitly with `setCombatTraits` (the binder does that on spawn with
+     * the same live view) take precedence.
+     */
+    private val engineTraits: NpcCombatTraits? = CombatTraitsView { traits }
+
+    override fun getCombatTraits(): NpcCombatTraits? = super.getCombatTraits() ?: engineTraits
 
     /** Scaled max HP; 0 until [applyScaling]. */
     var scaledMaxHp: Int = 0

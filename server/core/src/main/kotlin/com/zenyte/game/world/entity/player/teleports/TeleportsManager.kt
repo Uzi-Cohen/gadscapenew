@@ -28,8 +28,14 @@ class TeleportsManager(
     @Transient
     var previousDestination: Destination? = null
 
-    /** Saved by name so the previous teleport survives a relog (and a reordering of the menu). */
+    /**
+     * Saved by category and name so the previous teleport survives a relog (and a reordering of the menu). Names alone
+     * are not unique ("Bandit Camp" is in Training and Cities, "Slayer Tower" in Training and Dungeons, at different tiles).
+     */
     var previousDestinationName: String? = null
+
+    /** Category of [previousDestinationName]; null in saves made before it was stored (restored by name only). */
+    var previousDestinationCategory: String? = null
 
     var favoriteDestinations: MutableList<Int> = ArrayList()
 
@@ -43,8 +49,11 @@ class TeleportsManager(
         }
         val name = teleportsManager.previousDestinationName
         if (name != null) {
+            val categoryName = teleportsManager.previousDestinationCategory
+            val destination = findDestination(categoryName, name)
+            previousDestination = destination
             previousDestinationName = name
-            previousDestination = TeleportsList.allTeleports.firstOrNull { it.name == name }
+            previousDestinationCategory = if (destination != null) categoryOf(destination)?.name else categoryName
         }
     }
 
@@ -57,6 +66,7 @@ class TeleportsManager(
     fun setPreviousTeleport(destination: Destination) {
         previousDestination = destination
         previousDestinationName = destination.name
+        previousDestinationCategory = categoryOf(destination)?.name
         player.packetDispatcher.sendClientScript(PREVIOUS_TELEPORT_LABEL_SCRIPT, destination.name)
     }
 
@@ -115,6 +125,19 @@ class TeleportsManager(
     }
 
     companion object {
+        private fun categoryOf(destination: Destination): Category? =
+            TeleportsList.teleports.categories.firstOrNull { category -> category.destinations.any { it === destination } }
+                ?: TeleportsList.teleports.categories.firstOrNull { category -> destination in category.destinations }
+
+        /** [name] in the category called [categoryName]; by name alone for old saves or a renamed category. */
+        private fun findDestination(categoryName: String?, name: String): Destination? {
+            if (categoryName != null) {
+                val category = TeleportsList.teleports.categories.firstOrNull { it.name.equals(categoryName, ignoreCase = true) }
+                category?.destinations?.firstOrNull { it.name == name }?.let { return it }
+            }
+            return TeleportsList.allTeleports.firstOrNull { it.name == name }
+        }
+
         /**
          * Category varp: written by the server (spellbook/nexus) and by client script 10520, read by scripts 10504/10527.
          * It is the vanilla temp varp 261 (also used by a few other interfaces); see content-work/teleports-shops/CACHE_NEEDS.md
