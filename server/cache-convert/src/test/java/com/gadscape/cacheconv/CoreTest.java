@@ -100,4 +100,34 @@ class CoreTest {
         assertEquals(40002, back.allocate(Kind.SEQ));
         assertEquals(Json.write(m.toJson()), Json.write(IdMap.load(dir.resolve("idmap.json")).toJson()));
     }
+
+    @Test void idMapAliases(@TempDir Path dir) throws Exception {
+        IdMap m = new IdMap();
+        m.record(Kind.MODEL, 58011, 596, "twin");
+        m.alias(Kind.MODEL, 58013, 596, "twin, shared");
+        m.alias(Kind.MODEL, 58013, 596, "again");                                   // same alias twice: fine
+        assertEquals(596, m.map(Kind.MODEL, 58013));
+        assertEquals(58011, m.origin(Kind.MODEL, 596));                             // origin stays the recorded source
+        assertTrue(m.isAlias(Kind.MODEL, 58013));
+        assertFalse(m.isAlias(Kind.MODEL, 58011));
+        assertThrows(IllegalStateException.class, () -> m.alias(Kind.MODEL, 58013, 597, "conflict"));
+        assertThrows(IllegalStateException.class, () -> m.alias(Kind.MODEL, 1, 58011, "target is moved"));
+        assertThrows(IllegalStateException.class, () -> m.record(Kind.MODEL, 2, 596, "target taken by a record"));
+        m.save(dir.resolve("idmap.json"));
+        IdMap back = IdMap.load(dir.resolve("idmap.json"));
+        assertEquals(596, back.map(Kind.MODEL, 58013));
+        assertTrue(back.isAlias(Kind.MODEL, 58013));
+        assertEquals(Json.write(m.toJson()), Json.write(back.toJson()));
+    }
+
+    @Test void kindRanges() {
+        IdMap m = new IdMap();
+        assertEquals(null, m.range(Kind.MODEL));                                    // set from BASE by Ctx.open
+        assertEquals(new IdMap.Range(64500, 65534), m.range(Kind.LOC));            // u16 loc ids on the 241 wire
+        assertEquals(new IdMap.Range(5200, 5299), m.range(Kind.INTERFACE));
+        assertEquals(new IdMap.Range(4000, 4999), m.range(Kind.DBTABLE));
+        assertEquals(null, m.range(Kind.INV));
+        for (Kind k : Kind.values()) { IdMap.Range r = m.range(k); if (r != null) assertTrue(r.hi() <= 65535, k.key); }
+        assertTrue(com.gadscape.cacheconv.convert.Cs2.BRANCH.containsAll(List.of(6, 7, 31, 32, 68, 73)));
+    }
 }

@@ -24,8 +24,11 @@ import java.util.Set;
 public final class Cs2 {
     private Cs2() {}
 
-    /** Ops whose int operand is a relative jump (target = index + 1 + operand). */
-    public static final Set<Integer> BRANCH = Set.of(6, 7, 8, 9, 10, 31, 32);
+    /**
+     * Ops whose int operand is a relative jump (target = index + 1 + operand): jump (6), the int compares (7-10, 31, 32) and build 241's long compares
+     * (68-73, which pop two longs; they never occur in 211 scripts).
+     */
+    public static final Set<Integer> BRANCH = Set.of(6, 7, 8, 9, 10, 31, 32, 68, 69, 70, 71, 72, 73);
     public static final int ICONST = 0, SCONST = 3, JUMP = 6, RETURN = 21, ILOAD = 33, POP_INT = 38, POP_OBJ = 39, GOSUB = 40, SWITCH = 60, LCONST = 61, PUSH_NULL = 63;
     public static final int CC_CREATE = 100;
 

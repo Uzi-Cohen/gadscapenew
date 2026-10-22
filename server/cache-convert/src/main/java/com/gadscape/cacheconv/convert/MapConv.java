@@ -24,7 +24,14 @@ public final class MapConv {
     /** 211 terrain -> 241 terrain (appends the flags byte, 0). */
     public static byte[] terrain241(byte[] terrain211) { return Arrays.copyOf(terrain211, terrain211.length + 1); }
 
-    /** Terrain bytes of a 211 square (file 0 of "m{x}_{y}"), or null. */
+    /**
+     * Terrain bytes of a 211 square (file 0 of "m{x}_{y}"), or null.
+     *
+     * @deprecated {@link CacheView#groupIdByName} returns an arbitrary one of several groups carrying the same name (the
+     * GadScape cache has 84 duplicated square names left by the 225 port). Use {@code com.gadscape.cacheconv.map.NamedMaps},
+     * which picks the copy that decodes with the most data, lowest group id on a tie.
+     */
+    @Deprecated
     public static byte[] terrain211(CacheView c, int x, int y) {
         int g = c.groupIdByName(Arch.MAPS, terrainName(x, y));
         if (g < 0) return null;
@@ -35,7 +42,11 @@ public final class MapConv {
     /**
      * Loc bytes of a 211 square: tries the group unencrypted first (editor-saved), then with the key; keeps whichever
      * decodes with RuneLite's LocationsLoader. Null if there is no such group or neither decodes.
+     *
+     * @deprecated picks an arbitrary group when the square name is duplicated (see {@link #terrain211}); use
+     * {@code com.gadscape.cacheconv.map.NamedMaps}.
      */
+    @Deprecated
     public static byte[] locs211(CacheView c, Xteas keys, int x, int y) {
         int g = c.groupIdByName(Arch.MAPS, locsName(x, y));
         if (g < 0) return null;

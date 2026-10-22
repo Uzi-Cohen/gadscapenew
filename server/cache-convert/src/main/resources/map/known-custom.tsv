@@ -1,0 +1,129 @@
+# GadScape custom map squares known from the packers (audit MAP-3: TypeParser.packMaps, ChristmasMapPacker, Easter,
+# CustomMaps, Effigy, MapChanges, copyMaps, wilderness vault) plus editor-made 5522. Columns: region, x, y,
+# audit classification (audit/map/region_lists.txt), provenance. Used as a cross-check: every one of them must
+# classify as user-custom (or be reported).
+4674	18	66	G_CUSTOM_NEW_SQUARE	GWD instances (TypeParser.packMaps)
+4675	18	67	G_CUSTOM_NEW_SQUARE	GWD instances (TypeParser.packMaps)
+4676	18	68	G_CUSTOM_NEW_SQUARE	GWD instances (TypeParser.packMaps)
+4677	18	69	G_CUSTOM_NEW_SQUARE	GWD instances (TypeParser.packMaps)
+5522	21	146	G_CUSTOM_NEW_SQUARE	editor-made (not in any packer list)
+6304	24	160	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6305	24	161	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6306	24	162	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6308	24	164	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6309	24	165	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6310	24	166	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6312	24	168	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6313	24	169	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6314	24	170	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6457	25	57	CONFLICT_G_CUSTOM_AND_241_CHANGED	kourend_castle.pack (TypeParser.packMaps)
+6560	25	160	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6561	25	161	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6562	25	162	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6564	25	164	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6565	25	165	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6566	25	166	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6568	25	168	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6569	25	169	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6570	25	170	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6729	26	73	G_CUSTOM_241_UNCHANGED	GadScapeCustomMapsPacker
+6816	26	160	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6817	26	161	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6818	26	162	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6820	26	164	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6821	26	165	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6822	26	166	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6824	26	168	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6825	26	169	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+6826	26	170	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7072	27	160	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7073	27	161	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7074	27	162	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7076	27	164	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7077	27	165	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7078	27	166	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7080	27	168	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7081	27	169	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7082	27	170	G_CUSTOM_NEW_SQUARE	catacomb copies (TypeParser.copyMaps)
+7504	29	80	CONFLICT_G_CUSTOM_AND_241_CHANGED	GadScapeEaster2024Packer
+7789	30	109	G_CUSTOM_NEW_SQUARE	TypeParser.wildernessVault (wilderness vault pack)
+8276	32	84	G_CUSTOM_241_UNCHANGED	ChristmasMapPacker
+8314	32	122	G_CUSTOM_NEW_SQUARE	TypeParser.packMaps / other packer
+8557	33	109	G_CUSTOM_NEW_SQUARE	TypeParser.wildernessVault (wilderness vault pack)
+9261	36	45	CONFLICT_G_CUSTOM_AND_241_CHANGED	island (TypeParser.packMaps / PackIsland)
+9812	38	84	G_CUSTOM_241_UNCHANGED	ChristmasMapPacker
+9830	38	102	G_CUSTOM_NEW_SQUARE	TypeParser.copyMaps
+10057	39	73	G_CUSTOM_241_UNCHANGED	mage_bank.pack (TypeParser.packMaps)
+10086	39	102	G_CUSTOM_NEW_SQUARE	TypeParser.copyMaps
+10388	40	148	CONFLICT_G_CUSTOM_AND_241_CHANGED	Yanille (TypeParser.packMaps)
+10803	42	51	CONFLICT_G_CUSTOM_AND_241_CHANGED	witchaven.pack (TypeParser.packMaps)
+11346	44	82	CONFLICT_G_CUSTOM_AND_241_CHANGED	GWD instances (TypeParser.packMaps)
+11347	44	83	CONFLICT_G_CUSTOM_AND_241_CHANGED	GWD instances (TypeParser.packMaps)
+11374	44	110	G_CUSTOM_NEW_SQUARE	barrows copies (TypeParser.packMaps donator_zones/barrows.pack)
+11375	44	111	G_CUSTOM_NEW_SQUARE	barrows copies (TypeParser.packMaps donator_zones/barrows.pack)
+11376	44	112	G_CUSTOM_NEW_SQUARE	barrows copies (TypeParser.packMaps donator_zones/barrows.pack)
+11377	44	113	G_CUSTOM_NEW_SQUARE	barrows copies (TypeParser.packMaps donator_zones/barrows.pack)
+11378	44	114	G_CUSTOM_NEW_SQUARE	barrows copies (TypeParser.packMaps donator_zones/barrows.pack)
+11379	44	115	CONFLICT_G_NEW_SQUARE_WHERE_241_HAS_CONTENT	barrows copies (TypeParser.packMaps donator_zones/barrows.pack)
+11567	45	47	UNKNOWN_LOCS_CHECK	TypeParser.packMaps / other packer
+11595	45	75	CONFLICT_G_CUSTOM_AND_241_CHANGED	TypeParser.packMaps / other packer
+11601	45	81	UNKNOWN_LOCS_CHECK	GWD instances (TypeParser.packMaps)
+11602	45	82	CONFLICT_G_CUSTOM_AND_241_CHANGED	GWD instances (TypeParser.packMaps)
+11603	45	83	CONFLICT_G_CUSTOM_AND_241_CHANGED	GWD instances (TypeParser.packMaps)
+11681	45	161	CONFLICT_G_CUSTOM_AND_241_CHANGED	GadScapeEffigyMapEdits
+12086	47	54	CONFLICT_G_CUSTOM_AND_241_CHANGED	osnr_home/nr_home.pack (TypeParser.packMaps)
+12087	47	55	CONFLICT_G_CUSTOM_AND_241_CHANGED	osnr_home/nr_home.pack (TypeParser.packMaps)
+12088	47	56	CONFLICT_G_CUSTOM_AND_241_CHANGED	GadScapeEffigyMapEdits
+12132	47	100	CONFLICT_G_NEW_SQUARE_WHERE_241_HAS_CONTENT	MapChanges
+12145	47	113	G_CUSTOM_NEW_SQUARE	GadScapeCustomMapsPacker
+12342	48	54	CONFLICT_G_CUSTOM_AND_241_CHANGED	home (TypeParser.packMaps)
+12343	48	55	CONFLICT_G_CUSTOM_AND_241_CHANGED	home (TypeParser.packMaps)
+12854	50	54	CONFLICT_G_CUSTOM_AND_241_CHANGED	varrock_topr.pack (TypeParser.packMaps)
+13109	51	53	CONFLICT_G_CUSTOM_AND_241_CHANGED	TypeParser.packMaps / other packer
+13139	51	83	UNKNOWN_LOCS_CHECK	MapChanges
+13395	52	83	VANILLA_211_TAKE_S	MapChanges
+13420	52	108	G_CUSTOM_NEW_SQUARE	GadScapeCustomMapsPacker
+13422	52	110	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13424	52	112	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13426	52	114	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13428	52	116	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13430	52	118	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13431	52	119	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13433	52	121	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13434	52	122	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13436	52	124	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13437	52	125	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13439	52	127	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13441	52	129	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13443	52	131	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13444	52	132	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13445	52	133	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13446	52	134	CONFLICT_G_CUSTOM_AND_241_CHANGED	TypeParser.packMaps / other packer
+13550	52	238	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13552	52	240	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13686	53	118	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13687	53	119	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13689	53	121	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13690	53	122	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13692	53	124	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13693	53	125	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13699	53	131	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13700	53	132	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13701	53	133	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13702	53	134	CONFLICT_G_CUSTOM_AND_241_CHANGED	TypeParser.packMaps / other packer
+13909	54	85	G_CUSTOM_NEW_SQUARE	GadScapeCustomMapsPacker
+13955	54	131	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13956	54	132	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13957	54	133	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+13958	54	134	CONFLICT_G_CUSTOM_AND_241_CHANGED	TypeParser.packMaps / other packer
+14211	55	131	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+14212	55	132	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+14213	55	133	G_CUSTOM_NEW_SQUARE	donator zones (TypeParser.packMaps RSPSi packs)
+14214	55	134	CONFLICT_G_CUSTOM_AND_241_CHANGED	TypeParser.packMaps / other packer
+14388	56	52	CONFLICT_G_CUSTOM_AND_241_CHANGED	Meiyerditch.pack (TypeParser.packMaps)
+14477	56	141	G_KEEP_REMOVED_IN_241	dmm/tournament squares (TypeParser.packMaps)
+14478	56	142	G_KEEP_REMOVED_IN_241	dmm/tournament squares (TypeParser.packMaps)
+14733	57	141	G_KEEP_REMOVED_IN_241	dmm/tournament squares (TypeParser.packMaps)
+14734	57	142	G_KEEP_REMOVED_IN_241	dmm/tournament squares (TypeParser.packMaps)
+15245	59	141	G_KEEP_REMOVED_IN_241	dmm/tournament squares (TypeParser.packMaps)
+15248	59	144	G_CUSTOM_241_UNCHANGED	dmm/tournament squares (TypeParser.packMaps)

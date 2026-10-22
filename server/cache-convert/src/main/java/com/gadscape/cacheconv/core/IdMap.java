@@ -19,9 +19,13 @@ import java.util.TreeSet;
  * in every occupancy cache (BASE, USER and the output as built so far) and not already allocated, reserved or the
  * target of a relocation.
  * <p>
+ * Aliases ({@link #alias}) map an id onto an id that already exists and stays where it is (a user model identical to
+ * a BASE model at another id). Several ids may alias the same target; they appear in the kind's map like any other
+ * relocation and are also listed under {@code _aliases}. Apply the map once, never transitively.
+ * <p>
  * idmap.json: {@code {"seq": {"15000": 40000, ...}, "frame": {...}, ..., "_reasons": {"seq": {"15000": "..."}},
- * "_ranges": {"seq": [40000, 49999], ...}, "_format": 1}} — every kind key is always present; keys starting with "_"
- * are metadata.
+ * "_aliases": {"model": [58013, ...]}, "_ranges": {"seq": [40000, 49999], ...}, "_format": 1}} — every kind key is
+ * always present; keys starting with "_" are metadata.
  */
 public final class IdMap {
     public record Range(int lo, int hi) {
@@ -32,6 +36,7 @@ public final class IdMap {
     private final EnumMap<Kind, TreeMap<Integer, Integer>> map = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, TreeMap<Integer, Integer>> inverse = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, TreeMap<Integer, String>> reasons = new EnumMap<>(Kind.class);
+    private final EnumMap<Kind, TreeSet<Integer>> aliases = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, Range> ranges = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, TreeSet<Integer>> taken = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, Integer> next = new EnumMap<>(Kind.class);
@@ -40,6 +45,7 @@ public final class IdMap {
     public IdMap() {
         for (Kind k : Kind.values()) {
             map.put(k, new TreeMap<>()); inverse.put(k, new TreeMap<>()); reasons.put(k, new TreeMap<>()); taken.put(k, new TreeSet<>());
+            aliases.put(k, new TreeSet<>());
             if (k.rangeLo >= 0) ranges.put(k, new Range(k.rangeLo, k.rangeHi));
         }
     }
@@ -54,7 +60,7 @@ public final class IdMap {
     /** The new id, or -1 if the id was not relocated. */
     public int lookup(Kind k, int id) { Integer to = map.get(k).get(id); return to == null ? -1 : to; }
     public boolean moved(Kind k, int id) { return map.get(k).containsKey(id); }
-    /** The old id that was relocated to {@code to}, or -1. */
+    /** The old id that was relocated to {@code to}, or -1 (aliases of {@code to} are not counted). */
     public int origin(Kind k, int to) { Integer from = inverse.get(k).get(to); return from == null ? -1 : from; }
     public String reason(Kind k, int id) { return reasons.get(k).get(id); }
     /** Read-only view of one kind's relocations (old -> new). */
@@ -85,6 +91,27 @@ public final class IdMap {
         reasons.get(k).put(from, reason);
         taken.get(k).add(to);
     }
+
+    /**
+     * Records a many-to-one mapping onto an id that already exists and is not itself moved (for example a user model
+     * identical to a BASE model at another id). Unlike {@link #record}, several ids may alias the same target, and the
+     * target is not reported by {@link #origin}. Recording the same alias twice is fine.
+     */
+    public void alias(Kind k, int from, int to, String reason) {
+        Integer cur = map.get(k).get(from);
+        if (cur != null) {
+            if (cur == to) return;
+            throw new IllegalStateException(k.key + " " + from + " already relocated to " + cur + ", not " + to);
+        }
+        if (map.get(k).containsKey(to)) throw new IllegalStateException(k.key + " alias target " + to + " is itself relocated");
+        if (inverse.get(k).containsKey(from)) throw new IllegalStateException(k.key + " " + from + " is the new id of " + inverse.get(k).get(from) + " and cannot alias");
+        map.get(k).put(from, to);
+        reasons.get(k).put(from, reason);
+        aliases.get(k).add(from);
+    }
+
+    /** Whether {@code from} was mapped with {@link #alias}. */
+    public boolean isAlias(Kind k, int from) { return aliases.get(k).contains(from); }
 
     /** Marks an id as used so the allocator never hands it out. */
     public void reserve(Kind k, int id) { taken.get(k).add(id); }
@@ -157,6 +184,9 @@ public final class IdMap {
             rs.put(k.key, m);
         }
         root.put("_reasons", rs);
+        Map<String, Object> al = new LinkedHashMap<>();
+        for (Kind k : Kind.values()) if (!aliases.get(k).isEmpty()) al.put(k.key, new ArrayList<>(aliases.get(k)));
+        if (!al.isEmpty()) root.put("_aliases", al);
         Map<String, Object> rg = new LinkedHashMap<>();
         for (Kind k : Kind.values()) { Range r = ranges.get(k); if (r != null) rg.put(k.key, new int[]{r.lo, r.hi}); }
         root.put("_ranges", rg);
@@ -172,13 +202,18 @@ public final class IdMap {
         Map<String, Object> rg = root.containsKey("_ranges") ? Json.obj(root.get("_ranges")) : Map.of();
         for (var e : rg.entrySet()) { List<Object> l = Json.list(e.getValue()); m.setRange(Kind.byKey(e.getKey()), Json.i(l.get(0)), Json.i(l.get(1))); }
         Map<String, Object> rs = root.containsKey("_reasons") ? Json.obj(root.get("_reasons")) : Map.of();
+        Map<String, Object> al = root.containsKey("_aliases") ? Json.obj(root.get("_aliases")) : Map.of();
         for (Kind k : Kind.values()) {
             Object o = root.get(k.key);
             if (o == null) continue;
             Map<String, Object> why = rs.containsKey(k.key) ? Json.obj(rs.get(k.key)) : Map.of();
+            java.util.Set<Integer> isAlias = new TreeSet<>();
+            if (al.containsKey(k.key)) for (Object x : Json.list(al.get(k.key))) isAlias.add(Json.i(x));
             for (var e : Json.obj(o).entrySet()) {
                 Object r = why.get(e.getKey());
-                m.record(k, Integer.parseInt(e.getKey()), Json.i(e.getValue()), r == null ? "" : r.toString());
+                int from = Integer.parseInt(e.getKey());
+                if (isAlias.contains(from)) m.alias(k, from, Json.i(e.getValue()), r == null ? "" : r.toString());
+                else m.record(k, from, Json.i(e.getValue()), r == null ? "" : r.toString());
             }
         }
         return m;

@@ -1,0 +1,21 @@
+# Varps the GadScape server sends (VarManager.sendVar / sendVarInstant / varp delegates) that the USER cache does not
+# define. configs-plan reserves every id listed here (the allocator never hands them out) and moves the ones BASE
+# defines to the reserved varp range (idmap "varp"), so the server and the custom scripts can be rewritten to ids
+# BASE's own scripts never read. Ids BASE does not define stay; configs gives them plain definitions (varp slots).
+# Override with --configs.serverVarps=LIST (comma-separated ids/ranges) or --configs.serverVarps=none.
+#
+# Evidence (rev241/base/server, 2026-10-22):
+#   3800-3802, 3805, 3806   PlayerVariables.java:447-451 (uptime, play time, bonus XP, raids boost)
+#   3801                    TomeOfExperience.java:51
+#   3803, 3804, 3807        GameNoticeboardInterface.java:94-109 (player/staff/wilderness counts)
+#   3808, 3809              TeleportsManager.kt:85-86 (teleport favourites)
+#   3811                    VarCollection.java:54
+#   4506                    BoonManager.java:64, BoonPurchaseInterface.java:24 (exchange points)
+#   4700                    CreditStoreInterface.kt:46 (store credits)
+#   9998                    UniversalShopInterface.kt:27,59 (shop tab)
+#   19450-19453             RemnantInvInterface.kt, RemnantExchInterface.kt (remnant exchange)
+3800-3811
+4506
+4700
+9998
+19450-19453

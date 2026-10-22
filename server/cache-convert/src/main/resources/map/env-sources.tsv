@@ -1,0 +1,55 @@
+# Environment (files 2-4: lighting, fog, sky, water) for GadScape squares that BASE does not have, where the square is
+# a copy of a known BASE square (audit MAP-10). Every other such square takes the files of its nearest BASE neighbour
+# (Env.neighbourOrder). Columns: target region, source region (a BASE square), why.
+# Catacombs of Kourend copies (TypeParser.copyMaps)
+6306	6301	catacomb copy of 6301 (TypeParser.copyMaps)
+6310	6301	catacomb copy of 6301 (TypeParser.copyMaps)
+6314	6301	catacomb copy of 6301 (TypeParser.copyMaps)
+6305	6300	catacomb copy of 6300 (TypeParser.copyMaps)
+6309	6300	catacomb copy of 6300 (TypeParser.copyMaps)
+6313	6300	catacomb copy of 6300 (TypeParser.copyMaps)
+6304	6299	catacomb copy of 6299 (TypeParser.copyMaps)
+6308	6299	catacomb copy of 6299 (TypeParser.copyMaps)
+6312	6299	catacomb copy of 6299 (TypeParser.copyMaps)
+6562	6557	catacomb copy of 6557 (TypeParser.copyMaps)
+6566	6557	catacomb copy of 6557 (TypeParser.copyMaps)
+6570	6557	catacomb copy of 6557 (TypeParser.copyMaps)
+6561	6556	catacomb copy of 6556 (TypeParser.copyMaps)
+6565	6556	catacomb copy of 6556 (TypeParser.copyMaps)
+6569	6556	catacomb copy of 6556 (TypeParser.copyMaps)
+6560	6555	catacomb copy of 6555 (TypeParser.copyMaps)
+6564	6555	catacomb copy of 6555 (TypeParser.copyMaps)
+6568	6555	catacomb copy of 6555 (TypeParser.copyMaps)
+6818	6813	catacomb copy of 6813 (TypeParser.copyMaps)
+6822	6813	catacomb copy of 6813 (TypeParser.copyMaps)
+6826	6813	catacomb copy of 6813 (TypeParser.copyMaps)
+6817	6812	catacomb copy of 6812 (TypeParser.copyMaps)
+6821	6812	catacomb copy of 6812 (TypeParser.copyMaps)
+6825	6812	catacomb copy of 6812 (TypeParser.copyMaps)
+6816	6811	catacomb copy of 6811 (TypeParser.copyMaps)
+6820	6811	catacomb copy of 6811 (TypeParser.copyMaps)
+6824	6811	catacomb copy of 6811 (TypeParser.copyMaps)
+7074	7069	catacomb copy of 7069 (TypeParser.copyMaps)
+7078	7069	catacomb copy of 7069 (TypeParser.copyMaps)
+7082	7069	catacomb copy of 7069 (TypeParser.copyMaps)
+7073	7068	catacomb copy of 7068 (TypeParser.copyMaps)
+7077	7068	catacomb copy of 7068 (TypeParser.copyMaps)
+7081	7068	catacomb copy of 7068 (TypeParser.copyMaps)
+7072	7067	catacomb copy of 7067 (TypeParser.copyMaps)
+7076	7067	catacomb copy of 7067 (TypeParser.copyMaps)
+7080	7067	catacomb copy of 7067 (TypeParser.copyMaps)
+# The Whisperer copies (TypeParser.copyMaps)
+9830	9571	Whisperer shadow realm copy of 9571 (TypeParser.copyMaps)
+10086	10595	Whisperer real world copy of 10595 (TypeParser.copyMaps)
+# God Wars Dungeon instances (TypeParser.packMaps godwars-instances/<god>)
+4674	11346	GWD Armadyl instance (godwars-instances/Armadyl)
+4675	11347	GWD Bandos instance (godwars-instances/Bandos)
+4676	11603	GWD Zamorak instance (godwars-instances/Zamorak)
+4677	11602	GWD Saradomin instance (godwars-instances/Saradomin)
+# Donator-zone Barrows copies (TypeParser.packMaps donator_zones/barrows.pack): Barrows crypt lighting
+11374	14231	barrows copy: Barrows crypt environment
+11375	14231	barrows copy: Barrows crypt environment
+11376	14231	barrows copy: Barrows crypt environment
+11377	14231	barrows copy: Barrows crypt environment
+11378	14231	barrows copy: Barrows crypt environment
+11379	14231	barrows copy: Barrows crypt environment

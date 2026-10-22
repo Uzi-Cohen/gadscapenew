@@ -30,7 +30,8 @@ public final class Ctx implements AutoCloseable {
 
     /**
      * Opens the inputs that exist (BASE is required) and, with {@code withOut}, creates the output cache as a copy of
-     * BASE in {@code opt.out} (or a dry-run view).
+     * BASE in {@code opt.out} (or a dry-run view). The model range of the id map is set from BASE
+     * ({@link Kind#modelRange}).
      */
     public static Ctx open(Options o, boolean withOut) throws IOException {
         o.require("base", o.base);
@@ -46,6 +47,8 @@ public final class Ctx implements AutoCloseable {
             out = OutCache.create(o.base, o.out, o.protectedDirs(), o.force, o.dryRun, report);
         }
         IdMap ids = new IdMap();
+        IdMap.Range models = Kind.modelRange(base);
+        if (models != null) ids.setRange(Kind.MODEL, models.lo(), models.hi());
         if (user != null && out != null) ids.occupancy(base, user, out);
         else if (user != null) ids.occupancy(base, user);
         else ids.occupancy(base);

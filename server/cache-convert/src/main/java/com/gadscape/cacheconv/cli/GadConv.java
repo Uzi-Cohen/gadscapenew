@@ -30,10 +30,15 @@ public final class GadConv {
         COMMANDS.put("build-cacheu", new Entry("build-cacheu [--base DIR] [--user DIR] [--van211 DIR] [--out DIR] [--force] [--dry-run] [--only a,b] [--skip a,b]",
                 "copy BASE to --out and run the pipeline steps; writes report.json and idmap.json", BuildCacheU::run));
         COMMANDS.put("port", new Entry("port ...", "convert 211 config entries / groups into a 241 cache (not implemented yet)", PortCmd::run));
-        COMMANDS.put("port-interface", new Entry("port-interface ...", "port a 211 interface and its scripts into a 241 cache (not implemented yet)", PortInterfaceCmd::run));
-        COMMANDS.put("port-map", new Entry("port-map ...", "port 211 map squares into a 241 cache (not implemented yet)", PortMapCmd::run));
-        COMMANDS.put("rebrand", new Entry("rebrand ...", "replace old branding in cache texts (not implemented yet)", RebrandCmd::run));
-        COMMANDS.put("verify", new Entry("verify ...", "reference checks, client-decode oracles, branding scan (not implemented yet)", VerifyCmd::run));
+        COMMANDS.put("port-interface", new Entry("port-interface --from=DIR211 [--into=DIR241] --out=DIR [--interfaces=1600,1700-1702] [--scripts=..] [--idmap=..]",
+                "port 211 interfaces and their scripts into a 241 cache", PortInterfaceCmd::run));
+        COMMANDS.put("port-map", new Entry("port-map --squares=R1,R2|x_y|custom [--from=DIR] [--from-xteas=FILE] --out DIR [--env=neighbour|keep|REGION] [--idmap=FILE]"
+                + " | port-map --region=R --terrain-file=F --locs-file=F [--pre209] --out DIR",
+                "port 211 map squares into a 241 cache", PortMapCmd::run));
+        COMMANDS.put("rebrand", new Entry("rebrand [CACHE] [--rebrand.table=FILE] [--out DIR --force] [--dry-run]",
+                "replace old branding in cache texts from a replacement table (without a table: scan and report only)", RebrandCmd::run));
+        COMMANDS.put("verify", new Entry("verify [CACHE] [--checks=refs,anims,interfaces,maps,scripts,brand,oracle,strict,determinism] [--baseline=base|none|DIR] [--compare=DIR] [--json=FILE] [--brand-errors]",
+                "reference checks, gosub/stack analysis, client-decode oracles, strict server checker, branding scan, determinism", VerifyCmd::run));
         COMMANDS.put("selfcheck", new Entry("selfcheck [--user DIR] [--ref DIR] [--full]",
                 "golden check: ported 211->241 converters vs the hand-built cacheU", o -> SelfCheck.run(argv(o))));
     }

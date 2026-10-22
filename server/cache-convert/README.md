@@ -22,7 +22,7 @@ caches, plus RuneLite's cache loaders).
 | `core` | shared core: `Ctx`, `CacheView`/`JagCache`/`OutCache`, `GroupData`, `IdMap`/`Kind`, `Report`, `Origin`, `Step`, `Options`, `Xteas`, `RefTable`, `Bytes`/`Buf`/`BufOut`, `Json` |
 | `convert` | the 211 -> 241 format converters, ported from `rev241/tools` with the same behaviour, plus `SelfCheck` |
 | `cli` | `GadConv` (main), `Inspect`, `Diff`, `BuildCacheU`, `Pipeline`, and one class per remaining command |
-| *area packages* | each area's `Step`s, in a package of its own (for example `anim`, `maps`, `ui`, `raids`, `rebrand`, `verify`) |
+| *area packages* | each area's `Step`s, in a package of its own: `anim`, `model`, `config`, `sprite` (sprites, fonts, mapscene), `db`, `map`, `ui` (GadScape's own UI), `uimerge` (three-way-merged vanilla UI), `rebrand`, `verify` |
 | `dev/` | `compile.sh` and `run.sh`, for working without Gradle |
 | `src/main/resources/ui-merge/` | three-way-merged UI groups stored as data (spec policy 8) |
 
@@ -77,45 +77,74 @@ the heap, at most 512 MB per cache).
 
 **`IdMap`** records every relocation. The kinds are listed in `Kind`: `seq`, `frame`, `framemap`, `keyframe`,
 `script`, `sprite`, `dbrow`, `dbtable`, `model`, `loc`, `obj`, `npc`, `spot`, `varbit`, `varp`, `varc`, `struct`,
-`enum`, `param`, `interface`.
+`enum`, `param`, `interface`, `inv`, `healthbar`.
 
 * `record(kind, old, new, reason)` stores a relocation. Recording the same mapping again is fine; giving an id a
   different target, or reusing a target, throws.
+* `alias(kind, old, existing, reason)` maps an id onto an id that already exists and is not itself moved (a user
+  model identical to a BASE model at another id). Several ids may alias one target; `origin(kind, target)` still
+  names the first recorded source. Aliases appear in the kind's map like other relocations and are listed under
+  `_aliases`. Apply the map once, never transitively.
 * `relocate(kind, old, reason)` allocates the next free id in the kind's reserved range and records it.
 * `map(kind, id)` returns the new id, or the same id when the id was not moved. `mapFrameRef(group << 16 | file)`
   maps a seq frame reference.
 * `allocate` hands out an id only when it is unused in BASE, USER and OUT, and not already allocated, reserved or
   targeted.
 
-The reserved ranges come from the spec:
+The reserved ranges come from the spec, corrected where the 241 client or protocol cannot carry the spec's ids:
 
-| kind | range |
-|---|---|
-| seq | 40000-49999 |
-| frame (archive 0 groups) | 30000-32767 |
-| framemap | 30000-32767 |
-| keyframe | 20000-29999 |
-| script | 47000-47999 |
-| sprite | 20000-29999 |
-| dbrow | 60000-64999 |
-| model | 100000-199999 |
-| loc | 70000-79999 |
-| varbit | 30000-34999 |
-| varp | 9000-9999 |
-| struct | 13000-13999 |
-| enum | 20000-20999 |
-| param | 9000-9999 |
+| kind | range | note |
+|---|---|---|
+| seq | 40000-49999 | |
+| frame (archive 0 groups) | 30000-32767 | |
+| framemap | 30000-32767 | |
+| keyframe | 20000-29999 | |
+| script | 47000-47999 | |
+| sprite | 20000-29999 | |
+| dbrow | 60000-64999 | |
+| dbtable | 4000-4999 | added; used only when a user table id clashes with BASE (none today) |
+| model | BASE max + 1 to 65535 (62776-65535 on 2746) | not 100000-199999: the 241 client's JS5 requests and replies carry 16-bit group ids, so model 100000 would be requested as sprite group 34464. `Ctx.open` sets the range from BASE (`Kind.modelRange`). After this build 1,421 ids remain, and the next stock cache needs them too. |
+| loc | 64500-65534 | not 70000-79999: loc ids are u16 on the 241 wire (rsprot `OpLoc1V2Decoder` g2, `LocAddChangeV2Encoder` p2) and in multiloc transform lists |
+| varbit | 30000-34999 | |
+| varp | 9000-9999 | |
+| varc | 2016-2047 | set by configs-plan: the 241 client sizes its varc table from the config-19 file count |
+| obj | 60000-64999 | set by configs-plan: obj ids are u16 in inventories and cert links; seq hand objs allow at most 65023 |
+| struct | 13000-13999 | |
+| enum | 20000-20999 | |
+| param | 9000-9999 | |
+| interface | 5200-5299 | added (free in BASE, max 979, and USER, max 5103) |
 
-Kinds without a range need `setRange` before `allocate`. The first pipeline step, `check-ranges`, records how much
-of each range BASE, USER and OUT already use. Today USER uses 9 frame groups and 4 framemaps from 30000 up, and enum
-20002; the allocator skips those ids. idmap.json has this shape:
+Kinds without a range (npc, spot, inv, healthbar) need `setRange` before `allocate`; inv and healthbar exist so
+clashing user inventories (1000-1006) and health bars (75) can move later. Today they are kept at their ids and
+reported as clashes. The first pipeline step, `check-ranges`, records how much of each range BASE, USER and OUT
+already use. Today USER uses 9 frame groups and 4 framemaps from 30000 up, 14 models from 63000 up, and enum 20002;
+the allocator skips those ids. idmap.json has this shape:
 
 ```json
 {"seq": {"15000": 40000}, "frame": {}, "...": {},
- "_reasons": {"seq": {"15000": "raid seq clash"}}, "_ranges": {"seq": [40000, 49999]}, "_format": 1}
+ "_reasons": {"seq": {"15000": "raid seq clash"}}, "_aliases": {"model": [58013]},
+ "_ranges": {"seq": [40000, 49999]}, "_format": 1}
 ```
 
 Every kind key is always present. Keys that start with `_` are metadata.
+
+How the kinds are keyed, and what the server rewrite must know:
+
+* **`seq`**: USER seq id -> output id. The server applies this map (for example 10000 -> 40000 and the raid clash
+  15000-15162 -> 40088-40250).
+* **`frame`, `framemap`**: USER archive-0 group / archive-1 group -> output id. These include the vanilla 211 frame
+  sets and framemaps that ported user seqs need, because Jagex renumbered or changed them by 241.
+* **`keyframe`**: a 211 archive-0 keyframe group -> an archive-22 group. It is empty on the current inputs.
+* User animation assets that are taken from BASE, or not carried over, are not in the id map. Each has a
+  `taken-from-base` or `dropped` entry in report.json.
+* **`model`**: user model -> output id. Twins map onto an identical existing model (several may share one target,
+  as aliases).
+* **Config kinds** (`obj`, `struct`, `enum`, `param`, `varbit`, `varp`, `varc`, `dbrow`): apply them only to
+  GadScape-era server code and data, which uses USER ids. New Raids 4 server code is written against BASE ids:
+  obj 34721-34723/34726 and structs 1216-1774 mean BASE's raid content now. Only old GadScape references to them move.
+* **`script`, `interface`**: custom UI at ids BASE uses (10034-10121 -> 47000+, interface 866 -> 5200). The ports of
+  211 vanilla scripts (2122 -> 47034, 2174 -> 47035) apply only to server calls that mean the 211 behaviour.
+* **`loc`**: user locs that BASE squares place (64500+). The map squares written by `maps` already use the new ids.
 
 **`Report`** writes report.json. Log one entry per decision:
 
@@ -190,6 +219,46 @@ Rules for steps:
   rewrite the references.
 * Call `release(archive)` after walking a big archive (models, frames, maps).
 
+## The build-cacheu pipeline
+
+`cli/Pipeline.steps()` lists the steps in run order. All of them share one `IdMap`: every step that moves ids runs
+before the steps that write references to those ids, and those steps map the references through `ctx.ids`.
+
+| # | step | package | what | options |
+|---|---|---|---|---|
+| 1 | `check-ranges` | `cli` | how much of each reserved range BASE, USER and OUT use | |
+| 2 | `ui-relocate` | `ui` | custom scripts/interfaces at ids BASE uses move (47000+, 5200+); reserves undefined var ids custom UI uses inside reserved ranges (varp 9998), so it runs before any var allocation | `--ui.interfaceRange=LO-HI` |
+| 3 | `fonts` | `sprite` | user fonts (all vanilla today: BASE's) | |
+| 4 | `sprites` | `sprite` | user sprites; GadScape art at ids BASE's UI uses moves to 20000+; edited vanilla sprites are merged frame by frame | `--sprites.sameThing` |
+| 5 | `db-plan` | `db` | user dbrows at BASE ids (whole tables) move to 60000+ in order | `--db.tableRange` |
+| 6 | `models` | `model` | user models; clashes move to the top of the model range or onto an identical twin | `--models-range=LO-HI`, `--models-pack=top\|bottom`, `--models-dedup`, `--models-changed=auto\|relocate\|override`, `--models-prev-idmap=FILE`, `--models-census` |
+| 7 | `configs-plan` | `config` | UI configs at BASE ids, Raids 4 protected ids, GadScape vars without a USER definition | `--configs.range.KIND=LO-HI`, `--configs.portRemovedVanilla`, `--configs.serverVarps` |
+| 8 | `maps-plan` | `map` | user locs that BASE squares place move to 64500+ | `--maps.locRange=LO-HI` |
+| 9 | `anim` | `anim` | seqs, frames (archive 0), framemaps (1), keyframes (22); BASE's groups never change; hand objs follow configs-plan | `--anim.takeBase=IDS`, `--anim.portRemovedVanilla`, `--anim.forcePort` |
+| 10 | `configs` | `config` | archive 2 except seqs: vanilla = BASE, user entries converted, references mapped, three-way merges, enum unions, varc/varp slots | `--configs.varcSlots`, `--configs.varpSlots`, `--configs.lossy`, `--configs.enumRemovals` |
+| 10b | `config-sprites` | `sprite` | vanilla 211 sprites BASE deleted that the written configs still name are copied from USER (enum 11001 -> sprite 4567) | |
+| 11 | `mapscene` | `sprite` | mapscene sheet: BASE's plus custom frames user locs use (none today) | `--mapscene.merge=auto\|never` |
+| 12 | `ui-merge` | `uimerge` | the 14 interfaces and 31 scripts the user modified, three-way merged (data in `resources/ui-merge`) | `--uimerge.data=DIR` |
+| 13 | `ui-convert` | `ui` | GadScape's own interfaces and scripts converted and written at the ids ui-relocate chose | `--ui.copyAssets`, `--ui.componentRemap=TSV`, `--ui.fixups` |
+| 14 | `maps` | `map` | user squares from the stored allow-list, loc ids mapped | `--maps.mode=merge\|overlay` |
+| 15 | `db-index` | `db` | archive 21 rebuilt from the rows written | `--db.syncObjCopies` |
+| 16 | `rebrand` | `rebrand` | branding replacement table applied to config, interface and script strings (no table yet: no-op) | `--rebrand.table=FILE\|none` |
+| 17-19 | `configs-oracle`, `configs-refcheck`, `configs-expect` | `config` | the server's strict decoders on every written entry; references resolve; audit expectations | |
+| 20 | `models-refcheck` | `model` | every model reference resolves; nothing still points at a moved model | |
+| 21 | `anim-refcheck` | `anim` | frames/framemaps/keyframes resolve, BASE's animation data unchanged, BOSS-X1 lists, NPC/spotanim seqs | |
+| 22 | `ui-check` | `ui` | custom scripts/interfaces read back; gosub targets and arg counts; assets exist | |
+| 23 | `verify` | `verify` | the whole-cache verifier with BASE as baseline (refs, anims, interfaces, maps, scripts, brand, strict) | `--verify.checks=a,b`, `--verify.oracle`, `--brand-errors` |
+
+The checks report one error per failing check, so `build-cacheu` exits 1 on a broken output. Bad items listed in
+`src/main/resources/verify/known-exceptions.tsv` (`CHECK<TAB>KEY_REGEX<TAB>REASON`) are documented exceptions: they
+are reported with their reason but are not errors. Each one must say why it is acceptable; today every row is a
+defect already present in GadScape's 211 cache that the converter carries over unchanged (for example script 2186
+calling 2194 without its two arguments, and the user NPCs whose seqs 15170-15253 have no frames in USER). Fix them in
+the 211 source and delete the row. `--verify.known=FILE|none` (pipeline) or `--known=FILE|none` (verify command)
+replaces the list. Every step writes its
+details to `WORK/<area>/` (`--work DIR`; for example `configs/clashes.tsv`, `models/moves.tsv`, `maps/loc-moves.tsv`,
+`sprites-db/dbrow-moves.tsv`, `verify/verify.json`).
+
 ## Running
 
 Without Gradle (fast iteration):
@@ -235,8 +304,21 @@ gadconv inspect CACHE name ARCHIVE NAME              group id of a named group
 gadconv diff A B [ARCHIVE...] [--content] [--ids]    group-by-group comparison (configs per file)
 gadconv build-cacheu [--base --user --van211 --out DIR] [--force] [--dry-run] [--only a,b] [--skip a,b]
 gadconv selfcheck [--full]                           converters vs cacheU
-gadconv port | port-interface | port-map | rebrand | verify    (stubs, owned by their areas)
+gadconv port-interface --from=DIR211 [--into=DIR241] --out=DIR [--interfaces=1600,1700-1702] [--scripts=..] [--idmap=..]
+gadconv port-map --squares=R1,R2|x_y|custom [--from=DIR] [--from-xteas=FILE] --out DIR [--env=neighbour|keep|REGION] [--idmap=FILE]
+gadconv port-map --region=R --terrain-file=F --locs-file=F [--pre209] --out DIR
+gadconv rebrand CACHE [--rebrand.table=FILE] [--out DIR --force]   (without a table or --out: lists the branding hits)
+gadconv verify [CACHE] [--checks=refs,anims,interfaces,maps,scripts,brand,oracle,strict,determinism]
+               [--baseline=base|none|DIR] [--compare=DIR] [--json=FILE] [--brand-errors] [--known=FILE|none]
+gadconv port ...                                     (stub: single config entries; use build-cacheu or port-interface/port-map)
 ```
+
+Determinism after two builds: `gadconv verify OUT1 --checks=determinism --compare=OUT2 --baseline=none`.
+
+**Rebrand table** (`--rebrand.table=FILE`, or the resource `rebrand/table.tsv` when it exists): UTF-8, one rule per
+line, `FROM<TAB>TO[<TAB>FLAGS]` with flags `i` (ignore case) and `w` (whole words); `#` starts a comment. Rules are
+literal and applied in order. Config strings are rewritten only when the entry still parses to the same fields and
+references; IF1 component texts and script names are not rewritten (reported).
 
 `build-cacheu` copies BASE to `--out` and runs `Pipeline.steps()`, committing after each step. Then it writes
 `idmap.json` and `report.json` to `--report-dir`, which defaults to the output directory (`WORK/dry-run` with
@@ -246,7 +328,15 @@ flags are written `--name=value` or `--name`; read them with `o.get("name", def)
 ## Caveats
 
 * Reference tables written by mgi `Archive.pack` are padded. `OutCache` trims them on commit.
-* For scripts read with `parse241`, `Cs2.BRANCH` covers the classic branch opcodes (6-10, 31, 32). Check
-  this before you splice 241 scripts that use newer branch opcodes.
+* `Cs2.BRANCH` holds every relative-jump opcode: 6-10, 31, 32 and build 241's long compares 68-73 (they pop two
+  longs; stock script 778 uses them). `splice` keeps all of them pointing at the same instruction.
+* `MapConv.terrain211`/`locs211` are deprecated: `groupIdByName` returns an arbitrary group when a square name is
+  duplicated (84 in USER). Use `map.NamedMaps`.
+* Facts the verify area established on stock 2746, which script rewriting relies on: db column refs
+  (`db_find` 7500/7507, `db_getfield` 7502 constants) are `table << 12 | column << 4 | t` (t = 0: the whole tuple,
+  t = n: element n - 1); hook descriptor chars `X`, `W` and `*` are object-stack arguments, like `s`; 1703/2703
+  (`cc_param`/`if_param`) and 1704/2704 (`cc_setparam`/`if_setparam`) push/pop a value typed by their param constant;
+  210 (`cc_find` by params) pops a value only for params that are not -1; arrays are objects in object locals (44
+  `define_array` operand = local << 16 | element type; 45/46 operand = local) and 8000-8027 are the array commands.
 * `JagCache` reports a map group that fails to decode without a key as an `IllegalStateException`;
   `group(arch, id, xtea)` returns null instead. `MapConv.locs211` tries the plain group first, then the key.
