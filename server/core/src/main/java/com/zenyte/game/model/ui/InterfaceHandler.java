@@ -214,6 +214,9 @@ public class InterfaceHandler {
 			GameInterface.ORBS.open(player);
 		}
 		final PacketDispatcher dispatcher = player.getPacketDispatcher();
+		// 241 camera zoom limits (varcs 1338-1341, read by the scroll-wheel zoom script 39 -> 42). No 241 script sets
+		// them, the server has to; left at 0 the zoom is locked.
+		dispatcher.sendClientScript(626);
 		dispatcher.sendComponentSettings(216, 1, 0, 47, AccessMask.CLICK_OP1);
 		// (an old-revision settings tab's 261:89/261:90 events were sent here: 261 has 3 components in 211 and 241)
 		player.getVarManager().sendBit(4070, player.getCombatDefinitions().getSpellbook().ordinal());

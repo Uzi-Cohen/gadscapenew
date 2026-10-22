@@ -3967,6 +3967,12 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (Objects.equals(15515, getLocation().getRegionId()))
             setLocation(new Location(3808, 9755, 1));
         varManager.refreshDefaults();
+        if (getNumericAttribute("rev241 orbs zoom reset").intValue() == 0) {
+            // the old defaults (1) of 241's orbs_disabled / camera_zoom_mouse_disabled were saved into varp 1055
+            varManager.sendBit(SettingVariables.SHOW_DATA_ORBS_VARBIT_ID, 0);
+            varManager.sendBit(SettingVariables.SCROLL_WHEEL_CAN_CHANGE_ZOOM_DISTANCE_VARBIT_ID, 0);
+            addAttribute("rev241 orbs zoom reset", 1);
+        }
         final String updateMessage =
                 "Latest Update: " + GameConstants.UPDATE_LOG_BROADCAST + "|" + GameConstants.UPDATE_LOG_URL;
         if (getNumericAttribute(GameSetting.ALWAYS_SHOW_LATEST_UPDATE.toString()).intValue() == 1 || !Objects.equals(attributes.get("latest update message"), updateMessage)) {

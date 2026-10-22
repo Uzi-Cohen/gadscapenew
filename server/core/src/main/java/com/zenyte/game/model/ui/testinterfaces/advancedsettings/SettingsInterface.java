@@ -208,7 +208,8 @@ public class SettingsInterface extends Interface {
     private void toggle(Player player, Setting setting) {
         switch (setting.getStructId()) {
             case SettingStructs.SHOW_DATA_ORBS_STRUCT_ID:
-                if (player.getVarManager().getBitValue(SettingVariables.SHOW_DATA_ORBS_VARBIT_ID) == 1) {
+                // 241 varbit 4084 is orbs_disabled: 0 shows the orbs
+                if (player.getVarManager().getBitValue(SettingVariables.SHOW_DATA_ORBS_VARBIT_ID) == 0) {
                     GameInterface.ORBS.open(player);
                 } else {
                     player.getInterfaceHandler().closeInterface(GameInterface.ORBS);
