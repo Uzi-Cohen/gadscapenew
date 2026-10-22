@@ -25,21 +25,23 @@ object RaidWorld {
     /**
      * [near] itself if it is standable, else the closest standable tile within [radius] (rings outward, deterministic
      * order), else [near]. [spread] > 0 first tries a random tile within that distance ([random] supplies the roll).
+     * [avoidNpcs] = false allows tiles under NPCs (hidden spectators).
      */
     @JvmStatic
-    fun landing(near: Location, radius: Int, spread: Int = 0, random: java.util.Random? = null): Location {
+    @JvmOverloads
+    fun landing(near: Location, radius: Int, spread: Int = 0, random: java.util.Random? = null, avoidNpcs: Boolean = true): Location {
         if (spread > 0 && random != null) {
             val dx = random.nextInt(spread * 2 + 1) - spread
             val dy = random.nextInt(spread * 2 + 1) - spread
             val candidate = Location(near.x + dx, near.y + dy, near.plane)
-            if (isStandable(candidate)) return candidate
+            if (isStandable(candidate, avoidNpcs)) return candidate
         }
-        if (isStandable(near)) return near
+        if (isStandable(near, avoidNpcs)) return near
         for (r in 1..radius) {
             for (dx in -r..r) for (dy in -r..r) {
                 if (maxOf(kotlin.math.abs(dx), kotlin.math.abs(dy)) != r) continue
                 val candidate = Location(near.x + dx, near.y + dy, near.plane)
-                if (isStandable(candidate)) return candidate
+                if (isStandable(candidate, avoidNpcs)) return candidate
             }
         }
         return near
