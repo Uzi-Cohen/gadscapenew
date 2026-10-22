@@ -48,13 +48,22 @@ import java.util.TreeSet;
  *   <li>every NPC (movement seqs: stand, walk, turns, run, crawl) and spotanim (op 2) of the output, and every
  *       user-added/changed NPC and spotanim of USER with its seq ids mapped through the id map: the seqs exist and
  *       resolve (refs that were already dead in USER are counted apart).</li>
+ *   <li><b>skeletons</b>: every user-added/changed NPC and spotanim whose output record plays the user's own seqs
+ *       (the USER seq ids mapped through the id map; rev-225 imports, which take BASE's record, excluded): each output
+ *       seq animates the skeleton the USER seq animated (same framemap, or a 211 framemap whose transform groups are a
+ *       prefix of the output's; a vanilla seq BASE kept on the same framemap id, which Jagex updated in place, is
+ *       counted apart). This catches vanilla seq ids Jagex reused for another skeleton (gnome walk 189 is a player
+ *       emote in 241), which the reference checks above cannot see.</li>
+ *   <li>vanilla seq ports (id map {@code _vanilla}) play the vanilla 211 animation.</li>
  * </ol>
  */
 public final class AnimRefCheck implements Step {
     @Override public String name() { return "anim-refcheck"; }
 
     @Override public void run(Ctx ctx) throws IOException {
-        Result r = new Checker(ctx.out, ctx.base, ctx.user, ctx.van211, ctx.ids).run();
+        Checker c = new Checker(ctx.out, ctx.base, ctx.user, ctx.van211, ctx.ids);
+        c.imported = ctx::isRev225Import;
+        Result r = c.run();
         r.toReport(ctx.report);
         Path w = ctx.work("anim");
         Json.write(w.resolve("refcheck.json"), r.toJson());
@@ -77,7 +86,10 @@ public final class AnimRefCheck implements Step {
         if (!Files.isRegularFile(idmap)) System.out.println("no " + idmap + ": checking without relocations");
         try (JagCache out = JagCache.open("OUT", o.out); JagCache base = JagCache.open("BASE", o.base);
              JagCache user = JagCache.open("USER", o.user); JagCache van = JagCache.open("VAN211", o.van211)) {
-            Result r = new Checker(out, base, user, van, ids).run();
+            Checker c = new Checker(out, base, user, van, ids);
+            com.gadscape.cacheconv.core.Rev225 t = com.gadscape.cacheconv.core.Rev225.load(o);
+            c.imported = (g, id) -> t.isImport(g, id, user.configRef(g, id));
+            Result r = c.run();
             Json.write(reportDir.resolve("refcheck.json"), r.toJson());
             r.print();
             return r.bad() == 0 ? 0 : 1;
@@ -160,6 +172,10 @@ public final class AnimRefCheck implements Step {
         /** Seq ids (output) with a bad reference. */
         final TreeSet<Integer> badSeqs = new TreeSet<>();
         final TreeMap<Integer, SeqRec> outSeqs = new TreeMap<>();
+        /** (config group, id) of USER entries that are rev-225 imports (BASE's record is used), or null. */
+        java.util.function.BiPredicate<Integer, Integer> imported;
+        /** framemap id -> bytes of every BASE frame on it (for frames the anim step kept on BASE's framemap). */
+        final TreeMap<Integer, java.util.HashSet<java.nio.ByteBuffer>> baseFrames = new TreeMap<>();
 
         Checker(CacheView out, CacheView base, CacheView user, CacheView van, IdMap ids) {
             this.out = out; this.base = base; this.user = user; this.van = van; this.ids = ids;
@@ -171,6 +187,7 @@ public final class AnimRefCheck implements Step {
             if (user != null && van != null) userSeqs();
             regressionLists();
             npcs();
+            if (user != null && van != null) skeletons();
             return r;
         }
 
@@ -289,7 +306,7 @@ public final class AnimRefCheck implements Step {
             for (int id : idsAll) {
                 Origin o = Origin.ofConfig(Arch.CFG_SEQ, id, user, van);
                 byte[] bb = base.configRef(Arch.CFG_SEQ, id);
-                if (o == Origin.VANILLA && bb != null) continue;
+                if (o == Origin.VANILLA && bb != null && !ids.isVanillaPort(Kind.SEQ, id)) continue;
                 int to = ids.map(Kind.SEQ, id);
                 byte[] ob = out.configRef(Arch.CFG_SEQ, to);
                 String what = "seq " + id + (to != id ? " (-> " + to + ")" : "");
@@ -330,6 +347,9 @@ public final class AnimRefCheck implements Step {
                 int fx = AnimFiles.frameFramemap(x), fy = AnimFiles.frameFramemap(y);
                 byte[] mx = user.fileRef(Arch.FRAMEMAPS, fx, 0), my = out.fileRef(Arch.FRAMEMAPS, fy, 0);
                 boolean newer = mx != null && AnimFiles.frameTransforms(x) > AnimFiles.framemapCount(mx) && fx == fy;
+                // a frame made for BASE's version of the framemap: byte-identical to a BASE frame on it
+                if (!newer && fx == fy && Arrays.equals(my, base.fileRef(Arch.FRAMEMAPS, fy, 0)))
+                    newer = baseFrames.computeIfAbsent(fy, k -> AnimStep.Port.frameSet(base, java.util.Set.of(k))).contains(java.nio.ByteBuffer.wrap(x));
                 if (!newer && !AnimFiles.classicCompatible(mx, my)) return "frame " + i + " framemap " + fx + " -> " + fy + " not equivalent";
             }
             if (u.skeletal() != s.skeletal()) return "skeletal flag";
@@ -413,6 +433,90 @@ public final class AnimRefCheck implements Step {
                 userRef("user spotanims (added/changed): seq resolves with ids mapped", "spotanim " + id, s);
             }
             out.release(Arch.CONFIGS);
+        }
+
+        // 6. user NPC / spotanim seqs animate the skeleton they animated in USER
+        void skeletons() {
+            String cat = "user NPCs/spotanims: seqs animate the skeleton they had in USER";
+            TreeMap<Long, String> memo = new TreeMap<>();
+            for (int id : user.configIds(Arch.CFG_NPC)) {
+                if (!Origin.ofConfig(Arch.CFG_NPC, id, user, van).isUser() || (imported != null && imported.test(Arch.CFG_NPC, id))) continue;
+                NpcAnims a = NpcAnims.parse(id, ConfigConv.npc(id, user.configRef(Arch.CFG_NPC, id)));
+                byte[] ob = out.configRef(Arch.CFG_NPC, ids.map(Kind.NPC, id));
+                NpcAnims o = ob == null ? null : NpcAnims.parse(id, ob);
+                if (a == null || o == null) continue;
+                int[] us = a.all(), os = o.all();
+                if (us.length != os.length) continue;
+                boolean users = true;
+                for (int i = 0; i < us.length; i++) if (os[i] != (us[i] < 0 ? us[i] : ids.map(Kind.SEQ, us[i]))) users = false;
+                if (!users) { r.info(cat + ": NPC records with BASE's seqs (merged), not compared", 1); continue; }
+                for (int i = 0; i < us.length; i++) if (us[i] >= 0) sameSkeleton(cat, "npc " + id, us[i], os[i], memo);
+            }
+            for (int id : user.configIds(Arch.CFG_SPOT)) {
+                if (!Origin.ofConfig(Arch.CFG_SPOT, id, user, van).isUser() || (imported != null && imported.test(Arch.CFG_SPOT, id))) continue;
+                int su = spotSeq(ConfigConv.spot(id, user.configRef(Arch.CFG_SPOT, id)));
+                byte[] ob = out.configRef(Arch.CFG_SPOT, ids.map(Kind.SPOT, id));
+                int so = ob == null ? -2 : spotSeq(ob);
+                if (su < 0 || so < 0 || so != ids.map(Kind.SEQ, su)) continue;
+                sameSkeleton(cat, "spotanim " + id, su, so, memo);
+            }
+            user.release(Arch.FRAMES); out.release(Arch.FRAMES); out.release(Arch.KEYFRAMES);
+        }
+
+        void sameSkeleton(String cat, String owner, int su, int so, TreeMap<Long, String> memo) {
+            String why = memo.computeIfAbsent(((long) su << 32) | (so & 0xffffffffL), k -> skeletonDiff(su, so));
+            if (why == null) { r.ok(cat); return; }
+            if (why.startsWith("=")) { r.info(cat + ": BASE's record of a vanilla seq on the same framemap id, which Jagex updated in place (accepted)", 1); return; }
+            if (why.startsWith("?")) { r.info(cat + ": not comparable (" + why.substring(1) + ")", 1); return; }
+            r.bad(cat, owner + " seq " + su + (so != su ? " -> " + so : "") + ": " + why);
+        }
+
+        /** Null when output seq so animates the skeleton USER seq su animated; "?..." when one of them cannot be read. */
+        String skeletonDiff(int su, int so) {
+            byte[] ub = user.configRef(Arch.CFG_SEQ, su), ob = out.configRef(Arch.CFG_SEQ, so);
+            if (ub == null || ob == null) return "?seq missing";
+            SeqRec u = SeqRec.parse(su, ConfigConv.seq(su, ub)), s = SeqRec.parse(so, ob);
+            byte[] uf = framemapOf(user, u, true), of = framemapOf(out, s, false);
+            if (uf == null || of == null) return "?frames missing";
+            if (Arrays.equals(uf, of)) return null;
+            if (!u.skeletal() && !s.skeletal() && AnimFiles.classicCompatible(uf, of)) return null;
+            // a vanilla seq BASE kept (not ported: AnimStep ports only those whose framemap id changed) on the same
+            // framemap id: Jagex updated that skeleton in place (the 241 player skeleton 0) with its animations
+            if (su == so && u.skeletal() == s.skeletal() && Arrays.equals(ob, base.configRef(Arch.CFG_SEQ, so))
+                    && Origin.ofConfig(Arch.CFG_SEQ, su, user, van) == Origin.VANILLA && framemapIdOf(user, u, true) == framemapIdOf(out, s, false)) return "=same framemap id";
+            if (!u.skeletal() && !s.skeletal() && u.realFrameRefs().length > 0) {
+                // frames made for BASE's version of their framemap keep BASE's (the anim step's newer-base rule)
+                int r0 = u.realFrameRefs()[0];
+                byte[] x = user.fileRef(Arch.FRAMES, r0 >>> 16, r0 & 0xffff);
+                int fm = AnimFiles.frameFramemap(x);
+                if (Arrays.equals(of, base.fileRef(Arch.FRAMEMAPS, fm, 0))
+                        && baseFrames.computeIfAbsent(fm, k -> AnimStep.Port.frameSet(base, java.util.Set.of(k))).contains(java.nio.ByteBuffer.wrap(x))) return null;
+            }
+            return (u.skeletal() ? "skeletal" : "classic") + " in USER, " + (s.skeletal() ? "skeletal" : "classic") + " on another framemap in the output";
+        }
+
+        /** The framemap id a seq animates (as {@link #framemapOf}), or -1. */
+        static int framemapIdOf(CacheView c, SeqRec s, boolean is211) {
+            if (s.skeletal()) {
+                byte[] k = c.fileRef(is211 ? Arch.FRAMES : Arch.KEYFRAMES, s.keyframe >>> 16, s.keyframe & 0xffff);
+                return k == null ? -1 : AnimFiles.keyframeFramemap(k);
+            }
+            int[] refs = s.realFrameRefs();
+            if (refs.length == 0) return -1;
+            byte[] f = c.fileRef(Arch.FRAMES, refs[0] >>> 16, refs[0] & 0xffff);
+            return f == null ? -1 : AnimFiles.frameFramemap(f);
+        }
+
+        /** The framemap bytes a seq animates (first real frame, or the keyframes; 211 keyframes live in archive 0). */
+        static byte[] framemapOf(CacheView c, SeqRec s, boolean is211) {
+            if (s.skeletal()) {
+                byte[] k = c.fileRef(is211 ? Arch.FRAMES : Arch.KEYFRAMES, s.keyframe >>> 16, s.keyframe & 0xffff);
+                return k == null ? null : c.fileRef(Arch.FRAMEMAPS, AnimFiles.keyframeFramemap(k), 0);
+            }
+            int[] refs = s.realFrameRefs();
+            if (refs.length == 0) return null;
+            byte[] f = c.fileRef(Arch.FRAMES, refs[0] >>> 16, refs[0] & 0xffff);
+            return f == null ? null : c.fileRef(Arch.FRAMEMAPS, AnimFiles.frameFramemap(f), 0);
         }
 
         /** A user record's seq ref: fine when it resolves after mapping; a ref that was already dead in USER is counted apart. */

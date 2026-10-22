@@ -24,6 +24,12 @@ import java.util.TreeMap;
  * The result also gives the script's return counts (int, string), the types of its int arguments (inferred from how
  * they are used, for callers and IF3 hooks), its gosub and hook-setter sites, and every problem found (stack underflow,
  * unknown command, returns that disagree, values left at a jump target).
+ * <p>
+ * Computed values carry a type too where the producer gives one (an {@code enum} lookup's value type, a local that
+ * holds such a value), and the int compares and branches (7-10, 31, 32) pass a known type to the constant on the
+ * other side: {@code if (enum(int, component, 1137, ...) = 161:68)} types 161:68 as a component, so it is remapped
+ * like the enum's own values (audit: custom scripts 32518/32519 compared BASE enum 1137's 241 components with 211
+ * constants). A component type reaches only constants that look like packed component ids (above 0xffff).
  */
 public final class CsSim {
     /** Provenance: >= 0 = index of the constant instruction, UNKNOWN = computed, <= -2 = int local k (-2 - k; k < intArgs = argument). */
@@ -72,6 +78,8 @@ public final class CsSim {
         public int dirtyLabels;
         /** Constants typed twice with different types: "index:a/b". */
         public final List<String> conflicts = new ArrayList<>();
+        /** Constants that got their type from an int compare with a typed value. */
+        public int comparedConsts;
 
         Result(int id, int intArgs) { this.id = id; this.argTypes = new String[intArgs]; }
 
@@ -112,6 +120,11 @@ public final class CsSim {
     private final Set<Integer> labels = new HashSet<>();
     private int[] is = new int[64], ss = new int[64];
     private int isp, ssp;
+    /** Type of each int stack slot's value when its producer gives one (null = unknown), and of the last popped one. */
+    private String[] it = new String[64];
+    private String popped;
+    /** {int local, constant instruction} pairs compared with each other (typed once the local's type is known). */
+    private final List<int[]> comparedWithLocal = new ArrayList<>();
     /** Array type char per array slot defined in this script (op 44 operand low 16 bits). */
     private final char[] arrayType = new char[8];
     /** Type per int local (arguments first), from how its values are used; constants stored into it get it at the end. */
@@ -145,6 +158,7 @@ public final class CsSim {
             }
         }
         for (int k = 0; k < localType.length; k++) if (localType[k] != null) for (int c : storedConst.get(k)) type(c, localType[k]);
+        for (int[] lc : comparedWithLocal) if (lc[0] < localType.length && localType[lc[0]] != null) typeCompared(lc[1], localType[lc[0]]);
         for (int k = 0; k < s.intArgs && k < localType.length; k++) r.argTypes[k] = localType[k];
     }
 
@@ -153,9 +167,41 @@ public final class CsSim {
         r.complete = false; r.problem = why; r.stoppedAt = at;
     }
 
-    private void pushI(int prov) { if (isp == is.length) is = Arrays.copyOf(is, isp * 2); is[isp++] = prov; }
+    private void pushI(int prov) { pushI(prov, null); }
+    private void pushI(int prov, String type) {
+        if (isp == is.length) { is = Arrays.copyOf(is, isp * 2); it = Arrays.copyOf(it, isp * 2); }
+        it[isp] = type;
+        is[isp++] = prov;
+    }
     private void pushS(int prov) { if (ssp == ss.length) ss = Arrays.copyOf(ss, ssp * 2); ss[ssp++] = prov; }
-    private int popI() { if (isp == 0) throw new Underflow("int"); return is[--isp]; }
+    private int popI() { if (isp == 0) throw new Underflow("int"); popped = it[--isp]; return is[isp]; }
+
+    /** The type a value is known to have: its producer's, or (for a local or argument) the local's so far. */
+    private String typeOfValue(int prov, String producerType) {
+        if (producerType != null) return producerType;
+        if (isArg(prov) && argIndex(prov) < localType.length) return localType[argIndex(prov)];
+        return null;
+    }
+
+    /** Int compare/branch: a known type on one side types the constant (or local) on the other. */
+    private void compare() {
+        int b = popI(); String tb = typeOfValue(b, popped);
+        int a = popI(); String ta = typeOfValue(a, popped);
+        if (tb != null && !tb.equals("int")) typeCompared(a, tb);
+        if (ta != null && !ta.equals("int")) typeCompared(b, ta);
+        if (isArg(a) && b >= 0) comparedWithLocal.add(new int[]{argIndex(a), b});
+        if (isArg(b) && a >= 0) comparedWithLocal.add(new int[]{argIndex(b), a});
+    }
+
+    /** Types a value compared with a typed one; a constant gets a component type only if it looks like one. */
+    private void typeCompared(int prov, String type) {
+        if (prov >= 0) {
+            Ins in = s.code.get(prov);
+            if (in.op != Cs2.ICONST || (type.equals("component") && (in.i >>> 16) == 0)) return;
+            if (!r.constType.containsKey(prov)) r.comparedConsts++;
+        }
+        type(prov, type);
+    }
     private int popS() { if (ssp == 0) throw new Underflow("string"); return ss[--ssp]; }
 
     private static final class Underflow extends RuntimeException {
@@ -243,6 +289,7 @@ public final class CsSim {
             case 33 -> pushI(in.i >= 0 && in.i < localType.length ? arg(in.i) : UNKNOWN);
             case 34 -> {
                 int p = popI();
+                if (popped != null && !popped.equals("int") && in.i >= 0 && in.i < localType.length) type(arg(in.i), popped); // a typed computed value
                 if (in.i >= 0 && in.i < localType.length) {
                     if (p >= 0) storedConst.get(in.i).add(p);
                     else if (isArg(p) && argIndex(p) < localType.length) storedLocal.get(in.i).add(argIndex(p));
@@ -254,7 +301,7 @@ public final class CsSim {
             case 38 -> popI();
             case 39 -> popS();
             case 6 -> { }
-            case 7, 8, 9, 10, 31, 32 -> { popI(); popI(); }
+            case 7, 8, 9, 10, 31, 32 -> compare();
             case 60 -> popI();
             case 21 -> {
                 int[] ret = {isp, ssp};
@@ -311,7 +358,7 @@ public final class CsSim {
         int vtc = constValue(vt), ktc = constValue(kt);
         if (vtc == Integer.MIN_VALUE) { stop(k, "enum with computed value type"); return false; }
         if (ktc != Integer.MIN_VALUE) { String t = typeOfChar((char) (ktc & 0xff)); if (t != null) type(key, t); }
-        if (vtc == 's') pushS(UNKNOWN); else pushI(UNKNOWN);
+        if (vtc == 's') pushS(UNKNOWN); else pushI(UNKNOWN, typeOfChar((char) (vtc & 0xff)));
         return true;
     }
 

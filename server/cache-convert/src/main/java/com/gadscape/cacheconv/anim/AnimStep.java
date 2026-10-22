@@ -25,7 +25,12 @@ import java.util.TreeSet;
  * <b>Sequences</b>, per id (USER vs VAN211, ascending):
  * <ul>
  *   <li>vanilla (user never touched it): BASE's record stays. A vanilla 211 seq that BASE no longer has is ported
- *       (the server still plays some of them), unless {@code --anim.portRemovedVanilla=false}.</li>
+ *       (the server still plays some of them), unless {@code --anim.portRemovedVanilla=false}. A vanilla 211 seq whose
+ *       BASE record animates another skeleton (another framemap id: Jagex reused the id, gnome walk 189 is the player's
+ *       EMOTE_YES_LOOP in 241; or re-rigged it for new models, GNOME_CATCH 200 and 2904 on framemap 2402) is ported to the reserved range with its 211
+ *       frames, as a vanilla port ({@link IdMap#markVanilla}): GadScape content that plays it on 211-era models (the
+ *       user's gnome NPCs, the Herblore Store 16034) is rewritten to the copy, BASE's content keeps BASE's record
+ *       ({@code --anim.portRiggedVanilla=false} to skip).</li>
  *   <li>user-added/changed and BASE has the id, "same thing" -> BASE's record stays (taken-from-base):
  *       <ul><li>skeletal in both on the same framemap (BOSS-X1: 211 keyframes live in archive 0, 241 reads archive 22;
  *       BASE has the same animation with its keyframes already in archive 22);</li>
@@ -46,8 +51,9 @@ import java.util.TreeSet;
  *       seq built from vanilla 211 frames needs the 211 frames, not BASE's group at that id (B3, IC-15).</li>
  *   <li>framemap F: kept when BASE's F is identical, or for classic frames when the 211 transform groups are a
  *       prefix of BASE's; otherwise the USER framemap is copied into the reserved framemap range (BOSS-X4: 112
- *       vanilla framemaps changed incompatibly by 241). Frames with more transforms than the USER framemap has were
- *       made for the newer base and keep BASE's F.</li>
+ *       vanilla framemaps changed incompatibly by 241). Frames made for the newer base keep BASE's F: frames with
+ *       more transforms than the USER framemap has, and frames of the user's own groups that are byte-identical to a
+ *       BASE frame on F and to no VAN211 frame (exported from a 241-era cache: USER seq 10173's 15 player frames).</li>
  *   <li>keyframes of a ported skeletal seq: the 211 archive-0 group is copied into archive 22 at a reserved
  *       keyframe id (framemap mapped) and op 13 is rewritten.</li>
  * </ul>
@@ -93,6 +99,7 @@ public final class AnimStep implements Step {
     /** Per-framemap use by the ported frames/keyframes. */
     private static final class FmUse {
         boolean classicFitsUser, skeletal;
+        int madeForBase; // frames made for BASE's version of the framemap (they keep BASE's id)
         final TreeSet<Integer> overUserBy = new TreeSet<>(); // transform counts above the USER framemap's group count
     }
 
@@ -100,7 +107,11 @@ public final class AnimStep implements Step {
     static final class Port {
         final Ctx ctx;
         final CacheView base, user, van;
-        final boolean portRemovedVanilla;
+        final boolean portRemovedVanilla, portRiggedVanilla;
+        /** USER frames (group << 16 | file) made for BASE's version of their framemap (keep BASE's framemap id). */
+        final java.util.HashSet<Integer> newerBaseFrames = new java.util.HashSet<>();
+        /** framemap -> rig comparison memo for the vanilla seq check (USER framemap id + BASE framemap id). */
+        final java.util.HashMap<Long, Boolean> sameRig = new java.util.HashMap<>();
         /** Testing aid ({@code --anim.forcePort=9419,10045-10050}): user seqs ported even when BASE has the same animation. */
         final TreeSet<Integer> forcePort;
         /** {@code --anim.takeBase=11008-11020}: user seqs at BASE ids that keep BASE's record even though they differ. */
@@ -120,6 +131,7 @@ public final class AnimStep implements Step {
             this.user = ctx.user();
             this.van = ctx.van211();
             this.portRemovedVanilla = Boolean.parseBoolean(ctx.opt.get("anim.portRemovedVanilla", "true"));
+            this.portRiggedVanilla = Boolean.parseBoolean(ctx.opt.get("anim.portRiggedVanilla", "true"));
             this.forcePort = parseIds(ctx.opt.get("anim.forcePort", ""));
             this.takeBase = parseIds(ctx.opt.get("anim.takeBase", ""));
         }
@@ -142,6 +154,12 @@ public final class AnimStep implements Step {
             byte[] bb = base.configRef(Arch.CFG_SEQ, id);
             if (o == Origin.USER_REMOVED) return new SeqCase(id, o, Action.USER_REMOVED, null, null, null);
             if (o == Origin.VANILLA) {
+                if (bb != null && portRiggedVanilla) {
+                    byte[] conv = ConfigConv.seq(id, user.configRef(Arch.CFG_SEQ, id));
+                    SeqRec u = SeqRec.parse(id, conv);
+                    String why = rigChange(u, SeqRec.parse(id, bb));
+                    if (why != null && missing(u) == null) return new SeqCase(id, o, Action.PORT_RELOCATE, "vanilla 211 seq " + id + ": " + why, conv, u);
+                }
                 if (bb != null || !portRemovedVanilla) return new SeqCase(id, o, Action.BASE_VANILLA, bb == null ? "vanilla 211 seq missing from BASE, not ported" : null, null, null);
                 byte[] conv = ConfigConv.seq(id, user.configRef(Arch.CFG_SEQ, id));
                 SeqRec u = SeqRec.parse(id, conv);
@@ -178,6 +196,52 @@ public final class AnimStep implements Step {
                     : u.skeletal() ? "skeletal on another framemap than BASE's"
                     : u.frames.length != b.frames.length ? "frame count " + u.frames.length + " vs BASE " + b.frames.length : "frames differ from BASE's";
             return new SeqCase(id, o, Action.PORT_RELOCATE, why, conv, u);
+        }
+
+        /**
+         * Null when BASE's record animates the same skeleton as the 211 record (the same framemap id, which Jagex may
+         * have updated in place together with its models and animations; or another framemap that is identical, or for
+         * classic frames one whose 211 transform groups are a prefix of BASE's), else what changed: Jagex reused the seq
+         * id for an animation of another skeleton (gnome walk 189 -> player emote on framemap 0), or re-rigged it onto a
+         * new skeleton (GNOME_CATCH 200: framemap 319 -> 2402).
+         */
+        String rigChange(SeqRec u, SeqRec b) {
+            int[] uref = u.realFrameRefs(), bref = b.realFrameRefs();
+            int ufm, bfm;
+            if (u.skeletal()) {
+                byte[] k = user.fileRef(Arch.FRAMES, u.keyframe >>> 16, u.keyframe & 0xffff);
+                if (k == null) return null;
+                ufm = AnimFiles.keyframeFramemap(k);
+            } else {
+                if (uref.length == 0) return null;
+                byte[] f = user.fileRef(Arch.FRAMES, uref[0] >>> 16, uref[0] & 0xffff);
+                if (f == null) return null;
+                ufm = AnimFiles.frameFramemap(f);
+            }
+            if (b.skeletal()) {
+                byte[] k = base.fileRef(Arch.KEYFRAMES, b.keyframe >>> 16, b.keyframe & 0xffff);
+                if (k == null) return null;
+                bfm = AnimFiles.keyframeFramemap(k);
+            } else {
+                if (bref.length == 0) return null;
+                byte[] f = base.fileRef(Arch.FRAMES, bref[0] >>> 16, bref[0] & 0xffff);
+                if (f == null) return null;
+                bfm = AnimFiles.frameFramemap(f);
+            }
+            // the same framemap id in both: Jagex updated that skeleton in place (the 241 player skeleton 0) and re-exported
+            // its animations with it; BASE's record is the same animation, kept like any other vanilla seq
+            if (u.skeletal() == b.skeletal() && ufm == bfm) return null;
+            boolean classic = !u.skeletal() && !b.skeletal();
+            long key = ((long) ufm << 32) | ((long) bfm << 1) | (classic ? 1 : 0);
+            boolean same = sameRig.computeIfAbsent(key, x -> {
+                byte[] uf = user.fileRef(Arch.FRAMEMAPS, ufm, 0), bf = base.hasGroup(Arch.FRAMEMAPS, bfm) ? base.fileRef(Arch.FRAMEMAPS, bfm, 0) : null;
+                if (uf == null || bf == null) return true; // cannot tell: leave BASE's record
+                return Arrays.equals(uf, bf) || (classic && AnimFiles.classicCompatible(uf, bf));
+            });
+            if (same) return null;
+            String kind = u.skeletal() != b.skeletal() ? (b.skeletal() ? "BASE made it skeletal" : "BASE made it classic") + " (framemap " + ufm + " -> " + bfm + ")"
+                    : "BASE's record is on framemap " + bfm + ", 211's on " + ufm;
+            return kind + " (Jagex reused or re-rigged it); the 211 animation is ported for GadScape content";
         }
 
         /** Null if every frame/keyframe ref of the record resolves in USER, else a description. */
@@ -218,13 +282,21 @@ public final class AnimStep implements Step {
                 for (int g : c.rec.frameGroups()) frameGroups.add(g);
             }
             for (int g : frameGroups) {
+                if (Origin.ofGroup(Arch.FRAMES, g, user, van) == Origin.VANILLA) continue;
+                GroupData gd = user.group(Arch.FRAMES, g);
+                for (int i = 0; i < gd.fileCount(); i++) userFrames.computeIfAbsent(AnimFiles.frameFramemap(gd.dataAt(i)), k -> new ArrayList<>()).add((g << 16) | gd.fileIdAt(i));
+            }
+            findNewerBaseFrames();
+            for (int g : frameGroups) {
                 GroupData gd = user.group(Arch.FRAMES, g);
                 for (int i = 0; i < gd.fileCount(); i++) {
                     byte[] f = gd.dataAt(i);
                     int fm = AnimFiles.frameFramemap(f), n = AnimFiles.frameTransforms(f);
                     FmUse u = fmUse.computeIfAbsent(fm, k -> new FmUse());
                     byte[] uf = user.fileRef(Arch.FRAMEMAPS, fm, 0);
-                    if (uf != null && n > AnimFiles.framemapCount(uf)) u.overUserBy.add(n); else u.classicFitsUser = true;
+                    if (newerBaseFrames.contains((g << 16) | gd.fileIdAt(i))) u.madeForBase++;
+                    else if (uf != null && n > AnimFiles.framemapCount(uf)) u.overUserBy.add(n);
+                    else u.classicFitsUser = true;
                 }
             }
             for (int g : keyGroups) {
@@ -236,6 +308,52 @@ public final class AnimStep implements Step {
             ctx.report.count("frame-groups-needed", frameGroups.size());
             ctx.report.count("keyframe-groups-needed", keyGroups.size());
             ctx.report.count("framemaps-needed", fmUse.size());
+        }
+
+        /** framemap -> user-origin frames (group << 16 | file) of the needed groups that use it. */
+        final TreeMap<Integer, List<Integer>> userFrames = new TreeMap<>();
+
+        /**
+         * Frames of the user's own groups that were made for BASE's version of their framemap: byte-identical to a
+         * BASE frame on the same framemap id and to no VAN211 frame there, on a framemap whose USER (211) version
+         * BASE changed. They keep BASE's framemap id ({@link #frameFramemapTo}); after the 211 copy of the framemap
+         * they would play garbled (USER seq 10173: 15 frames exported for the 241 player skeleton).
+         */
+        void findNewerBaseFrames() {
+            TreeSet<Integer> fms = new TreeSet<>();
+            for (int fm : userFrames.keySet()) {
+                byte[] uf = user.fileRef(Arch.FRAMEMAPS, fm, 0), bf = base.hasGroup(Arch.FRAMEMAPS, fm) ? base.fileRef(Arch.FRAMEMAPS, fm, 0) : null;
+                if (uf != null && bf != null && !Arrays.equals(uf, bf) && !AnimFiles.classicCompatible(uf, bf)) fms.add(fm);
+            }
+            if (fms.isEmpty()) return;
+            java.util.HashSet<java.nio.ByteBuffer> inBase = frameSet(base, fms), inVan = frameSet(van, fms);
+            int n = 0;
+            for (int fm : fms) for (int ref : userFrames.get(fm)) {
+                byte[] f = user.fileRef(Arch.FRAMES, ref >>> 16, ref & 0xffff);
+                java.nio.ByteBuffer k = java.nio.ByteBuffer.wrap(f);
+                if (inBase.contains(k) && !inVan.contains(k)) { newerBaseFrames.add(ref); n++; }
+            }
+            user.release(Arch.FRAMES);
+            if (n > 0) {
+                ctx.report.count("user-frames-made-for-base-framemap", n);
+                TreeMap<Integer, Integer> perGroup = new TreeMap<>();
+                for (int r : newerBaseFrames) perGroup.merge(r >>> 16, 1, Integer::sum);
+                for (var e : perGroup.entrySet())
+                    ctx.report.add(Decision.NOTE, Kind.FRAME, e.getKey(), e.getValue() + " frames are byte-identical to BASE frames on BASE's framemap and to no 211 frame: made for the 241 skeleton, they keep BASE's framemap");
+            }
+        }
+
+        /** Bytes of every frame of {@code c} (archive 0) whose framemap is one of {@code fms}. */
+        static java.util.HashSet<java.nio.ByteBuffer> frameSet(CacheView c, java.util.Set<Integer> fms) {
+            java.util.HashSet<java.nio.ByteBuffer> s = new java.util.HashSet<>();
+            int n = 0;
+            for (int g : c.groupIds(Arch.FRAMES)) {
+                GroupData gd = c.group(Arch.FRAMES, g);
+                if (gd != null) for (int i = 0; i < gd.fileCount(); i++) { byte[] f = gd.dataAt(i); if (f.length >= 2 && fms.contains(AnimFiles.frameFramemap(f))) s.add(java.nio.ByteBuffer.wrap(f.clone())); }
+                if ((++n & 255) == 0) c.release(Arch.FRAMES);
+            }
+            c.release(Arch.FRAMES);
+            return s;
         }
 
         // -------------------------------------------------------------- 3. framemaps (archive 1)
@@ -283,8 +401,9 @@ public final class AnimStep implements Step {
             }
         }
 
-        /** Output framemap for a frame file of USER (framemap f, n transforms). */
-        int frameFramemapTo(int f, int n) {
+        /** Output framemap for a frame file of USER (frame ref group << 16 | file, framemap f, n transforms). */
+        int frameFramemapTo(int ref, int f, int n) {
+            if (newerBaseFrames.contains(ref)) return f; // made for BASE's framemap f
             byte[] uf = user.fileRef(Arch.FRAMEMAPS, f, 0);
             if (uf != null && n > AnimFiles.framemapCount(uf)) return f; // made for the newer base: BASE's framemap
             Integer to = fmTo.get(f);
@@ -302,7 +421,7 @@ public final class AnimStep implements Step {
                 GroupData.Builder b = new GroupData.Builder(g).name(gd.name);
                 for (int i = 0; i < gd.fileCount(); i++) {
                     byte[] f = gd.dataAt(i);
-                    int fm = AnimFiles.frameFramemap(f), to = frameFramemapTo(fm, AnimFiles.frameTransforms(f));
+                    int fm = AnimFiles.frameFramemap(f), to = frameFramemapTo((g << 16) | gd.fileIdAt(i), fm, AnimFiles.frameTransforms(f));
                     b.put(gd.fileIdAt(i), gd.fileNameAt(i), to == fm ? f : AnimFiles.withFrameFramemap(f, to));
                 }
                 GroupData r = b.build();
@@ -367,8 +486,9 @@ public final class AnimStep implements Step {
                         byte[] out = rewrite(c);
                         int to = id;
                         if (c.action == Action.PORT_RELOCATE) {
-                            String why = "BASE seq " + id + " is another animation (" + c.detail + ")";
+                            String why = c.origin == Origin.VANILLA ? c.detail : "BASE seq " + id + " is another animation (" + c.detail + ")";
                             to = ctx.ids.relocate(Kind.SEQ, id, why);
+                            if (c.origin == Origin.VANILLA) { ctx.ids.markVanilla(Kind.SEQ, id); ctx.report.count("vanilla-seqs-rigged-ported"); }
                             ctx.report.relocated(Kind.SEQ, id, to, why);
                         } else if (c.origin == Origin.VANILLA) {
                             ctx.report.add(Decision.NOTE, Kind.SEQ, id, c.detail);

@@ -25,8 +25,8 @@ import java.util.TreeSet;
  * converted with {@link ScriptConv#convertAll} (the ported CsAll rules) and read back:
  * <ul>
  *   <li>gosub targets and hook script ids: relocated custom scripts, adapters for vanilla procs whose 241 signature
- *       differs ({@code ui/script-signatures.tsv}: create_graphic 98 -> 46000, scrollbar_horizontal 6156 -> 46001,
- *       2064 -> 46002), other vanilla targets checked (exist, same arg counts, same name; otherwise the 211 version is
+ *       differs ({@code ui/script-signatures.tsv}; adapter ids allocated by ui-relocate at the top of the reserved
+ *       script range and listed under {@code _new} in idmap.json), other vanilla targets checked (exist, same arg counts, same name; otherwise the 211 version is
  *       ported into the reserved script range);</li>
  *   <li>constants {@link CsSim} typed (component, graphic, model, seq, enum, struct, param, dbrow/dbtable/dbcolumn, varp
  *       triggers, ...): through ctx.ids; component ids of vanilla interfaces through the 211 -> 241 component remap;
@@ -187,12 +187,12 @@ public final class UiConvertStep implements Step {
             int un = ctx.user().groupName(Arch.SCRIPTS, t), on = ctx.out.groupName(Arch.SCRIPTS, t);
             if (un != -1 && on != -1 && un != on) { ctx.report.error("script", t, "signature rule names a proc that is a different script in 241 (name hash " + un + " -> " + on + ")"); continue; }
             byte[] ad = UiAdapters.build(r);
-            byte[] ex = ctx.out.single(Arch.SCRIPTS, r.adapter());
-            if (ex != null && !Arrays.equals(ex, ad)) { ctx.report.error("script", r.adapter(), "adapter id is taken in the output"); continue; }
-            if (ctx.user().hasGroup(Arch.SCRIPTS, r.adapter())) { ctx.report.error("script", r.adapter(), "adapter id is a USER script"); continue; }
-            ctx.out.putGroup(Arch.SCRIPTS, GroupData.single(r.adapter(), Bytes.nameHash("gadscape_adapter_" + t), ad));
-            ctx.ids.reserve(Kind.SCRIPT, r.adapter());
-            ctx.report.add(Report.Decision.NOTE, Kind.SCRIPT, r.adapter(), "adapter for vanilla " + t + (r.mapped() ? " (args " + String.join(",", r.intMap()) + (r.objMap().length > 0 ? "|" + String.join(",", r.objMap()) : "") + ")" : "") + ": " + r.note());
+            int aid = UiData.adapterId(ctx.ids, r);
+            byte[] ex = ctx.out.single(Arch.SCRIPTS, aid);
+            if (ex != null && !Arrays.equals(ex, ad)) { ctx.report.error("script", aid, "adapter id is taken in the output"); continue; }
+            if (ctx.user().hasGroup(Arch.SCRIPTS, aid)) { ctx.report.error("script", aid, "adapter id is a USER script"); continue; }
+            ctx.out.putGroup(Arch.SCRIPTS, GroupData.single(aid, Bytes.nameHash("gadscape_adapter_" + t), ad));
+            ctx.report.add(Report.Decision.NOTE, Kind.SCRIPT, aid, "adapter for vanilla " + t + (r.mapped() ? " (args " + String.join(",", r.intMap()) + (r.objMap().length > 0 ? "|" + String.join(",", r.objMap()) : "") + ")" : "") + ": " + r.note());
         }
     }
 

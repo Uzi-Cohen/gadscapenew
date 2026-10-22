@@ -47,6 +47,8 @@ public final class UiRelocateStep implements Step {
         }
         var user = ctx.user();
         var out = ctx.out != null ? ctx.out : ctx.base;
+        // adapter scripts for vanilla procs whose 241 signature changed: new ids at the top of the reserved range
+        UiData.allocateAdapters(ctx.ids);
         int ifs = 0, ifMoved = 0, cs = 0, csMoved = 0;
         UiScope scope = UiScope.of(ctx);
         if (!scope.all) ctx.report.note("UI scope: " + scope);

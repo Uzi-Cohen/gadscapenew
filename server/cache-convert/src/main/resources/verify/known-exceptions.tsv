@@ -17,7 +17,7 @@ cs/return-mismatch	script (10615|10631|10641) @\d+ return-mismatch	USER code sha
 if/hook-script	component 1705:1 onLoad -> script 10300	USER bug: custom interface 1705 hooks script 10300, which exists in no cache (USER included); a no-op on 211
 #
 # Config references that already dangle in USER
-refs/enum->component	enum 20006 -> component 481:5[67]	USER bug: user enum 1505 (moved to 20006) names components 481:56-57; interface 481 has components 0-55 in USER, VAN211 and BASE
-refs/enum->component	enum 20009 -> component 707:(2[5-9]|3[01])	USER bug: user enum 2521 (moved to 20009) names components 707:25-31; interface 707 has components 0-8 in USER, VAN211 and BASE
+refs/enum->component	enum 20005 -> component 481:5[67]	USER bug: user enum 1505 (moved to 20005) names components 481:56-57; interface 481 has components 0-55 in USER, VAN211 and BASE
+refs/enum->component	enum 20008 -> component 707:(2[5-9]|3[01])	USER bug: user enum 2521 (moved to 20008) names components 707:25-31; interface 707 has components 0-8 in USER, VAN211 and BASE
 refs/obj->param	obj \d+ -> param 65\d\d\d	USER bug: user objs carry params 65xxx that no cache defines (the client only resolves a param when a script reads it)
 refs/npc->seq	npc \d+ -> seq (1517\d|151[89]\d|152[0-4]\d|1525[0-3])	USER content gap: user NPCs (the Easter NPCs 15171-15200 and more) use seqs 15170-15253, whose frame groups 5103-5186 USER does not have (they never played on 211); the anim step drops those seqs. Restore the frames in the 211 source and rebuild

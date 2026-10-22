@@ -41,6 +41,45 @@ public final class CfgModel {
         this.baseTypes = new ParamTypeTable(base);
         this.userTypes = new ParamTypeTable(user);
         this.vanTypes = new ParamTypeTable(van);
+        for (int p : user.configIds(Arch.CFG_PARAM)) {
+            if (!isIntRetype(p)) continue;
+            intRetyped.add(p);
+            userTypes.force(p, baseTypes.typeOf(p)); // USER values of the param read as what they are: BASE's (and 211's) type
+        }
+    }
+
+    /** Vanilla params the user only re-typed between two int types (see {@link #isIntRetype}). */
+    public final TreeSet<Integer> intRetyped = new TreeSet<>();
+
+    /**
+     * Whether the user changed only the type of vanilla param {@code p}, between two int-valued types, and BASE still
+     * has vanilla 211's type: param 690, the collection log's sub-enum, became 'i' instead of 'g' in USER while its
+     * values stayed enum ids that BASE's scripts read through param 690. Such a param is the same param: it is not
+     * relocated, BASE's definition is kept and the user's values keep their 211 meaning.
+     */
+    public boolean isIntRetype(int p) {
+        byte[] ub = user.configRef(Arch.CFG_PARAM, p), vb = van.configRef(Arch.CFG_PARAM, p), bb = base.configRef(Arch.CFG_PARAM, p);
+        if (ub == null || vb == null || bb == null || Arrays.equals(ub, vb)) return false;
+        int tu = ParamTypeTable.typeOf(ub), tv = ParamTypeTable.typeOf(vb), tb = ParamTypeTable.typeOf(bb);
+        if (tu == tv || tv != tb || !ParamTypeTable.intLike(tu) || !ParamTypeTable.intLike(tv)) return false;
+        Entry u = withTypeOf(CfgCodec.parse(Arch.CFG_PARAM, p, ub, CfgCodec.UNTYPED), CfgCodec.parse(Arch.CFG_PARAM, p, vb, CfgCodec.UNTYPED));
+        return sameEffective(Arch.CFG_PARAM, u, CfgCodec.parse(Arch.CFG_PARAM, p, vb, CfgCodec.UNTYPED));
+    }
+
+    /** {@code u} with the type fields (op 1 type char, op 8 type id) of {@code like}. */
+    public static Entry withTypeOf(Entry u, Entry like) {
+        java.util.List<CfgCodec.Item> items = new java.util.ArrayList<>();
+        boolean put = false;
+        for (CfgCodec.Item it : u.items) {
+            if (it.key.equals("1") || it.key.equals("8")) {
+                if (!put) for (CfgCodec.Item l : like.items) if (l.key.equals("1") || l.key.equals("8")) items.add(l);
+                put = true;
+                continue;
+            }
+            items.add(it);
+        }
+        if (!put) { java.util.List<CfgCodec.Item> t = new java.util.ArrayList<>(); for (CfgCodec.Item l : like.items) if (l.key.equals("1") || l.key.equals("8")) t.add(l); items.addAll(0, t); }
+        return CfgCodec.build(u.group, u.id, items);
     }
 
     // ------------------------------------------------------------------ groups

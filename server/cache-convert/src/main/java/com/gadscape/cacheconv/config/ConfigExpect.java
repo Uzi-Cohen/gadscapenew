@@ -27,8 +27,12 @@ import java.util.List;
  * enum 1034 = BASE (SKSP-12); objs 34681-34720/34725 = BASE, 34721-34723/34726 moved (R4-05, OBL-6); the 46 raid
  * structs = BASE, their 211 copies moved and ported enum 2730 pointing at the copies (R4-03); dbrows 2342-2928 = BASE,
  * user shop rows moved and the user's table indexes renumbered (PVP-23, CRIT-23); varbits 17007/17008 off varp 4702;
- * GadScape varcs 1155-1159/1500 moved, BASE's kept (rule 11); enum 708 = BASE with the user's copy moved.
- * Failures are report errors; passes are counted.
+ * GadScape varcs 1155-1159/1500 moved, BASE's kept (rule 11); enum 708 merged at its id (BASE's list with the user's
+ * removals and GadScape's holiday items: vanilla scripts 450/474 and the server read 708); param 690 kept at its id
+ * (the user only re-typed it 'g' -> 'i'); the collection log stand-ins 10500-10503 mapped onto BASE's structs and enum
+ * 2103 free of duplicates; rev-225 imports BASE changed are BASE's (raid locs 54113/54148, obj 28769); empty USER
+ * placeholders keep BASE's objs (33255, 33362, 33371); user edits of rev-225 imports merged onto BASE (npc 12166
+ * "Attack", locs 47567/47568 "Take"). Failures are report errors; passes are counted.
  */
 public final class ConfigExpect implements Step {
     public static final String NAME = "configs-expect";
@@ -55,6 +59,9 @@ public final class ConfigExpect implements Step {
         dbrows();
         vars();
         replacedEnum();
+        retypedParam();
+        standIns();
+        rev225();
         ctx.report.count("expect.pass", pass);
         ctx.report.count("expect.fail", fail);
         ctx.report.count("expect.skipped", skipped);
@@ -192,13 +199,60 @@ public final class ConfigExpect implements Step {
         check(vp.length == vp[vp.length - 1] + 1 && vp.length >= 19454, "varp table: " + vp.length + " entries, top id " + vp[vp.length - 1] + " (the server sends up to 19453)");
     }
 
-    /** Enum 708: the user replaced its content; BASE keeps 708, the user's enum is at its new id. */
+    /**
+     * Enum 708 (Diango's holiday items): the user replaced most of its content, but it is still the enum vanilla
+     * scripts 450/474 and the server read, so it is merged at its id: every value the user has is in the output's 708.
+     */
     void replacedEnum() {
         if (!has(ctx.base, Arch.CFG_ENUM, 708) || m.origin(Arch.CFG_ENUM, 708) != Origin.USER_CHANGED) return;
-        int to = ctx.ids.lookup(Kind.ENUM, 708);
-        check(to != -1, "enum 708 (replaced by the user) was not moved");
-        check(Arrays.equals(out.configRef(Arch.CFG_ENUM, 708), ctx.base.configRef(Arch.CFG_ENUM, 708)), "enum 708 is not BASE's");
-        if (to != -1) check(pairs(out, to).size() == EnumMerge.pairsOf(m.userEntry(Arch.CFG_ENUM, 708)).size(), "enum " + to + " is not the user's 708");
+        check(ctx.ids.lookup(Kind.ENUM, 708) == -1, "enum 708 was moved to " + ctx.ids.lookup(Kind.ENUM, 708) + " (scripts 450/474 and the server read 708)");
+        java.util.Set<String> outVals = new java.util.HashSet<>();
+        for (byte[] x : pairs(out, 708).values()) outVals.add(com.gadscape.cacheconv.core.Bytes.hex(x));
+        for (var e : EnumMerge.pairsOf(CfgCodec.map(m.userEntry(Arch.CFG_ENUM, 708), m.mapper())).entrySet())
+            check(outVals.contains(com.gadscape.cacheconv.core.Bytes.hex(e.getValue())), "enum 708: the user's value " + com.gadscape.cacheconv.core.Bytes.i32(e.getValue(), 0) + " (key " + e.getKey() + ") is missing");
+    }
+
+    /** Param 690: the user only re-typed it ('g' -> 'i'); it stays at its id with BASE's definition. */
+    void retypedParam() {
+        if (!has(ctx.base, Arch.CFG_PARAM, 690) || !m.intRetyped.contains(690)) return;
+        check(ctx.ids.lookup(Kind.PARAM, 690) == -1, "param 690 was moved to " + ctx.ids.lookup(Kind.PARAM, 690));
+        check(Arrays.equals(out.configRef(Arch.CFG_PARAM, 690), ctx.base.configRef(Arch.CFG_PARAM, 690)), "param 690 is not BASE's");
+    }
+
+    /** Collection log stand-ins: mapped onto BASE's structs, BASE's structs intact, the bosses list without duplicates. */
+    void standIns() {
+        int n = 0;
+        for (var e : ctx.ids.all(Kind.STRUCT).entrySet()) {
+            if (!ctx.ids.isAlias(Kind.STRUCT, e.getKey())) continue;
+            n++;
+            check(Arrays.equals(out.configRef(Arch.CFG_STRUCT, e.getValue()), ctx.base.configRef(Arch.CFG_STRUCT, e.getValue())), "struct " + e.getValue() + " (stand-in target) is not BASE's");
+        }
+        if (n == 0 || !out.hasConfig(Arch.CFG_ENUM, 2103)) return;
+        java.util.Map<String, Integer> seen = new java.util.HashMap<>();
+        for (byte[] x : pairs(out, 2103).values()) seen.merge(com.gadscape.cacheconv.core.Bytes.hex(x), 1, Integer::sum);
+        for (var e : seen.entrySet()) check(e.getValue() == 1, "enum 2103 lists struct " + Integer.parseUnsignedInt(e.getKey(), 16) + " " + e.getValue() + " times");
+        for (var e : ctx.ids.all(Kind.STRUCT).entrySet())
+            if (ctx.ids.isAlias(Kind.STRUCT, e.getKey())) check(!seen.containsKey(String.format("%08x", e.getKey())), "enum 2103 still lists stand-in struct " + e.getKey());
+    }
+
+    /** Rev-225 imports and their edits (see {@link com.gadscape.cacheconv.core.Rev225}). */
+    void rev225() {
+        if (ctx.rev225.isEmpty()) { skipped++; return; }
+        for (int[] gi : new int[][]{{Arch.CFG_LOC, 54113}, {Arch.CFG_LOC, 54148}, {Arch.CFG_OBJ, 28769}, {Arch.CFG_OBJ, 28771}, {Arch.CFG_SPOT, 2430}, {Arch.CFG_HEALTHBAR, 75},
+                {Arch.CFG_OBJ, 33255}, {Arch.CFG_OBJ, 33362}, {Arch.CFG_OBJ, 33371}}) {
+            if (!has(ctx.base, gi[0], gi[1]) || !m.user.hasConfig(gi[0], gi[1])) continue;
+            check(Arrays.equals(out.configRef(gi[0], gi[1]), ctx.base.configRef(gi[0], gi[1])), Arch.configName(gi[0]) + " " + gi[1] + " is not BASE's (rev-225 import or empty USER placeholder)");
+        }
+        for (int[] gi : new int[][]{{Arch.CFG_NPC, 12166, 1, 'A'}, {Arch.CFG_LOC, 47567, 1, 'T'}, {Arch.CFG_LOC, 47568, 1, 'T'}}) {
+            if (!has(ctx.base, gi[0], gi[1]) || ctx.rev225.config(gi[0], gi[1], m.user.configRef(gi[0], gi[1])) != com.gadscape.cacheconv.core.Rev225.Status.EDIT) continue;
+            Entry e = CfgCodec.parse(gi[0], gi[1], out.configRef(gi[0], gi[1]), m.baseTypes);
+            String want = gi[3] == 'A' ? "Attack" : "Take";
+            CfgCodec.Item op = e.get(String.valueOf(30 + gi[2]));
+            check(op != null && new String(op.raw, 1, op.raw.length - 2, java.nio.charset.StandardCharsets.ISO_8859_1).equals(want),
+                    Arch.configName(gi[0]) + " " + gi[1] + ": the user's op " + (gi[2] + 1) + " '" + want + "' is missing (user edit of a rev-225 import)");
+            Entry b = m.baseEntry(gi[0], gi[1]);
+            check(e.items.size() >= b.items.size(), Arch.configName(gi[0]) + " " + gi[1] + ": BASE's fields were dropped by the merge");
+        }
     }
 
 }

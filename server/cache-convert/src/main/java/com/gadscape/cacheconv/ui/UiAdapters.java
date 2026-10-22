@@ -19,7 +19,7 @@ public final class UiAdapters {
     /** The adapter bytes for a rule (241 layout, read-back checked). */
     public static byte[] build(UiData.SigRule r) {
         byte[] b = r.mapped() ? mapped(r) : ScriptTrailer.adapter(r.target(), r.int211(), r.extraInts(), r.dropIntReturns());
-        ScriptTrailer.verify241(r.adapter(), b);
+        ScriptTrailer.verify241(r.target(), b);
         return b;
     }
 

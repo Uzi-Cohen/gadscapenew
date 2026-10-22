@@ -41,6 +41,15 @@ public final class Merge3 {
     }
 
     public static Result merge(int g, Entry v, Entry u, Entry b, CfgCodec.Mapper mapper, CfgModel.Lossy lossy) {
+        return merge(g, v, u, b, mapper, lossy, true);
+    }
+
+    /**
+     * @param applyRemovals false: fields (and params) the user's entry lacks are never removed from BASE's. Used when
+     *                      the merge base is not what the user's editor loaded (a rev-225 import: GadScape's encoders
+     *                      drop fields they cannot write, so a missing field says nothing about the user's intent)
+     */
+    public static Result merge(int g, Entry v, Entry u, Entry b, CfgCodec.Mapper mapper, CfgModel.Lossy lossy, boolean applyRemovals) {
         LinkedHashMap<String, Item> vm = v.map(), um = u.map(), bm = b.map();
         List<Item> out = new ArrayList<>(b.items);
         List<Item> appended = new ArrayList<>();
@@ -51,9 +60,9 @@ public final class Merge3 {
             Item vi = vm.get(key), ui = um.get(key);
             if (CfgModel.equalItems(vi, ui)) continue;
             boolean container = (vi != null ? vi : ui).isContainer();
-            if (container) { mergeContainer(key, vi, ui, out, appended, bm.get(key), mapper, lossy, applied, conflicts); continue; }
+            if (container) { mergeContainer(key, vi, ui, out, appended, bm.get(key), mapper, lossy, applied, conflicts, applyRemovals); continue; }
             if (ui == null) {
-                if (CfgModel.isDefault(g, vi) || (lossy != null && lossy.contains(vi))) continue;
+                if (!applyRemovals || CfgModel.isDefault(g, vi) || (lossy != null && lossy.contains(vi))) continue;
                 Item bi = bm.get(key);
                 if (bi == null) continue;
                 if (!CfgModel.equalItems(bi, vi)) conflicts.add("-" + key);
@@ -83,7 +92,7 @@ public final class Merge3 {
 
     /** Params (or any keyed container): per-element three-way. */
     static void mergeContainer(String key, Item vi, Item ui, List<Item> out, List<Item> appended, Item bi, CfgCodec.Mapper mapper,
-                               CfgModel.Lossy lossy, List<String> applied, List<String> conflicts) {
+                               CfgModel.Lossy lossy, List<String> applied, List<String> conflicts, boolean applyRemovals) {
         Map<String, Item> vc = children(vi), uc = children(ui);
         List<Item> bch = bi == null ? new ArrayList<>() : new ArrayList<>(bi.children);
         Map<String, Integer> bIdx = new HashMap<>();
@@ -95,7 +104,7 @@ public final class Merge3 {
             Item v = vc.get(c), u = uc.get(c);
             if (CfgModel.equalItems(v, u)) continue;
             if (u == null) {
-                if (lossy != null && lossy.contains(v)) continue;
+                if (!applyRemovals || (lossy != null && lossy.contains(v))) continue;
                 Integer i = bIdx.get(c);
                 if (i == null) continue;
                 if (!CfgModel.equalItems(bch.get(i), v)) conflicts.add(c + "-");

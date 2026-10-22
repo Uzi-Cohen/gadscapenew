@@ -31,7 +31,7 @@ change the specs and regenerate; `UiMergeMain check` fails when the stored data 
 | interface | 160 | merged | orbs: the XP drops orb gets GadScape's third op 'XP Multiplier' |
 | interface | 161 | merged | resizable toplevel: the spellbook side stone gets a third op slot ('*', label set by custom script 10593: 'Previous teleport') |
 | interface | 164 | merged | resizable (side panels) toplevel: same third op on the spellbook side stone |
-| interface | 192 | merged | deposit box: title text 'The Bank of GadScape - Deposit Box' |
+| interface | 192 | merged | deposit box: the user's title edit ('Gielinor' -> 'GadScape') re-applied to BASE's new title: 'The Bank of GadScape - Item Deposits' |
 | interface | 205 | merged | makeover mage: GadScape made it a skin-colour-only screen (gender buttons hidden, narrower window, title) |
 | interface | 215 | base | 211's 215 was the ironman setup screen; 241 reuses id 215 for ntk_scores (12 components). GadScape's server opens its own copy 1606 (GAME... |
 | interface | 218 | merged | spellbook: GadScape's second op on the home teleports (Lumbridge / Lunar Isle / Arceuus destinations) |
@@ -131,10 +131,10 @@ Re-applied:
 
 ### Interface 192 (bank_depositbox)
 
-VAN211 21, USER 21, BASE 43 components. **merge**: deposit box: title text 'The Bank of GadScape - Deposit Box'.
+VAN211 21, USER 21, BASE 43 components. **merge**: deposit box: the user's title edit ('Gielinor' -> 'GadScape') re-applied to BASE's new title: 'The Bank of GadScape - Item Deposits'.
 
 Re-applied:
-- 192:1 -> BASE 192:1 onLoad: [227, -2147483645, "The Bank of Gielinor - Deposit Box"] -> [227, -2147483645, "The Bank of GadScape - Deposit Box"] (argument-wise merge with BASE's [227, -2147483645, "The Bank of Gielinor - Item Deposits"])
+- 192:1 -> BASE 192:1 onLoad: [227, -2147483645, "The Bank of Gielinor - Deposit Box"] -> [227, -2147483645, "The Bank of GadScape - Deposit Box"] (argument-wise merge with BASE's [227, -2147483645, "The Bank of Gielinor - Item Deposits"]: result [227, -2147483645, "The Bank of GadScape - Item Deposits"])
 
 ### Interface 205 (makeover_mage)
 
@@ -143,7 +143,7 @@ VAN211 11, USER 11, BASE 34 components. **merge**: makeover mage: GadScape made 
 - 241 put a pronoun row (BASE 205:14) next to the body type choice; GadScape's edit removed that choice (skin colour only), so the row is hidden too
 
 Re-applied:
-- 205:1 -> BASE 205:1 onLoad: [227, -2147483645, "Select skin colour and gender"] -> [227, -2147483645, "Select skin colour"] (argument-wise merge with BASE's [227, -2147483645, "Select skin colour, body type and pronouns"])
+- 205:1 -> BASE 205:1 onLoad: [227, -2147483645, "Select skin colour and gender"] -> [227, -2147483645, "Select skin colour"] (argument-wise merge with BASE's [227, -2147483645, "Select skin colour, body type and pronouns"]: result [227, -2147483645, "Select skin colour"])
 - 205:2 -> BASE 205:2 hidden: 0 -> 1
 - 205:6 -> BASE 205:8 hidden: 0 -> 1
 - 205:9 -> BASE 205:13 width: 454 -> 66

@@ -27,7 +27,8 @@ import java.util.Set;
  *   --dry-run       run every step but write nothing (reads see BASE plus the pending changes)
  *   --only a,b      run only these steps;  --skip a,b  skip these steps
  *   --set k=v       free-form option for steps (repeatable), read with {@link #get}
- *   --name=value    any other option (command-specific), same as --set name=value; a bare --name means "true"
+ *   --name=value    any other option (command-specific), same as --set name=value; a bare --name means "true".
+ *                   The options above also accept --name=value (--out=DIR is --out DIR).
  * </pre>
  */
 public final class Options {
@@ -67,6 +68,17 @@ public final class Options {
         Options o = defaults();
         for (int i = from; i < a.length; i++) {
             String s = a[i];
+            // --name=value for the options below is the same as "--name value" (build-cacheu --out=DIR)
+            int eq = s.indexOf('=');
+            if (s.startsWith("--") && eq > 2 && TAKES_VALUE.contains(s.substring(0, eq))) {
+                String[] split = new String[a.length + 1];
+                System.arraycopy(a, 0, split, 0, i);
+                split[i] = s.substring(0, eq);
+                split[i + 1] = s.substring(eq + 1);
+                System.arraycopy(a, i + 1, split, i + 2, a.length - i - 1);
+                a = split;
+                s = a[i];
+            }
             switch (s) {
                 case "--base" -> o.base = Path.of(a[++i]);
                 case "--user" -> o.user = Path.of(a[++i]);
@@ -93,6 +105,9 @@ public final class Options {
         }
         return o;
     }
+
+    /** Options that take a value and accept both "--name value" and "--name=value". */
+    static final Set<String> TAKES_VALUE = Set.of("--base", "--user", "--van211", "--old241", "--ref", "--xteas", "--out", "--report-dir", "--work", "--only", "--skip", "--set");
 
     public String get(String key, String def) { return extra.getOrDefault(key, def); }
     public boolean flag(String key) { return Boolean.parseBoolean(extra.getOrDefault(key, "false")); }

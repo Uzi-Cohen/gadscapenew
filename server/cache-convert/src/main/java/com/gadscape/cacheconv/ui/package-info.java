@@ -12,7 +12,7 @@
  *   <li>{@link com.gadscape.cacheconv.ui.UiConvertStep} ("ui-convert", after the steps that relocate sprites, models,
  *       seqs and configs, and after the UI merge): rewrites every reference in the 211 bytes, converts with the ported
  *       CsAll rules (convert.ScriptConv / InterfaceConv) and writes the custom scripts, the vanilla 211 scripts that
- *       had to be ported, the signature adapters (46000 create_graphic, 46001 scrollbar_horizontal, 46002 for 2064)
+ *       had to be ported, the signature adapters (for create_graphic 98, scrollbar_horizontal 6156, 2064 and 4218; ids allocated at the top of the reserved script range, idmap.json _new)
  *       and the custom interfaces; USER sprites/fonts the custom UI needs that no earlier step added are copied;</li>
  *   <li>{@link com.gadscape.cacheconv.ui.UiCheckStep} ("ui-check", read-only, at the end): read-back, gosub argument
  *       counts, hook targets and assets of everything ui-convert wrote.</li>

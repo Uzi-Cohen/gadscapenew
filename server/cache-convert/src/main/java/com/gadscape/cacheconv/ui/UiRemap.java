@@ -131,7 +131,7 @@ public final class UiRemap {
             return t;
         }
         UiData.SigRule rule = rules.get(t);
-        if (rule != null) { rulesUsed.add(t); count(hook ? "hooks redirected to adapters" : "gosubs redirected to adapters"); return rule.adapter(); }
+        if (rule != null) { rulesUsed.add(t); count(hook ? "hooks redirected to adapters" : "gosubs redirected to adapters"); return UiData.adapterId(ctx.ids, rule); }
         byte[] u = ctx.user().single(Arch.SCRIPTS, t);
         byte[] o = out.single(Arch.SCRIPTS, t);
         if (u == null) {

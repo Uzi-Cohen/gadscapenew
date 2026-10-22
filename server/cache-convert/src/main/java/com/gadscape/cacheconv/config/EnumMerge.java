@@ -292,6 +292,41 @@ public final class EnumMerge {
         return Item.leaf("k" + index, op, raw, refs);
     }
 
+    /**
+     * The user's enum without the pairs the user added or changed whose value (or key) {@code drop} rejects: GadScape
+     * stand-ins for content BASE now has natively (collection log categories GadScape made for Duke Sucellus, Vardorvis,
+     * Araxxor and the Tormented Demons, which BASE lists itself). Pairs vanilla 211 already had stay. Returns the
+     * dropped pairs in {@code dropped} ("key=value").
+     */
+    public static Entry withoutUserPairs(Entry u, Entry v, java.util.function.BiPredicate<com.gadscape.cacheconv.core.Kind, Integer> drop, List<String> dropped) {
+        Item up = pairs(u);
+        if (up == null) return u;
+        Map<String, Item> vc = Merge3.children(v == null ? null : pairs(v));
+        List<Item> keep = new ArrayList<>();
+        for (Item c : up.children) {
+            boolean bad = false;
+            for (CfgCodec.Ref r : c.refs) if (!r.none() && r.kind() != null && drop.test(r.kind(), r.value())) bad = true;
+            if (bad && !CfgModel.equalItems(vc.get(c.key), c)) { dropped.add(Bytes.i32(c.raw, 0) + "=" + Bytes.i32(c.raw, 4)); continue; }
+            keep.add(c);
+        }
+        if (keep.size() == up.children.size()) return u;
+        if (dense(up)) {
+            // a list (keys 0..n-1): the remaining elements are renumbered so it stays a list, in the user's order
+            keep.sort(java.util.Comparator.comparingInt(c -> Bytes.i32(c.raw, 0)));
+            List<Item> renum = new ArrayList<>(keep.size());
+            for (int i = 0; i < keep.size(); i++) {
+                Item c = keep.get(i);
+                byte[] raw = c.raw.clone();
+                raw[0] = (byte) (i >>> 24); raw[1] = (byte) (i >>> 16); raw[2] = (byte) (i >>> 8); raw[3] = (byte) i;
+                renum.add(Item.leaf("k" + i, c.op, raw, c.refs));
+            }
+            keep = renum;
+        }
+        List<Item> items = new ArrayList<>();
+        for (Item i : u.items) items.add(i == up ? up.withChildren(keep) : i);
+        return CfgCodec.build(u.group, u.id, items);
+    }
+
     static Entry withoutPairs(Entry e) {
         List<Item> items = new ArrayList<>();
         for (Item i : e.items) if (!i.isContainer()) items.add(i);

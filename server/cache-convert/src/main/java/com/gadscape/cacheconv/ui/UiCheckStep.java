@@ -50,7 +50,10 @@ public final class UiCheckStep implements Step {
             if (why != null && why.startsWith("211 vanilla script")) written.put(e.getValue(), e.getKey());
         }
         TreeMap<Integer, UiData.SigRule> adapters = new TreeMap<>();
-        for (UiData.SigRule r : UiData.signatures().values()) if (out.hasGroup(Arch.SCRIPTS, r.adapter())) { adapters.put(r.adapter(), r); written.put(r.adapter(), -r.target()); }
+        for (UiData.SigRule r : UiData.signatures().values()) {
+            int a = ctx.ids.newId(Kind.SCRIPT, UiData.adapterName(r));
+            if (a >= 0 && out.hasGroup(Arch.SCRIPTS, a)) { adapters.put(a, r); written.put(a, -r.target()); }
+        }
 
         int scripts = 0, calls = 0, errors = 0, warnings = 0;
         TreeSet<Integer> arrayScripts = new TreeSet<>();

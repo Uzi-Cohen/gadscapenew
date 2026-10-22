@@ -58,6 +58,7 @@ public final class ConfigStep implements Step {
     @Override public void run(Ctx ctx) throws IOException {
         W w = new W(ctx, new CfgModel(ctx));
         for (int g : w.m.groups()) w.group(g);
+        w.followModels();
         w.implicitVarTargets();
         w.varcSlots();
         w.varpSlots();
@@ -72,7 +73,7 @@ public final class ConfigStep implements Step {
         final CfgCodec.Mapper mapper;
         final boolean portRemovedVanilla;
         final TreeMap<String, Long> counts = new TreeMap<>();
-        final List<String> clashes = new ArrayList<>(), merged = new ArrayList<>();
+        final List<String> clashes = new ArrayList<>(), merged = new ArrayList<>(), imports225 = new ArrayList<>();
         final TreeMap<Integer, List<Integer>> removedVanillaPorted = new TreeMap<>(), userRemoved = new TreeMap<>();
 
         W(Ctx ctx, CfgModel m) {
@@ -109,7 +110,18 @@ public final class ConfigStep implements Step {
 
         void one(int g, Kind k, int id) {
             Origin o = m.origin(g, id);
+            if (k != null && ctx.ids.isAlias(k, id)) {
+                // a GadScape stand-in mapped onto BASE's native entry by configs-plan: BASE's stays, nothing written
+                count(g, "stand-in-base-kept");
+                ctx.report.add(Decision.SAME, kindKey(g), id, "stand-in for BASE " + Arch.configName(g) + " " + ctx.ids.map(k, id) + ": " + ctx.ids.reason(k, id));
+                return;
+            }
             int target = k == null ? -1 : ctx.ids.lookup(k, id);
+            if (o.isUser()) {
+                com.gadscape.cacheconv.core.Rev225.Status st = ctx.rev225.config(g, id, m.user.configRef(g, id));
+                if (st == com.gadscape.cacheconv.core.Rev225.Status.IMPORT && rev225Import(g, k, id, o, target)) return;
+                if (st == com.gadscape.cacheconv.core.Rev225.Status.EDIT && o == Origin.USER_ADDED && target == -1 && rev225Edit(g, id)) return;
+            }
             switch (o) {
                 case VANILLA -> vanilla(g, k, id, target);
                 case USER_REMOVED -> { count(g, "user-removed-base-kept"); userRemoved.computeIfAbsent(g, x -> new ArrayList<>()).add(id); }
@@ -133,6 +145,56 @@ public final class ConfigStep implements Step {
             removedVanillaPorted.computeIfAbsent(g, x -> new ArrayList<>()).add(id);
         }
 
+        /**
+         * A rev-225 import (Jagex content GadScape's DataMigration copied, {@link com.gadscape.cacheconv.core.Rev225}):
+         * BASE's newer entry stays, like for a vanilla entry. Returns false when the USER entry must be written
+         * after all (BASE lacks the id, or a planner moved it: maps-plan does when the user's own squares place it).
+         */
+        boolean rev225Import(int g, Kind k, int id, Origin o, int target) {
+            if (target != -1 || !m.base.hasConfig(g, id)) return false;
+            count(g, "rev225-import-base-kept");
+            Entry u = m.userEntry(g, id), b = m.baseEntry(g, id);
+            if (CfgModel.same(g, u, CfgCodec.map(u, mapper), b).same()) return true;
+            count(g, "rev225-import-base-newer");
+            String d = "rev-225 import (Jagex content GadScape imported" + (o == Origin.USER_CHANGED ? " over the 211 entry" : "") + "): BASE's newer "
+                    + describe(g, b) + " replaces the 225 copy " + describe(g, u);
+            ctx.report.add(Decision.TAKEN_FROM_BASE, kindKey(g), id, d);
+            imports225.add(Arch.configName(g) + "\t" + id + "\t" + tsv(describe(g, u)) + "\t" + tsv(describe(g, b)));
+            return true;
+        }
+
+        /**
+         * The user edited a rev-225 import that BASE still has as the same thing (Duke Sucellus 12166 got "Attack", the
+         * Pestle and mortar 47567 and Pickaxe 47568 got "Take"): the edit (rev 225 -> USER) is re-applied onto BASE's
+         * entry. Fields the user's entry lacks are not removed (GadScape's encoders drop fields they cannot write).
+         * Returns false when BASE turned the id into something else (the ordinary clash rules apply then).
+         */
+        boolean rev225Edit(int g, int id) {
+            Entry b = m.baseEntry(g, id);
+            if (b == null) return false;
+            byte[] rb = ctx.rev225.editBase(g, id, m.user.configRef(g, id));
+            Entry r = CfgCodec.parse(g, id, CfgModel.conv(g, id, rb), m.userTypes), u = m.userEntry(g, id);
+            if (!Rev225Gen.sameThing(g, r, b)) return false;
+            Merge3.Result mr = Merge3.merge(g, r, u, b, mapper, m.lossy(g), false);
+            byte[] out = mr.entry.encode();
+            if (Arrays.equals(out, b.encode())) {
+                count(g, "rev225-edit-already-in-base");
+                ctx.report.add(Decision.SAME, kindKey(g), id, "user edit of a rev-225 import adds nothing to BASE's entry");
+                return true;
+            }
+            write(g, id, out);
+            count(g, "rev225-edit-merged");
+            String detail = "user edit of a rev-225 import re-applied on BASE's entry: applied " + mr.applied + (mr.conflicts.isEmpty() ? "" : "; USER value wins over BASE for " + mr.conflicts);
+            ctx.report.add(Decision.MERGED, kindKey(g), id, detail);
+            merged.add(Arch.configName(g) + "\t" + id + "\tmerged-rev225-edit\t" + tsv(detail));
+            return true;
+        }
+
+        /** Groups whose entries are things the client shows (an empty entry there is a placeholder, not content). */
+        static boolean isShownThing(int g) {
+            return g == Arch.CFG_OBJ || g == Arch.CFG_NPC || g == Arch.CFG_LOC || g == Arch.CFG_SPOT || g == Arch.CFG_IDENTKIT || g == Arch.CFG_HEALTHBAR || g == Arch.CFG_HITSPLAT;
+        }
+
         void user(int g, Kind k, int id, Origin o, int target) {
             String key = kindKey(g);
             Entry u = m.userEntry(g, id);
@@ -144,6 +206,21 @@ public final class ConfigStep implements Step {
                 return; // the relocation itself was reported by the step that planned it
             }
             Entry b = m.baseEntry(g, id);
+            if (b != null && o == Origin.USER_ADDED && isShownThing(g) && !u.opaque && u.items.isEmpty()) {
+                // GadScape's editors leave empty entries ("00") up to the last id they wrote; BASE's real entry stays
+                count(g, "empty-user-placeholder-base-kept");
+                ctx.report.add(Decision.SAME, key, id, "empty USER placeholder (no fields): BASE's " + describe(g, b) + " kept");
+                return;
+            }
+            if (b != null && g == Arch.CFG_PARAM && m.intRetyped.contains(id)) {
+                Entry v0 = m.vanEntry(g, id);
+                if (CfgModel.sameEffective(g, CfgModel.withTypeOf(u, v0), v0)) {
+                    count(g, "int-retype-base-kept");
+                    ctx.report.add(Decision.SAME, key, id, "the user only re-typed vanilla param " + id + " between int types (" + (char) ParamTypeTable.typeOf(m.vanBytes(g, id)) + " -> "
+                            + (char) ParamTypeTable.typeOf(m.userBytes(g, id)) + "): the same param, BASE's definition kept and the user's values read with BASE's type");
+                    return;
+                }
+            }
             if (b == null) {
                 write(g, id, um.encode());
                 count(g, o == Origin.USER_ADDED ? "user-added" : "user-changed-base-deleted");
@@ -199,8 +276,12 @@ public final class ConfigStep implements Step {
                     ctx.report.add(Decision.USER_CHANGED, key, id, "BASE enum is empty: USER enum written");
                     return;
                 }
-                EnumMerge.Result r = EnumMerge.merge(v, u, b, mapper, !"keep".equals(ctx.opt.get("configs.enumRemovals", "apply")));
-                result = r.entry; detail = r.describe(); conflicts = r.conflicts;
+                List<String> standIns = new ArrayList<>();
+                Entry uf = EnumMerge.withoutUserPairs(u, v, (kk, val) -> ctx.ids.isAlias(kk, val), standIns);
+                EnumMerge.Result r = EnumMerge.merge(v, uf, b, mapper, !"keep".equals(ctx.opt.get("configs.enumRemovals", "apply")));
+                result = r.entry; detail = r.describe() + (standIns.isEmpty() ? "" : "; " + standIns.size() + " GadScape stand-in pair(s) not added (BASE lists its native entry itself): " + standIns);
+                conflicts = r.conflicts;
+                if (!standIns.isEmpty()) count(g, "stand-in-pairs-dropped");
             } else {
                 Merge3.Result r = Merge3.merge(g, v, u, b, mapper, m.lossy(g));
                 result = r.entry;
@@ -229,6 +310,41 @@ public final class ConfigStep implements Step {
         }
 
         static String tsv(String s) { return s == null ? "" : s.replace('\t', ' ').replace('\n', ' '); }
+
+        // -------------------------------------------------------------- model edits the 211-era users follow
+
+        /**
+         * User edits of vanilla models that {@code models} moved because BASE content added after 211 uses the model
+         * too ({@code models.follow} in {@link Ctx#shared}: model -> "kind:id" of the BASE configs that already used it
+         * in 211): those configs point at the moved edit, as on 211; BASE's newer users keep BASE's model.
+         */
+        @SuppressWarnings("unchecked")
+        void followModels() {
+            Object o = ctx.shared.get("models.follow");
+            if (!(o instanceof TreeMap<?, ?> f)) return;
+            for (var e : ((TreeMap<Integer, java.util.TreeSet<String>>) f).entrySet()) {
+                int model = e.getKey(), to = ctx.ids.map(Kind.MODEL, model);
+                if (to == model) continue;
+                for (String who : e.getValue()) {
+                    int c = who.indexOf(':');
+                    int g = groupByName(who.substring(0, c)), id = Integer.parseInt(who.substring(c + 1));
+                    byte[] cur = g < 0 ? null : ctx.out.configRef(g, id);
+                    if (cur == null) continue;
+                    Entry en = CfgCodec.parse(g, id, cur, m.baseTypes);
+                    byte[] nb = CfgCodec.map(en, (k, v) -> k == Kind.MODEL && v == model ? to : v).encode();
+                    if (Arrays.equals(nb, cur)) continue;
+                    write(g, id, nb);
+                    count(g, "follows-moved-model-edit");
+                    ctx.report.add(Decision.USER_CHANGED, kindKey(g), id, "uses vanilla model " + model + ", which the user edited: points at the edit (model " + to
+                            + "); the edit moved because BASE content added after 211 uses model " + model + " too");
+                }
+            }
+        }
+
+        static int groupByName(String n) {
+            for (int g : new int[]{Arch.CFG_OBJ, Arch.CFG_NPC, Arch.CFG_LOC, Arch.CFG_SPOT, Arch.CFG_IDENTKIT}) if (Arch.configName(g).equals(n)) return g;
+            return -1;
+        }
 
         // -------------------------------------------------------------- slots
 
@@ -343,6 +459,7 @@ public final class ConfigStep implements Step {
             Path dir = ctx.work("configs");
             Files.write(dir.resolve("clashes.tsv"), ("group\tid\tuser\tbase\n" + String.join("\n", clashes) + "\n").getBytes(StandardCharsets.UTF_8));
             Files.write(dir.resolve("merged.tsv"), ("group\tid\tdecision\tdetail\n" + String.join("\n", merged) + "\n").getBytes(StandardCharsets.UTF_8));
+            Files.write(dir.resolve("rev225-imports-base-newer.tsv"), ("group\tid\tuser (rev 225)\tbase\n" + String.join("\n", imports225) + "\n").getBytes(StandardCharsets.UTF_8));
             ctx.log("%d clashes kept, %d merged/changed; see %s", clashes.size(), merged.size(), dir);
         }
     }

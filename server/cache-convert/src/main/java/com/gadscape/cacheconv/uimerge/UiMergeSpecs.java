@@ -44,7 +44,7 @@ public final class UiMergeSpecs {
         merge(m, 161, "resizable toplevel: the spellbook side stone gets a third op slot ('*', label set by custom script 10593: 'Previous teleport')");
         merge(m, 164, "resizable (side panels) toplevel: same third op on the spellbook side stone");
         merge(m, 548, "fixed toplevel: same third op on the spellbook side stone");
-        merge(m, 192, "deposit box: title text 'The Bank of GadScape - Deposit Box'");
+        merge(m, 192, "deposit box: the user's title edit ('Gielinor' -> 'GadScape') re-applied to BASE's new title: 'The Bank of GadScape - Item Deposits'");
         {
             IfMerge.Options o = new IfMerge.Options();
             o.userWins.add("0.width");

@@ -10,6 +10,7 @@ import com.gadscape.cacheconv.core.Step;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,7 @@ public final class ConfigPlanStep implements Step {
         Plan p = new Plan(ctx, m);
         p.serverVarps();  // first: reserves the server's varp ids before anything allocates varps
         p.scanScripts();
+        p.standIns();
         for (int g : m.groups()) {
             Kind k = CfgModel.kindOf(g);
             if (k == null || !CfgCodec.walked(g) && k != Kind.VARP && k != Kind.VARC) continue;
@@ -135,6 +137,7 @@ public final class ConfigPlanStep implements Step {
             for (int id : m.user.configIds(g)) {
                 Origin o = m.origin(g, id);
                 if (!o.isUser()) continue;
+                if (ctx.rev225.config(g, id, m.user.configRef(g, id)) != null) { count(gn + ".rev225-import-or-edit"); continue; } // Jagex content: BASE's entry (ConfigStep)
                 Entry u;
                 try { u = m.userEntry(g, id); }
                 catch (RuntimeException e) { ctx.report.error(k.key, id, "USER entry does not decode in the 241 layout: " + e.getMessage()); continue; }
@@ -161,6 +164,7 @@ public final class ConfigPlanStep implements Step {
             Entry um = CfgCodec.map(u, m.mapper());
             if (CfgModel.isEntity(k)) {
                 if (!m.newInBase(g, id)) return null;
+                if (u.items.isEmpty()) return null; // an empty USER placeholder: BASE's entry stays (ConfigStep)
                 CfgModel.Same s = CfgModel.same(g, u, um, b);
                 if (s.same()) return null;
                 return "BASE added " + Arch.configName(g) + " " + id + " after OLD241 (" + describe(g, b) + "); USER has " + describe(g, u);
@@ -178,14 +182,13 @@ public final class ConfigPlanStep implements Step {
             boolean jagexChanged = !CfgModel.sameEffective(g, v, b);
             switch (k) {
                 case ENUM:
+                    // a user enum with BASE's key/value types is the same enum, however much of its content the user
+                    // replaced (Diango's holiday list 708: vanilla scripts 450/474 and the server read it): ConfigStep
+                    // merges it (spec rule 10)
                     if (EnumMerge.incompatible(u, b)) return "user re-typed vanilla enum " + id + " (" + types(u) + " vs BASE " + types(b) + ")";
-                    if (EnumMerge.replaced(v, u)) {
-                        int[] d = EnumMerge.valueDelta(v, u);
-                        return "user replaced the content of vanilla enum " + id + " (kept " + d[0] + " of " + d[2] + " vanilla values, brought " + d[1]
-                                + " new ones): a different enum, BASE keeps its own";
-                    }
                     return null;
                 case PARAM:
+                    if (m.intRetyped.contains(id)) { count("param.int-retype-kept-at-id"); return null; } // param 690: same param, BASE's type
                     if (ParamTypeTable.typeOf(u.encode()) != ParamTypeTable.typeOf(b.encode())) return "user changed the type of vanilla param " + id;
                     return null;
                 case VARBIT:
@@ -206,6 +209,77 @@ public final class ConfigPlanStep implements Step {
                 if (r.none() || r.kind() == null) continue;
                 if (r.kind() == Kind.STRUCT || r.kind() == Kind.ENUM) userRefs.computeIfAbsent(r.kind(), x -> new TreeSet<>()).add(r.value());
                 if (r.kind() == Kind.VARP || r.kind() == Kind.VARBIT) use(r.kind(), r.value(), by);
+            }
+        }
+
+        // ---------------------------------------------------------------- stand-ins
+
+        /**
+         * GadScape stand-ins for content BASE now has natively: a user-added struct whose string params (its name)
+         * equal those of a struct Jagex added after 211, and whose param keys BASE's struct also has (GadScape's
+         * collection log categories 10500-10503 for Duke Sucellus, Vardorvis, the Tormented Demons and Araxxor, which
+         * BASE has as structs 4652, 4653, ... with their own item lists). The stand-in is mapped onto BASE's struct
+         * ({@link IdMap#alias}): it is not written, references to it (the server's collection log code) mean BASE's
+         * category, and enum merges do not add it again next to BASE's ({@link ConfigStep}). Exactly one BASE match is
+         * required; {@code --configs.standIns=false} turns this off.
+         */
+        void standIns() {
+            if (!Boolean.parseBoolean(ctx.opt.get("configs.standIns", "true"))) return;
+            int g = Arch.CFG_STRUCT;
+            TreeMap<String, List<Integer>> byString = new TreeMap<>();
+            TreeMap<Integer, java.util.Map<Integer, String>> baseStrings = new TreeMap<>();
+            TreeMap<Integer, java.util.Set<Integer>> baseKeys = new TreeMap<>();
+            for (int id : m.base.configIds(g)) {
+                byte[] vb = m.van.configRef(g, id);
+                if (vb != null && Arrays.equals(vb, m.base.configRef(g, id))) continue; // only content Jagex added (or reused the id for) after 211
+                java.util.Map<Integer, String> str = new TreeMap<>();
+                java.util.Set<Integer> keys = new TreeSet<>();
+                if (!structParams(m.base.configRef(g, id), str, keys) || str.isEmpty()) continue;
+                baseStrings.put(id, str);
+                baseKeys.put(id, keys);
+                for (var e : str.entrySet()) byString.computeIfAbsent(e.getKey() + "=" + e.getValue(), x -> new ArrayList<>()).add(id);
+            }
+            for (int id : m.user.configIds(g)) {
+                if (m.origin(g, id) != Origin.USER_ADDED || ctx.ids.moved(Kind.STRUCT, id)) continue;
+                java.util.Map<Integer, String> str = new TreeMap<>();
+                java.util.Set<Integer> keys = new TreeSet<>();
+                if (!structParams(m.user.configRef(g, id), str, keys) || str.isEmpty()) continue;
+                TreeSet<Integer> cand = null;
+                for (var e : str.entrySet()) {
+                    TreeSet<Integer> c = new TreeSet<>(byString.getOrDefault(e.getKey() + "=" + e.getValue(), List.of()));
+                    if (cand == null) cand = c; else cand.retainAll(c);
+                }
+                if (cand == null) continue;
+                cand.removeIf(b -> !baseKeys.get(b).containsAll(keys) || !baseStrings.get(b).equals(str));
+                if (cand.size() != 1) { if (cand.size() > 1) ctx.report.note("struct " + id + ": " + cand.size() + " BASE structs share its strings " + str + " (" + cand + "); not treated as a stand-in"); continue; }
+                int b = cand.first();
+                String why = "GadScape stand-in for BASE struct " + b + " (same " + str.values() + ", BASE has every param key of it): BASE's native struct is used";
+                ctx.ids.alias(Kind.STRUCT, id, b, why);
+                ctx.report.relocated(Kind.STRUCT, id, b, why);
+                count("struct.stand-in-mapped-to-base");
+            }
+        }
+
+        /** String params and all param keys of a struct entry (either layout); false if it does not parse. */
+        static boolean structParams(byte[] b, java.util.Map<Integer, String> strings, java.util.Set<Integer> keys) {
+            if (b == null) return false;
+            try {
+                com.gadscape.cacheconv.core.Buf in = new com.gadscape.cacheconv.core.Buf(b);
+                while (true) {
+                    int op = in.u8();
+                    if (op == 0) return true;
+                    if (op != 249) return false;
+                    int n = in.u8();
+                    for (int i = 0; i < n; i++) {
+                        int str = in.u8(), key = in.u24();
+                        keys.add(key);
+                        if (str == 1) strings.put(key, in.str());
+                        else if (str == 2) in.skip(8);
+                        else in.skip(4);
+                    }
+                }
+            } catch (RuntimeException e) {
+                return false;
             }
         }
 

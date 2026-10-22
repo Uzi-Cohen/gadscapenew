@@ -21,6 +21,19 @@ public final class ParamTypeTable implements CfgCodec.ParamTypes {
         return memo.computeIfAbsent(param, p -> typeOf(cache.configRef(Arch.CFG_PARAM, p)));
     }
 
+    /** Reads {@code param} as {@code typeChar} instead of its own type (a re-type the converter does not carry over). */
+    public void force(int param, int typeChar) { memo.put(param, typeChar); }
+
+    /**
+     * Whether values of this type char are plain 32-bit ints in a param (every script var type of RuneLite's table
+     * except string): a re-type between two such types changes no stored value, only how the value is read.
+     */
+    public static boolean intLike(int c) {
+        if (c < 0 || c == 's') return false;
+        for (net.runelite.cache.util.ScriptVarType t : net.runelite.cache.util.ScriptVarType.values()) if ((t.getKeyChar() & 0xff) == c) return true;
+        return false;
+    }
+
     /** Type char of a param entry (either layout), -1 if it has none. */
     public static int typeOf(byte[] b) {
         if (b == null) return -1;

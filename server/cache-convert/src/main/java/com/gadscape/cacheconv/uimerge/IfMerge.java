@@ -174,7 +174,7 @@ public final class IfMerge {
                                 List<Object> m = mergeList(mv, mu, mb);
                                 edit.apply(bc).f.put(f, m);
                                 refs.computeIfAbsent(bc, k -> new java.util.TreeSet<>()).addAll(hookRefs(f, m, env, changedArgs(mv, mu)));
-                                r.applied.add(where + to + " " + desc + " (argument-wise merge with BASE's " + IfComp.show(bv) + ")");
+                                r.applied.add(where + to + " " + desc + " (argument-wise merge with BASE's " + IfComp.show(bv) + ": result " + IfComp.show(m) + ")");
                                 continue;
                             }
                         }

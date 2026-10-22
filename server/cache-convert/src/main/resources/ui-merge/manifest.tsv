@@ -4,7 +4,7 @@ interface	121	merged	interfaces/121.if	544f9ecdda9835d93328453e160a952468e8ebf27
 interface	160	merged	interfaces/160.if	bdccffc29f1621486c76c0c2044c1f48d6eadf0b3494c9470cce363e0d73602c	orbs: the XP drops orb gets GadScape's third op 'XP Multiplier'
 interface	161	merged	interfaces/161.if	0ee0d672092ef79b48e08bfd07282b74a4fa28f176126a6716ea5136709eab35	resizable toplevel: the spellbook side stone gets a third op slot ('*', label set by custom script 10593: 'Previous teleport')
 interface	164	merged	interfaces/164.if	5346bdd2946a9af1d7ba7b408f71761bc1384053447774554164e4240e97ed8c	resizable (side panels) toplevel: same third op on the spellbook side stone
-interface	192	merged	interfaces/192.if	66b83e1d3cb538c201dbedd8ec92dc4312c0857c6e09fd92f927329b7cf4b249	deposit box: title text 'The Bank of GadScape - Deposit Box'
+interface	192	merged	interfaces/192.if	66b83e1d3cb538c201dbedd8ec92dc4312c0857c6e09fd92f927329b7cf4b249	deposit box: the user's title edit ('Gielinor' -> 'GadScape') re-applied to BASE's new title: 'The Bank of GadScape - Item Deposits'
 interface	205	merged	interfaces/205.if	0231326abf6aeff4164450c7518870ebf686efa988aaee3631b25e6ed5585de3	makeover mage: GadScape made it a skin-colour-only screen (gender buttons hidden, narrower window, title)
 interface	215	base	-	d816608b2784ea25d50a67b9f21dae72c7c1347d3d19618b879cffe3f89d5162	211's 215 was the ironman setup screen; 241 reuses id 215 for ntk_scores (12 components). GadScape's server opens its own copy 1606 (GAME_MODE_SETUP) and nothing opens 215, so BASE's ntk_scores is kept
 interface	218	merged	interfaces/218.if	c7f59dd7415e58342aaf90bb0cf2f926b5d77a2a0fefff3421c98f96dc16b80a	spellbook: GadScape's second op on the home teleports (Lumbridge / Lunar Isle / Arceuus destinations)

@@ -39,12 +39,19 @@ import java.util.TreeSet;
  *   <li>user-changed into a different object (another name and none of the vanilla models): the GadScape Portal and
  *       the other customs on the nameless scenery ids 35000-35023 (TELE-08), 40027-40033, ...</li>
  * </ul>
- * It stays when the user's definition is rev 225's own (imported by DataMigration: {@link AllowList#loc225}), when it
- * is the same object as BASE's ({@link #sameThing}), when the user only edited a
- * vanilla loc (same object as vanilla 211's: {@code configs} merges the edit into BASE's definition), and when the
- * user turned the object into another one <i>in place</i> (same name, or same models: the Grand Exchange clan portal
- * 41724 turned Tournament Portal): those placements are the user's feature, so {@code configs} keeps the USER entry
- * at the id and BASE's squares show it (reported as clash-kept).
+ * It stays when it is the same object as BASE's ({@link #sameThing}) and when the user only edited a vanilla loc
+ * (same object as vanilla 211's: {@code configs} merges the edit into BASE's definition).
+ * <p>
+ * A user definition that is rev 225's own (a Jagex object DataMigration imported: {@link com.gadscape.cacheconv.core.Rev225})
+ * is Jagex content: {@code configs} gives the id BASE's newer definition, so BASE's squares show BASE's object. It moves
+ * only when the user's own written squares also place it and BASE's definition is another object (the user's squares
+ * then keep rev 225's object at the new id).
+ * <p>
+ * A user change that turns the object into another one <i>in place</i> (same name, or same models: the Grand Exchange
+ * clan portal 41724 turned Tournament Portal, the clan recruitment board 41728 turned Hiscores) moves too when the
+ * user's written squares place it (spec rule 3: BASE's squares keep BASE's object; the user's squares are rewritten to
+ * the moved id). Only when no written user square places it (the feature exists only on BASE's squares) does the USER
+ * entry stay at the id, so BASE's squares show it (reported as clash-kept).
  * Range: loc ids are u16 on the 241 wire (rsprot OpLoc1V2Decoder reads the id with g2, LocAddChangeV2Encoder writes it
  * with p2) and in multiloc transform lists, so the spec's 70000-79999 cannot hold a loc a player clicks or the server
  * spawns. This step uses {@code --maps.locRange=LO-HI} (default 64500-65534, free in BASE and USER) unless the loc
@@ -61,39 +68,55 @@ public final class MapLocPlanStep implements Step {
         setRange(ctx);
         CfgModel m = new CfgModel(ctx);
         TreeMap<Integer, TreeSet<Integer>> placedIn = basePlacements(ctx, al);
+        TreeMap<Integer, TreeSet<Integer>> userPlaced = userPlacements(ctx, al);
         TreeMap<Integer, String> via = new TreeMap<>();
         for (int id : placedIn.keySet()) via.put(id, "placed");
         closeOverTransforms(m, placedIn.keySet(), via);
 
         List<String> tsv = new ArrayList<>();
         tsv.add("loc\tto\torigin\tuser\tbase\twhy\tsquares(BASE squares placing it, first 10)");
-        int moved = 0, same = 0, edited = 0, vanilla = 0, inPlace = 0, imported = 0;
+        int moved = 0, same = 0, edited = 0, vanilla = 0, inPlace = 0, imported = 0, importedMoved = 0, inPlaceMoved = 0;
         for (int id : via.keySet()) {
             if (!ctx.user().hasConfig(Arch.CFG_LOC, id) || !ctx.base.hasConfig(Arch.CFG_LOC, id)) continue;
             Origin o = m.origin(Arch.CFG_LOC, id);
             if (!o.isUser()) { vanilla++; continue; }
-            if (o == Origin.USER_ADDED && al.loc225.get(id)) { imported++; continue; } // rev 225's own object, not a custom
             CfgCodec.Entry u, b;
             try { u = m.userEntry(Arch.CFG_LOC, id); b = m.baseEntry(Arch.CFG_LOC, id); }
             catch (RuntimeException e) { ctx.report.error("loc", id, "loc does not decode: " + e.getMessage()); continue; }
             CfgCodec.Entry um = CfgCodec.map(u, m.mapper());
+            com.gadscape.cacheconv.core.Rev225.Status r225 = ctx.rev225.config(Arch.CFG_LOC, id, ctx.user().configRef(Arch.CFG_LOC, id));
+            TreeSet<Integer> userSq = userPlaced.getOrDefault(id, new TreeSet<>());
+            if (r225 != null) {
+                // rev 225's own object (or the user's small edit of it): configs gives the id BASE's newer definition
+                if (userSq.isEmpty() || sameThing(um, b) || sameThing(u, b)) { imported++; continue; }
+                String what = "rev-225 import loc " + id + " (" + describe(u) + ") that the user's own squares place " + userSq.size() + "x where BASE has " + describe(b)
+                        + "; BASE " + (via.get(id).equals("placed") ? "places it in its squares" : "renders it as " + via.get(id)) + ": the user's squares keep the 225 object at the new id";
+                int to = LocWriter.plan(ctx, id, "MAP-6: " + what);
+                importedMoved++;
+                TreeSet<Integer> sq = placedIn.getOrDefault(id, new TreeSet<>());
+                tsv.add(id + "\t" + to + "\t" + o + "+rev225\t" + tab(describe(u)) + "\t" + tab(describe(b)) + "\t" + tab(what) + "\t" + sq.size() + ":" + sq.stream().limit(10).toList());
+                continue;
+            }
             if (sameThing(um, b) || sameThing(u, b)) { same++; continue; }
             CfgCodec.Entry ref = b;
             if (o == Origin.USER_CHANGED) {
                 ref = m.vanEntry(Arch.CFG_LOC, id);
                 if (sameThing(u, ref)) { edited++; continue; }
             }
-            if (inPlace(u, ref, o == Origin.USER_CHANGED)) {
-                // the user turned the object at its own placements into another one (same look or same name): the
-                // GE clan portal 41724 became the Tournament Portal. Those placements are the user's feature, so the
-                // USER entry stays at the id (configs keeps it as a clash) and BASE's squares show it too.
+            if (inPlace(u, ref, o == Origin.USER_CHANGED) && userSq.isEmpty()) {
+                // the user turned the object into another one (same look or same name) and no square of the user's
+                // places it: the feature lives on BASE's squares only, so the USER entry stays at the id (configs
+                // keeps it as a clash) and BASE's squares show it. With user squares placing it, it moves like any
+                // other user object: BASE's squares keep BASE's object, the user's squares the moved one.
                 inPlace++;
                 ctx.report.add(Decision.CLASH_KEPT, "loc", id, "MAP-6: " + (o == Origin.USER_ADDED ? "user-added" : "user-changed") + " loc " + id + " (" + describe(u)
                         + ") repurposes " + (o == Origin.USER_ADDED ? "BASE's " : "vanilla ") + describe(ref) + " in place (same name or models): not moved; BASE squares show the user's object");
                 continue;
             }
+            if (inPlace(u, ref, o == Origin.USER_CHANGED)) inPlaceMoved++;
             String what = (o == Origin.USER_ADDED ? "user-added" : "user-repurposed") + " loc " + id + " (" + describe(u) + ") where BASE has " + describe(b)
-                    + "; BASE " + (via.get(id).equals("placed") ? "places it in its squares" : "renders it as " + via.get(id));
+                    + "; BASE " + (via.get(id).equals("placed") ? "places it in its squares" : "renders it as " + via.get(id))
+                    + (userSq.isEmpty() ? "" : "; the user's squares place it " + userSq.size() + "x (rewritten to the new id)");
             int to = LocWriter.plan(ctx, id, "MAP-6: " + what);
             moved++;
             TreeSet<Integer> sq = placedIn.getOrDefault(id, new TreeSet<>());
@@ -105,9 +128,12 @@ public final class MapLocPlanStep implements Step {
         ctx.report.count("loc.vanilla", vanilla);
         ctx.report.count("loc.user-edited-vanilla-kept-for-configs", edited);
         ctx.report.count("loc.repurposed-in-place-kept", inPlace);
-        ctx.report.count("loc.rev225-imports-not-moved", imported);
+        ctx.report.count("loc.rev225-imports-base-definition", imported);
+        ctx.report.count("loc.rev225-imports-moved-for-user-squares", importedMoved);
+        ctx.report.count("loc.repurposed-in-place-moved-for-user-squares", inPlaceMoved);
         Files.write(ctx.work("maps").resolve("loc-moves.tsv"), tsv, StandardCharsets.UTF_8);
-        ctx.log("%d loc ids rendered by BASE squares; %d relocated, %d same thing, %d user edits of vanilla locs left to configs, %d repurposed in place (kept), %d rev-225 imports", via.size(), moved, same, edited, inPlace, imported);
+        ctx.log("%d loc ids rendered by BASE squares; %d relocated (%d repurposed in place, placed by user squares), %d same thing, %d user edits of vanilla locs left to configs, %d repurposed in place (kept: no user square places them), %d rev-225 imports (BASE's definition), %d rev-225 imports moved for the user's squares",
+                via.size(), moved + importedMoved, inPlaceMoved, same, edited, inPlace, imported, importedMoved);
     }
 
     /**
@@ -184,6 +210,37 @@ public final class MapLocPlanStep implements Step {
         ctx.base.release(Arch.MAPS);
         for (var e : al.keep.entrySet())
             for (long k : e.getValue()) placed.computeIfAbsent((int) (k >>> 24), x -> new TreeSet<>()).add(e.getKey());
+        return placed;
+    }
+
+    /**
+     * Loc id -> written user squares placing it on the user's own tiles (OVERLAY squares: every placement when the
+     * square replaces BASE's, the placements on mask tiles when it is merged; OVERLAY_NEW / RESTORE: every placement),
+     * without the vanilla placements that keep BASE's id ({@link AllowList#keep}).
+     */
+    static TreeMap<Integer, TreeSet<Integer>> userPlacements(Ctx ctx, AllowList al) throws java.io.IOException {
+        java.util.List<com.gadscape.cacheconv.core.Xteas> keys = ctx.opt.xteas != null && Files.isRegularFile(ctx.opt.xteas) ? java.util.List.of(ctx.xteas()) : java.util.List.of();
+        NamedMaps u = new NamedMaps(ctx.user(), keys);
+        boolean mergeOn = !ctx.opt.get("maps.mode", "merge").equals("overlay");
+        TreeMap<Integer, TreeSet<Integer>> placed = new TreeMap<>();
+        int n = 0;
+        for (AllowList.Square s : al.squares.values()) {
+            int r = s.region();
+            if (!al.writes(r)) continue;
+            LocFile f;
+            if (al.restoreLocs.containsKey(r)) f = LocFile.parse(al.restoreLocs.get(r));
+            else { NamedMaps.Locs l = u.locs(r); f = l.ok() ? l.file() : null; }
+            if (f == null) continue;
+            BitSet[] mask = s.action() == Action.OVERLAY && s.merge() && mergeOn ? al.masks.get(r) : null;
+            TreeSet<Long> keep = al.keep.getOrDefault(r, new TreeSet<>());
+            for (LocFile.Loc l : f.locs) {
+                if (mask != null && !(mask[0].get(l.pos()) || mask[1].get(l.pos()))) continue;
+                if (keep.contains((long) l.id() << 24 | (long) l.pos() << 8 | l.attr())) continue;
+                placed.computeIfAbsent(l.id(), k -> new TreeSet<>()).add(r);
+            }
+            if (++n % 50 == 0) ctx.user().release(Arch.MAPS);
+        }
+        ctx.user().release(Arch.MAPS);
         return placed;
     }
 

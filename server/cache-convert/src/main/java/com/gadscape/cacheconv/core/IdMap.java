@@ -23,9 +23,18 @@ import java.util.TreeSet;
  * a BASE model at another id). Several ids may alias the same target; they appear in the kind's map like any other
  * relocation and are also listed under {@code _aliases}. Apply the map once, never transitively.
  * <p>
+ * Vanilla ports ({@link #markVanilla}) are relocations of a vanilla 211 entry that Jagex reused or re-rigged by 241
+ * (model 292 became the Cat mask, seq 189 a player emote): GadScape content that used the 211 entry is rewritten to the
+ * ported copy. They are listed under {@code _vanilla}: the server rewrite applies them only where GadScape code means
+ * the 211 entry on GadScape's own (211-era) content, never to stock 241 content.
+ * <p>
+ * New ids ({@link #addNew}) are ids the build created that replace nothing (adapter scripts): allocated from the
+ * kind's reserved range like relocations, and listed under {@code _new} by name.
+ * <p>
  * idmap.json: {@code {"seq": {"15000": 40000, ...}, "frame": {...}, ..., "_reasons": {"seq": {"15000": "..."}},
- * "_aliases": {"model": [58013, ...]}, "_ranges": {"seq": [40000, 49999], ...}, "_format": 1}} — every kind key is
- * always present; keys starting with "_" are metadata.
+ * "_aliases": {"model": [58013, ...]}, "_vanilla": {"seq": [189, ...]}, "_new": {"script": {"adapter:98": 47900}},
+ * "_ranges": {"seq": [40000, 49999], ...}, "_format": 1}} — every kind key is always present; keys starting with "_"
+ * are metadata.
  */
 public final class IdMap {
     public record Range(int lo, int hi) {
@@ -37,6 +46,9 @@ public final class IdMap {
     private final EnumMap<Kind, TreeMap<Integer, Integer>> inverse = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, TreeMap<Integer, String>> reasons = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, TreeSet<Integer>> aliases = new EnumMap<>(Kind.class);
+    private final EnumMap<Kind, TreeSet<Integer>> vanilla = new EnumMap<>(Kind.class);
+    private final EnumMap<Kind, TreeMap<String, Integer>> added = new EnumMap<>(Kind.class);
+    private final EnumMap<Kind, TreeMap<String, String>> addedWhy = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, Range> ranges = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, TreeSet<Integer>> taken = new EnumMap<>(Kind.class);
     private final EnumMap<Kind, Integer> next = new EnumMap<>(Kind.class);
@@ -45,7 +57,7 @@ public final class IdMap {
     public IdMap() {
         for (Kind k : Kind.values()) {
             map.put(k, new TreeMap<>()); inverse.put(k, new TreeMap<>()); reasons.put(k, new TreeMap<>()); taken.put(k, new TreeSet<>());
-            aliases.put(k, new TreeSet<>());
+            aliases.put(k, new TreeSet<>()); vanilla.put(k, new TreeSet<>()); added.put(k, new TreeMap<>()); addedWhy.put(k, new TreeMap<>());
             if (k.rangeLo >= 0) ranges.put(k, new Range(k.rangeLo, k.rangeHi));
         }
     }
@@ -113,6 +125,53 @@ public final class IdMap {
     /** Whether {@code from} was mapped with {@link #alias}. */
     public boolean isAlias(Kind k, int from) { return aliases.get(k).contains(from); }
 
+    /** Marks a recorded relocation as a port of a vanilla 211 entry Jagex changed (listed under {@code _vanilla}). */
+    public void markVanilla(Kind k, int from) {
+        if (!map.get(k).containsKey(from)) throw new IllegalStateException(k.key + " " + from + " is not relocated");
+        vanilla.get(k).add(from);
+    }
+
+    public boolean isVanillaPort(Kind k, int from) { return vanilla.get(k).contains(from); }
+
+    /** Ids marked with {@link #markVanilla}, ascending. */
+    public java.util.Set<Integer> vanillaPorts(Kind k) { return java.util.Collections.unmodifiableSet(vanilla.get(k)); }
+
+    /**
+     * Removes a relocation again (a ported copy nothing in the output ended up using). Its target is released for
+     * later allocations only if nothing else claims it; the id map stays as if the relocation never happened.
+     */
+    public void unrecord(Kind k, int from) {
+        Integer to = map.get(k).remove(from);
+        if (to == null) return;
+        reasons.get(k).remove(from);
+        vanilla.get(k).remove(from);
+        if (aliases.get(k).remove(from)) return;
+        inverse.get(k).remove(to);
+        taken.get(k).remove(to);
+    }
+
+    /**
+     * A new id the build creates for {@code name} (an adapter script): the same id again for the same name, otherwise
+     * the next free id of the kind's reserved range. Listed under {@code _new}.
+     */
+    public int addNew(Kind k, String name, String why) { return addNew(k, name, why, false); }
+
+    /** {@link #addNew(Kind, String, String)}; {@code fromTop} takes the highest free id of the range instead of the lowest. */
+    public int addNew(Kind k, String name, String why, boolean fromTop) {
+        Integer cur = added.get(k).get(name);
+        if (cur != null) return cur;
+        int id = fromTop ? allocateTop(k) : allocate(k);
+        added.get(k).put(name, id);
+        addedWhy.get(k).put(name, why);
+        return id;
+    }
+
+    /** The id {@link #addNew} gave {@code name}, or -1. */
+    public int newId(Kind k, String name) { Integer v = added.get(k).get(name); return v == null ? -1 : v; }
+
+    /** Read-only view of one kind's new ids (name -> id). */
+    public Map<String, Integer> allNew(Kind k) { return java.util.Collections.unmodifiableMap(added.get(k)); }
+
     /** Marks an id as used so the allocator never hands it out. */
     public void reserve(Kind k, int id) { taken.get(k).add(id); }
 
@@ -137,6 +196,14 @@ public final class IdMap {
         for (int id = next.getOrDefault(k, r.lo); id <= r.hi; id++) {
             if (isFree(k, id)) { taken.get(k).add(id); next.put(k, id + 1); return id; }
         }
+        throw new IllegalStateException("reserved " + k.key + " range " + r.lo + ".." + r.hi + " is full");
+    }
+
+    /** The highest free id of the kind's reserved range (marked taken). */
+    public int allocateTop(Kind k) {
+        Range r = ranges.get(k);
+        if (r == null) throw new IllegalStateException("no reserved range for " + k.key + " (IdMap.setRange first)");
+        for (int id = r.hi; id >= r.lo; id--) if (isFree(k, id)) { taken.get(k).add(id); return id; }
         throw new IllegalStateException("reserved " + k.key + " range " + r.lo + ".." + r.hi + " is full");
     }
 
@@ -187,6 +254,25 @@ public final class IdMap {
         Map<String, Object> al = new LinkedHashMap<>();
         for (Kind k : Kind.values()) if (!aliases.get(k).isEmpty()) al.put(k.key, new ArrayList<>(aliases.get(k)));
         if (!al.isEmpty()) root.put("_aliases", al);
+        Map<String, Object> va = new LinkedHashMap<>();
+        for (Kind k : Kind.values()) if (!vanilla.get(k).isEmpty()) va.put(k.key, new ArrayList<>(vanilla.get(k)));
+        if (!va.isEmpty()) root.put("_vanilla", va);
+        Map<String, Object> nw = new LinkedHashMap<>();
+        for (Kind k : Kind.values()) {
+            if (added.get(k).isEmpty()) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            for (var e : added.get(k).entrySet()) m.put(e.getKey(), e.getValue());
+            nw.put(k.key, m);
+        }
+        if (!nw.isEmpty()) root.put("_new", nw);
+        Map<String, Object> nwWhy = new LinkedHashMap<>();
+        for (Kind k : Kind.values()) {
+            if (addedWhy.get(k).isEmpty()) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            for (var e : addedWhy.get(k).entrySet()) m.put(e.getKey(), e.getValue());
+            nwWhy.put(k.key, m);
+        }
+        if (!nwWhy.isEmpty()) root.put("_newReasons", nwWhy);
         Map<String, Object> rg = new LinkedHashMap<>();
         for (Kind k : Kind.values()) { Range r = ranges.get(k); if (r != null) rg.put(k.key, new int[]{r.lo, r.hi}); }
         root.put("_ranges", rg);
@@ -203,6 +289,9 @@ public final class IdMap {
         for (var e : rg.entrySet()) { List<Object> l = Json.list(e.getValue()); m.setRange(Kind.byKey(e.getKey()), Json.i(l.get(0)), Json.i(l.get(1))); }
         Map<String, Object> rs = root.containsKey("_reasons") ? Json.obj(root.get("_reasons")) : Map.of();
         Map<String, Object> al = root.containsKey("_aliases") ? Json.obj(root.get("_aliases")) : Map.of();
+        Map<String, Object> va = root.containsKey("_vanilla") ? Json.obj(root.get("_vanilla")) : Map.of();
+        Map<String, Object> nw = root.containsKey("_new") ? Json.obj(root.get("_new")) : Map.of();
+        Map<String, Object> nwWhy = root.containsKey("_newReasons") ? Json.obj(root.get("_newReasons")) : Map.of();
         for (Kind k : Kind.values()) {
             Object o = root.get(k.key);
             if (o == null) continue;
@@ -214,6 +303,17 @@ public final class IdMap {
                 int from = Integer.parseInt(e.getKey());
                 if (isAlias.contains(from)) m.alias(k, from, Json.i(e.getValue()), r == null ? "" : r.toString());
                 else m.record(k, from, Json.i(e.getValue()), r == null ? "" : r.toString());
+            }
+            if (va.containsKey(k.key)) for (Object x : Json.list(va.get(k.key))) m.markVanilla(k, Json.i(x));
+            if (nw.containsKey(k.key)) {
+                Map<String, Object> nwr = nwWhy.containsKey(k.key) ? Json.obj(nwWhy.get(k.key)) : Map.of();
+                for (var e : Json.obj(nw.get(k.key)).entrySet()) {
+                    int id = Json.i(e.getValue());
+                    m.added.get(k).put(e.getKey(), id);
+                    Object w = nwr.get(e.getKey());
+                    m.addedWhy.get(k).put(e.getKey(), w == null ? "" : w.toString());
+                    m.taken.get(k).add(id);
+                }
             }
         }
         return m;

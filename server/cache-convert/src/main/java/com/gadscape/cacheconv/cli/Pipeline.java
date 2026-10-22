@@ -28,7 +28,8 @@ import java.util.Map;
  *     </ul></li>
  *   <li><b>Writers</b>, which map every reference through the id map: {@code configs} (archive 2 except seqs),
  *       {@code config-sprites} (deleted vanilla sprites those configs name), {@code mapscene}, {@code ui-merge} (the three-way-merged vanilla UI), {@code ui-convert} (GadScape's own UI),
- *       {@code maps} (user squares), {@code db-index} (archive 21 from the rows written), {@code rebrand} (texts).</li>
+ *       {@code maps} (user squares), {@code db-index} (archive 21 from the rows written), {@code rebrand} (texts),
+ *       then {@code models-prune} (vanilla model ports nothing ended up using are removed again).</li>
  *   <li><b>Checks</b> (read-only, one report error per failure): {@code configs-oracle}, {@code configs-refcheck},
  *       {@code configs-expect}, {@code models-refcheck}, {@code anim-refcheck}, {@code ui-check}, and {@code verify}
  *       (the whole-cache verifier with BASE as baseline) last.</li>
@@ -59,6 +60,7 @@ public final class Pipeline {
         s.add(new com.gadscape.cacheconv.map.MapsStep());               // maps
         s.add(new com.gadscape.cacheconv.db.DbIndexStep());             // db-index
         s.add(new com.gadscape.cacheconv.rebrand.RebrandStep());        // rebrand
+        s.add(new com.gadscape.cacheconv.model.ModelsPruneStep());      // models-prune (unused vanilla model ports)
         // checks (read-only)
         s.add(new com.gadscape.cacheconv.config.ConfigOracle());        // configs-oracle
         s.add(new com.gadscape.cacheconv.config.ConfigRefCheck());      // configs-refcheck

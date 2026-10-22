@@ -34,7 +34,14 @@ public final class RefCensus {
     private RefCensus(Set<Integer> watch) { this.watch = watch; }
 
     /** Scans every config/interface of {@code c} (a 211 cache) for references to {@code watch}; {@code van} classifies users. */
-    public static RefCensus scan(CacheView c, CacheView van, Set<Integer> watch) {
+    public static RefCensus scan(CacheView c, CacheView van, Set<Integer> watch) { return scan(c, van, watch, null); }
+
+    /**
+     * Like {@link #scan(CacheView, CacheView, Set)}; {@code watch} null watches every model, and {@code vanillaLike}
+     * (config group, id), if given, marks user-added/changed config entries that count as vanilla anyway (rev-225
+     * imports: BASE's entry replaces them, so their references are not GadScape's).
+     */
+    public static RefCensus scan(CacheView c, CacheView van, Set<Integer> watch, java.util.function.BiPredicate<Integer, Integer> vanillaLike) {
         RefCensus r = new RefCensus(watch);
         int[] groups = {Arch.CFG_OBJ, Arch.CFG_NPC, Arch.CFG_LOC, Arch.CFG_SPOT, Arch.CFG_IDENTKIT};
         for (int g : groups) {
@@ -46,7 +53,12 @@ public final class RefCensus {
                 int[] ms;
                 try { ms = ModelRefs.models(g, id, fn.apply(id, b), false); }
                 catch (RuntimeException e) { r.totals.merge("unreadable." + kind, 1, Integer::sum); continue; }
-                for (int m : ms) if (watch.contains(m)) r.hit(m, kind, String.valueOf(id), Origin.ofConfig(g, id, c, van).isUser());
+                Boolean user = null;
+                for (int m : ms) {
+                    if (!r.watches(m)) continue;
+                    if (user == null) user = Origin.ofConfig(g, id, c, van).isUser() && (vanillaLike == null || !vanillaLike.test(g, id));
+                    r.hit(m, kind, String.valueOf(id), user);
+                }
             }
         }
         for (int g : c.groupIds(Arch.INTERFACES)) {
@@ -58,7 +70,7 @@ public final class RefCensus {
                 try { ms = ModelRefs.componentModels(InterfaceConv.component(gd.dataAt(i))); }
                 catch (RuntimeException e) { r.totals.merge("unreadable.if", 1, Integer::sum); continue; }
                 for (int m : ms) {
-                    if (!watch.contains(m)) continue;
+                    if (!r.watches(m)) continue;
                     if (user == null) user = Origin.ofGroup(Arch.INTERFACES, g, c, van).isUser();
                     r.hit(m, "if", g + ":" + gd.fileIdAt(i), user);
                 }
@@ -73,6 +85,11 @@ public final class RefCensus {
     private static String kind(int cfg) {
         return switch (cfg) { case Arch.CFG_OBJ -> "obj"; case Arch.CFG_NPC -> "npc"; case Arch.CFG_LOC -> "loc"; case Arch.CFG_SPOT -> "spot"; case Arch.CFG_IDENTKIT -> "kit"; default -> Arch.configName(cfg); };
     }
+
+    private boolean watches(int model) { return model >= 0 && (watch == null || watch.contains(model)); }
+
+    /** Models referenced by user-origin entries (ascending). */
+    public java.util.Set<Integer> userModels() { return java.util.Collections.unmodifiableSet(users.keySet()); }
 
     private void hit(int model, String kind, String who, boolean user) {
         totals.merge(kind + (user ? ".user" : ".vanilla"), 1, Integer::sum);
@@ -107,12 +124,12 @@ public final class RefCensus {
                 }
                 Boolean user = null;
                 for (int[] kv : ints) {
-                    boolean k = keyType == ModelRefs.MODEL_TYPE_CHAR && watch.contains(kv[0]), v = valType == ModelRefs.MODEL_TYPE_CHAR && watch.contains(kv[1]);
+                    boolean k = keyType == ModelRefs.MODEL_TYPE_CHAR && watches(kv[0]), v = valType == ModelRefs.MODEL_TYPE_CHAR && watches(kv[1]);
                     if (!k && !v) continue;
                     if (user == null) user = Origin.ofConfig(Arch.CFG_ENUM, id, c, van).isUser();
                     hit(k ? kv[0] : kv[1], "enum", id + "[" + kv[0] + "]", user);
                 }
-                if (valType == ModelRefs.MODEL_TYPE_CHAR && watch.contains(dflt)) hit(dflt, "enum", id + "[default]", Origin.ofConfig(Arch.CFG_ENUM, id, c, van).isUser());
+                if (valType == ModelRefs.MODEL_TYPE_CHAR && watches(dflt)) hit(dflt, "enum", id + "[default]", Origin.ofConfig(Arch.CFG_ENUM, id, c, van).isUser());
             } catch (RuntimeException e) { totals.merge("unreadable.enum", 1, Integer::sum); }
         }
     }
@@ -140,7 +157,7 @@ public final class RefCensus {
                 type.put(id, t);
                 if (t == ModelRefs.MODEL_TYPE_CHAR) {
                     totals.merge("model-typed-params", 1, Integer::sum);
-                    if (watch.contains(dflt)) hit(dflt, "param", id + "[default]", Origin.ofConfig(Arch.CFG_PARAM, id, c, van).isUser());
+                    if (watches(dflt)) hit(dflt, "param", id + "[default]", Origin.ofConfig(Arch.CFG_PARAM, id, c, van).isUser());
                 }
             } catch (RuntimeException e) { totals.merge("unreadable.param", 1, Integer::sum); }
         }
@@ -159,7 +176,7 @@ public final class RefCensus {
                         if (str == 1) { in.skipStr(); continue; }
                         if (str == 2) { in.skip(8); continue; }
                         int v = in.i32();
-                        if (type.getOrDefault(key, 0) == ModelRefs.MODEL_TYPE_CHAR && watch.contains(v))
+                        if (type.getOrDefault(key, 0) == ModelRefs.MODEL_TYPE_CHAR && watches(v))
                             hit(v, "struct", id + "[param " + key + "]", Origin.ofConfig(Arch.CFG_STRUCT, id, c, van).isUser());
                     }
                 }

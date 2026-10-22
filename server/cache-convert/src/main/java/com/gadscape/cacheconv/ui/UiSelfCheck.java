@@ -153,7 +153,7 @@ public final class UiSelfCheck {
         expect(f, "remap rows", true, rm.size() > 7000);
         expect(f, "orbs +1 (160:8 -> 160:9)", 9, rm.get((160 << 16) | 8) == null ? -1 : rm.get((160 << 16) | 8).to());
         // 7. adapters read back
-        for (UiData.SigRule rule : UiData.signatures().values()) ScriptTrailer.verify241(rule.adapter(), UiAdapters.build(rule));
+        for (UiData.SigRule rule : UiData.signatures().values()) ScriptTrailer.verify241(rule.target(), UiAdapters.build(rule));
         return f;
     }
 

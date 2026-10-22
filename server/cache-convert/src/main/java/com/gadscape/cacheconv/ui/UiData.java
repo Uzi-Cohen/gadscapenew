@@ -47,6 +47,25 @@ public final class UiData {
      * {@code intMap}/{@code objMap} list what the adapter pushes for each 241 argument: "iN"/"oN" = the adapter's own
      * int/object argument N (the 211 caller's argument), a number = that int constant.
      */
+    /**
+     * The id of the adapter script for a rule: allocated by {@code ui-relocate} at the top of the reserved script range
+     * ({@link com.gadscape.cacheconv.core.IdMap#addNew}, listed under {@code _new} in idmap.json as "adapter:TARGET").
+     */
+    public static int adapterId(com.gadscape.cacheconv.core.IdMap ids, SigRule r) {
+        int id = ids.newId(com.gadscape.cacheconv.core.Kind.SCRIPT, adapterName(r));
+        if (id < 0) throw new IllegalStateException("adapter for script " + r.target() + " was not allocated (ui-relocate runs first)");
+        return id;
+    }
+
+    public static String adapterName(SigRule r) { return "adapter:" + r.target(); }
+
+    /** Allocates the adapter ids of every rule (ascending targets, from the top of the reserved script range). */
+    public static void allocateAdapters(com.gadscape.cacheconv.core.IdMap ids) {
+        for (SigRule r : signatures().values())
+            ids.addNew(com.gadscape.cacheconv.core.Kind.SCRIPT, adapterName(r), "adapter for vanilla proc " + r.target() + " (241 signature differs): " + r.note(), true);
+    }
+
+    /** {@code adapter} is unused (-1): adapter ids are allocated, see {@link #adapterId}. */
     public record SigRule(int target, int adapter, int int211, int obj211, int int241, int obj241, int long241, int[] extraInts, int dropIntReturns,
                           String[] intMap, String[] objMap, String note) {
         public boolean mapped() { return intMap != null; }
@@ -92,7 +111,7 @@ public final class UiData {
                 for (int i = 0; i < im.length; i++) im[i] = im[i].trim();
                 for (int i = 0; i < om.length; i++) om[i] = om[i].trim();
             }
-            SigRule r = new SigRule(Integer.parseInt(f[0]), Integer.parseInt(f[1]), Integer.parseInt(a[0]), Integer.parseInt(a[1]),
+            SigRule r = new SigRule(Integer.parseInt(f[0]), f[1].trim().equals("auto") ? -1 : Integer.parseInt(f[1].trim()), Integer.parseInt(a[0]), Integer.parseInt(a[1]),
                     Integer.parseInt(b[0]), Integer.parseInt(b[1]), Integer.parseInt(b[2]), extra, Integer.parseInt(f[5]), im, om, f.length > 7 ? f[7] : "");
             String bad = r.shapeProblem();
             if (bad != null) throw new IllegalStateException("ui/script-signatures.tsv row " + r.target() + ": " + bad);

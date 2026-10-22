@@ -20,12 +20,20 @@ public final class Ctx implements AutoCloseable {
     public final IdMap ids;
     public final JagCache base, user, van211, old241;
     public final OutCache out;
+    /**
+     * Plans one step hands to a later step of the same run that do not belong in the id map (not persisted), keyed by
+     * a name the two steps agree on, e.g. {@code "models.follow"}.
+     */
+    public final java.util.Map<String, Object> shared = new java.util.TreeMap<>();
+    /** The rev-225 import table ({@link Rev225}): Jagex entries GadScape imported, treated as vanilla. */
+    public final Rev225 rev225;
     private Xteas xteas;
     private JagCache ref;
 
     private Ctx(Options opt, Report report, IdMap ids, JagCache base, JagCache user, JagCache van211, JagCache old241, OutCache out) {
         this.opt = opt; this.report = report; this.ids = ids;
         this.base = base; this.user = user; this.van211 = van211; this.old241 = old241; this.out = out;
+        this.rev225 = Rev225.load(opt);
     }
 
     /**
@@ -62,6 +70,14 @@ public final class Ctx implements AutoCloseable {
 
     /** USER vs VAN211 for one id: vanilla / user-changed / user-added / ... (see {@link Origin}). */
     public Origin origin(Kind k, int id) { return Origin.of(k, id, user(), van211()); }
+
+    /**
+     * Whether a user-added/changed config entry is really Jagex content GadScape imported from rev 225 unchanged
+     * ({@link Rev225}): such entries take BASE's newer version like vanilla ones.
+     */
+    public boolean isRev225Import(int cfgGroup, int id) {
+        return user != null && rev225.isImport(cfgGroup, id, user.configRef(cfgGroup, id));
+    }
 
     /** The user's map keys (lazy). */
     public Xteas xteas() throws IOException {

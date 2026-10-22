@@ -44,6 +44,8 @@ public final class Bytes {
 
     public static String hex(byte[] b) { return b == null ? "null" : HexFormat.of().formatHex(b); }
     public static String hex(byte[] b, int from, int to) { return HexFormat.of().formatHex(b, Math.max(0, from), Math.min(b.length, to)); }
+    /** Inverse of {@link #hex(byte[])}. */
+    public static byte[] unhex(String s) { return HexFormat.of().parseHex(s); }
 
     /** Classic 16-bytes-per-line hex dump with an ASCII column. */
     public static String dump(byte[] b, int max) {

@@ -4,7 +4,7 @@
 # GadScape added are appended after BASE's last one). -1 = no 241 counterpart.
 # Sources (notes column): the server docs table (docs/rev241/interface-remap.tsv, checked against BASE's component
 # names in gamevals), the UI merge (merged/added/user), or content alignment for interfaces the docs table lacks.
-# Interfaces the server references (server-interfaces.txt): 0-1,4,6-7,11-12,14-16,21,23-26,28,30,35,42,50-51,54,57-58,64,67-69,72-74,76-82,84-85,90,94-95,100,103,108-109,116,122,125-126,128,131,134,136-138,140,148-149,153-157,160-162,164-165,178-180,182,187,190,192-193,201,203,205,208,210,212-214,216-221,229,231,233,238-240,243,245,255,259,261,265-266,269-271,288-289,293,300-303,306,308,311-312,320,322,324,326,332,334-336,363-365,370,378,381-383,387,392,396,398-399,402-403,405-408,411,413,416,421-422,426,428-430,432,436,446,451,458-459,464,474-477,482-483,493,499-500,507,513,522-523,530,539-541,548-551,582,584,591-595,597,601-602,608,621,629-631,634,639,660,663,669-672,674-675,679-680,701-702,707,711-717,721,723-727,730,732,742-744,771-778,866,1600-1609,1611-1620,1700-1702,1704,1706-1711,1713,1722-1723,1998-2000,5003-5005,5007,5100-5103
+# Interfaces the server references (server-interfaces.txt): 0-1,4,6-7,11-12,14-16,21,23-26,28,30,35,42,50-51,54,57-58,64,67-69,72-74,76-82,84-85,90-91,94-95,99-101,103,108-109,116,122,125-126,128,131,134,136-138,140,148-149,153-157,160-162,164-165,178-180,182,187,190,192-193,201,203,205,208,210,212-214,216-221,224,229,231,233,238-240,243,245,255,259,261,265-266,269-271,276,288-289,293,299-303,306,308,310-312,320,322,324,326,332,334-336,345,363-365,370,378,381-383,387,392,396,398-400,402-403,405-408,411,413,416,421-422,426,428-430,432,436,446,451,458-459,464-465,467,474-477,482-483,492-493,499-500,507,513,522-523,530,539-541,548-551,553,582,584,591-595,597,601-602,608,621,629-631,634,639,660,663,669-672,674-675,679-680,700-702,707,711-717,721,723-727,730,732,742-744,771-778,866,1406,1600-1620,1700-1702,1704,1706-1711,1713,1722-1723,1998-2000,2730,2775,2852-2853,3657,4681,5003-5005,5007,5100-5103
 # interface	name241	component211	component241	confidence	name241	notes
 0	100guide_eggs_overlay	0	0	high	universe	
 0	100guide_eggs_overlay	1	1	high	dodger	
@@ -1175,6 +1175,52 @@
 90	pvp_icons	52	52	high	quitterwarning	onvartransmit,geometry-match
 90	pvp_icons	53	53	high	attackstyle	
 90	pvp_icons	54	54	high	tooltip	
+91	clanwars_setup	0	0	high	infinity	content: identical
+91	clanwars_setup	1	1	high	universe	content: identical
+91	clanwars_setup	2	2	high	frame	content: identical
+91	clanwars_setup	3	3	high	title	content: identical
+91	clanwars_setup	4	4	high	contents	content: identical
+91	clanwars_setup	5	5	high	wincondition_container	content: identical
+91	clanwars_setup	6	6	high	wincondition_frame	content: identical
+91	clanwars_setup	7	7	high	wincondition	content: identical
+91	clanwars_setup	8	8	high	wincondition_scrollbar	content: identical
+91	clanwars_setup	9	9	high	arena_container	content: identical
+91	clanwars_setup	10	10	high	arena_frame	content: identical
+91	clanwars_setup	11	11	high	arena	content: identical
+91	clanwars_setup	12	12	high	arena_scrollbar	content: identical
+91	clanwars_setup	13	13	high	stragglers_container	content: identical
+91	clanwars_setup	14	14	high	stragglers_frame	content: identical
+91	clanwars_setup	15	15	high	stragglers	content: identical
+91	clanwars_setup	16	16	high	other_container	content: identical
+91	clanwars_setup	17	17	high	other_frame	content: identical
+91	clanwars_setup	18	18	high	other	content: identical
+91	clanwars_setup	19	19	high	rules	content: identical
+91	clanwars_setup	20	20	high	melee	content: identical
+91	clanwars_setup	21	21	high	ranged	content: identical
+91	clanwars_setup	22	22	high	magic	content: identical
+91	clanwars_setup	23	23	high	food	content: identical
+91	clanwars_setup	24	24	high	drinks	content: identical
+91	clanwars_setup	25	25	high	prayer	content: identical
+91	clanwars_setup	26	26	high	specialattacks	content: identical
+91	clanwars_setup	27	27	high	playercap	content: identical
+91	clanwars_setup	28	28	high	leavingcc	content: identical
+91	clanwars_setup	29	29	high	rejoiningdelay	content: identical
+91	clanwars_setup	30	30	high	corner	content: identical
+91	clanwars_setup	31	31	high	accept	content: identical
+91	clanwars_setup	32	32	high	dropdown_container	content: identical
+91	clanwars_setup	33	33	high	dropdown_box	content: identical
+91	clanwars_setup	34	34	high	com_34	content: identical
+91	clanwars_setup	35	35	high	dropdown_melee	content: identical
+91	clanwars_setup	36	36	high	dropdown_ranged	content: identical
+91	clanwars_setup	37	37	high	dropdown_magic	content: identical
+91	clanwars_setup	38	38	high	dropdown_food	content: identical
+91	clanwars_setup	39	39	high	dropdown_drinks	content: identical
+91	clanwars_setup	40	40	high	dropdown_prayer	content: identical
+91	clanwars_setup	41	41	high	dropdown_specialattacks	content: identical
+91	clanwars_setup	42	42	high	dropdown_leavingcc	content: identical
+91	clanwars_setup	43	43	high	dropdown_playercap	content: identical
+91	clanwars_setup	44	44	high	dropdown_rejoiningdelay	content: identical
+91	clanwars_setup	45	45	high	tooltip	content: identical
 94	chatchannel_setup	0	0	high	universe	
 94	chatchannel_setup	1	1	high	com_1	
 94	chatchannel_setup	2	2	high	container	
@@ -1220,6 +1266,43 @@
 95	messagescroll_handwriting_2	11	11	high	messagescroll11_hw	
 95	messagescroll_handwriting_2	12	12	high	messagescroll12_hw	
 95	messagescroll_handwriting_2	13	13	high	messagescroll_handwriting_2_close	
+99	death_dice	0	0	high	com_0	content: identical
+99	death_dice	1	1	high	death_gamble_harold_dice2	content: identical
+99	death_dice	2	2	high	death_gamble_harold_dice1	content: identical
+99	death_dice	3	3	high	death_gamble_player_dice1	content: identical
+99	death_dice	4	4	high	death_gamble_player_dice2	content: identical
+99	death_dice	5	5	high	com_5	content: 0.90
+99	death_dice	6	6	high	death_gamble_playername	content: 0.90
+99	death_dice	7	7	high	death_gamble_harold_gold1	content: identical
+99	death_dice	8	8	high	death_gamble_harold_gold2	content: identical
+99	death_dice	9	9	high	death_gamble_harold_gold3	content: identical
+99	death_dice	10	10	high	death_gamble_harold_gold4	content: identical
+99	death_dice	11	11	high	death_gamble_harold_gold5	content: identical
+99	death_dice	12	12	high	death_gamble_harold_gold6	content: identical
+99	death_dice	13	13	high	death_gamble_harold_gold7	content: identical
+99	death_dice	14	14	high	death_gamble_harold_gold8	content: identical
+99	death_dice	15	15	high	death_gamble_harold_gold9	content: identical
+99	death_dice	16	16	high	death_gamble_harold_gold10	content: identical
+99	death_dice	17	17	high	death_gamble_player_gold1	content: identical
+99	death_dice	18	18	high	death_gamble_player_gold2	content: identical
+99	death_dice	19	19	high	death_gamble_player_gold3	content: identical
+99	death_dice	20	20	high	death_gamble_player_gold4	content: identical
+99	death_dice	21	21	high	death_gamble_player_gold5	content: identical
+99	death_dice	22	22	high	death_gamble_player_gold6	content: identical
+99	death_dice	23	23	high	death_gamble_player_gold7	content: identical
+99	death_dice	24	24	high	death_gamble_player_gold8	content: identical
+99	death_dice	25	25	high	death_gamble_player_gold9	content: identical
+99	death_dice	26	26	high	death_gamble_player_gold10	content: identical
+99	death_dice	27	27	high	death_gamble_roll	content: identical
+99	death_dice	28	28	high	death_gamble_roll_button	content: 0.90
+99	death_dice	29	29	high	death_gamble_continue	content: identical
+99	death_dice	30	30	high	death_gamble_continue_button	content: 0.90
+99	death_dice	31	31	high	death_gamble_harold_stake	content: 0.90
+99	death_dice	32	32	high	death_gamble_player_stake	content: 0.90
+99	death_dice	33	33	high	death_gamble_result	content: 0.90
+99	death_dice	34	34	high	com_34	content: identical
+99	death_dice	35	35	high	com_35	content: identical
+99	death_dice	36	36	high	death_dice_close	content: identical
 100	tournament_supplies	0	0	high	universe	
 100	tournament_supplies	1	1	high	frame	
 100	tournament_supplies	2	2	high	switchlayer	
@@ -1254,6 +1337,10 @@
 100	tournament_supplies	31	31	high	catalogue_list	
 100	tournament_supplies	32	32	high	catalogue_scrollbar	
 100	tournament_supplies	33	33	high	loadout_apply	
+101	brut_found_doc	0	0	high	com_0	content: identical
+101	brut_found_doc	1	1	high	brut_scroll_text	content: identical
+101	brut_found_doc	2	2	high	com_2	content: identical
+101	brut_found_doc	3	3	high	exit	content: identical
 103	pattern_next	0	0	high	universe	
 103	pattern_next	1	1	high	com_1	
 103	pattern_next	2	2	high	com_2	
@@ -3673,6 +3760,14 @@
 221	messagescroll2	11	11	high	ms10	
 221	messagescroll2	12	12	high	ms11	
 221	messagescroll2	13	13	high	ms12	
+224	misc_shipjourney	0	0	high	com_0	content: identical
+224	misc_shipjourney	1	1	high	com_1	content: identical
+224	misc_shipjourney	2	2	high	com_2	content: identical
+224	misc_shipjourney	3	3	high	com_3	content: identical
+224	misc_shipjourney	4	4	high	com_4	content: identical
+224	misc_shipjourney	5	5	high	com_5	content: identical
+224	misc_shipjourney	6	6	high	com_6	content: identical
+224	misc_shipjourney	7	7	high	misc_shipmodel	content: identical
 229	messagebox	0	0	high	universe	x,height,width,anchor,anchored
 229	messagebox	1	3	high	text	xmode,textalignv,textlineheight,widthmode,width,anchor,parent,anchored
 229	messagebox	2	4	high	continue	width,widthmode,xmode,anchor,parent,anchored
@@ -3890,6 +3985,26 @@
 271	raids_storage_private	9	9	high	withdraw	
 271	raids_storage_private	10	10	high	bank	
 271	raids_storage_private	11	11	high	prompt	
+276	tog_sidepanel	0	0	high	universe	content: 0.97
+276	tog_sidepanel	1	1	high	container	content: 0.97
+276	tog_sidepanel	2	2	high	bar	content: identical
+276	tog_sidepanel	3	3	high	com_3	content: identical
+276	tog_sidepanel	4	4	high	com_4	content: 0.98
+276	tog_sidepanel	5	5	high	com_5	content: 0.98
+276	tog_sidepanel	6	6	high	drip1	content: 0.98
+276	tog_sidepanel	7	7	high	drip2	content: 0.98
+276	tog_sidepanel	8	8	high	drip3	content: 0.98
+276	tog_sidepanel	9	9	high	drip4	content: 0.98
+276	tog_sidepanel	10	10	high	drip5	content: 0.98
+276	tog_sidepanel	11	11	high	drip6	content: 0.98
+276	tog_sidepanel	12	12	high	drip7	content: 0.98
+276	tog_sidepanel	13	13	high	drip8	content: 0.98
+276	tog_sidepanel	14	14	high	drip9	content: 0.98
+276	tog_sidepanel	15	15	high	drip10	content: 0.98
+276	tog_sidepanel	16	16	high	com_16	content: 0.98
+276	tog_sidepanel	17	17	high	com_17	content: 0.98
+276	tog_sidepanel	18	18	high	com_18	content: 0.98
+276	tog_sidepanel	19	19	high	count	content: 0.98
 288	colour_pallet	0	0	high	universe	
 288	colour_pallet	1	1	high	clamp	
 288	colour_pallet	2	2	high	fader	
@@ -3917,6 +4032,38 @@
 293	loading_icon_modal	0	0	high	universe	
 293	loading_icon_modal	1	1	high	text	
 293	loading_icon_modal	2	2	high	main	
+299	ship_journey	0	0	high	universe	content: identical
+299	ship_journey	1	1	high	frame	content: identical
+299	ship_journey	2	2	high	com_2	content: identical
+299	ship_journey	3	3	high	content	content: identical
+299	ship_journey	4	4	high	map	content: identical
+299	ship_journey	5	5	high	lables	content: identical
+299	ship_journey	6	6	high	boat	content: identical
+299	ship_journey	7	7	high	pins	content: identical
+299	ship_journey	8	8	high	pin_port_sarim	content: identical
+299	ship_journey	9	9	high	pin_entrana	content: identical
+299	ship_journey	10	10	high	pin_ship_yard	content: identical
+299	ship_journey	11	11	high	pin_pot_khazard	content: identical
+299	ship_journey	12	12	high	pin_ardougne	content: identical
+299	ship_journey	13	13	high	pin_cairn_isle	content: identical
+299	ship_journey	14	14	high	pin_brimhaven	content: identical
+299	ship_journey	15	15	high	pin_crandor	content: identical
+299	ship_journey	16	16	high	pin_karamja	content: identical
+299	ship_journey	17	17	high	pin_feldip_hills	content: identical
+299	ship_journey	18	18	high	pin_ape_atoll	content: identical
+299	ship_journey	19	19	high	title	content: 0.91
+299	ship_journey	20	20	high	ape_atoll	content: identical
+299	ship_journey	21	21	high	asgarnia	content: identical
+299	ship_journey	22	22	high	karamja	content: identical
+299	ship_journey	23	23	high	crandor	content: identical
+299	ship_journey	24	24	high	entrana	content: identical
+299	ship_journey	25	25	high	port_sarim	content: identical
+299	ship_journey	26	26	high	port_khazard	content: identical
+299	ship_journey	27	27	high	ship_yard	content: identical
+299	ship_journey	28	28	high	cairn_isle	content: identical
+299	ship_journey	29	29	high	brimhaven	content: identical
+299	ship_journey	30	30	high	ardougne	content: identical
+299	ship_journey	31	31	high	feldip_hills	content: identical
 300	shopmain	0	0	high	universe	
 300	shopmain	1	1	high	frame	
 300	shopmain	2	2	high	quantityx	onload,onvartransmit,geometry-match
@@ -3982,6 +4129,12 @@
 308	cata_boss	6	6	high	altar2	
 308	cata_boss	7	7	high	altar3	
 308	cata_boss	8	8	high	altar4	
+310	gryphon_boss	0	0	high	universe	content: 0.94
+310	gryphon_boss	1	4	high	content	content: 0.85
+310	gryphon_boss	2	5	medium	title	content: 0.81
+310	gryphon_boss	3	6	medium	title_text	content: 0.66
+310	gryphon_boss	4	7	medium	stats	content: 0.79
+310	gryphon_boss	5	-1	low		content: no match
 311	league_combat_mastery	0	0	high	infinity	
 311	league_combat_mastery	1	-1	low		unmatched
 311	league_combat_mastery	2	-1	low		unmatched
@@ -4477,6 +4630,19 @@
 335	trademain	31	31	high	title	
 335	trademain	32	32	high	tooltip	
 336	tradeside	0	0	high	side_layer	
+345	sailing_intro_hud	0	0	high	universe	content: 0.89
+345	sailing_intro_hud	1	-1	low		content: no match
+345	sailing_intro_hud	2	1	medium	dodger_hints	content: 0.94, parent differs
+345	sailing_intro_hud	3	-1	low		content: no match
+345	sailing_intro_hud	4	2	medium	hint_layer	content: 0.79
+345	sailing_intro_hud	5	-1	low		content: no match
+345	sailing_intro_hud	6	-1	low		content: no match
+345	sailing_intro_hud	7	-1	low		content: no match
+345	sailing_intro_hud	8	-1	low		content: no match
+345	sailing_intro_hud	9	6	low	hint_text_1	content: 0.57
+345	sailing_intro_hud	10	7	medium	hint_text_2	content: 0.74
+345	sailing_intro_hud	11	-1	low		content: no match
+345	sailing_intro_hud	12	-1	low		content: no match
 363	tob_scoreboard	0	0	high	universe	
 363	tob_scoreboard	1	1	high	contents	
 363	tob_scoreboard	2	2	high	frame	
@@ -5072,6 +5238,20 @@
 399	questlist	9	9	high	completed	
 399	questlist	10	10	high	questpoints	
 399	questlist	11	11	high	settings_button	
+400	trr_display	0	0	medium	universe	content: 0.78
+400	trr_display	1	1	high	contents	content: 0.91
+400	trr_display	2	-1	low		content: no match
+400	trr_display	3	2	high	frame	content: 0.95
+400	trr_display	4	3	medium	title	content: 0.75
+400	trr_display	5	4	medium	main	content: 0.76
+400	trr_display	6	-1	low		content: no match
+400	trr_display	7	5	medium	left	content: 0.88, parent differs
+400	trr_display	8	-1	low		content: no match
+400	trr_display	9	-1	low		content: no match
+400	trr_display	10	6	medium	model_layer	content: 0.75
+400	trr_display	11	9	medium	right	content: 0.91, parent differs
+400	trr_display	12	-1	low		content: no match
+400	trr_display	13	10	medium	text_layer	content: 0.75
 402	ge_collect	0	0	high	universe	onload,geometry-match
 402	ge_collect	1	1	high	container	
 402	ge_collect	2	2	high	frame	
@@ -5668,6 +5848,8 @@
 465	ge_offers	29	33	high	tooltip	content: identical (USER 29 = 211 32)
 465	ge_offers	30	34	high	gadscape_30	ui-merge: GadScape component appended
 465	ge_offers	31	35	high	gadscape_31	ui-merge: GadScape component appended
+467	ge_offers_side	0	0	high	items	content: identical
+467	ge_offers_side	1	1	high	glow	content: identical
 474	blast_furnace_hud	0	0	high	universe	
 474	blast_furnace_hud	1	1	high	dodger	
 474	blast_furnace_hud	2	2	high	display	
@@ -5873,6 +6055,13 @@
 483	lumbridge_alchemy	6	6	high	com_6	
 483	lumbridge_alchemy	7	7	high	items	
 483	lumbridge_alchemy	8	8	high	charges	
+492	soul_wars_clan_games	0	0	high	universe	content: identical
+492	soul_wars_clan_games	1	1	high	content	content: identical
+492	soul_wars_clan_games	2	2	high	frame	content: identical
+492	soul_wars_clan_games	3	3	high	title	content: identical
+492	soul_wars_clan_games	4	4	high	display	content: identical
+492	soul_wars_clan_games	5	5	high	display_text	content: identical
+492	soul_wars_clan_games	6	6	high	confirm	content: identical
 493	hidey_holes	0	0	high	universe	
 493	hidey_holes	1	1	high	frame	
 493	hidey_holes	2	2	high	content	
@@ -6366,6 +6555,22 @@
 551	raids_storage_side	6	6	high	com_6	
 551	raids_storage_side	7	7	high	text	
 551	raids_storage_side	8	8	high	dismiss	
+553	magictraining_main	0	0	medium	universe	content: 0.78
+553	magictraining_main	1	1	high	dodger	content: 0.89
+553	magictraining_main	2	3	medium	com_3	content: 0.66
+553	magictraining_main	3	-1	low		content: no match
+553	magictraining_main	4	4	medium	magictrain_title	content: 0.68
+553	magictraining_main	5	5	medium	magigtrain_subtitle	content: 0.64
+553	magictraining_main	6	6	medium	magictrain_tele_title	content: 0.64
+553	magictraining_main	7	-1	low		content: no match
+553	magictraining_main	8	8	low	magictrain_ench_title	content: 0.48
+553	magictraining_main	9	-1	low		content: no match
+553	magictraining_main	10	-1	low		content: no match
+553	magictraining_main	11	9	low	magictrain_grave_title	content: 0.50
+553	magictraining_main	12	-1	low		content: no match
+553	magictraining_main	13	12	medium	magictrain_ench_points	content: 0.61
+553	magictraining_main	14	14	medium	magictrain_lay1	content: 0.69
+553	magictraining_main	15	15	medium	magictrain_lay2	content: 0.85, parent differs
 582	decant	0	0	high	universe	
 582	decant	1	1	high	close_button	
 582	decant	2	2	high	title	
@@ -7153,6 +7358,77 @@
 680	indexed_book	109	109	high	page_left_graphic	
 680	indexed_book	110	110	high	page_right_button	
 680	indexed_book	111	111	high	page_right_graphic	
+700	clans_board	0	0	high	infinite	content: identical
+700	clans_board	1	1	high	universe	content: identical
+700	clans_board	2	2	high	frame	content: identical
+700	clans_board	3	3	high	contents	content: identical
+700	clans_board	4	4	high	filter_container	content: identical
+700	clans_board	5	5	high	filters	content: identical
+700	clans_board	6	6	high	filter_scrollbar	content: identical
+700	clans_board	7	7	high	filter_bottomarea	content: identical
+700	clans_board	8	8	high	com_8	content: 0.91
+700	clans_board	9	9	high	com_9	content: identical
+700	clans_board	10	10	high	com_10	content: 0.91
+700	clans_board	11	11	high	com_11	content: identical
+700	clans_board	12	12	high	reset	content: identical
+700	clans_board	13	13	high	right	content: identical
+700	clans_board	14	14	high	list_container	content: identical
+700	clans_board	15	15	high	com_15	content: identical
+700	clans_board	16	16	high	sortarea	content: identical
+700	clans_board	17	17	high	sort_name	content: 0.97
+700	clans_board	18	18	high	sort_size	content: identical
+700	clans_board	19	19	high	sort_age	content: identical
+700	clans_board	20	20	high	list	content: identical
+700	clans_board	21	21	high	00	content: identical
+700	clans_board	22	22	high	01	content: identical
+700	clans_board	23	23	high	02	content: identical
+700	clans_board	24	24	high	03	content: identical
+700	clans_board	25	25	high	04	content: identical
+700	clans_board	26	26	high	05	content: identical
+700	clans_board	27	27	high	06	content: identical
+700	clans_board	28	28	high	07	content: identical
+700	clans_board	29	29	high	08	content: identical
+700	clans_board	30	30	high	09	content: identical
+700	clans_board	31	31	high	10	content: identical
+700	clans_board	32	32	high	11	content: identical
+700	clans_board	33	33	high	12	content: identical
+700	clans_board	34	34	high	13	content: identical
+700	clans_board	35	35	high	14	content: identical
+700	clans_board	36	36	high	15	content: identical
+700	clans_board	37	37	high	16	content: identical
+700	clans_board	38	38	high	17	content: identical
+700	clans_board	39	39	high	18	content: identical
+700	clans_board	40	40	high	19	content: identical
+700	clans_board	41	41	high	20	content: identical
+700	clans_board	42	42	high	21	content: identical
+700	clans_board	43	43	high	22	content: identical
+700	clans_board	44	44	high	23	content: identical
+700	clans_board	45	45	high	24	content: identical
+700	clans_board	46	46	high	25	content: identical
+700	clans_board	47	47	high	26	content: identical
+700	clans_board	48	48	high	27	content: identical
+700	clans_board	49	49	high	28	content: identical
+700	clans_board	50	50	high	29	content: identical
+700	clans_board	51	51	high	30	content: identical
+700	clans_board	52	52	high	31	content: identical
+700	clans_board	53	53	high	32	content: identical
+700	clans_board	54	54	high	33	content: identical
+700	clans_board	55	55	high	34	content: identical
+700	clans_board	56	56	high	35	content: identical
+700	clans_board	57	57	high	36	content: identical
+700	clans_board	58	58	high	37	content: identical
+700	clans_board	59	59	high	38	content: identical
+700	clans_board	60	60	high	39	content: identical
+700	clans_board	61	61	high	40	content: identical
+700	clans_board	62	62	high	41	content: identical
+700	clans_board	63	63	high	42	content: identical
+700	clans_board	64	64	high	43	content: identical
+700	clans_board	65	65	high	44	content: identical
+700	clans_board	66	66	high	list_scrollbar	content: identical
+700	clans_board	67	67	high	bottom	content: identical
+700	clans_board	68	68	high	myclan	content: identical
+700	clans_board	69	69	high	applicants	content: identical
+700	clans_board	70	70	high	refresh	content: identical
 701	clans_sidepanel	0	0	high	universe	
 701	clans_sidepanel	1	1	high	header	
 701	clans_sidepanel	2	2	high	refresh	
