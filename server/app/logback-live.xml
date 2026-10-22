@@ -33,6 +33,7 @@
         <neverBlock>true</neverBlock>
     </appender>
 
+    <logger name="com.zenyte.game.world.entity.npc.NPC" level="INFO"/>
     <logger name="io.netty" level="INFO"/>
     <logger name="io.mockk" level="WARN"/>
 
