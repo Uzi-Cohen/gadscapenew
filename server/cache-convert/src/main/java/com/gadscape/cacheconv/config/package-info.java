@@ -11,6 +11,10 @@
  *       {@link com.gadscape.cacheconv.config.LocWriter#plan} before {@code configs}.</li>
  *   <li>{@link com.gadscape.cacheconv.config.ConfigStep} ({@code configs}): writes the groups. Run it after every
  *       step that moves ids configs refer to (models, anim seqs, UI sprites/interfaces, maps locs).</li>
+ *   <li>{@link com.gadscape.cacheconv.config.ConfigFixesStep} ({@code config-fixes}): the data-driven fixes of GadScape
+ *       configs ({@code config/fixes.tsv}, opcode edits through {@link com.gadscape.cacheconv.config.ConfigEdit}), after
+ *       {@code configs}; configs-plan claims the ids of its new entries and applies {@code config/relocate.tsv} (forced
+ *       relocations).</li>
  *   <li>{@link com.gadscape.cacheconv.config.ConfigOracle} ({@code configs-oracle}): every non-BASE entry through the
  *       server's strict 241 decoders.</li>
  *   <li>{@link com.gadscape.cacheconv.config.ConfigRefCheck} ({@code configs-refcheck}): every reference of every

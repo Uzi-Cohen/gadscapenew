@@ -9,6 +9,8 @@
  *       ids (after {@code check-ranges} / {@code ui-relocate}), and before {@code configs}, the UI merge and
  *       {@code ui-convert}, which rewrite sprite references through the id map
  *       ({@link com.gadscape.cacheconv.sprite.SpriteRefs}).</li>
+ *   <li>{@link com.gadscape.cacheconv.sprite.AssetFixesStep} ({@code asset-fixes}): redrawn sprite frames
+ *       ({@code sprite/replace.tsv}) and the user-changed binary archive groups (title screen).</li>
  *   <li>{@link com.gadscape.cacheconv.sprite.MapsceneStep} ({@code mapscene}): after {@code configs} (it patches
  *       the user locs that step wrote, when it has to merge mapscene frames).</li>
  * </ol>

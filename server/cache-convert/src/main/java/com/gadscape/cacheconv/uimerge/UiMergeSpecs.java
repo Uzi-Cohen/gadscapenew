@@ -29,8 +29,19 @@ public final class UiMergeSpecs {
     public record IfSpec(int id, Decision decision, IfMerge.Options options, TreeMap<Integer, Integer> remapOverride, TreeMap<Integer, Integer> retarget, String reason) {
         IfSpec(int id, Decision decision, IfMerge.Options options, TreeMap<Integer, Integer> remapOverride, String reason) { this(id, decision, options, remapOverride, null, reason); }
         /** 241 gave the id to a different interface: no 211 component has a counterpart. */
-        public boolean idReused() { return id == 215; }
+        public boolean idReused() { return REUSED_IDS.containsKey(id); }
     }
+
+    /**
+     * Vanilla 211 interfaces the GadScape server uses whose id 241 gave to an unrelated interface (BASE's gamevals name in
+     * the reason): component-remap.tsv maps every component to -1, since content alignment would pair the 211 poll screens
+     * with whatever layers the new interface has. The server needs its own copies of these screens (as it has for 215: 1606).
+     */
+    public static final TreeMap<Integer, String> REUSED_IDS = new TreeMap<>(java.util.Map.of(
+            215, "241 reuses the id for ntk_scores; GadScape's 211 ironman setup screen is its own copy 1606",
+            310, "241 reuses the id for gryphon_boss; 211's 310 is the poll history screen (PollManager.HISTORY_INTERFACE_ID), 241 has no polls",
+            345, "241 reuses the id for sailing_intro_hud; 211's 345 is the poll screen (PollManager.INTERFACE_ID), 241 has no polls",
+            400, "241 reuses the id for trr_display; 211's 400 is the poll voting screen (PollManager.VOTING_INTERFACE_ID), 241 has no polls"));
 
     public static final int[] INTERFACES = {12, 121, 160, 161, 164, 192, 205, 215, 218, 465, 476, 548, 621, 629};
     public static final int[] SCRIPTS = {37, 205, 336, 342, 393, 414, 423, 426, 687, 699, 701, 702, 912, 1074, 1090, 1092, 1261, 1311, 1448,
@@ -85,15 +96,26 @@ public final class UiMergeSpecs {
         m.put(476, new IfSpec(476, Decision.USER, null, null,
                 "GadScape replaced br_settings (6 components) with its own duel confirmation screen (84 components); BASE's 476 is byte-identical to 211's, so USER's version is taken"));
         merge(m, 621, "collection log: GadScape's 'Log Completion Rewards' panel (11 components) and two resized scroll layers");
-        TreeMap<Integer, Integer> j = new TreeMap<>();
-        // 211 -> 241 journal tabs by role (the docs table is off by one to three for 14-22): 241 added a backing sprite per tab
-        int[][] tabs = {{14, 20}, {15, 22}, {16, 24}, {17, 25}, {18, -1}, {19, -1}, {20, -1}, {21, -1}, {22, -1},
-                {23, 26}, {24, 28}, {25, 30}, {26, 32}, {27, 33}, {28, 34}, {29, 37}, {30, 39}, {31, 41}, {32, 42}, {33, 43}};
-        for (int[] t : tabs) j.put(t[0], t[1]);
-        m.put(629, new IfSpec(629, Decision.BASE, null, j,
-                "not re-applied: GadScape's journal tab bar ('Game Noticeboard' on 211's Kourend Favour tab, 'Events' on the Leagues tab, quests and adventure paths hidden, "
-                + "wider tabs) is laid out by script 3178, and 241 removed the Kourend tab and put Adventure Paths in its slot; the interface and scripts 2797/3178 have to be "
-                + "ported together (NOTES.md, open issues). BASE's 629 is kept meanwhile"));
+        {
+            TreeMap<Integer, Integer> j = new TreeMap<>();
+            // 211 -> 241 journal tabs by role in GadScape's journal (the docs table is off by one to three for 14-22; 241 added a backing
+            // sprite per tab). 241 removed the Kourend Favour tab 18-22; GadScape's Game Noticeboard, which sat on it, takes the Adventure
+            // Paths tab 26-33 (the server's component 18 -> 26). GadScape hid 211's Adventure Paths tab 23-27, which has no tab of its own
+            // left on 241 (-1: its hide edit is not applied to the noticeboard).
+            int[][] tabs = {{14, 20}, {15, 22}, {16, 24}, {17, 25}, {18, 26}, {19, 28}, {20, 30}, {21, 32}, {22, 33},
+                    {23, -1}, {24, -1}, {25, -1}, {26, -1}, {27, -1}, {28, 34}, {29, 37}, {30, 39}, {31, 41}, {32, 42}, {33, 43}};
+            for (int[] t : tabs) j.put(t[0], t[1]);
+            IfMerge.Options o = new IfMerge.Options();
+            for (String f : new String[]{"3.width", "5.width", "5.widthMode", "15.width", "15.widthMode"}) o.skip.add(f);
+            o.why.add("the tab widths GadScape set on 211 (629:3 37 px, the middle sprites 629:5/15 relative 40 px) are not applied: 241 sizes each "
+                    + "tab's sprites from the tab width (script 2596), and script 3178 sets the tab widths (44 px, 241's four-tab bar)");
+            o.why.add("varbit 8168 tab values: summary 0, diaries 2, Game Noticeboard 3 (241's Adventure Paths slot, as on 211's Kourend slot), "
+                    + "Events 4 (241's Leagues slot; 211's was 5, which 3178 now reads as 4). Server: JournalHeaderTabInterface 3/13/18/28 -> 2/18/26/34 "
+                    + "(component-remap.tsv) and Journal.SERVER_EVENTS 5 -> 4");
+            m.put(629, new IfSpec(629, Decision.MERGE, o, j,
+                    "journal tabs: the quest list hidden, 'Game Noticeboard' (icon sprite 4524) on the Adventure Paths tab 629:26 that took 211's Kourend "
+                    + "Favour slot, 'Events' on the Leagues tab 629:34; script 3178 lays out the four tabs"));
+        }
         return m;
     }
 

@@ -62,8 +62,8 @@ public final class ScriptRecipes {
         base(m, 1448, "2d_intarray_num_cols", "USER's 1448 is an old duel-arena script (14 args) nothing calls: its only callers are the vanilla procs 1441/1442, which call 1448 as 2d_intarray_num_cols with one argument (broken on 211). 241's version is kept, which also repairs 1441/1442");
         base(m, 4104, "emote_set_graphic", "USER's version is an older revision without the Relic-unlock (emote 50) variants; GadScape's emotes take their graphics from enum 1001, which BASE's version reads the same way");
         String slayer = "241 draws slayer rewards from dbtable 117 (db_find/db_getfield) instead of the 211 enum 834 index range; GadScape's edit only raised the "
-                + "211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward needs a dbrow in table 117 "
-                + "(config/dbrow work), not a script change";
+                + "211 index limit 52 -> 53 for one extra reward (plus decompiler artefacts and old hook descriptors). On 241 that reward is a row of table 117 "
+                + "(step db-slayer-rewards: 'Slayer Statues', reward id 95), not a script change";
         base(m, 414, "slayer_rewards_unlock_confirm", slayer);
         base(m, 423, "slayer_rewards_tasks_canceltask", slayer);
         base(m, 426, "slayer_rewards_tasks_blocked_draw", slayer);
@@ -84,10 +84,7 @@ public final class ScriptRecipes {
                 + "and three custom categories (structs 10300 Ganodermic Beast, 10321 Rise of the Six, 10322 Vanstrom Klause)", ScriptRecipes::r2735);
         merge(m, 6138, "pet_insurance_draw_pets", "GadScape shows each pet's item on its slot (cc_setobject); its pet count edit (51 -> 61) is covered by BASE's 71", ScriptRecipes::r6138);
         merge(m, 3310, "summary_sidepanel_draw", "GadScape's 'Completionist overview' entry (sprite 10037, varbits 6347/11877, onOp hook 10707) in the character summary", ScriptRecipes::r3310);
-        base(m, 3178, "side_journal_additional", "not re-applied: GadScape rewrote the journal tab bar (Character Summary, Achievement Diaries, 'Game Noticeboard' on 211's "
-                + "Kourend Favour tab, 'Events' on the Leagues tab; quests and adventure paths hidden). 241 removed the Kourend tab, put Adventure Paths in its slot and "
-                + "passes 44 components (211: 33), and varbit 8168's tab values changed with it; porting needs 629, 2797 and 3178 together plus the server's "
-                + "JournalHeaderTabInterface ids (see NOTES.md, open issues). BASE's journal is kept meanwhile");
+        merge(m, 3178, "side_journal_additional", JOURNAL, ScriptRecipes::r3178);
         return m;
     }
 
@@ -219,6 +216,79 @@ public final class ScriptRecipes {
         while (in.user.code.get(to).op != 1407) to++;
         int at = e.find(0, "33:15", "33:16", "8:*", "6:*", "33:0", "33:1", "33:5", "33:4", "33:6", "33:7", "3:\"Achievements Completed:");
         e.insertBefore(at, in.user(e, from, to + 1), "completionist entry (USER " + from + ".." + to + "): gosub 3950 with BASE's local layout, then its onOp hook 10707");
+    }
+
+    static final String JOURNAL = "GadScape's journal tab bar: Character Summary, Achievement Diaries, 'Events' (the server's Server Events) and "
+            + "'Game Noticeboard', no quest list. On 211 it sat on the Kourend Favour tab (noticeboard, tab value 3) and the Leagues tab (events, value 5); "
+            + "241 removed the Kourend tab and put Adventure Paths (value 3) in its slot, so the noticeboard takes the Adventure Paths tab 629:26 and the "
+            + "events the Leagues tab 629:34 (value 4), laid out like 241's own four-tab bar";
+
+    /**
+     * 3178: GadScape's tab bar replaces BASE's default branch (the normal world type; BASE's Leagues / Deadman / Adventure Paths
+     * world branches stay). USER's 211 version (33 arguments, hard-coded 629:18 and 629:32) is re-done against 241's 44 arguments:
+     * arg 2 quest list (hidden), 3 diaries, 4 summary, 5 Adventure Paths tab (-> Game Noticeboard), 6 Leagues tab (-> Events),
+     * 23 the Leagues tab's icon (USER's 629:32: graphic 2272). The hover and op hooks of the two re-used tabs are BASE's own
+     * blocks for those tabs (2803/2804 with their 241 sprite arguments, 2798 with tab values 3 and 4). Varbit 8168 = 5 (GadScape's
+     * 211 value for Server Events, still sent by the server) is read as 4, the Leagues slot 241's 2800 highlights. Then BASE's
+     * shared tail sizes the tabs and draws them.
+     */
+    static void r3178(ScriptEdit e, In in) {
+        // USER's 211 edit as anchors: the tab ops it sets and the Events graphic
+        if (find211(in.user, "0:1", "3:\"Events", "33:7", "2300:0") < 0 || find211(in.user, "0:2272", "0:" + ((629 << 16) | 32), "2105:0") < 0)
+            throw new IllegalStateException("3178: USER's Events tab edit not found");
+        int def = e.find(0, "33:5", "2307:0", "0:1", "33:5", "2003:0", "33:6", "2307:0", "0:1", "33:6", "2003:0", "25:8168");
+        int tail = e.find(0, "33:44", "0:0", "0:0", "0:1", "33:2", "2001:0");
+        if (tail <= def) throw new IllegalStateException("3178: BASE's shared tail is not after its default branch");
+        int apHover = e.find(0, "40:1972", "0:0", "8:*", "6:*", "0:2803", "33:20", "33:21", "33:22", "33:37", "33:38", "33:39", "0:3");
+        int apOp = e.find(0, "0:2798", "0:-2147483644", "0:3", "33:1");
+        int lgHover = e.find(0, "40:1972", "0:0", "8:*", "6:*", "0:2803", "33:24", "33:25", "33:26", "33:40", "33:41", "33:42", "0:4");
+        int lgOp = e.find(0, "0:2798", "0:-2147483644", "0:4", "33:1");
+        List<Cs2.Ins> b = new ArrayList<>();
+        // the quest list is not part of GadScape's journal (USER hid 629:8; the interface merge hides 629:10 too)
+        b.addAll(e.L(e.u(Cs2.ILOAD, 2), e.u(2307, 0), e.u(Cs2.ICONST, 1), e.u(Cs2.ILOAD, 2), e.u(2003, 0)));
+        // varbit 8168 = 5 (211's Leagues slot, GadScape's Server Events) -> 4 (241's Leagues slot)
+        b.addAll(e.L(e.u(25, 8168), e.u(Cs2.ICONST, 5), e.u(8, 1), e.u(Cs2.JUMP, 2), e.u(Cs2.ICONST, 4), e.u(27, 8168)));
+        // Events on the Leagues tab (arg 6): op, icon, BASE's hover/op hooks for that tab (value 4), shown
+        b.addAll(e.L(e.u(Cs2.ILOAD, 6), e.u(2307, 0), e.u(Cs2.ICONST, 1), e.str("Events"), e.u(Cs2.ILOAD, 6), e.u(2300, 0),
+                e.u(Cs2.ICONST, 2272, "graphic"), e.u(Cs2.ILOAD, 23), e.u(2105, 0)));
+        b.addAll(copyBlock(e, lgHover, 2404));
+        b.addAll(copyBlock(e, lgOp, 2409));
+        b.addAll(e.L(e.u(Cs2.ICONST, 0), e.u(Cs2.ILOAD, 6), e.u(2003, 0)));
+        // Game Noticeboard on the Adventure Paths tab (arg 5): op, BASE's hover/op hooks for that tab (value 3), shown; its icon
+        // (sprite 4524) comes from the interface merge (USER's 629:22 edit on 629:33)
+        b.addAll(e.L(e.u(Cs2.ILOAD, 5), e.u(2307, 0), e.u(Cs2.ICONST, 1), e.str("Game Noticeboard"), e.u(Cs2.ILOAD, 5), e.u(2300, 0)));
+        b.addAll(copyBlock(e, apHover, 2404));
+        b.addAll(copyBlock(e, apOp, 2409));
+        b.addAll(e.L(e.u(Cs2.ICONST, 0), e.u(Cs2.ILOAD, 5), e.u(2003, 0)));
+        // four tabs of 44 px, centred like 241's own four-tab bar, in GadScape's order: summary, diaries, events, noticeboard
+        b.addAll(e.L(e.u(Cs2.ICONST, 44), e.u(34, 44)));
+        int[][] pos = {{-69, 4}, {-23, 3}, {23, 6}, {69, 5}};
+        for (int[] p : pos) b.addAll(e.L(e.u(Cs2.ICONST, p[0]), e.u(Cs2.ICONST, 0), e.u(Cs2.ICONST, 1), e.u(Cs2.ICONST, 2), e.u(Cs2.ILOAD, p[1]), e.u(2000, 0)));
+        e.insertBefore(def, b, "GadScape's journal tab bar on the normal world branch (" + b.size() + " instructions; USER's 211 layout on 241's arguments, "
+                + "hooks copied from BASE's Leagues and Adventure Paths branches); it falls through into BASE's shared tail");
+        int newTail = tail + b.size(), afterBlock = def + b.size();
+        e.remove(afterBlock, newTail, "BASE's default-branch layout (quest list, three tabs of 58 px; Adventure Paths and Leagues tabs hidden), replaced by GadScape's");
+        if (!ScriptEdit.matches(e.s().code.get(afterBlock), "33:44") || !ScriptEdit.matches(e.s().code.get(afterBlock + 5), "2001:0"))
+            throw new IllegalStateException("3178: GadScape's block does not fall through into BASE's tail");
+    }
+
+    /**
+     * Copies of BASE's instructions from {@code at} through the next instruction with opcode {@code lastOp} (a hook setter), as
+     * GadScape lines. Relative jumps inside the block must stay inside it or land right after it.
+     */
+    static List<Cs2.Ins> copyBlock(ScriptEdit e, int at, int lastOp) {
+        List<Cs2.Ins> code = e.s().code;
+        int end = at;
+        while (end < code.size() && code.get(end).op != lastOp) end++;
+        if (end == code.size()) throw new IllegalStateException("script " + e.doc.id + ": no opcode " + lastOp + " after " + at);
+        List<Cs2.Ins> r = new ArrayList<>();
+        for (int k = at; k <= end; k++) {
+            Cs2.Ins x = code.get(k);
+            if (Cs2.BRANCH.contains(x.op) && (k + 1 + x.i < at || k + 1 + x.i > end + 1)) throw new IllegalStateException("script " + e.doc.id + ": jump at " + k + " leaves the copied block " + at + ".." + end);
+            if (x.op == Cs2.SWITCH) throw new IllegalStateException("script " + e.doc.id + ": switch in the copied block " + at + ".." + end);
+            r.add(x.op == Cs2.SCONST ? e.str(x.s) : e.u(x.op, x.i, x.op == Cs2.ICONST ? null : RefKinds.implied(x.op)));
+        }
+        return r;
     }
 
     // ------------------------------------------------------------------ helpers

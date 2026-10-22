@@ -1,0 +1,9 @@
+# Forced relocations (configs-plan, ConfigPlanStep.forced): USER entries that move to the reserved GadScape range of
+# their kind although the clash rules would keep them at their id, because the id belongs to 241 content an area
+# needs. Rows: KIND<TAB>IDS<TAB>FINDING<TAB>REASON. Only ids USER added or changed move; the id map records them and
+# the server follows through idmap.json. --configs.relocate=FILE|none replaces this list.
+obj	2749-2758	CLUE-20	castle puzzle pieces: 241's hard castle puzzle (enum 1354, box 19911) needs its pieces 2749-2758 back; GadScape's '<colour> ankou set' boxes move (CustomItemId.*_ANKOU_SET follow the id map)
+spot	2500-2515	BOSS-04	Leviathan/Vardorvis VFX: 241's 2500-2507 (Leviathan explosions, 360 lightning, bomb, tornado) and 2508-2515 (Vardorvis spikes) come back; GadScape's own spotanims at those ids move
+loc	50081	PVP-CLANWARS	Clan Wars FFA loc: 241's 50081 is garden_white_tree_fruit_4_noop; the GadScape loc ClanWarsFFAArea spawns at 3324,4754 moves
+obj	33138	UI-SPELLBOOK	spellbook: 241 obj 33138 is the standard-book Minigame Teleport spell (enum 1982); GadScape's White ankou mask placeholder moves (the spellbook init script 2262 aborts on a spell obj without param 596, which empties every book)
+obj	33140	UI-SPELLBOOK	spellbook: 241 obj 33140 is the Arceuus Minigame Teleport spell (enum 1985); GadScape's White ankou top placeholder moves

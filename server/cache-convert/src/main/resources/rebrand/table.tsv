@@ -1,0 +1,58 @@
+# GadScape cache rebrand table (branding-fodder area).
+# Format = gadconv RebrandTable: FROM<TAB>TO[<TAB>FLAGS], literal (no regex), applied in file order to every
+# NUL-terminated cache string (configs, IF3 component texts/ops/string hook args, clientscript op-3 constants).
+# FLAGS: i = ignore case, w = whole word only. Use it as: gadconv build-cacheu ... --rebrand.table=<this file>
+# (or copy it to server/cache-convert/src/main/resources/rebrand/table.tsv).
+#
+# Scan used to build it (StrScan, regex near[ _.-]?reality|nearreality|osnr|roat ?pkz|runespawn|rune spawn):
+#   user 211 cache (inputs/gadcache/x/cache/data/cache), archives 2 3 12: 14 hits, listed below with their place;
+#   archives 6 8-11 13-21: 0 hits.  Stock openrs2 2746 (audit/raids4/c2746/cache) archives 2 3 12: 0 hits, so the
+#   generic rules at the end cannot touch stock text.  cacheU has the same 14 hits at the same ids.
+# After the build, rescan the output with the same regex: expected 0 hits.
+#
+# ---- exact strings, one per cache place (old -> new) ----
+# obj 32080 name (archive 2 group 10 file 32080) and its placeholder obj 33080 (same name). Broadcast by
+# GadScapeLaunchBox when a rare reward is opened, so players see it in world messages.
+OSNR Mystery Box	GadScape Mystery Box
+# struct 10327 string param (archive 2 group 34 file 10327): Advent Calendar day 1 task text
+find 10 Snowmen around Near-Reality	find 10 Snowmen around GadScape
+# interface 5004 component 1 text (archive 3 group 5004 file 1): Remnant Exchange title
+Near-Reality Remnant Exchange	GadScape Remnant Exchange
+# interface 5101 component 39 text (archive 3 group 5101 file 39): Credit Store, "credit packages" layer
+# interface 5006 component 39 text (archive 3 group 5006 file 39): old store (dead, no server binding)
+RuneSpawn Credit Packages	GadScape Credit Packages
+# interface 5103 component 5 text (archive 3 group 5103 file 5): Blackjack title
+Roat Pkz Blackjack	GadScape Blackjack
+# clientscript 10504 op-3 string (instruction 18): title of the Teleports menu, interface 1601 (hook 1601:1)
+Near-Reality Teleports	GadScape Teleports
+# clientscript 12575 op-3 string (instruction 5): title of Remnant Perks, interface 866 (onload 866:0)
+Near-Reality Remnant Perks	GadScape Remnant Perks
+# clientscript 32000 op-3 string (instruction 14): title of the Voting Hub, interface 5100 (onload 5100:0)
+Near-Reality Voting Hub	GadScape Voting Hub
+# clientscript 32008 op-3 string (instruction 2): title of the Credit Store, interface 5101 (hook 5101:1)
+# clientscript 12538 op-3 string: same title in the dead old-store script cluster 12538-12574
+Near-Reality Store	GadScape Store
+# clientscript 32036 op-3 string (instruction 5): title of Credit Packages, interface 5102 (onload 5102:0)
+# clientscript 12566 op-3 string: same title in the dead old-store script cluster
+Near-Reality Credit Packages	GadScape Credit Packages
+#
+# ---- generic fallbacks (catch anything a future user cache brings in) ----
+# web addresses first, then the names; longest first.
+www.near-reality.org	gadscape.com	i
+www.near-reality.com	gadscape.com	i
+near-reality.org	gadscape.com	i
+near-reality.com	gadscape.com	i
+Near-Reality	GadScape
+Near Reality	GadScape
+Near-reality	GadScape
+NEAR-REALITY	GADSCAPE
+NEAR REALITY	GADSCAPE
+near-reality	gadscape
+near reality	gadscape
+NearReality	GadScape
+nearreality	gadscape
+Roat Pkz	GadScape	i
+RoatPkz	GadScape	i
+RuneSpawn	GadScape	i
+Rune Spawn	GadScape	i
+OSNR	GadScape	w

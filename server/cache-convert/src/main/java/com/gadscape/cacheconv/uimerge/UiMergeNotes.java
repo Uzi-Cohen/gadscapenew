@@ -46,13 +46,19 @@ final class UiMergeNotes {
     }
 
     static final List<String> OPEN = List.of(
-            "**Journal tabs (629 + scripts 2797/3178)**: GadScape's tab bar (Character Summary, Achievement Diaries, 'Game Noticeboard' on 211's "
-                    + "Kourend Favour tab 629:18, 'Server Events' on the Leagues tab 629:28 relabelled 'Events' by 3178; quests and adventure paths hidden) is "
-                    + "not re-applied. 241 removed the Kourend tab, moved Adventure Paths into its slot (629:26), added a backing sprite per tab and passes 44 "
-                    + "components to 3178 (211: 33). Port plan: put 'Game Noticeboard' on 629:26 and 'Server Events' on 629:34, re-do USER 3178's layout "
-                    + "(4 tabs, 42 px) against 241's argument list (2797 passes 629:0's onLoad list unchanged), and check varbit 8168's tab values (server: "
-                    + "summary 0, diaries 2, noticeboard 3, events 5). Server: JournalHeaderTabInterface ids 3/8/13/18/28 -> 2/10/18/26/34.",
-            "**Slayer rewards (414, 423, 426, 1090, 1092)**: GadScape's 53rd slayer reward (211 enum 834 index 53) needs a dbrow in dbtable 117 on 241.",
+            "**Journal tabs (629 + 3178)**: GadScape's tab bar is re-applied on 241 (quest list hidden, 'Game Noticeboard' on the Adventure "
+                    + "Paths tab 629:26 that took 211's Kourend Favour slot, 'Events' on the Leagues tab 629:34, four 44 px tabs). Server side: "
+                    + "JournalHeaderTabInterface components 3/13/18/28 -> 2/18/26/34 (component-remap.tsv; the quest tab 8 -> 10 is hidden), and "
+                    + "InterfaceHandler.Journal.SERVER_EVENTS should send 4 (241's Leagues slot): 3178 reads the old 5 as 4, so both work meanwhile.",
+            "**Slayer rewards (414, 423, 426, 1090, 1092)**: GadScape's 53rd reward 'Slayer Statues' (211 enum 834 index 53) is a row of 241's "
+                    + "reward table 117 (step db-slayer-rewards, idmap.json _new dbrow 'slayer-reward:53') with reward id 95 (varp 5587 bit 31), since "
+                    + "241 gave id 53 to 'Revenenenenenants'. The server's Slayer unlocks (a 64-bit set over the 211 indices, varps 1076/1344) must "
+                    + "unlock it as reward id 95; 211 indices 0-52 are 241's ids 0-52.",
+            "**Poll screens (310, 345, 400) and the gnome cocktail shaker (436)**: 241 reuses these ids for other interfaces (gryphon_boss, "
+                    + "sailing_intro_hud, trr_display, soul_wars_stats); component-remap.tsv maps 310/345/400 to -1 at their old ids. ui-convert "
+                    + "ports the 211 screens into the reserved interface range (ui.UiScope.VANILLA_PORTS, idmap.json _vanilla interface, same "
+                    + "component numbering) with the poll scripts the server runs (603/604/609/610, _vanilla script): PollManager and "
+                    + "GameInterface.GNOME_COCKTAIL follow the id map.",
             "**Emotes (699/701/702)** follow the config merge of enums 1000-1002 (USER wins keys 52-57, so 241's Fortis Salute, Sit down and Crab dance "
                     + "are not in the list). If the emote enums are ever merged differently (e.g. GadScape's emotes moved after 241's), the counts (57) and "
                     + "the switch keys 52-57 in these recipes must follow.",

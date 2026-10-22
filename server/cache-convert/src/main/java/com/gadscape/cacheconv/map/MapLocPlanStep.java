@@ -64,6 +64,12 @@ public final class MapLocPlanStep implements Step {
     @Override public String name() { return NAME; }
 
     @Override public void run(Ctx ctx) throws Exception {
+        plan(ctx);
+        // the forced loc relocations of config/relocate.tsv (Clan Wars FFA 50081) after the map-driven ones, so their ids stay put
+        for (var e : com.gadscape.cacheconv.config.ConfigPlanStep.forcedRelocations(ctx, k -> k == Kind.LOC).entrySet()) ctx.report.count(e.getKey(), e.getValue());
+    }
+
+    private void plan(Ctx ctx) throws Exception {
         AllowList al = AllowList.load();
         setRange(ctx);
         CfgModel m = new CfgModel(ctx);

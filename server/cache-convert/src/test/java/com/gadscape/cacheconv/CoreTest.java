@@ -23,6 +23,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CoreTest {
+    /** build-cacheu --out=DIR is --out DIR (it was silently ignored, so the build targeted the default output). */
+    @Test void optionsTakeNameEqualsValue() {
+        com.gadscape.cacheconv.core.Options o = com.gadscape.cacheconv.core.Options.parse(
+                new String[]{"build-cacheu", "--out=/tmp/x out", "--work", "/tmp/w", "--only=models,anim", "--set=a.b=c", "--models.prune=false"}, 1);
+        assertEquals(Path.of("/tmp/x out"), o.out);
+        assertEquals(Path.of("/tmp/w"), o.work);
+        assertEquals(List.of("models", "anim"), List.copyOf(o.only));
+        assertEquals("c", o.get("a.b", null));
+        assertEquals("false", o.get("models.prune", null));
+    }
+
     @Test void bufRoundTrip() {
         byte[] b = new BufOut().u8(7).u16(65535).u24(0x123456).i32(-2).i64(1L << 40).str("Obligator").smart(5).smart(300)
                 .bigSmart(-1).bigSmart(100).bigSmart(70000).smartInt(10).smartInt(100000).done();

@@ -29,6 +29,10 @@ public final class Report {
         SAME("same"),
         DROPPED("dropped"),
         REBRANDED("rebranded"),
+        /** A data-driven fix of GadScape content (QA findings, area cache needs): {@code config/fixes.tsv}, {@code ui/fixes.tsv}, ... */
+        FIXED("fixed"),
+        /** An entry the build creates that replaces nothing (new objs, new scripts), listed under {@code _new} in idmap.json. */
+        ADDED("added"),
         NOTE("note"),
         WARNING("warning"),
         ERROR("error");

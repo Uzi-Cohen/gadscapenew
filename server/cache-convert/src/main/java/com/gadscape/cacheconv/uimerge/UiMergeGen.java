@@ -224,8 +224,10 @@ public final class UiMergeGen implements IfMerge.Env {
             String in = names.name(g) == null ? "" : names.name(g);
             UiMergeSpecs.IfSpec s = ifSpecs.get(g);
             IfMerge.Result r = ifResults.get(g);
-            if (s != null && s.idReused()) {
-                for (int c : user.fileIds(Arch.INTERFACES, g)) sb.append(row(g, in, c, -1, "none", "", "ui-merge: 241 reuses the id (" + in + "); GadScape's 211 interface is unused"));
+            if (UiMergeSpecs.REUSED_IDS.containsKey(g)) {
+                if (names.has(g) && !UiMergeSpecs.REUSED_IDS.get(g).contains(" " + in + ";"))
+                    problems.add("interface " + g + ": REUSED_IDS names another 241 interface than BASE's gamevals (" + in + ")");
+                for (int c : user.fileIds(Arch.INTERFACES, g)) sb.append(row(g, in, c, -1, "none", "", "ui-merge: " + UiMergeSpecs.REUSED_IDS.get(g)));
                 continue;
             }
             if (s != null && s.decision() == UiMergeSpecs.Decision.BASE && s.remapOverride() != null) {
@@ -255,7 +257,7 @@ public final class UiMergeGen implements IfMerge.Env {
                         Integer ov = s.remapOverride() == null ? null : s.remapOverride().get(v);
                         CompRemap.Row vr = rm.get(v);
                         to = ov != null ? ov : vr == null ? -1 : vr.c241();
-                        conf = ov != null ? "high" : vr == null ? "low" : vr.confidence();
+                        conf = ov != null ? (ov < 0 ? "none" : "high") : vr == null ? "low" : vr.confidence();
                         how = (ov != null ? "ui-merge override" : vr == null ? "?" : vr.method()) + (v != c ? " (USER " + c + " = 211 " + v + ")" : "");
                     }
                     String cn = to < 0 ? "" : names.comp(g, to) != null ? names.comp(g, to) : "gadscape_" + c;

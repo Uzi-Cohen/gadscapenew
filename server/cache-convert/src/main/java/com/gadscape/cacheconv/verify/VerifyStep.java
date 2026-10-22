@@ -14,7 +14,9 @@ import java.util.List;
  * <p>
  * Bad items listed in {@link KnownExceptions} (documented, understood exceptions) are reported but are not errors.
  * Options: {@code --verify.known=FILE|none}, {@code --verify.checks=a,b} (default: refs, anims, interfaces, maps, scripts, brand, and strict when the
- * output is on disk; oracle when {@code --verify.oracle} is set), {@code --brand-errors} (branding hits are errors),
+ * output is on disk; oracle when {@code --verify.oracle} is set), {@code --brand-errors} (branding hits are errors; the
+ * default when a rebrand table is applied, {@code --brand-warnings} turns that off; the scan result goes to report.json
+ * input {@code brandScan}),
  * {@code --oracle.*} / {@code --strict.*} as for the verify command.
  */
 public final class VerifyStep implements Step {
@@ -40,10 +42,24 @@ public final class VerifyStep implements Step {
             if (e.getKey().startsWith("oracle.") && !e.getKey().equals("oracle.lib")) vo.oracle.put(e.getKey().substring(7), e.getValue());
             if (e.getKey().startsWith("strict.")) vo.strict.put(e.getKey(), e.getValue());
         }
-        if (ctx.opt.flag("brand-errors")) vo.brandSeverity = Findings.Severity.ERROR;
+        // branding hits are errors when the build applies a rebrand table (the table is meant to remove them all)
+        boolean table = !com.gadscape.cacheconv.rebrand.RebrandTable.load(ctx.opt).isEmpty();
+        if (ctx.opt.flag("brand-errors") || table && !ctx.opt.flag("brand-warnings")) vo.brandSeverity = Findings.Severity.ERROR;
         vo.known = KnownExceptions.load(ctx.opt.get("verify.known", null));
         Verifier.Result r = Verifier.run(ctx.out, vo);
         r.findings.toReport(ctx.report);
+        java.util.Map<String, Object> brand = new java.util.TreeMap<>();
+        for (var e : r.findings.checks().entrySet()) {
+            if (!e.getKey().startsWith("brand/")) continue;
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("ok", e.getValue().ok);
+            m.put("hits", e.getValue().bad);
+            m.put("examples", e.getValue().examples);
+            brand.put(e.getKey(), m);
+        }
+        brand.put("patterns", "raw bytes: " + BrandScan.BRAND.pattern() + "; decoded strings: " + StringScan.BRAND.pattern() + " (case-insensitive) and " + StringScan.NR.pattern());
+        brand.put("stringsScanned", r.findings.info().get("brand.strings.scanned"));
+        ctx.report.input("brandScan", brand);
         Json.write(vo.work.resolve("verify.json"), r.toJson());
         r.findings.lines().forEach(l -> ctx.log("%s", l));
     }

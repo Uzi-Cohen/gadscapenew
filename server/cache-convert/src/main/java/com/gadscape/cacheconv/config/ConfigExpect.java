@@ -62,6 +62,7 @@ public final class ConfigExpect implements Step {
         retypedParam();
         standIns();
         rev225();
+        slayerRewards();
         ctx.report.count("expect.pass", pass);
         ctx.report.count("expect.fail", fail);
         ctx.report.count("expect.skipped", skipped);
@@ -233,6 +234,29 @@ public final class ConfigExpect implements Step {
         for (var e : seen.entrySet()) check(e.getValue() == 1, "enum 2103 lists struct " + Integer.parseUnsignedInt(e.getKey(), 16) + " " + e.getValue() + " times");
         for (var e : ctx.ids.all(Kind.STRUCT).entrySet())
             if (ctx.ids.isAlias(Kind.STRUCT, e.getKey())) check(!seen.containsKey(String.format("%08x", e.getKey())), "enum 2103 still lists stand-in struct " + e.getKey());
+    }
+
+    /**
+     * GadScape's slayer reward 53 ("Slayer Statues", USER enum 834) is a row of 241's reward table 117 (db-slayer-rewards),
+     * with a reward id no other row of the table uses.
+     */
+    void slayerRewards() {
+        java.util.TreeMap<Integer, Object> u = com.gadscape.cacheconv.db.SlayerRewardsStep.enumMap(m.user, 834), v = com.gadscape.cacheconv.db.SlayerRewardsStep.enumMap(m.van, 834);
+        if (u == null || v == null || !u.containsKey(53) || v.containsKey(53)) { skipped++; return; }
+        String name = String.valueOf(u.get(53));
+        int found = 0;
+        java.util.TreeMap<Integer, Integer> ids = new java.util.TreeMap<>();
+        for (int id : out.configIds(Arch.CFG_DBROW)) {
+            com.gadscape.cacheconv.db.DbRow r;
+            try { r = com.gadscape.cacheconv.db.DbRow.row(out.configRef(Arch.CFG_DBROW, id)); } catch (RuntimeException e) { continue; }
+            if (r.tableId != com.gadscape.cacheconv.db.SlayerRewardsStep.TABLE) continue;
+            var c0 = r.columns.get(0);
+            if (c0 != null && c0.values.length > 0 && c0.values[0] instanceof Integer x) ids.merge(x, 1, Integer::sum);
+            var c3 = r.columns.get(3);
+            if (c3 != null && c3.values.length > 0 && name.equalsIgnoreCase(String.valueOf(c3.values[0]))) found++;
+        }
+        check(found == 1, "slayer reward '" + name + "' has " + found + " rows in table 117 (expected 1)");
+        for (var e : ids.entrySet()) check(e.getValue() == 1, "slayer reward id " + e.getKey() + " is used by " + e.getValue() + " rows of table 117");
     }
 
     /** Rev-225 imports and their edits (see {@link com.gadscape.cacheconv.core.Rev225}). */

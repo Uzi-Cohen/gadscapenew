@@ -41,6 +41,22 @@ class UiMergeTest {
         assertNotNull(MergeData.text(null, "NOTES.md"));
     }
 
+    /** ScriptEdit.remove drops a dead range, keeps outside jumps on their targets and refuses a jump into the range. */
+    @Test void scriptEditRemove() {
+        Cs2.Script s = new Cs2.Script();
+        s.rev241 = true;
+        s.name = new byte[]{0};
+        // 0 iconst 1; 1 jump -> 5; 2 iconst 2; 3 pop_int; 4 iconst 3; 5 return
+        s.code = new java.util.ArrayList<>(List.of(new Cs2.Ins(0, 1, null), new Cs2.Ins(6, 3, null), new Cs2.Ins(0, 2, null), new Cs2.Ins(38, 0, null),
+                new Cs2.Ins(0, 3, null), new Cs2.Ins(21, 0, null)));
+        ScriptEdit e = new ScriptEdit(1, s);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> e.remove(4, 6, "jump target inside"));
+        e.remove(2, 5, "dead");
+        assertEquals(3, e.s().code.size());
+        assertEquals(6, e.s().code.get(1).op);
+        assertEquals(21, e.s().code.get(1 + 1 + e.s().code.get(1).i).op, "the jump still lands on the return");
+    }
+
     @Test void specsCoverEveryId() {
         assertEquals(UiMergeSpecs.INTERFACES.length, UiMergeSpecs.interfaces().size());
         assertEquals(UiMergeSpecs.SCRIPTS.length, ScriptRecipes.specs().size());

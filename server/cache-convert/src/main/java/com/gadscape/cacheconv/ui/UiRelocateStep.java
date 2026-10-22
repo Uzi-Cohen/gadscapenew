@@ -52,9 +52,21 @@ public final class UiRelocateStep implements Step {
         int ifs = 0, ifMoved = 0, cs = 0, csMoved = 0;
         UiScope scope = UiScope.of(ctx);
         if (!scope.all) ctx.report.note("UI scope: " + scope);
-        for (int id : scope.interfaces) {
+        // GadScape's own interfaces first, the vanilla ports after them: ids the server already uses (866 -> 5200) stay put
+        java.util.List<Integer> order = new java.util.ArrayList<>();
+        for (int id : scope.interfaces) if (!scope.vanillaPorts.contains(id)) order.add(id);
+        order.addAll(scope.vanillaPorts);
+        for (int id : order) {
             ifs++;
             if (!out.hasGroup(Arch.INTERFACES, id)) continue;
+            if (scope.vanillaPorts.contains(id)) {
+                String why = "vanilla 211 interface the server opens, id reused by 241: " + UiScope.VANILLA_PORTS.get(id);
+                int to = ctx.ids.relocate(Kind.INTERFACE, id, why);
+                ctx.ids.markVanilla(Kind.INTERFACE, id);
+                ctx.report.relocated(Kind.INTERFACE, id, to, why);
+                ifMoved++;
+                continue;
+            }
             GroupData conv = InterfaceConv.group(user.group(Arch.INTERFACES, id));
             if (conv.sameContent(out.group(Arch.INTERFACES, id))) {
                 ctx.report.add(Report.Decision.SAME, Kind.INTERFACE, id, "custom interface equals the 241 one");
