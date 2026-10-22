@@ -647,7 +647,7 @@ public final class GameCommands {
             }
             p.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, 12);
             p.getPacketDispatcher().sendUpdateItemContainer(tp.getInventory().getContainer(), ContainerType.BANK);
-            p.getPacketDispatcher().sendComponentSettings(12, 13, 0, 1000, AccessMask.CLICK_OP10);
+            p.getPacketDispatcher().sendComponentSettings(12, 12, 0, 1000, AccessMask.CLICK_OP10); // 241 bankmain:items (211: 13)
         });
         new Command(PlayerPrivilege.SUPPORT, "checkbank", "Check bank of given player. Usage: ::checkbank player " +
                 "name", (p,
@@ -668,7 +668,7 @@ public final class GameCommands {
             p.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, 12);
             p.getPacketDispatcher().sendUpdateItemContainer(tp.getBank().getContainer(), ContainerType.BANK);
             tp.getBank().refreshBankSizes(p);
-            p.getPacketDispatcher().sendComponentSettings(12, 13, 0, 1000, AccessMask.CLICK_OP10);
+            p.getPacketDispatcher().sendComponentSettings(12, 12, 0, 1000, AccessMask.CLICK_OP10); // 241 bankmain:items (211: 13)
         });
         new Command(PlayerPrivilege.SUPPORT, "checkgear", "Check current worn equipment of a player. Usage: " +
                 "::checkgear " +

@@ -20,8 +20,10 @@ import com.zenyte.game.world.entity.player.container.impl.RunePouch;
 public final class RunePouchInterface extends Interface implements SwitchPlugin {
     @Override
     protected void attach() {
+        // Build 241 rune_pouch (190): script 453 creates the pouch slots in 190:4 (pouch) and the inventory in 190:7
+        // (inventory); 211 had them in 190:4 and 190:8.
         put(4, "Withdraw");
-        put(8, "Deposit");
+        put(7, "Deposit"); // 211: 8
     }
 
     @Override

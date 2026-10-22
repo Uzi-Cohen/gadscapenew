@@ -77,9 +77,9 @@ public class HairdresserD extends Dialogue {
 			player.getVarManager().sendBit(3945, player.getAppearance().isMale() ? 0 : 1);
 		}
 		HAIRDRESSER.open(player);
-		player.getPacketDispatcher().sendComponentSettings(82, 2, 0, 23, AccessMask.CLICK_OP1);
-		player.getPacketDispatcher().sendComponentSettings(82, 8, 0, 24, AccessMask.CLICK_OP1);
-		player.getPacketDispatcher().sendComponentText(82, 9, "CONFIRM - (" + PRICE.getAmount() + " coins)");
+		player.getPacketDispatcher().sendComponentSettings(HAIRDRESSER.getId(), 2, 0, 23, AccessMask.CLICK_OP1);
+		player.getPacketDispatcher().sendComponentSettings(HAIRDRESSER.getId(), 8, 0, 24, AccessMask.CLICK_OP1);
+		player.getPacketDispatcher().sendComponentText(HAIRDRESSER.getId(), 9, "CONFIRM - (" + PRICE.getAmount() + " coins)");
 		player.getTemporaryAttributes().put("HairdresserNPCId", npcId);
 	}
 

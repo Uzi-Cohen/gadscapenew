@@ -55,7 +55,7 @@ public final class StatSpy implements PlayerSpell, NPCSpell {
             player.getPacketDispatcher().sendComponentText(523, index, skills.getLevel(i));
             player.getPacketDispatcher().sendComponentText(523, index + 1, 99);
         }
-        player.getPacketDispatcher().sendComponentText(523, 94, target.getPlayerInformation().getDisplayname());
+        player.getPacketDispatcher().sendComponentText(523, 98, target.getPlayerInformation().getDisplayname()); // 241 dream_player_stats:stat_name (211: 94)
         player.getInterfaceHandler().sendInterface(InterfacePosition.SPELLBOOK_TAB, 523);
         return true;
     }

@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.object.ObjectAction;
 import com.zenyte.game.world.object.WorldObject;
@@ -29,6 +30,6 @@ public class ZenytePortal implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] {35000};
+        return new Object[] {Gad211.loc(35000)};
     }
 }

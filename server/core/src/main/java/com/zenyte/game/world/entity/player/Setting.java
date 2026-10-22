@@ -46,7 +46,9 @@ public enum Setting {
 	HARD_LEATHER_TAN,
 	ROW_CURRENCY_COLLECTOR,
 	BONECRUSHING_INACTIVE,
-	AUTO_MUSIC(18, true),
+	// Varp 18 (musicplay) is sent by MusicHandler.sendPlayMode: 211 reads 1 auto / 0 manual, build 241 reads 0 area /
+	// 1 shuffle / 2 single, so the saved value (1 = auto / area) is not the varp value on 241.
+	AUTO_MUSIC(-1, true, (player, state) -> player.getMusic().sendPlayMode()),
 	LOOP_MUSIC(4137, false),
 	VARROCK_TELEPORT_CONFIGURATION(4585, false),
 	CAMELOT_TELEPORT_CONFIGURATION(4560, false),

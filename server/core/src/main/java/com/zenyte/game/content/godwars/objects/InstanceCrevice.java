@@ -1,5 +1,6 @@
 package com.zenyte.game.content.godwars.objects;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.skills.agility.Shortcut;
 import com.zenyte.game.task.WorldTasksManager;
 import com.zenyte.game.util.Direction;
@@ -76,7 +77,7 @@ public class InstanceCrevice implements Shortcut {
 
     @Override
     public int[] getObjectIds() {
-        return new int[] {35013};
+        return new int[] {Gad211.loc(35013)};
     }
 
     @Override

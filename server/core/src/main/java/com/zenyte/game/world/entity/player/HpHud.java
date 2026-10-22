@@ -10,6 +10,7 @@ import static com.zenyte.game.model.ui.testinterfaces.advancedsettings.SettingVa
 public class HpHud {
 
 	private static final int HP_HUD = 303;
+	// Build 241 hpbar_hud (303) component ids: 241 inserted a component after hp_bar (10), so 211's 11-20 are 12-21.
 	private static final Object[] OPEN_CS2_ARGS = {
 			HP_HUD << 16 | 0,
 			HP_HUD << 16 | 2,
@@ -17,33 +18,38 @@ public class HpHud {
 			HP_HUD << 16 | 5,
 			HP_HUD << 16 | 8,
 			HP_HUD << 16 | 10,
-			HP_HUD << 16 | 20,
-			HP_HUD << 16 | 13,
+			HP_HUD << 16 | 21,
 			HP_HUD << 16 | 14,
 			HP_HUD << 16 | 15,
+			HP_HUD << 16 | 16,
 			HP_HUD << 16 | 9,
 			HP_HUD << 16 | 6,
 			HP_HUD << 16 | 7,
-			HP_HUD << 16 | 11,
-			HP_HUD << 16 | 18,
+			HP_HUD << 16 | 12,
 			HP_HUD << 16 | 19,
-			HP_HUD << 16 | 16,
+			HP_HUD << 16 | 20,
 			HP_HUD << 16 | 17,
+			HP_HUD << 16 | 18,
 			HP_HUD << 16 | 3
 	};
+	// Script 2889 (fade out) takes 15 ints like 2888 (fade in, called by 2377): OPEN args 3, 4, 11, 12, 10, 13, 7, 8,
+	// 9, 6, 14, 15, 16, 17 and the start transparency. The 211 list lacked the first two (303:5, 303:8), so every
+	// component was shifted by two (same script header on 211).
 	private static final Object[] CLOSE_CS2_ARGS = {
+			HP_HUD << 16 | 5,
+			HP_HUD << 16 | 8,
 			HP_HUD << 16 | 6,
 			HP_HUD << 16 | 7,
 			HP_HUD << 16 | 9,
-			HP_HUD << 16 | 11,
-			HP_HUD << 16 | 13,
+			HP_HUD << 16 | 12,
 			HP_HUD << 16 | 14,
 			HP_HUD << 16 | 15,
-			HP_HUD << 16 | 20,
-			HP_HUD << 16 | 18,
-			HP_HUD << 16 | 19,
 			HP_HUD << 16 | 16,
+			HP_HUD << 16 | 21,
+			HP_HUD << 16 | 19,
+			HP_HUD << 16 | 20,
 			HP_HUD << 16 | 17,
+			HP_HUD << 16 | 18,
 			0
 	};
 	private static final RSColour[] ORIGINAL_COLORS = { new RSColour(25, 0, 0), new RSColour(0, 15, 0), new RSColour(0, 25, 0) };
@@ -80,15 +86,15 @@ public class HpHud {
 	}
 
 	public void sendColorChange(RSColour rsColour, RSColour rsColour1, RSColour rsColour2) {
-		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 13, rsColour);
-		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 14, rsColour1);
-		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 15, rsColour2);
+		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 14, rsColour);
+		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 15, rsColour1);
+		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 16, rsColour2);
 	}
 
 	public void resetColors() {
-		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 13, ORIGINAL_COLORS[0]);
-		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 14, ORIGINAL_COLORS[1]);
-		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 15, ORIGINAL_COLORS[2]);
+		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 14, ORIGINAL_COLORS[0]);
+		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 15, ORIGINAL_COLORS[1]);
+		player.getPacketDispatcher().sendComponentSpriteColour(HP_HUD, 16, ORIGINAL_COLORS[2]);
 	}
 
 	public void sendMaxHitPoints(int hitPoints) {

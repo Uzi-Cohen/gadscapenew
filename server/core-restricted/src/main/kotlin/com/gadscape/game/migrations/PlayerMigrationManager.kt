@@ -4,6 +4,7 @@ import com.google.common.eventbus.Subscribe
 import com.gadscape.game.world.entity.player.migrationVersion
 import com.zenyte.game.world.entity.player.Player
 import com.zenyte.plugins.events.LoginEvent
+import com.zenyte.plugins.events.PostInitializationEvent
 import com.zenyte.plugins.events.ServerLaunchEvent
 import com.zenyte.utils.ClassInitializer
 import io.github.classgraph.ClassGraph
@@ -34,6 +35,14 @@ object PlayerMigrationManager {
     @JvmStatic
     fun onPlayerLogin(event: LoginEvent) {
         performPlayerLoginMigrations(event.player)
+        performRepeatableMigrations(event.player, GameMigration.Phase.LOGIN)
+    }
+
+    /** The save has been loaded into the player and nothing has been sent yet: [GameMigration.Phase.LOAD] migrations. */
+    @Subscribe
+    @JvmStatic
+    fun onPlayerLoaded(event: PostInitializationEvent) {
+        performRepeatableMigrations(event.player, GameMigration.Phase.LOAD)
     }
 
     private fun scanMigrations() {
@@ -77,12 +86,31 @@ object PlayerMigrationManager {
 
     @JvmStatic
     private fun performPlayerLoginMigrations(player: Player) {
+        if (!::sortedMigrations.isInitialized) return
         for((id, migration) in sortedMigrations) {
+            if (migration.repeatable() || migration.phase() != GameMigration.Phase.LOGIN) continue
             if(player.migrationVersion < id) {
                 log.debug("Performing player migration #$id for ${player.username}")
                 player.sendDeveloperMessage("Running migration: " + migration.javaClass.simpleName)
                 migration.run(player)
                 player.migrationVersion = id
+            }
+        }
+    }
+
+    /**
+     * Repeatable migrations of [phase], in id order. Each keeps its own per-account record, so running it again (a
+     * second login, or the load event that the login sequence posts twice) does nothing.
+     */
+    @JvmStatic
+    private fun performRepeatableMigrations(player: Player, phase: GameMigration.Phase) {
+        if (!::sortedMigrations.isInitialized) return
+        for ((id, migration) in sortedMigrations) {
+            if (!migration.repeatable() || migration.phase() != phase) continue
+            try {
+                migration.run(player)
+            } catch (e: Exception) {
+                log.error("Migration #$id (${migration.javaClass.simpleName}) failed for ${player.username}", e)
             }
         }
     }

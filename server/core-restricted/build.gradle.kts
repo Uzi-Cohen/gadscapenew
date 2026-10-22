@@ -59,4 +59,12 @@ dependencies {
     implementation(libs.netty.codec.haproxy)
 
     implementation(libs.mockk)
+
+    // rev 241 id-map migration tests (Rev241IdsTest): JUnit 5 through kotlin-test, as in :core
+    testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

@@ -22,7 +22,7 @@ public class ItemRetrievalServiceInterface extends Interface {
     @Override
     protected void attach() {
         put(3, "Items");
-        put(8, "Discard-All");
+        put(10, "Discard-All"); // 241 gravestone_retrieval:discard (211: 8)
         put(6, "Take-All/Unlock");
     }
 

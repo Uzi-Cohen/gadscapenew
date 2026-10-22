@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.magic.spells.teleports.structures;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.SoundEffect;
 import com.zenyte.game.world.entity.masks.Animation;
@@ -13,7 +14,7 @@ import com.zenyte.game.world.entity.player.Player;
 public class HighRevisionTeleportStructure implements TeleportStructure {
 
     private static final Animation startAnimation = new Animation(15243);
-    private static final Graphics startGraphics = new Graphics(2515);
+    private static final Graphics startGraphics = new Graphics(Gad211.spot(2515));
     private static final SoundEffect startSound = new SoundEffect(7604);
 
     private static final Animation endAnimation = new Animation(15245);

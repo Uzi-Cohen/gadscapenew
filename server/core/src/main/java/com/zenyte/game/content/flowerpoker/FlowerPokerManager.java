@@ -25,6 +25,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public final class FlowerPokerManager {
+    /** Trade value scripts 1216/1217 (build 241): 28 long values, -1 = no item (211: 28 ints). */
+    private static final Object[] TRADE_VALUES_NONE = java.util.Collections.nCopies(28, -1L).toArray();
 
     public static FlowerPokerManager get(Player player) {
         return (FlowerPokerManager) player.getTemporaryAttributes().computeIfAbsent(":content:flowerpoker:fpm",
@@ -174,10 +176,8 @@ public final class FlowerPokerManager {
         player.getPacketDispatcher().sendComponentSettings(INTERFACE, 28, 0, 27, AccessMask.CLICK_OP10);
         player.getPacketDispatcher().sendClientScript(149, 22020096, 93, 4, 7, 0, -1, "Offer<col=ff9040>", "Offer-5" +
                 "<col=ff9040>", "Offer-10<col=ff9040>", "Offer-All<col=ff9040>", "Offer-X<col=ff9040>");
-        player.getPacketDispatcher().sendClientScript(1217, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-        player.getPacketDispatcher().sendClientScript(1216, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+        player.getPacketDispatcher().sendClientScript(1217, TRADE_VALUES_NONE);
+        player.getPacketDispatcher().sendClientScript(1216, TRADE_VALUES_NONE);
         requested.getPacketDispatcher().sendComponentSettings(INVENTORY_INTERFACE, 0, 0, 27, AccessMask.CLICK_OP1,
                 AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP4, AccessMask.CLICK_OP5,
                 AccessMask.CLICK_OP10);
@@ -187,10 +187,8 @@ public final class FlowerPokerManager {
         requested.getPacketDispatcher().sendComponentSettings(INTERFACE, 28, 0, 27, AccessMask.CLICK_OP10);
         requested.getPacketDispatcher().sendClientScript(149, 22020096, 93, 4, 7, 0, -1, "Offer<col=ff9040>", "Offer" +
                 "-5<col=ff9040>", "Offer-10<col=ff9040>", "Offer-All<col=ff9040>", "Offer-X<col=ff9040>");
-        requested.getPacketDispatcher().sendClientScript(1217, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-                , -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-        requested.getPacketDispatcher().sendClientScript(1216, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
-                , -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+        requested.getPacketDispatcher().sendClientScript(1217, TRADE_VALUES_NONE);
+        requested.getPacketDispatcher().sendClientScript(1216, TRADE_VALUES_NONE);
     }
 
     private void refreshStake() {

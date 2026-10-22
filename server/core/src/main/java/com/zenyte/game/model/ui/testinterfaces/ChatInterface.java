@@ -3,6 +3,7 @@ package com.zenyte.game.model.ui.testinterfaces;
 import com.zenyte.game.GameConstants;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.model.ui.Interface;
+import com.zenyte.game.util.AccessMask;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.Setting;
 
@@ -24,6 +25,10 @@ public class ChatInterface extends Interface {
     @Override
     public void open(Player player) {
         player.getInterfaceHandler().sendInterface(getInterface());
+        // GadScape's Report button opens the teleports. On 211 every op of 162:31 was transmitted (click mask 30); 241
+        // transmits only some of them, so the ops are enabled here.
+        player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Report button"), -1, -1,
+                AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP4);
     }
 
     @Override

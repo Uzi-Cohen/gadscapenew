@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.var;
 
+import com.gadscape.game.rev241.Gad211;
 import com.gadscape.game.content.shop.ShopCurrencyHandler;
 import com.gadscape.game.model.ui.chat_channel.ChatChannelPlayerExtKt;
 import com.zenyte.game.content.ItemRetrievalService;
@@ -47,15 +48,16 @@ public enum VarCollection {
     UPDATE_MESSAGE(VAR, 3619, p -> attribute(p, "UPDATE_MESSAGE"), POST_LOGIN),
     EXAMINE_NPCS(VAR, 3621, p -> attribute(p, "EXAMINE_NPCS"), POST_LOGIN),
     BROADCAST_TREASURE_TRAILS(VAR, 3623, p -> attribute(p, "BROADCAST_TREASURE_TRAILS"), POST_LOGIN),
-    SLAYER_STATUES(VAR, 3811, p -> {
-        int value = p.getVarManager().getValue(3811);
+    SLAYER_STATUES(VAR, Gad211.varp(3811), p -> {
+        int value = p.getVarManager().getValue(Gad211.varp(3811));
         if (p.getSlayer().isUnlocked("Slayer Statues") && value <= 0) {
             value = 1;
-            p.getVarManager().sendVar(3811, value);
+            p.getVarManager().sendVar(Gad211.varp(3811), value);
         }
         return value;
     }, POST_LOGIN),
-    BROADCAST_NEW_PLAYERS(VAR, 3812, p -> attribute(p, "BROADCAST_NEW_PLAYERS"), POST_LOGIN),
+    // GadScape server varp above the 211 varp table; 2746 defines a varp 3812 too, so gadconv should move it (add 3812 to its config/server-varps.txt)
+    BROADCAST_NEW_PLAYERS(VAR, Gad211.varp(3812), p -> attribute(p, "BROADCAST_NEW_PLAYERS"), POST_LOGIN),
     //var 3611-3613 are used for the tournament overlay
     //var 3622 is used for wheel of fortune
     //var 3625 is used for gwd instances
@@ -77,7 +79,7 @@ public enum VarCollection {
     UNKNOWN_IRONMAN(VAR, 281, p -> 1000, POST_LOGIN),
     FOUNTAIN_OF_RUNE(VARBIT, 4145, p -> 1),
     ZEAH_FAIRY_RING(VARBIT, 4885, p -> 1, POST_LOGIN),
-    DIALOGUE_FULL_SIZE(VARBIT, 5983, p -> 1),
+    DIALOGUE_FULL_SIZE(VARBIT, 10670, p -> 1), // 241 chatmodal_unclamp (211: 5983, reused in 241)
     VYRE_WELL(VARBIT, 6455, p -> attribute(p, "vyre well charges"), POST_LOGIN),
     ACHIEVEMENT_DIARY_TAB(VARBIT, 3612, p -> 1),
     MINIGAMES_TAB(VARBIT, 3217, p -> 1),
@@ -93,14 +95,16 @@ public enum VarCollection {
     OVERLOAD_REFRESHES_REMAINING(VARBIT, 5418, p -> p.getVarManager().getBitValue(5418), PRE_LOGIN),
     THRALL_ACTIVE(VARBIT, 12413, p -> ThrallSpellKt.getCurrentThrall(p) != null ? 1 : 0, PRE_LOGIN),
     TOA_ENTRANCE(VARBIT, 13837, p -> 1, POST_LOGIN),
-    BOON_UNLOCKS(VARBIT, 19500, 19500 + BoonLoader.boonTypes.size(), ((player, idx) -> player.getBoonManager().hasBoon(BoonWrapper.get(idx).getPerk()) ? 1 : 0), POST_LOGIN),
-    EXCHANGE_POINTS(VAR, 4506, p -> ShopCurrencyHandler.getAmount(ShopCurrency.EXCHANGE_POINTS, p), POST_LOGIN)
+    // GadScape boon unlock varbits 19500+ (one per boon): the 241 cache moved them (Gad211), so each index resolves on its own
+    BOON_UNLOCKS(VARBIT, 19500, 19500 + BoonLoader.boonTypes.size(), Gad211::varbit, ((player, idx) -> player.getBoonManager().hasBoon(BoonWrapper.get(idx).getPerk()) ? 1 : 0), POST_LOGIN),
+    EXCHANGE_POINTS(VAR, Gad211.varp(4506), p -> ShopCurrencyHandler.getAmount(ShopCurrency.EXCHANGE_POINTS, p), POST_LOGIN)
     ;
 
     private static final VarCollection[] VALUES = values();
     private final VarType type;
     private final int id;
     private final int end;
+    private java.util.function.IntUnaryOperator ids = java.util.function.IntUnaryOperator.identity();
     private boolean multiVar;
     private final VarFunction function;
     private final EventType[] eventTypes;
@@ -115,9 +119,15 @@ public enum VarCollection {
     }
 
     VarCollection(final VarType type, final int start, int end, final VarMultivalueFunction function, final EventType... eventTypes) {
+        this(type, start, end, java.util.function.IntUnaryOperator.identity(), function, eventTypes);
+    }
+
+    /** A range start..end-1 whose ids go through {@code ids} before they are sent (for example Gad211::varbit). */
+    VarCollection(final VarType type, final int start, int end, final java.util.function.IntUnaryOperator ids, final VarMultivalueFunction function, final EventType... eventTypes) {
         this.type = type;
         this.id = start;
         this.end = end;
+        this.ids = ids;
         this.function = function;
         this.eventTypes = eventTypes;
         this.multiVar = true;
@@ -158,7 +168,7 @@ public enum VarCollection {
     public void updateMulti(Player player) {
         int index = 0;
         while(this.id + index < end) {
-            sendSpecific(player, id + index, function.getValue(player, index + 1));
+            sendSpecific(player, ids.applyAsInt(id + index), function.getValue(player, index + 1));
             index++;
         }
     }

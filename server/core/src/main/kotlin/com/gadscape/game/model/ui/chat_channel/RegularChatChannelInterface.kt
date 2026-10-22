@@ -13,10 +13,10 @@ import com.zenyte.game.model.ui.Interface
 class RegularChatChannelInterface : Interface() {
 
     override fun attach() {
-        put(3, "Chat-channel")
-        put(4, "Your Clan")
-        put(5, "View another clan")
-        put(6, "Grouping")
+        put(2, "Chat-channel") // 211: 3
+        put(3, "Your Clan") // 211: 4
+        put(4, "View another clan") // 211: 5
+        put(5, "Grouping") // 211: 6
     }
 
     override fun build() {

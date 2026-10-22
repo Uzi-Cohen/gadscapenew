@@ -88,7 +88,7 @@ public class SettingVariables {
     public static final int SHOW_THE_STORE_BUTTON_ON_DESKTOP_VARBIT_ID = 13037;
     public static final int MIDDLE_MOUSE_BUTTON_CONTROLS_THE_CAMERA_VARBIT_ID = 4134;
     public static final int MOVE_FOLLOWER_OPTIONS_LOWER_DOWN_VARBIT_ID = 5599;
-    public static final int SHIFT_CLICK_TO_DROP_ITEMS_VARBIT_ID = 5542;
+    public static final int SHIFT_CLICK_TO_DROP_ITEMS_VARBIT_ID = 11556; // 241 desktop_shiftclickdrop_enabled (211: 5542, now reused)
     public static final int SHOW_THE_FUNCTION_BUTTON_VARBIT_ID = 6257;
     public static final int MODERN_LAYOUT_SIDE_PANEL_CAN_BE_CLOSED_BY_THE_HOTKEYS_VARBIT_ID = 4611;
     public static final int ESC_CLOSES_THE_CURRENT_INTERFACE_VARBIT_ID = 4681;
@@ -111,7 +111,7 @@ public class SettingVariables {
     public static final int FOODPOTIONS_CAN_FORM_SUPPLY_PILES_ON_DEATH_VARBIT_ID = 11893;
     public static final int TILE_HIGHLIGHTING_VARBIT_ID = 12342;
     public static final int SHOW_MOUSEOVER_TOOLTIPS_VARBIT_ID = 12344;
-    public static final int SHOW_MOUSEOVER_TEXT_VARBIT_ID = 12377;
+    public static final int SHOW_MOUSEOVER_TEXT_VARBIT_ID = 10035; // 241 mouseover_text_disabled (211: 12377, now reused)
     public static final int LIMIT_FRAMERATE_VARBIT_ID = 12345;
     public static final int DATA_ORBS_REGENERATION_INDICATORS_VARBIT_ID = 12346;
     public static final int CHAMBERS_OF_XERIC_HELPER_VARBIT_ID = 12347;

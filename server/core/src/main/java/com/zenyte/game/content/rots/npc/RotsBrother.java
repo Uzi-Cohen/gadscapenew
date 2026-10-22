@@ -1,5 +1,6 @@
 package com.zenyte.game.content.rots.npc;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.rots.RotsInstance;
 import com.zenyte.game.util.Direction;
 import com.zenyte.game.world.entity.HitBar;
@@ -86,7 +87,7 @@ public abstract class RotsBrother extends NPC implements CombatScript {
 			getHitBars().clear();
 			getHitBars().add(removeRegularHpBar);
 			getHitBars().add(fillBar);
-			setAnimation(new Animation(12003));
+			setAnimation(new Animation(Gad211.seq(12003)));
 
 			final Player source = getMostDamagePlayerCheckIronman();
 			if (source != null) {

@@ -1,5 +1,6 @@
 package com.gadscape.game.content.tournament.loc
 
+import com.gadscape.game.rev241.Gad211
 import com.gadscape.game.content.tournament.preset.TournamentPreset
 import com.gadscape.game.content.tournament.tournamentOrNull
 import com.zenyte.game.GameInterface
@@ -39,5 +40,5 @@ class TournamentSupplies : ObjectAction {
     }
 
     override fun getObjects(): Array<Any> =
-        arrayOf(ObjectId.TOURNAMENT_SUPPLIES, ObjectId.TOURNAMENT_SUPPLIES_35007)
+        arrayOf(Gad211.loc(ObjectId.TOURNAMENT_SUPPLIES), Gad211.loc(ObjectId.TOURNAMENT_SUPPLIES_35007))
 }

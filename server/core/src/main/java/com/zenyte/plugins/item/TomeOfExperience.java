@@ -1,5 +1,6 @@
 package com.zenyte.plugins.item;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
 import com.zenyte.game.util.Colour;
@@ -48,7 +49,7 @@ public class TomeOfExperience extends ItemPlugin {
         final int finalAmount = Math.min(item.getAmount(), amount);
         final int usedAmount = inventory.deleteItem(new Item(item.getId(), finalAmount)).getSucceededAmount();
         player.getVariables().setBonusXP(player.getVariables().getBonusXP() + (usedAmount * (int) TimeUnit.MINUTES.toTicks(15)));
-        player.getVarManager().sendVar(3801, (int) (player.getVariables().getBonusXP() * 0.6F));
+        player.getVarManager().sendVar(Gad211.varp(3801), (int) (player.getVariables().getBonusXP() * 0.6F));
         player.sendMessage(Colour.RED.wrap("You've read " + usedAmount + " tome" + (usedAmount == 1 ? "" : "s") + " of experience and gained " + (usedAmount * 15) + " minutes of private bonus experience."));
         player.setGraphics(graphics);
     }

@@ -1,5 +1,6 @@
 package com.gadscape.game.content.tournament.loc
 
+import com.gadscape.game.rev241.Gad211
 import com.gadscape.game.content.tournament.Tournament
 import com.gadscape.game.content.tournament.TournamentManager
 import com.gadscape.game.plugin.optionsMenu
@@ -44,7 +45,8 @@ class TournamentPortalObject : ObjectAction {
         singleTournament: Tournament,
     ) = FadeScreen(player) { singleTournament.lobby.teleportPlayer(player) }.fade(3, true)
 
-    override fun getObjects(): Array<Any> = arrayOf(ObjectId.CLAN_HALL_PORTAL)
+    // GadScape's "Tournament Portal" (moved by the 241 cache, Gad211) and 2746's clan hall portal at 41724 (one id on 211)
+    override fun getObjects(): Array<Any> = arrayOf(ObjectId.CLAN_HALL_PORTAL, Gad211.loc(ObjectId.CLAN_HALL_PORTAL))
 
     companion object {
         val LOCATION_IN_FRONT_OF_PORTAL = Location(3079, 3492, 0)

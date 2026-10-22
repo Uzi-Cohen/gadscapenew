@@ -21,7 +21,7 @@ public class LobbyInterface extends Interface {
     protected void attach() {
         put(6, "Message of the week");
         put(75, "Bank pin");
-        put(81, "Click here to play");
+        put(72, "Click here to play"); // 378:72 "Play" in 211 and 241 (the old 81 is a loading-banner layer)
     }
 
     @Override
@@ -36,7 +36,7 @@ public class LobbyInterface extends Interface {
         dispatcher.sendClientScript(2494, 1);
         handler.sendInterface(InterfacePosition.CHATBOX, 162);
         handler.sendInterface(InterfacePosition.PRIVATE_CHAT, 163);
-        handler.sendInterface(378, 27, PaneType.FULL_SCREEN, false);
+        handler.sendInterface(378, 28, PaneType.FULL_SCREEN, false); // 165:28 (211: 27)
         dispatcher.sendClientScript(1080, "");
         handler.sendInterface(InterfacePosition.SKILLS_TAB, 320);
         dispatcher.sendComponentSettings(399, 7, 0, EnumDefinitions.get(1374).getSize(), AccessMask.CLICK_OP1);

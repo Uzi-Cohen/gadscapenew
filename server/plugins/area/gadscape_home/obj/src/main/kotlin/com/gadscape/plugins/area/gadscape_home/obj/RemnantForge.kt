@@ -1,5 +1,6 @@
 package com.gadscape.plugins.area.gadscape_home.obj
 
+import com.gadscape.game.rev241.Gad211
 import com.gadscape.game.item.CustomObjectId
 import com.zenyte.game.GameInterface
 import com.zenyte.game.world.entity.player.Player
@@ -26,6 +27,6 @@ class RemnantForge : ObjectAction {
     }
 
     override fun getObjects(): Array<Int> {
-        return arrayOf(CustomObjectId.REMNANT_FORGE)
+        return arrayOf(Gad211.loc(CustomObjectId.REMNANT_FORGE))
     }
 }

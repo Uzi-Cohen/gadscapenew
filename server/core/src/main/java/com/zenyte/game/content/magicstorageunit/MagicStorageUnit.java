@@ -46,7 +46,8 @@ public class MagicStorageUnit {
     }
 
     public void refeshVarbit(@NotNull final Player player) {
-        player.getVarManager().sendBit(16001, unlockPayment == 0 ? 0 : 1);
+        // Nothing to send: GadScape's cache never defined varbit 16001, so on 211 this write did nothing; on the 241
+        // cache 16001 is a 2746 varbit (varp 5751) and must not be written.
     }
 
     public List<Integer> getStoredItemIds(final int displayedItem) {

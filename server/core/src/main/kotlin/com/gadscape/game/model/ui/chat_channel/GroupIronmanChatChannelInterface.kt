@@ -12,11 +12,12 @@ import com.zenyte.game.model.ui.Interface
 class GroupIronmanChatChannelInterface : Interface() {
 
     override fun attach() {
-        put(3, "Iron Group")
-        put(4, "Clat-channel")
-        put(5, "Your Clan")
-        put(6, "View another clan")
-        put(7, "Grouping")
+        // Build 241 side_channels_large (727) tabs; 211 ids 3-7.
+        put(2, "Iron Group") // tab_gim
+        put(3, "Clat-channel") // tab_0
+        put(4, "Your Clan") // tab_1
+        put(5, "View another clan") // tab_2
+        put(6, "Grouping") // tab_3
     }
 
     override fun build() {

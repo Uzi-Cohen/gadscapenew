@@ -5,13 +5,14 @@ import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.player.MusicHandler;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import mgi.types.config.enums.EnumDefinitions;
+import com.zenyte.game.world.entity.player.VarManager;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.util.List;
+import java.util.OptionalInt;
 
 /**
  * @author Kris | 27. juuli 2018 : 23:42:56
@@ -57,35 +58,37 @@ public final class MusicLoader implements ScheduledExternalizable {
 				World.getRegion(region).getMusicTracks().add(track);
 			}
 		}
-		final EnumDefinitions map = EnumDefinitions.get(819);
-		final EnumDefinitions nameMap = EnumDefinitions.get(812);
-		map.getValues().forEach((slot, grid) -> {
-			if (!(grid instanceof Integer)) {
-				return;
+		// Slot -> track and unlock bit: enums 812/819 on the 211 cache, the music db table on build 241 (MusicSlots).
+		final MusicSlots slots = MusicSlots.get();
+		for (int slot = 1; slot <= slots.size(); slot++) {
+			final OptionalInt unlock = slots.unlockOf(slot);
+			if (!unlock.isPresent()) {
+				continue;
 			}
-			final String name = nameMap.getStringValue(slot);
-			if (name == null) {
-				log.warn("Failure to load song: {}", slot);
-				return;
-			}
-			final Music track = Music.map.get(name);
+			final Music track = slots.musicOf(slot);
 			if (track == null) {
-				// System.err.println("Failure to locate track for name: " + name);
-				return;
+				continue;
 			}
 			if (track.getRegionIds() != null || track.isDefaultLocked()) {
-				return;
+				continue;
 			}
-			if ((int) grid == -1) {
-				return;
+			final int grid = unlock.getAsInt();
+			if (grid == -1) {
+				continue;
 			}
-			final int index = ((int) grid >> 14 & 16383) - 1;
-			if (index >= DEFAULT_VARP_VALUES.length) {
-				log.warn("Failure to set music track \"{}\" as a default track!", name);
-				return;
+			final int index = (grid >> 14 & 16383) - 1;
+			if (index < 0 || index >= DEFAULT_VARP_VALUES.length) {
+				log.warn("Failure to set music track \"{}\" as a default track!", track.getName());
+				continue;
 			}
-			DEFAULT_VARP_VALUES[index] |= 1 << ((int) grid & 16383);
-		});
+			DEFAULT_VARP_VALUES[index] |= 1 << (grid & 16383);
+		}
+		if (slots.isTable()) {
+			// Build 241 music playlists (3 x 100 varbits, see MusicHandler) are kept on the character file.
+			for (int varbit = 19738; varbit <= 20037; varbit++) {
+				VarManager.appendPersistentVarbit(varbit);
+			}
+		}
 	}
 
 	@Override

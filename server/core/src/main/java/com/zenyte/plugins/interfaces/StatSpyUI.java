@@ -13,7 +13,7 @@ public final class StatSpyUI implements UserInterface {
 
 	@Override
 	public void handleComponentClick(final Player player, final int interfaceId, final int componentId, final int slotId, final int itemId, final int optionId, final String option) {
-		if (componentId == 95) {
+		if (componentId == 99) { // 241 dream_playerstat_close (211: 95)
 			player.getInterfaceHandler().sendInterface(InterfacePosition.SPELLBOOK_TAB, 218);
 		}
 	}

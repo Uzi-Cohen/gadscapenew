@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.skills.afk.AfkBarrierDialogue;
 import com.zenyte.game.content.skills.afk.AfkSkilling;
 import com.zenyte.game.task.WorldTasksManager;
@@ -32,6 +33,6 @@ public class AfkEntranceBarrier implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] {55071};
+        return new Object[] {Gad211.loc(55071)};
     }
 }

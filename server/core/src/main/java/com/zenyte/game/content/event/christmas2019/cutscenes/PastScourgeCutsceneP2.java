@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.base.Preconditions;
 import com.zenyte.game.content.event.christmas2019.ChristmasConstants;
 import com.zenyte.game.content.event.christmas2019.ChristmasUtils;
@@ -40,7 +41,7 @@ public class PastScourgeCutsceneP2 extends Cutscene {
     public void build() {
         final String impName = ChristmasUtils.getImpName(player);
         addActions(0, () -> player.setLocation(instance.getLocation(2079, 5404, 0)), () -> player.getAppearance().setInvisible(true), () -> player.getVarManager().sendBit(4606, 1), () -> {
-            player.getVarManager().sendBit(15018, 0);
+            player.getVarManager().sendBit(Gad211.varbit(15018), 0);
             for (final FrozenGuest guest : FrozenGuest.getValues()) {
                 final NPC npc = new NPC(guest.getCutsceneBaseNPC(), instance.getLocation(guest.getTile()), guest.getDirection(), 0);
                 npc.spawn();
@@ -53,7 +54,7 @@ public class PastScourgeCutsceneP2 extends Cutscene {
         addActions(6, () -> {
             imp = new CutsceneImp(player.getLocation().transform(Direction.SOUTH, 1));
             imp.spawn();
-            imp.setGraphics(new Graphics(2508));
+            imp.setGraphics(new Graphics(Gad211.spot(2508)));
         });
         addActions(9, new DialogueAction(new Dialogue(player) {
             @Override
@@ -66,11 +67,11 @@ public class PastScourgeCutsceneP2 extends Cutscene {
             //perform animation
             frozenGuestsMap.forEach((guest, npc) -> {
                 npc.setInvalidAnimation(guest.getPreFreezeAnimation());
-                World.sendGraphics(new Graphics(2507), npc.getLocation());
+                World.sendGraphics(new Graphics(Gad211.spot(2507)), npc.getLocation());
             });
         });
         addActions(12, () -> {
-            player.getVarManager().sendBit(15018, 1);//Hide all npcs.
+            player.getVarManager().sendBit(Gad211.varbit(15018), 1);//Hide all npcs.
             for (final FrozenGuest guest : FrozenGuest.getValues()) {
                 player.getVarManager().sendBit(ObjectDefinitions.getOrThrow(guest.getBaseObject()).getVarbitId(), 1);
             }
@@ -84,7 +85,7 @@ public class PastScourgeCutsceneP2 extends Cutscene {
                 Preconditions.checkArgument(guest != null);
                 final Location tile = instance.getLocation(guest.getTile());
                 final WorldObject object = World.getObjectWithId(tile, guest.getBaseObject());
-                World.sendObjectAnimation(object, new Animation(15108));
+                World.sendObjectAnimation(object, new Animation(Gad211.seq(15108)));
                 player.getPacketDispatcher().sendGraphics(new Graphics(1010, 0, 150), tile);
                 imp.setFaceLocation(tile);
             });
@@ -97,7 +98,7 @@ public class PastScourgeCutsceneP2 extends Cutscene {
         }));
         addActions(30, () -> {
             imp.finish();
-            World.sendGraphics(new Graphics(2508), imp.getLocation());
+            World.sendGraphics(new Graphics(Gad211.spot(2508)), imp.getLocation());
         });
         final FadeScreen fadeScreen = new FadeScreen(player);
         addActions(32, fadeScreen::fade);

@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.easter2020;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.model.MinimapState;
 import com.zenyte.game.model.ui.GameTab;
@@ -47,7 +48,7 @@ public class RedCarpetCutscene extends Cutscene {
         });
         addActions(5, unfadeRunnable, () -> {
             bunny.setInvalidAnimation(new Animation(15211, 5));
-            bunny.setGraphics(new Graphics(2511, 5, 0));
+            bunny.setGraphics(new Graphics(Gad211.spot(2511), 5, 0));
             player.lock();
         });
         addActions(7, new CameraPositionAction(player, instance.getLocation(2204, 4392, 0), 250, 3, 0));

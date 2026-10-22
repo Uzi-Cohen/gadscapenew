@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.event.christmas2019.AChristmasWarble;
 import com.zenyte.game.content.event.christmas2019.ChristmasConstants;
@@ -47,13 +48,13 @@ public class PastScourgeCutsceneP3 extends Cutscene {
             dummy = new NPC(24, instance.getLocation(2470, 5398, 1), Direction.NORTH, 0);
             dummy.spawn();
             player.setFaceLocation(instance.getLocation(2472, 5402, 1));
-        }, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(15000)));
+        }, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(Gad211.seq(15000))));
         addActions(2, unfadeRunnable);
         addActions(4, () -> {
             imp = new CutsceneImp(instance.getLocation(2472, 5402, 1));
             imp.spawn();
             imp.setFaceLocation(player.getLocation());
-            imp.setGraphics(new Graphics(2508));
+            imp.setGraphics(new Graphics(Gad211.spot(2508)));
         });
         addActions(7, new DialogueAction(new Dialogue(player) {
             @Override

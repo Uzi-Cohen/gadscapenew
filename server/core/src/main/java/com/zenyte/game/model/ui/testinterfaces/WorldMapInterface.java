@@ -34,7 +34,7 @@ public class WorldMapInterface extends Interface {
         if (player.getWorldMap().isFullScreen()) {
             player.getWorldMap().setPreviousPane(player.getInterfaceHandler().getPane());
             player.getInterfaceHandler().sendPane(player.getWorldMap().getPreviousPane(), PaneType.FULL_SCREEN);
-            player.getInterfaceHandler().sendInterface(595, 38, PaneType.FULL_SCREEN, true);
+            player.getInterfaceHandler().sendInterface(595, 41, PaneType.FULL_SCREEN, true); // 165:41 floater (211: 38)
             player.getInterfaceHandler().sendInterface(594, com.zenyte.game.world.entity.player.WorldMap.FULL_SCREEN_SIDE_COMPONENT, PaneType.FULL_SCREEN, false);
         } else {
             player.getInterfaceHandler().sendInterface(getInterface());

@@ -10,39 +10,44 @@ import mgi.types.config.enums.EnumDefinitions;
  * @see <a href="https://rune-status.net/members/kris.354/">Rune-Status profile</a>
  */
 public enum InterfacePosition {
-	CHATBOX(94, 162, true),
-	PRIVATE_CHAT(91, 163, true),
-	WILDERNESS_OVERLAY(3, true),
-	BH_OVERLAY(5, true),
-	ORBS(32, true),
-	SKILLS_TAB(76, 320, true),
-	JOURNAL_TAB_HEADER(77, 629, true),
-	CHAT_TAB_HEADER(82, true),
-	INVENTORY_TAB(78, 149, true),
-	EQUIPMENT_TAB(79, 387, true),
-	PRAYER_TAB(80, 541, true),
-	SPELLBOOK_TAB(81, 218, true),
-	ACCOUNT_MANAGEMENT(83, 1702, true),
-	FRIENDS_TAB(84, 429, true),
-	LOGOUT_TAB(85, 182, true),
-	SETTINGS_TAB(86, 116, true),
-	EMOTE_TAB(87, 216, true),
-	MUSIC_TAB(88, 239, true),
-	COMBAT_TAB(75, 593, true),
-	CENTRAL(16, false),
-	DIALOGUE(559, false),
-	MINIGAME_OVERLAY(8, true),
-	OVERLAY(1, true),
-	SINGLE_TAB(73, false),
-	WORLD_MAP(17, false),
-	UNKNOWN_OVERLAY(8, true),
-	XP_TRACKER(9, true),
-	// Special type, parent = adv. settings
-	COLOUR_PICKER(8, false),
-	NOTIFICATION_POS(13, true),
-	HP_HUD_POS(2, -1, true),
-	TOA_MANAGEMENT(61, false),
-	NIGHTMARE_TOTEMS_POS(12, -1, true),
+	/*
+	 * Build 241 (cacheV = openrs2 2746 + GadScape) component ids. The seed is a component of toplevel_osrs_stretch
+	 * (161); the other panes resolve through the cache's pane remap enums 1129-1132/1745, which are keyed by 241
+	 * components. GadScape-211 ids in the trailing comments (cacheV.component-remap.tsv).
+	 */
+	CHATBOX(96, 162, true), // 211: 94 chat_container
+	PRIVATE_CHAT(93, 163, true), // 211: 91 pm_container
+	WILDERNESS_OVERLAY(3, true), // pvp_icons
+	BH_OVERLAY(5, true), // stat_boosts_hud
+	ORBS(33, true), // 211: 32 orbs
+	SKILLS_TAB(77, 320, true), // 211: 76 side1
+	JOURNAL_TAB_HEADER(78, 629, true), // 211: 77 side2
+	CHAT_TAB_HEADER(83, true), // 211: 82 side7
+	INVENTORY_TAB(79, 149, true), // 211: 78 side3
+	EQUIPMENT_TAB(80, 387, true), // 211: 79 side4
+	PRAYER_TAB(81, 541, true), // 211: 80 side5
+	SPELLBOOK_TAB(82, 218, true), // 211: 81 side6
+	ACCOUNT_MANAGEMENT(84, 1702, true), // 211: 83 side8
+	FRIENDS_TAB(85, 429, true), // 211: 84 side9
+	LOGOUT_TAB(86, 182, true), // 211: 85 side10
+	SETTINGS_TAB(87, 116, true), // 211: 86 side11
+	EMOTE_TAB(88, 216, true), // 211: 87 side12
+	MUSIC_TAB(89, 239, true), // 211: 88 side13
+	COMBAT_TAB(76, 593, true), // 211: 75 side0
+	CENTRAL(16, false), // mainmodal
+	DIALOGUE(568, false), // chatbox (162) chatmodal, 211: 559
+	MINIGAME_OVERLAY(8, true), // overlay_hud
+	OVERLAY(1, true), // overlay_atmosphere
+	SINGLE_TAB(74, false), // 211: 73 sidemodal
+	WORLD_MAP(18, false), // 211: 17 floater
+	UNKNOWN_OVERLAY(8, true), // overlay_hud
+	XP_TRACKER(9, true), // xp_drops
+	// Special type, parent = adv. settings (134 settings:popup, 211: 8)
+	COLOUR_PICKER(9, false),
+	NOTIFICATION_POS(13, true), // notifications
+	HP_HUD_POS(2, -1, true), // hpbar_hud
+	TOA_MANAGEMENT(61, false), // toa_partydetails (774) popup, unchanged
+	NIGHTMARE_TOTEMS_POS(12, -1, true), // helper_content
 	;
 	/**
 	 * An array containing all of the component types.

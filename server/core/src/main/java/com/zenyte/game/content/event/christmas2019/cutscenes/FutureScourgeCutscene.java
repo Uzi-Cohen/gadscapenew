@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.event.christmas2019.AChristmasWarble;
 import com.zenyte.game.content.event.christmas2019.ChristmasConstants;
@@ -60,7 +61,7 @@ public class FutureScourgeCutscene extends Cutscene {
         });
         addActions(5, unfadeRunnable);
         addActions(8, new CameraPositionAction(player, instance.getLocation(2471, 5407 - 3, 1), 350, 5, 0), new CameraLookAction(player, instance.getLocation(2471, 5390 - 3, 1), 200, 5, 0));
-        addActions(12, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(15001)), () -> dummy.setInvalidAnimation(new Animation(15001)));
+        addActions(12, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(Gad211.seq(15001))), () -> dummy.setInvalidAnimation(new Animation(Gad211.seq(15001))));
         addActions(21, new CameraPositionAction(player, instance.getLocation(2471, 5400, 1), 550, 255, 100), new CameraLookAction(player, instance.getLocation(2471, 5403, 1), 75, 255, 100), () -> {
             player.setRunSilent(2);
             player.addWalkSteps(instance.getX(2471), instance.getY(5403), 2);
@@ -79,14 +80,14 @@ public class FutureScourgeCutscene extends Cutscene {
             }
         }));
         addActions(30, new CameraPositionAction(player, instance.getLocation(2475 + 1, 5404 + 1, 1), 500, 255, 100), new CameraLookAction(player, instance.getLocation(2465, 5396, 1), 0, 255, 100));
-        addActions(32, () -> imp.setInvalidAnimation(new Animation(15029)), new DialogueAction(new Dialogue(player) {
+        addActions(32, () -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))), new DialogueAction(new Dialogue(player) {
             @Override
             public void buildDialogue() {
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Psst, don't say anything.", Expression.HIGH_REV_NORMAL).executeAction(() -> turnLeft());
                 player("Bu-");
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Shhh!", Expression.HIGH_REV_NORMAL).executeAction(() -> {
                     turnStraight();
-                    imp.setInvalidAnimation(new Animation(15028));
+                    imp.setInvalidAnimation(new Animation(Gad211.seq(15028)));
                 });
                 npcWithId(ChristmasConstants.PAJAMAS_SCOURGE_NPC_ID, "Ghost, why don't you speak?", Expression.HIGH_REV_MAD);
             }
@@ -97,8 +98,8 @@ public class FutureScourgeCutscene extends Cutscene {
                 npcWithId(ChristmasConstants.PAJAMAS_SCOURGE_NPC_ID, "Well, if you don't wish to speak, allow me. " +
                         "We've had the Ghost of Christmas Past and the Ghost of Christmas Present - that much leave " +
                         "the Ghost of Christmas Yet to Come. Am I correct?", Expression.HIGH_REV_MAD);
-                player("Err-").executeAction(() -> imp.setInvalidAnimation(new Animation(15029)));
-                npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Quiets.", Expression.HIGH_REV_NORMAL).executeAction(() -> imp.setInvalidAnimation(new Animation(15028)));
+                player("Err-").executeAction(() -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))));
+                npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Quiets.", Expression.HIGH_REV_NORMAL).executeAction(() -> imp.setInvalidAnimation(new Animation(Gad211.seq(15028))));
                 npcWithId(ChristmasConstants.PAJAMAS_SCOURGE_NPC_ID, "Well, what have you come to show me, ghost? More spoilt brats? Another tale of lost love?", Expression.HIGH_REV_MAD);
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Scare hims, " + player.getName() + ". Show him how scary you is.", Expression.HIGH_REV_NORMAL);
             }
@@ -137,8 +138,8 @@ public class FutureScourgeCutscene extends Cutscene {
             player.addWalkSteps(instance.getX(2472), instance.getY(5401), 3, false);
         });
         addActions(304, () -> {
-            imp.setInvalidAnimation(new Animation(15021));
-            imp.setGraphics(new Graphics(2506));
+            imp.setInvalidAnimation(new Animation(Gad211.seq(15021)));
+            imp.setGraphics(new Graphics(Gad211.spot(2506)));
             imp.faceObject(object);
         });
         addActions(305, () -> player.faceObject(object));

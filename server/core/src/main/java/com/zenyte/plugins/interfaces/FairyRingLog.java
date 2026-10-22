@@ -27,21 +27,26 @@ public final class FairyRingLog implements UserInterface {
 			if (fav == null) {
 				continue;
 			}
-			player.getPacketDispatcher().sendComponentText(381, 140 + i, "<br>" + fav.getTag());
-			player.getPacketDispatcher().sendComponentText(381, 144 + i, fav.getCode());
+			player.getPacketDispatcher().sendComponentText(381, FairyRing.FAVE_FIRST + i, "<br>" + fav.getTag());
+			player.getPacketDispatcher().sendComponentText(381, FairyRing.FAVE_CODE_FIRST + i, fav.getCode());
 		}
 		player.getInterfaceHandler().sendInterface(InterfacePosition.SINGLE_TAB, 381);
 	}
 	
 	@Override
 	public void handleComponentClick(final Player player, final int interfaceId, final int componentId, final int slotId, final int itemId, final int optionId, final String option) {
-		if (componentId >= 140 && optionId == 2 || componentId >= 148) {
+		final boolean favourite = componentId >= FairyRing.FAVE_FIRST && componentId < FairyRing.FAVE_FIRST + 4;
+		final boolean favouriteIcon = componentId >= FairyRing.FAVE_ICON_FIRST && componentId < FairyRing.FAVE_ICON_FIRST + 4;
+		if (favourite && optionId == 2 || favouriteIcon) {
 			FairyRing.removeFavourite(player, componentId, optionId);
 			return;
 		}
-		if (componentId >= 140) {
+		if (favourite) {
 			final List<String> favourites = FairyRing.getFavourites(player);
-			final int index = componentId - 140;
+			final int index = componentId - FairyRing.FAVE_FIRST;
+			if (index >= favourites.size()) {
+				return;
+			}
 			final FairyRing ring = FairyRing.getRing(favourites.get(index));
 			if (ring == null) {
 				return;

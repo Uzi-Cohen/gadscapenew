@@ -12,6 +12,7 @@ import com.zenyte.game.world.entity.player.SkillConstants.*
 import com.zenyte.game.world.entity.player.container.RequestResult.NOT_ENOUGH_SPACE
 import com.zenyte.game.world.entity.player.container.impl.RunePouch
 import com.zenyte.plugins.item.HerbSack
+import mgi.types.config.DBRowDefinition
 import mgi.types.config.items.ItemDefinitions
 import kotlin.math.min
 import com.zenyte.game.GameInterface.*
@@ -23,8 +24,11 @@ class SlayerInterface : InterfaceScript() {
 
     init {
         SLAYER_REWARDS {
-            val unlock = "Unlock/extend perk | Manage task"(8) {
+            // Build 241 slayer_rewards (426): confirm_button 11 (211: 8), buy_items 25 (211: 23).
+            val unlock = "Unlock/extend perk | Manage task"(11) {
+                val slotID = gadScapeRewardSlot(slotID, size)
                 when {
+                    slotID < 0 -> player.sendMessage("That reward is not available.")
                     slotID < size -> {
                         val unlocked = player.slayer.isUnlocked(slotID)
                         if (!unlocked) player.slayer.confirmPurchase(slotID)
@@ -39,7 +43,7 @@ class SlayerInterface : InterfaceScript() {
                     else -> throw IllegalStateException("Slot: $slotID")
                 }
             }
-            val buy = "Buy reward".suspend(23) {
+            val buy = "Buy reward".suspend(25) {
                 if (option == 10) {
                     ItemUtil.sendItemExamine(player, itemID)
                 } else {
@@ -103,6 +107,27 @@ class SlayerInterface : InterfaceScript() {
             }
         }
     }
+}
+
+/**
+ * Build 241 slayer rewards: the confirm button carries the reward id of dbtable 117 (column 0) for a perk, and 66 + n
+ * for task management (241's scripts 423/426 add n to 66 where GadScape's 211 scripts added it to 53 = perks - 1:
+ * n = 1 cancel, 2 block, 3-8 unblock, 9 full extension, 10 store, 11 unstore). Perks are matched to GadScape's perk
+ * list (enum 834) by name, so a perk the cache lists under another id (GadScape's Slayer Statues is reward 95 there)
+ * still resolves; a 241 perk GadScape does not have resolves to -1.
+ */
+private const val SLAYER_REWARDS_TABLE = 117
+private const val TASK_SLOT_BASE_241 = 66
+
+fun gadScapeRewardSlot(slot: Int, perks: Int): Int {
+    if (slot > TASK_SLOT_BASE_241 && slot <= TASK_SLOT_BASE_241 + 11) {
+        return perks - 1 + (slot - TASK_SLOT_BASE_241)
+    }
+    val row = DBRowDefinition.tableRows[SLAYER_REWARDS_TABLE]
+        ?.firstOrNull { it.columns.containsKey(0) && it.getValueFromRow(0) == slot } ?: return -1
+    if (!row.columns.containsKey(3)) return -1
+    val name = row.getValueFromRow(3) as? String ?: return -1
+    return SLAYER_PERK_REWARD_NAMES.getKeyIgnoreCase(name).orElse(-1)
 }
 
 val InterfaceHandlerContext.requiredRangeLevel get() = if (itemID == BROAD_BOLTS) 61 else 50

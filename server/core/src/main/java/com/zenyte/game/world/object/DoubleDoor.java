@@ -1,5 +1,6 @@
 package com.zenyte.game.world.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.task.WorldTasksManager;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.player.Player;
@@ -32,8 +33,8 @@ public class DoubleDoor {
 		add(14247, 14248);
 		add(10262, 10263);
 		add(10264, 10265);
-		add(35009, 35011);
-		add(35010, 35012);
+		add(Gad211.loc(35009), Gad211.loc(35011));
+		add(Gad211.loc(35010), Gad211.loc(35012));
 		add(28460, 28464);
 		add(28461, 28465);
 		add(28462, 28466);

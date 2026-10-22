@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.task.WorldTasksManager;
 import com.zenyte.game.world.entity.masks.Graphics;
 import com.zenyte.game.world.entity.npc.actions.NPCPlugin;
@@ -46,7 +47,7 @@ public class EbenezerScourge extends NPCPlugin {
                         npc("in the Land of Snow.", Expression.HIGH_REV_MAD);
                         npc("Oh and be warned: if you try and help that oaf in the cage you'll be joining him!", Expression.HIGH_REV_MAD).executeAction(() -> {
                             AChristmasWarble.progress(player, AChristmasWarble.ChristmasWarbleProgress.SPOKEN_TO_SCOURGE);
-                            player.getPacketDispatcher().sendGraphics(new Graphics(2508), npc.getLocation());
+                            player.getPacketDispatcher().sendGraphics(new Graphics(Gad211.spot(2508)), npc.getLocation());
                             player.setFaceEntity(null);
                             finish();
                             player.lock(2);

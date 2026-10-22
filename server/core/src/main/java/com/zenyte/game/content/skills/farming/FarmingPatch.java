@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.farming;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.Location;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -23,22 +24,22 @@ public enum FarmingPatch {
     PRIF_COMPOST(PatchType.COMPOST_BIN, 34920, new Location(3287, 6100, 0), 70),
 
 
-    RDI_HERB(PatchType.HERB_PATCH, 50071, new Location(3400, 7998, 0), -1),
-    DI_HERB(PatchType.HERB_PATCH, 50070, new Location(3358, 8146, 2), -1),
-    DIE_HERB(PatchType.HERB_PATCH, 50069, new Location(3358, 8274, 2), -1),
+    RDI_HERB(PatchType.HERB_PATCH, Gad211.loc(50071), new Location(3400, 7998, 0), -1),
+    DI_HERB(PatchType.HERB_PATCH, Gad211.loc(50070), new Location(3358, 8146, 2), -1),
+    DIE_HERB(PatchType.HERB_PATCH, Gad211.loc(50069), new Location(3358, 8274, 2), -1),
 
 
-    RDI_ALLOTMENT(PatchType.ALLOTMENT, 50064, new Location(3399, 8007, 0), -1),
+    RDI_ALLOTMENT(PatchType.ALLOTMENT, Gad211.loc(50064), new Location(3399, 8007, 0), -1),
 
 
-    UDI_HERB(PatchType.HERB_PATCH, 50068, new Location(3417, 7784, 0), -1),
-    UDI_TREE(PatchType.TREE_PATCH, 50067, new Location(3417, 7789, 0), -1),
+    UDI_HERB(PatchType.HERB_PATCH, Gad211.loc(50068), new Location(3417, 7784, 0), -1),
+    UDI_TREE(PatchType.TREE_PATCH, Gad211.loc(50067), new Location(3417, 7789, 0), -1),
 
     HOME_COMPOST(PatchType.COMPOST_BIN, 50072, new Location(3106, 3503, 0), 69),
-    HOME_FLOWER(PatchType.FLOWER_PATCH, 50066, new Location(3100, 3503, 0), -1),
-    HOME_HERB(PatchType.HERB_PATCH, 50065, new Location(3096, 3503, 0), -1),
+    HOME_FLOWER(PatchType.FLOWER_PATCH, Gad211.loc(50066), new Location(3100, 3503, 0), -1),
+    HOME_HERB(PatchType.HERB_PATCH, Gad211.loc(50065), new Location(3096, 3503, 0), -1),
     HOME_ALLOTMENT_S(PatchType.ALLOTMENT, 50062, new Location(3100, 3501, 0), -1),
-    HOME_ALLOTMENT_N(PatchType.ALLOTMENT, 50063, new Location(3100, 3506, 0), -1),
+    HOME_ALLOTMENT_N(PatchType.ALLOTMENT, Gad211.loc(50063), new Location(3100, 3506, 0), -1),
 
 
     FALADOR_ALLOTMENT_NW(PatchType.ALLOTMENT, 8550, new Location(3052, 3310, 0), new PatchGardener(2663, 3), "North" +

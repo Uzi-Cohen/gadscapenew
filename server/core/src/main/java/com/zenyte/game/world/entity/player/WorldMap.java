@@ -7,8 +7,8 @@ import com.zenyte.game.world.entity.Location;
 
 public class WorldMap {
 
-    /** 165:37 holds interface 594 next to the fullscreen map (165:27 is the settings tab in enum 1132). */
-    public static final int FULL_SCREEN_SIDE_COMPONENT = 37;
+    /** 165:40 (displaymodal) holds interface 594 next to the fullscreen map (211: 165:37; 165:28 is the settings tab in enum 1132). */
+    public static final int FULL_SCREEN_SIDE_COMPONENT = 40;
 
     private final Player player;
 
@@ -34,7 +34,7 @@ public class WorldMap {
         visible = false;
         fullScreen = false;
         if (player.getInterfaceHandler().getPane() == PaneType.FULL_SCREEN) {
-            // 594 (the fullscreen map's side panel) sits at 165:37, which is no InterfacePosition: close it here,
+            // 594 (the fullscreen map's side panel) sits at 165:40, which is no InterfacePosition: close it here,
             // or it stays open in the client and in the visible map after the pane switches back (RES-6).
             player.getInterfaceHandler().closeInterfaceSpecific(FULL_SCREEN_SIDE_COMPONENT, PaneType.FULL_SCREEN, false);
             player.getInterfaceHandler().sendPane(PaneType.FULL_SCREEN, player.getWorldMap().getPreviousPane());

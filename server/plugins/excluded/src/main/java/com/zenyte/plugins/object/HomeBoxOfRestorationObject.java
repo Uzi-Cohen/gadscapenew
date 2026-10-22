@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.masks.Graphics;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.SkillConstants;
@@ -76,9 +77,9 @@ public class HomeBoxOfRestorationObject implements ObjectAction {
     @Override
     public Object[] getObjects() {
         return new Object[] {
-                ObjectId.BOX_OF_RESTORATION,
-                ObjectId.BOX_OF_RESTORATION_35022,
-                ObjectId.BOX_OF_RESTORATION_35021
+                Gad211.loc(ObjectId.BOX_OF_RESTORATION),
+                Gad211.loc(ObjectId.BOX_OF_RESTORATION_35022),
+                Gad211.loc(ObjectId.BOX_OF_RESTORATION_35021)
         };
     }
 }

@@ -1,5 +1,6 @@
 package com.zenyte.game.model.ui.testinterfaces;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.alternatetables.AlternateTable;
 import com.zenyte.game.item.ItemId;
@@ -172,7 +173,7 @@ public final class DropViewerInterface extends Interface {
 
     private static void sendFakeResults(Player player) {
         int offsetY = 0;
-        player.getPacketDispatcher().sendClientScript(10104, 1); //set searchtype (item/npc)
+        player.getPacketDispatcher().sendClientScript(Gad211.script(10104), 1); //set searchtype (item/npc)
         Int2ObjectOpenHashMap<AlternateTable> mapped_values = new Int2ObjectOpenHashMap<>();
         for (int index = 0; index < AlternateTable.values().length; index++) {
             final AlternateTable def = AlternateTable.values()[index];
@@ -182,7 +183,7 @@ public final class DropViewerInterface extends Interface {
 
             final int width = Utils.getTextWidth(494, name + cb);
             final int height = width > 114 ? 22 : 13;
-            player.getPacketDispatcher().sendClientScript(10105, index, offsetY, height, width, name, cb,
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10105), index, offsetY, height, width, name, cb,
                     builder); //append npc search result
             offsetY += height;
             mapped_values.put(index, def);
@@ -191,7 +192,7 @@ public final class DropViewerInterface extends Interface {
         player.getPacketDispatcher().sendComponentSettings(GameInterface.DROP_VIEWER.getId(),
                 GameInterface.DROP_VIEWER.getPlugin().get().getComponent("View Result"), 0, AlternateTable.values().length,
                 AccessMask.CLICK_OP1);
-        player.getPacketDispatcher().sendClientScript(10108, offsetY); //rebuild scrollllayer/bar
+        player.getPacketDispatcher().sendClientScript(Gad211.script(10108), offsetY); //rebuild scrollllayer/bar
         player.addTemporaryAttribute("drop_viewer_results", mapped_values);
     }
 
@@ -281,10 +282,10 @@ public final class DropViewerInterface extends Interface {
         player.addTemporaryAttribute("drop_viewer_search_result", searchResult);
         if (searchResult != null) {
             if (searchResult instanceof NPCDefinitions) {
-                player.getPacketDispatcher().sendClientScript(10103, ((NPCDefinitions) searchResult).getName(),
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10103), ((NPCDefinitions) searchResult).getName(),
                         completeRefresh ? 1 : 0); //set layout title
             } else {
-                player.getPacketDispatcher().sendClientScript(10103, ((ItemDefinitions) searchResult).getName(),
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10103), ((ItemDefinitions) searchResult).getName(),
                         completeRefresh ? 1 : 0); //set layout title
             }
         }
@@ -298,19 +299,19 @@ public final class DropViewerInterface extends Interface {
             }
             if (r instanceof ItemDropViewerEntry) {
                 final ItemDropViewerEntry row = (ItemDropViewerEntry) r;
-                player.getPacketDispatcher().sendClientScript(10114, index, offsetY, row.getItem(), row.info(),
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10114), index, offsetY, row.getItem(), row.info(),
                         row.minAmount(), row.maxAmount(), rarity); //append item row
             } else {
                 final NPCDropViewerEntry row = (NPCDropViewerEntry) r;
                 final String name = NPCDefinitions.get(row.getNpc()).getName();
-                player.getPacketDispatcher().sendClientScript(10121, index, offsetY, row.getItemId(), name,
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10121), index, offsetY, row.getItemId(), name,
                         row.info(), row.minAmount(), row.maxAmount(), rarity); //append npc row
             }
             offsetY += r.isPredicated() ? 70 : 40;
             index++;
         }
         if (searchResult != null) {
-            player.getPacketDispatcher().sendClientScript(10115, offsetY, completeRefresh ? 1 : 0); //rebuild
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10115), offsetY, completeRefresh ? 1 : 0); //rebuild
             // scrolllayer/bar
         }
     }
@@ -322,7 +323,7 @@ public final class DropViewerInterface extends Interface {
         player.addTemporaryAttribute("drop_viewer_rows", rows);
         player.addTemporaryAttribute("drop_viewer_search_result", table);
         if (table != null) {
-            player.getPacketDispatcher().sendClientScript(10103, (table).getDisplayName(), completeRefresh ? 1 : 0); //set layout title
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10103), (table).getDisplayName(), completeRefresh ? 1 : 0); //set layout title
             for (final DropViewerEntry r : rows) {
                 if (r instanceof OtherDropViewerEntry row) {
                     String rarity;
@@ -332,13 +333,13 @@ public final class DropViewerInterface extends Interface {
                         rarity = row.toPercentage();
                     }
                     final String name = ItemDefinitions.nameOf(row.itemId());
-                    player.getPacketDispatcher().sendClientScript(10121, index, offsetY, row.itemId(), name,
+                    player.getPacketDispatcher().sendClientScript(Gad211.script(10121), index, offsetY, row.itemId(), name,
                             row.info(), row.minAmount(), row.maxAmount(), rarity); //append npc row
                 }
                 offsetY += r.isPredicated() ? 70 : 40;
                 index++;
             }
-            player.getPacketDispatcher().sendClientScript(10115, offsetY, completeRefresh ? 1 : 0); //rebuild
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10115), offsetY, completeRefresh ? 1 : 0); //rebuild
         }
     }
 
@@ -399,7 +400,7 @@ public final class DropViewerInterface extends Interface {
                 return Integer.compare(o1.getCombatLevel(), o2.getCombatLevel());
             });
             int offsetY = 0;
-            player.getPacketDispatcher().sendClientScript(10104, type); //set searchtype (item/npc)
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10104), type); //set searchtype (item/npc)
             for (int index = 0; index < results.size(); index++) {
                 final NPCDefinitions def = results.get(index);
                 String name = def.getName();
@@ -435,7 +436,7 @@ public final class DropViewerInterface extends Interface {
                 }
                 final int width = Utils.getTextWidth(494, name + cb);
                 final int height = width > 114 ? 22 : 13;
-                player.getPacketDispatcher().sendClientScript(10105, index, offsetY, height, width, name, cb,
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10105), index, offsetY, height, width, name, cb,
                         builder.toString()); //append npc search result
                 offsetY += height;
             }
@@ -443,10 +444,10 @@ public final class DropViewerInterface extends Interface {
             player.getPacketDispatcher().sendComponentSettings(GameInterface.DROP_VIEWER.getId(),
                     GameInterface.DROP_VIEWER.getPlugin().get().getComponent("View Result"), 0, results.size(),
                     AccessMask.CLICK_OP1);
-            player.getPacketDispatcher().sendClientScript(10108, offsetY); //rebuild scrollllayer/bar
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10108), offsetY); //rebuild scrollllayer/bar
             player.addTemporaryAttribute("drop_viewer_results", results);
             if (results.size() == 0) {
-                player.getPacketDispatcher().sendClientScript(10109, "No results were found with your search.");
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10109), "No results were found with your search.");
                 //set response msg
             } else {
                 final NPCDefinitions result = results.get(0);
@@ -455,7 +456,7 @@ public final class DropViewerInterface extends Interface {
                 }
                 final List<DropViewerEntry> entries = getEntries(player, result);
                 populateRows(player, true, results.get(0), entries); //populate rows of first result
-                player.getPacketDispatcher().sendClientScript(10107, 0); //highlight first result
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10107), 0); //highlight first result
             }
         } else {
             final LinkedList<ItemDefinitions> results = new LinkedList<>();
@@ -465,7 +466,7 @@ public final class DropViewerInterface extends Interface {
                 }
             }
             int offsetY = 0;
-            player.getPacketDispatcher().sendClientScript(10104, type); //set search type (item/npc)
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10104), type); //set search type (item/npc)
             results.removeIf(def -> {
                 final List<DropViewerEntry> entries = getEntries(player, def);
                 return entries == null || entries.isEmpty();
@@ -483,7 +484,7 @@ public final class DropViewerInterface extends Interface {
                 final String name = def.getName();
                 final int width = Utils.getTextWidth(494, name);
                 final int height = width > 114 ? 22 : 13;
-                player.getPacketDispatcher().sendClientScript(10120, index, offsetY, height, width, name); //append
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10120), index, offsetY, height, width, name); //append
                 // item search result
                 offsetY += height;
             }
@@ -491,10 +492,10 @@ public final class DropViewerInterface extends Interface {
             player.getPacketDispatcher().sendComponentSettings(GameInterface.DROP_VIEWER.getId(),
                     GameInterface.DROP_VIEWER.getPlugin().get().getComponent("View Result"), 0, results.size(),
                     AccessMask.CLICK_OP1);
-            player.getPacketDispatcher().sendClientScript(10108, offsetY); //rebuild scrolllayer/bar
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10108), offsetY); //rebuild scrolllayer/bar
             player.addTemporaryAttribute("drop_viewer_results", results);
             if (results.size() == 0) {
-                player.getPacketDispatcher().sendClientScript(10109, "No results were found with your search.");
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10109), "No results were found with your search.");
                 //set response msg
             } else {
                 final ItemDefinitions result = results.get(0);
@@ -503,7 +504,7 @@ public final class DropViewerInterface extends Interface {
                 }
                 final List<DropViewerEntry> entries = getEntries(player, result);
                 populateRows(player, true, results.get(0), entries); //populate rows of first result
-                player.getPacketDispatcher().sendClientScript(10107, 0); //highlight first result
+                player.getPacketDispatcher().sendClientScript(Gad211.script(10107), 0); //highlight first result
             }
         }
     }

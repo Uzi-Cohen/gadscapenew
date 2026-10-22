@@ -1,5 +1,6 @@
 package com.zenyte.game.world.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.masks.Animation;
 import com.zenyte.plugins.object.LadderOA;
@@ -277,8 +278,8 @@ public enum InstantMovementObjects {
 
 	ASGARNIAN_CAVE_SHORTCUT(42506, new Location(3025, 9570, 0), new Location(3035, 9557, 0)),
 	ASGARNIAN_CAVE_SHORTCUT2(42507, new Location(3034, 9558,0), new Location(3026, 9572, 0)),
-	LDI_REV_DUNGEON(50098, new Location(3410, 7607,0), new Location(3369, 15247, 0)),
-	UDI_REV_DUNGEON(50097, new Location(3357, 7784,0), new Location(3369, 15375, 0)),
+	LDI_REV_DUNGEON(Gad211.loc(50098), new Location(3410, 7607,0), new Location(3369, 15247, 0)),
+	UDI_REV_DUNGEON(Gad211.loc(50097), new Location(3357, 7784,0), new Location(3369, 15375, 0)),
 
 	ESCAPE_CAVES_EXIT_1(47147, new Location(3358, 10244, 0), new Location(3283, 3773, 0), new Animation(2796)),
 	ESCAPE_CAVES_EXIT_2(47148, new Location(3382, 10287, 0), new Location(3321, 3829, 0), new Animation(2796)),

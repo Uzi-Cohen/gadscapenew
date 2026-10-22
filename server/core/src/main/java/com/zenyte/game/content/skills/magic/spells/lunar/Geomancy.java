@@ -15,6 +15,8 @@ import com.zenyte.game.world.entity.player.Player;
  * @see <a href="https://rune-status.net/members/kris.354/">Rune-Status profile</a>}
  */
 public final class Geomancy implements DefaultSpell {
+	/** Script 1119 (build 241) takes a string after the 4 ints: the noun of "The <noun> is dead / diseased". */
+	private static final String PATCH_NOUN = "crop";
 
 	//private static final List<FarmingPatch> LIST = Arrays.asList(FarmingPatch.VALUES);
 	private static final Animation ANIM = new Animation(7118);
@@ -66,7 +68,7 @@ public final class Geomancy implements DefaultSpell {
 			if (product != 1925) {
 				player.getPacketDispatcher().sendComponentItem(179, componentId, product, 0);
 			}
-			player.getPacketDispatcher().sendClientScript(1119, patch.getIndex(), product, state, settings);
+			player.getPacketDispatcher().sendClientScript(1119, patch.getIndex(), product, state, settings, PATCH_NOUN);
 		}
 	}
 	
@@ -86,7 +88,7 @@ public final class Geomancy implements DefaultSpell {
 			if (product != 1925) {
 				player.getPacketDispatcher().sendComponentItem(179, componentId, product, 0);
 			}
-			player.getPacketDispatcher().sendClientScript(1119, patch.getIndex(), product, state, 0);
+			player.getPacketDispatcher().sendClientScript(1119, patch.getIndex(), product, state, 0, PATCH_NOUN);
 		}
 	}
 	
@@ -101,7 +103,7 @@ public final class Geomancy implements DefaultSpell {
 			if (patch.getType() != PatchType.GRAPEVINE_PATCH) {
 				player.getPacketDispatcher().sendComponentItem(179, componentId, 6055, 0);
 			}
-			player.getPacketDispatcher().sendClientScript(1119, patch.getIndex(), 6055, 0, 0);
+			player.getPacketDispatcher().sendClientScript(1119, patch.getIndex(), 6055, 0, 0, PATCH_NOUN);
 		}
 	}
 	

@@ -11,37 +11,38 @@ import mgi.types.config.identitykit.IdentityKitDefinitions
  * @author Kris | 14/06/2022
  */
 class CharacterDesignerInterface : InterfaceScript() {
+    // Component ids are rev 241 (interface 679 "player_design"; 211 used 3 lower, 6 lower for confirm).
     init {
         GameInterface.CHARACTER_DESIGN {
-            "Previous head"(12) { player.changeDesign(CharacterCreatorDesign.Head, false) }
-            "Next head"(13) { player.changeDesign(CharacterCreatorDesign.Head, true) }
-            "Previous jaw"(16) { player.changeDesign(CharacterCreatorDesign.Jaw, false) }
-            "Next jaw"(17) { player.changeDesign(CharacterCreatorDesign.Jaw, true) }
-            "Previous torso"(20) { player.changeDesign(CharacterCreatorDesign.Torso, false) }
-            "Next torso"(21) { player.changeDesign(CharacterCreatorDesign.Torso, true) }
-            "Previous arms"(24) { player.changeDesign(CharacterCreatorDesign.Arms, false) }
-            "Next arms"(25) { player.changeDesign(CharacterCreatorDesign.Arms, true) }
-            "Previous hands"(28) { player.changeDesign(CharacterCreatorDesign.Hands, false) }
-            "Next hands"(29) { player.changeDesign(CharacterCreatorDesign.Hands, true) }
-            "Previous legs"(32) { player.changeDesign(CharacterCreatorDesign.Legs, false) }
-            "Next legs"(33) { player.changeDesign(CharacterCreatorDesign.Legs, true) }
-            "Previous feet"(36) { player.changeDesign(CharacterCreatorDesign.Feet, false) }
-            "Next feet"(37) { player.changeDesign(CharacterCreatorDesign.Feet, true) }
+            "Previous head"(15) { player.changeDesign(CharacterCreatorDesign.Head, false) }
+            "Next head"(16) { player.changeDesign(CharacterCreatorDesign.Head, true) }
+            "Previous jaw"(19) { player.changeDesign(CharacterCreatorDesign.Jaw, false) }
+            "Next jaw"(20) { player.changeDesign(CharacterCreatorDesign.Jaw, true) }
+            "Previous torso"(23) { player.changeDesign(CharacterCreatorDesign.Torso, false) }
+            "Next torso"(24) { player.changeDesign(CharacterCreatorDesign.Torso, true) }
+            "Previous arms"(27) { player.changeDesign(CharacterCreatorDesign.Arms, false) }
+            "Next arms"(28) { player.changeDesign(CharacterCreatorDesign.Arms, true) }
+            "Previous hands"(31) { player.changeDesign(CharacterCreatorDesign.Hands, false) }
+            "Next hands"(32) { player.changeDesign(CharacterCreatorDesign.Hands, true) }
+            "Previous legs"(35) { player.changeDesign(CharacterCreatorDesign.Legs, false) }
+            "Next legs"(36) { player.changeDesign(CharacterCreatorDesign.Legs, true) }
+            "Previous feet"(39) { player.changeDesign(CharacterCreatorDesign.Feet, false) }
+            "Next feet"(40) { player.changeDesign(CharacterCreatorDesign.Feet, true) }
 
-            "Previous hair colour"(43) { player.changeColour(CharacterCreatorColour.Hair, false) }
-            "Next hair colour"(44) { player.changeColour(CharacterCreatorColour.Hair, true) }
-            "Previous torso colour"(47) { player.changeColour(CharacterCreatorColour.Torso, false) }
-            "Next torso colour"(48) { player.changeColour(CharacterCreatorColour.Torso, true) }
-            "Previous legs colour"(51) { player.changeColour(CharacterCreatorColour.Legs, false) }
-            "Next legs colour"(52) { player.changeColour(CharacterCreatorColour.Legs, true) }
-            "Previous feet colour"(55) { player.changeColour(CharacterCreatorColour.Feet, false) }
-            "Next feet colour"(56) { player.changeColour(CharacterCreatorColour.Feet, true) }
-            "Previous skin colour"(59) { player.changeColour(CharacterCreatorColour.Skin, false) }
-            "Next skin colour"(60) { player.changeColour(CharacterCreatorColour.Skin, true) }
+            "Previous hair colour"(46) { player.changeColour(CharacterCreatorColour.Hair, false) }
+            "Next hair colour"(47) { player.changeColour(CharacterCreatorColour.Hair, true) }
+            "Previous torso colour"(50) { player.changeColour(CharacterCreatorColour.Torso, false) }
+            "Next torso colour"(51) { player.changeColour(CharacterCreatorColour.Torso, true) }
+            "Previous legs colour"(54) { player.changeColour(CharacterCreatorColour.Legs, false) }
+            "Next legs colour"(55) { player.changeColour(CharacterCreatorColour.Legs, true) }
+            "Previous feet colour"(58) { player.changeColour(CharacterCreatorColour.Feet, false) }
+            "Next feet colour"(59) { player.changeColour(CharacterCreatorColour.Feet, true) }
+            "Previous skin colour"(62) { player.changeColour(CharacterCreatorColour.Skin, false) }
+            "Next skin colour"(63) { player.changeColour(CharacterCreatorColour.Skin, true) }
 
-            "Male"(65) { player.changeGender(true) }
-            "Female"(66) { player.changeGender(false) }
-            "Confirm"(68) { player.confirm() }
+            "Male"(68) { player.changeGender(true) }
+            "Female"(69) { player.changeGender(false) }
+            "Confirm"(74) { player.confirm() }
             opened {
                 sendInterface()
             }

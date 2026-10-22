@@ -31,6 +31,8 @@ public class BankDepositInterface extends Interface {
     private static final Animation DEPOSIT_ANIM = new Animation(834);
     private static final int SCRIPT_RESET_INVENTORY_TAB_SPRITE = 915;
     private static final int INVENTORY_TAB = 3;
+    /** Equipment slots of the 241 deposit box's worn-item buttons 192:10..20 (slot0, slot1, ... slot13). */
+    private static final int[] WORN_SLOTS = {0, 1, 2, 3, 4, 5, 7, 9, 10, 12, 13};
 
     static {
         VarManager.appendPersistentVarp(1794);
@@ -39,15 +41,21 @@ public class BankDepositInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(2, "Interact with Item");
-        put(4, "Deposit inventory");
-        put(6, "Deposit worn items");
-        put(8, "Deposit loot");
-        put(11, "Default Quantity 1");
-        put(13, "Default Quantity 5");
-        put(15, "Default Quantity 10");
-        put(17, "Default Quantity X");
-        put(19, "Default Quantity All");
+        // Build 241 bank_depositbox (192), redesigned (worn-item slots, lock menu); matched by the deposit box init
+        // script 144 arguments and names. 211 ids in the comments.
+        put(26, "Interact with Item"); // item_background (211: 2)
+        put(31, "Deposit inventory"); // deposit_inv (211: 4)
+        put(30, "Deposit worn items"); // deposit_worn (211: 6)
+        put(32, "Deposit loot"); // deposit_lootingbag, "Empty containers" (211: 8)
+        put(35, "Default Quantity 1"); // 1 (211: 11)
+        put(36, "Default Quantity 5"); // 5 (211: 13)
+        put(37, "Default Quantity 10"); // 10 (211: 15)
+        put(38, "Default Quantity X"); // x (211: 17)
+        put(39, "Default Quantity All"); // all (211: 19)
+        // 241 only: the worn-item slots (slot0..slot13, components 10-20; the equipment slot is in the name)
+        for (int i = 0; i < WORN_SLOTS.length; i++) {
+            put(10 + i, "Deposit worn slot " + WORN_SLOTS[i]);
+        }
     }
 
     @Override
@@ -118,6 +126,26 @@ public class BankDepositInterface extends Interface {
             player.getBank().deposit(player, player.getInventory().getContainer(), slotId, op.amount);
             player.setAnimation(DEPOSIT_ANIM);
         });
+        for (final int wornSlot : WORN_SLOTS) {
+            bind("Deposit worn slot " + wornSlot, (player, slotId, itemId, option) -> {
+                final Container container = player.getEquipment().getContainer();
+                final Item item = container.get(wornSlot);
+                if (item == null) {
+                    return;
+                }
+                if (option == 10) {
+                    ItemUtil.sendItemExamine(player, item);
+                    return;
+                }
+                player.getBank().deposit(null, container, wornSlot, item.getAmount());
+                player.getEquipment().refreshAll();
+                player.getCombatDefinitions().refresh();
+                player.setAnimation(DEPOSIT_ANIM);
+                if (container.get(wornSlot) != null) {
+                    player.sendMessage("Not enough space in your bank.");
+                }
+            });
+        }
         bind("Deposit loot", player -> {
             final Inventory inventory = player.getInventory();
             final boolean carryingLootingBag = inventory.containsItem(ItemId.LOOTING_BAG) || inventory.containsItem(ItemId.LOOTING_BAG_22586);

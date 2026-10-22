@@ -1,5 +1,6 @@
 package com.zenyte.game.model.ui.testinterfaces;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.wheeloffortune.WheelOfFortune;
 import com.zenyte.game.item.Item;
@@ -37,8 +38,8 @@ public class WheelOfFortuneInterface extends Interface {
         final Item reward = wheelOfFortune.getPrize();
         player.getPacketDispatcher().sendUpdateItemContainer(container);
         player.getInterfaceHandler().sendInterface(this);
-        player.getPacketDispatcher().sendClientScript(10034, 15, reward.getDefinitions().getExamine(), type);
-        player.getPacketDispatcher().sendClientScript(10042, 0);
+        player.getPacketDispatcher().sendClientScript(Gad211.script(10034), 15, reward.getDefinitions().getExamine(), type);
+        player.getPacketDispatcher().sendClientScript(Gad211.script(10042), 0);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Examine item"), -1, container.getSize(), AccessMask.CLICK_OP1);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Claim"), -1, 0, AccessMask.CLICK_OP1);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Deposit to bank"), -1, 0, AccessMask.CLICK_OP1);
@@ -55,7 +56,7 @@ public class WheelOfFortuneInterface extends Interface {
         bind("Deposit to bank", player -> player.getWheelOfFortune().claim(true));
         bind("Claim later", player -> close(player));
         bind("Discard", player -> {
-            player.getPacketDispatcher().sendClientScript(10042, 1);
+            player.getPacketDispatcher().sendClientScript(Gad211.script(10042), 1);
             player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Claim"), -1, 0, AccessMask.NONE);
             player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Deposit to bank"), -1, 0, AccessMask.NONE);
             player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Claim later"), -1, 0, AccessMask.NONE);

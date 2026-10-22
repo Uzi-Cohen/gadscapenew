@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.eventbus.Subscribe;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.Location;
@@ -21,7 +22,7 @@ public class HomeNexusObject implements ObjectAction {
      * GadScape loc "Teleportation nexus" (TypeParser: clone of POH nexus 41415). In the 2746 base cache 50082 is a vanilla
      * "Wilderness Sign" placed in the Wilderness, so the cache converter relocates the nexus; the idmap must rewrite this.
      */
-    public static final int TELEPORTATION_NEXUS = 50082;
+    public static final int TELEPORTATION_NEXUS = Gad211.loc(50082);
 
     /** South-east of the Varrock fountain, beside the home-teleport arrival tile; 2x2 floor free on the 211, 241 and 2746 maps. */
     private static final Location VARROCK_HOME_NEXUS = new Location(3218, 3422, 0);

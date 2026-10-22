@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.slayer;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.base.Preconditions;
 import com.gadscape.game.world.PlayerEvent.SlayerTaskCompleted;
 import com.zenyte.game.GameInterface;
@@ -63,7 +64,11 @@ public class Slayer {
     private static final int STORED_TASK_INDEX_VAR = 265;
     private static final int UNLOCK_REWARDS_FIRST_VARP = 1076;
     private static final int UNLOCK_REWARDS_SECOND_VARP = 1344;
-    public static final int SLAYER_STATUES_VAR = 3811;
+    /** Build 241: reward ids 64-95 (script 8048 reads 1076, 1344 and 5587 for ids 0-31, 32-63, 64-95). */
+    private static final int UNLOCK_REWARDS_THIRD_VARP = 5587;
+    /** Build 241 slayer rewards db table: column 0 reward id, column 3 name. */
+    private static final int SLAYER_REWARDS_TABLE = 117;
+    public static final int SLAYER_STATUES_VAR = Gad211.varp(3811);
     private static final boolean DOUBLE_POINTS = true;
     static final boolean HALVED_QUANTITIES = true;
 
@@ -839,8 +844,60 @@ public class Slayer {
     void refreshRewards() {
         final VarManager varManager = player.getVarManager();
         final long hash = getUnlocksHash();
-        varManager.sendVar(UNLOCK_REWARDS_FIRST_VARP, (int) (hash & 4294967295L));
-        varManager.sendVar(UNLOCK_REWARDS_SECOND_VARP, (int) ((hash >> 32) & 4294967295L));
+        if (!mgi.tools.jagcached.CacheFormat.is241()) {
+            varManager.sendVar(UNLOCK_REWARDS_FIRST_VARP, (int) (hash & 4294967295L));
+            varManager.sendVar(UNLOCK_REWARDS_SECOND_VARP, (int) ((hash >> 32) & 4294967295L));
+            return;
+        }
+        // The unlocks hash keeps GadScape's 211 perk slots (enum 834); the 241 rewards screen reads the reward id of
+        // db table 117 instead. They are the same number except where GadScape's perk sits elsewhere in the 241 table
+        // (cacheV: Slayer Statues, GadScape slot 53, is reward 95; 241's 53 is "Revenenenenenants").
+        final int[] varps = new int[3];
+        for (int slot = 0; slot < 64; slot++) {
+            if ((hash & (1L << slot)) == 0) {
+                continue;
+            }
+            final int id = rewardIdOf(slot);
+            if (id >= 0 && id < 96) {
+                varps[id >> 5] |= 1 << (id & 31);
+            }
+        }
+        varManager.sendVar(UNLOCK_REWARDS_FIRST_VARP, varps[0]);
+        varManager.sendVar(UNLOCK_REWARDS_SECOND_VARP, varps[1]);
+        varManager.sendVar(UNLOCK_REWARDS_THIRD_VARP, varps[2]);
+    }
+
+    private static volatile it.unimi.dsi.fastutil.ints.Int2IntMap rewardIds;
+
+    /** The 241 reward id (db table 117) of GadScape's perk slot {@code slot}: the row with the same name, else the slot. */
+    static int rewardIdOf(final int slot) {
+        it.unimi.dsi.fastutil.ints.Int2IntMap map = rewardIds;
+        if (map == null) {
+            final java.util.List<mgi.types.config.DBRowDefinition> rows = mgi.types.config.DBRowDefinition.tableRows.get(SLAYER_REWARDS_TABLE);
+            if (rows == null) {
+                return slot; // table not loaded (tools, tests): GadScape's numbering
+            }
+            final java.util.Map<String, Integer> byName = new java.util.HashMap<>();
+            for (final mgi.types.config.DBRowDefinition row : rows) {
+                if (row.columns.containsKey(0) && row.columns.containsKey(3) && row.getValueFromRow(0) instanceof Integer id
+                        && row.getValueFromRow(3) instanceof String name) {
+                    byName.putIfAbsent(name.toLowerCase(java.util.Locale.ROOT), id);
+                }
+            }
+            final it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap built = new it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap();
+            built.defaultReturnValue(-1);
+            for (int gadSlot = 0; gadSlot < 64; gadSlot++) {
+                final java.util.Optional<String> name = Enums.SLAYER_PERK_REWARD_NAMES.getValue(gadSlot);
+                final Integer id = name.isPresent() ? byName.get(name.get().toLowerCase(java.util.Locale.ROOT)) : null;
+                if (id != null) {
+                    built.put(gadSlot, (int) id);
+                }
+            }
+            map = built;
+            rewardIds = map;
+        }
+        final int id = map.get(slot);
+        return id == -1 ? slot : id;
     }
 
     public void refreshSlayerPoints() {

@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.thieving;
 
+import com.gadscape.game.rev241.Gad211;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 
@@ -17,7 +18,7 @@ public enum Stall {
 	HOME_COINS_STALL_BEGINNER(COIN_STALL_BEGINNER, 50055, 4276),
 	HOME_COINS_STALL_EASY(COIN_STALL_EASY, 50056, 4276),
 	HOME_COINS_STALL_MEDIUM(COIN_STALL_MEDIUM, 50057, 4276),
-	HOME_COINS_STALL_HARD(COIN_STALL_HARD, 50058, 4276),
+	HOME_COINS_STALL_HARD(COIN_STALL_HARD, Gad211.loc(50058), 4276),
 	HOME_COINS_STALL_MASTER(COIN_STALL_MASTER, 50059, 4276),
 	LDI_STALL(COIN_STALL_LDI, 36571, 4276),
 

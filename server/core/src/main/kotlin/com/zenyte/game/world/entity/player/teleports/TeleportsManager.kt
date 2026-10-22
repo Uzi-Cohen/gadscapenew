@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.teleports
 
+import com.gadscape.game.rev241.Gad211
 import com.gadscape.cache.interfaces.teleports.Category
 import com.gadscape.cache.interfaces.teleports.Destination
 import com.gadscape.cache.interfaces.teleports.TeleportsList
@@ -126,7 +127,7 @@ class TeleportsManager(
          * shr 5 selects the varp). 7 varps = 224 destinations; TeleportInterfaceDialog refuses favourites beyond that.
          */
         @JvmField
-        val FAVORITE_VARPS = intArrayOf(263, 264, 265, 266, 262, 3808, 3809)
+        val FAVORITE_VARPS = intArrayOf(263, 264, 265, 266, 262, Gad211.varp(3808), Gad211.varp(3809))
 
         /** Sets varcstr 1500, the magic stone's "Previous teleport: <name>" op text. */
         const val PREVIOUS_TELEPORT_LABEL_SCRIPT = 10592

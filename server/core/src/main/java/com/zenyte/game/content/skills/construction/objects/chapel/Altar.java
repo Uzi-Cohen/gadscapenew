@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.construction.objects.chapel;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.boons.impl.BoneCruncher;
 import com.zenyte.game.content.skills.construction.Construction;
 import com.zenyte.game.content.skills.construction.ObjectInteraction;
@@ -115,7 +116,7 @@ public final class Altar implements ObjectInteraction, ItemOnObjectAction {
             if (altar.getId() == 409) {
                 baseModifier = 1.5F;
             } else {
-                baseModifier = altar.getId() == 411 ? 3.5F : altar.getId() == 18258 ? 1.75F : (index >= BASE_MODIFIERS.length || index < 0) ? 1 : BASE_MODIFIERS[index];
+                baseModifier = altar.getId() == 411 ? 3.5F : isSaradominAltar(altar.getId()) ? 1.75F : (index >= BASE_MODIFIERS.length || index < 0) ? 1 : BASE_MODIFIERS[index];
             }
         }
 
@@ -204,12 +205,20 @@ public final class Altar implements ObjectInteraction, ItemOnObjectAction {
                 }
             }
             player.getSkills().addXp(SkillConstants.PRAYER, bone.getXp() * modifier);
-            if (altar.getId() != 18258 && altar.getId() != 411) {
+            if (!isSaradominAltar(altar.getId()) && altar.getId() != 411) {
                 World.sendGraphics(OFFERING_GFX, altar);
-            } else if (altar.getId() == ObjectId.SARADOMIN_ALTAR) {
+            } else if (isSaradominAltar(altar.getId())) {
                 World.sendGraphics(OFFERING_GFX, altar.transform(0, 1, 0));
             }
             return 3;
         }
+    }
+
+    /**
+     * Loc 18258 (Saradomin altar): 2746 places its own at the vanilla spots, and the 241 cache moved GadScape's copy
+     * (home) off the id (Gad211); on 211 both were 18258, so both keep the 211 behaviour.
+     */
+    static boolean isSaradominAltar(final int id) {
+        return id == 18258 || id == Gad211.loc(18258);
     }
 }

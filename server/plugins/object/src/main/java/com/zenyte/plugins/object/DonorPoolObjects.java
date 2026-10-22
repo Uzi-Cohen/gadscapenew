@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.consumables.Consumable;
 import com.zenyte.game.content.consumables.ConsumableEffects;
 import com.zenyte.game.world.entity.player.Player;
@@ -22,7 +23,7 @@ public class DonorPoolObjects implements ObjectAction {
                 drink(player, 4);
         }
 
-        if(object.getId() == 50099 && option.equalsIgnoreCase("Drink")) {
+        if(object.getId() == Gad211.loc(50099) && option.equalsIgnoreCase("Drink")) {
             if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER)) {
                 player.sendMessage("Only Platinum Donators can use this.");
                 return;
@@ -38,7 +39,7 @@ public class DonorPoolObjects implements ObjectAction {
             ConsumableEffects.applyOverload(player);
         }
 
-        if(object.getId() == 50100 && option.equalsIgnoreCase("Drink")) {
+        if(object.getId() == Gad211.loc(50100) && option.equalsIgnoreCase("Drink")) {
             if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
                 player.sendMessage("Only Respected Donators or higher can use this.");
                 return;
@@ -93,6 +94,6 @@ public class DonorPoolObjects implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] {50043, 50044, 50050, 50099, 50100};
+        return new Object[] {50043, 50044, 50050, Gad211.loc(50099), Gad211.loc(50100)};
     }
 }

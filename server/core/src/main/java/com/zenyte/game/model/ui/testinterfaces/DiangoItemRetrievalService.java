@@ -46,12 +46,13 @@ public class DiangoItemRetrievalService extends Interface {
         if (set.isEmpty()) {
             return false;
         }
-        final int[] varps = new int[4];
-        for (int i = 0; i < 4; i++) {
+        // Script 450 (build 241): 8 int bitsets (items 0..255 of the enum) + the title (211: 6 ints + title).
+        final int[] varps = new int[8];
+        for (int i = 0; i < varps.length; i++) {
             final long[] values = set.get(i * 32, (i + 1) * 32).toLongArray();
             varps[i] = values.length == 0 ? 0 : (int) values[0];
         }
-        player.getPacketDispatcher().sendClientScript(450, varps[0], varps[1], varps[2], varps[3], "Diango's Holiday Item Retrieval");
+        player.getPacketDispatcher().sendClientScript(450, varps[0], varps[1], varps[2], varps[3], varps[4], varps[5], varps[6], varps[7], "Diango's Holiday Item Retrieval");
         return true;
     }
 

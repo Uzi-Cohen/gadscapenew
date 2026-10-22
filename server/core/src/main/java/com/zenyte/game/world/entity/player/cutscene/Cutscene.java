@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.cutscene;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.model.MinimapState;
 import com.zenyte.game.world.entity.masks.Animation;
 import com.zenyte.game.world.entity.npc.NPC;
@@ -186,16 +187,17 @@ public abstract class Cutscene {
 	}
 
 	protected void turnLeft() {
-		player.setInvalidAnimation(new Animation(15102));
+		player.setInvalidAnimation(new Animation(Gad211.seq(15102)));
 		player.addTemporaryAttribute("facing animation direction", 15102);
 	}
 
 	protected void turnStraight() {
-		player.setInvalidAnimation(new Animation(player.getNumericTemporaryAttribute("facing animation direction").intValue() == 15102 ? 15103 : 15105));
+		// the attribute holds GadScape's 211 seq id of the turn (15102 left, 15104 right)
+		player.setInvalidAnimation(new Animation(player.getNumericTemporaryAttribute("facing animation direction").intValue() == 15102 ? Gad211.seq(15103) : Gad211.seq(15105)));
 	}
 
 	protected void turnRight() {
-		player.setInvalidAnimation(new Animation(15104));
+		player.setInvalidAnimation(new Animation(Gad211.seq(15104)));
 		player.addTemporaryAttribute("facing animation direction", 15104);
 	}
 	

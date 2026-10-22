@@ -13,14 +13,17 @@ import com.zenyte.game.world.entity.player.Player;
 public class CombatTabInterface extends Interface {
     @Override
     protected void attach() {
-        put(4, "Attack style 1");
-        put(8, "Attack style 2");
-        put(12, "Attack style 3");
-        put(16, "Attack style 4");
-        put(21, "Defensive autocast");
-        put(26, "Autocast");
-        put(30, "Auto retaliate");
-        put(36, "Special attack");
+        // Build 241 combat_interface (593) ids; 211 ids in the comments.
+        put(6, "Attack style 1"); // 211: 4
+        put(10, "Attack style 2"); // 211: 8
+        put(14, "Attack style 3"); // 211: 12
+        put(18, "Attack style 4"); // 211: 16
+        put(23, "Defensive autocast"); // 211: 21
+        put(28, "Autocast"); // 211: 26
+        put(32, "Auto retaliate"); // 211: 30
+        put(41, "Special attack"); // 211: 36 (special_attack, inside the hidden sp_attackbar)
+        put(57, "Special attack main hand"); // 241 special_attack_mainhand (new bar)
+        put(67, "Special attack off hand"); // 241 special_attack_offhand (new bar)
     }
 
     @Override
@@ -73,17 +76,23 @@ public class CombatTabInterface extends Interface {
             }
             player.getCombatDefinitions().setAutoRetaliate(!player.getCombatDefinitions().isAutoRetaliate());
         });
-        bind("Special attack", player -> {
-            if (player.isLocked()) {
-                return;
-            }
-            final Duel duel = player.getDuel();
-            if (duel != null && duel.hasRule(DuelSetting.NO_SPECIAL_ATTACK) && duel.inDuel()) {
-                player.sendMessage("Use of special attacks has been turned off for this duel.");
-                return;
-            }
-            player.getCombatDefinitions().setSpecial(!player.getCombatDefinitions().isUsingSpecial(), false);
-        });
+        // 241 has three bars: the single bar (41), and the main-hand / off-hand bars (57 / 67) shown when an off-hand
+        // item has a special attack (CombatDefinitions.toggleSpecialBar: 0 single, 1 main hand, 2 off hand).
+        bind("Special attack", player -> toggleSpecialBar(player, 0));
+        bind("Special attack main hand", player -> toggleSpecialBar(player, 1));
+        bind("Special attack off hand", player -> toggleSpecialBar(player, 2));
+    }
+
+    private static void toggleSpecialBar(final Player player, final int bar) {
+        if (player.isLocked()) {
+            return;
+        }
+        final Duel duel = player.getDuel();
+        if (duel != null && duel.hasRule(DuelSetting.NO_SPECIAL_ATTACK) && duel.inDuel()) {
+            player.sendMessage("Use of special attacks has been turned off for this duel.");
+            return;
+        }
+        player.getCombatDefinitions().toggleSpecialBar(bar);
     }
 
     @Override

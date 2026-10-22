@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.easter2020;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.MinimapState;
@@ -46,7 +47,7 @@ public class OutsideCutscene extends Cutscene {
         });
         addActions(5, unfadeRunnable, () -> {
             bunny.setInvalidAnimation(new Animation(15213, 5));
-            bunny.setGraphics(new Graphics(2512, 5, 0));
+            bunny.setGraphics(new Graphics(Gad211.spot(2512), 5, 0));
             player.lock();
         });
         final FadeScreen fs = new FadeScreen(player);

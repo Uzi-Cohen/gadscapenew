@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.skills.slayer.Slayer;
 import com.zenyte.game.content.skills.slayer.SlayerMountType;
 import com.zenyte.game.item.Item;
@@ -105,7 +106,7 @@ public class SlayerStatues implements ObjectAction, ItemOnObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] {50103,50104,50105,50106,50107,50108,50109,50110,50111,50112,50113,50114,50115};
+        return new Object[] {Gad211.loc(50103),50104,50105,50106,50107,50108,50109,50110,50111,Gad211.loc(50112),Gad211.loc(50113),Gad211.loc(50114),Gad211.loc(50115)};
     }
 
 }

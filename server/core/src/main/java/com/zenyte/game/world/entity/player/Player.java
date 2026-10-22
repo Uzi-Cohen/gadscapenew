@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player;
 
+import com.gadscape.game.rev241.Gad211;
 import com.gadscape.website.WebsiteService;
 import com.google.gson.annotations.Expose;
 import com.gadscape.api.model.User;
@@ -2609,7 +2610,7 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (getFaceEntity() >= 0) {
             setFaceEntity(null);
         }
-        varManager.sendBit(5983, 0);
+        varManager.sendBit(10670, 0); // 241 chatmodal_unclamp (211: 5983)
         if (getTemporaryAttributes().get("CreatingRoom") != null) {
             construction.roomPreview((RoomReference) getTemporaryAttributes().get("CreatingRoom"), true);
             getTemporaryAttributes().remove("CreatingRoom");
@@ -2666,8 +2667,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
 
     public void stopAllExclWorldMap() {
         setRouteEvent(null);
-        if (varManager.getBitValue(5983) != 0) {
-            varManager.sendBit(5983, 0);
+        if (varManager.getBitValue(10670) != 0) { // 241 chatmodal_unclamp (211: 5983)
+            varManager.sendBit(10670, 0);
         }
         if (getTemporaryAttributes().get("CreatingRoom") != null) {
             construction.roomPreview((RoomReference) getTemporaryAttributes().get("CreatingRoom"), true);
@@ -3261,8 +3262,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
         return middleTile;
     }
 
-    private static final Animation candyCaneBlockAnimation = new Animation(15086);
-    private static final Animation easterCarrotBlockAnimation = new Animation(15162);
+    private static final Animation candyCaneBlockAnimation = new Animation(Gad211.seq(15086));
+    private static final Animation easterCarrotBlockAnimation = new Animation(Gad211.seq(15162));
 
     private Animation getDefenceAnimation() {
         final int weaponId = getEquipment().getId(EquipmentSlot.WEAPON);
@@ -3524,7 +3525,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
             packetDispatcher.sendComponentText(plugin.getInterface(), plugin.getComponent("Member Rank"), "Member: " +
                     "<col=ffffff>" + getMemberCrown().getCrownTag() + getMemberName().replace(" Member", "") + "</col>");
         }
-        varManager.sendBit(16000, memberRank.equalToOrGreaterThan(MemberRank.PREMIUM) ? 1 : 0);
+        // (no varbit 16000 "premium member" write: GadScape's cache never defined varbit 16000, so on 211 it did nothing;
+        // on the 241 cache 16000 is a 2746 varbit of varp 5751 and must not be written.)
         getUpdateFlags().flag(UpdateFlag.APPEARANCE);
     }
 
@@ -4009,12 +4011,13 @@ public class Player extends AbstractEntity implements UsernameProvider {
             }
         }
 
-//        varManager.sendBit(15026, attributes.containsKey("Christmas 2019 event") ? 1 : 0);
+//        varManager.sendBit(Gad211.varbit(15026), attributes.containsKey("Christmas 2019 event") ? 1 : 0);
 //        final boolean christmasEventCompleted = AChristmasWarble.progressedAtLeast(this,
 //                AChristmasWarble.ChristmasWarbleProgress.EVENT_COMPLETE);
-//        varManager.sendBit(15024, christmasEventCompleted ? 1 : 0);
-//        varManager.sendBit(15025, christmasEventCompleted ? 1 : 0);
-        varManager.sendBit(16000, memberRank.equalToOrGreaterThan(MemberRank.PREMIUM) ? 1 : 0);
+//        varManager.sendBit(Gad211.varbit(15024), christmasEventCompleted ? 1 : 0);
+//        varManager.sendBit(Gad211.varbit(15025), christmasEventCompleted ? 1 : 0);
+        // (no varbit 16000 "premium member" write: GadScape's cache never defined varbit 16000, so on 211 it did nothing;
+        // on the 241 cache 16000 is a 2746 varbit of varp 5751 and must not be written.)
         if (!getAuthenticator().isEnabled()) {
             sendMessage(Colour.RED.wrap("You do not have 2FA enabled. Please enable it for extra account security and" +
                     " extra vote rewards!"));

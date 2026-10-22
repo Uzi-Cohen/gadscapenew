@@ -32,7 +32,7 @@ public class SetAppearanceEvent implements ClientProtEvent {
 
     @Override
     public void handle(Player player) {
-        if (!player.getInterfaceHandler().isVisible(269)) {
+        if (!player.getInterfaceHandler().isVisible(com.zenyte.game.GameInterface.TUTORIAL_MAKE_OVER.getId())) {
             return;
         }
         for (int i = 0; i < 7; i++) {

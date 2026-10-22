@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.achievementdiary.diaries.FaladorDiary;
 import com.zenyte.game.content.achievementdiary.diaries.LumbridgeDiary;
 import com.zenyte.game.content.achievementdiary.diaries.VarrockDiary;
@@ -157,10 +158,10 @@ public enum Emote {
 	PARTY(51, 6550, new Animation(65535)),
 	TRICK(52, -2, new Animation(15247), new Graphics(2517)),
 	GIVE_THANKS(53, -2, null, null),
-	SNOWMAN_DANCE(54, 15024, new Animation(15094), null),
-	FREEZE(55, 15025, new Animation(15093), new Graphics(2505)),
-	DRAMATIC_POINT(56, 15026, new Animation(15084), new Graphics(2502)),
-	AROUND_THE_WORLD_IN_EGGTY_DAYS(57, 15051, new Animation(15231), new Graphics(2514));
+	SNOWMAN_DANCE(54, Gad211.varbit(15024), new Animation(Gad211.seq(15094)), null),
+	FREEZE(55, Gad211.varbit(15025), new Animation(Gad211.seq(15093)), new Graphics(Gad211.spot(2505))),
+	DRAMATIC_POINT(56, Gad211.varbit(15026), new Animation(Gad211.seq(15084)), new Graphics(Gad211.spot(2502))),
+	AROUND_THE_WORLD_IN_EGGTY_DAYS(57, 15051, new Animation(15231), new Graphics(Gad211.spot(2514)));
 
 	private final Animation animation;
 	private final Graphics graphics;
@@ -331,9 +332,9 @@ public enum Emote {
 		Animation PREMIER_SHIELD_ANIM = new Animation(7751);
 		Animation CRAZY_DANCE_A = new Animation(7536);
 		Animation CRAZY_DANCE_B = new Animation(7537);
-		Animation GIVE_THANKS_START = new Animation(11008);
-		Animation GIVE_THANKS_END = new Animation(11009);
-		Animation TURKEY_SPIN = new Animation(11010);
+		Animation GIVE_THANKS_START = new Animation(Gad211.seq(11008));
+		Animation GIVE_THANKS_END = new Animation(Gad211.seq(11009));
+		Animation TURKEY_SPIN = new Animation(Gad211.seq(11010));
 		Graphics POOF_GRAPHICS = new Graphics(5005);
 		Graphics[] PREMIER_GRAPHICS = new Graphics[] {new Graphics(1412), new Graphics(1413), new Graphics(1414)};
 

@@ -102,6 +102,8 @@ public final class CacheManager {
         CacheFormat.setRevision(revision);
         log.info("Using cache {} (format revision {}, {} archives{})", cache.getPath(), revision,
                 cache.getArchiveCount(), isExternalCache() ? ", external: no cache generation" : "");
+        // GadScape ids gadconv moved (seqs, objs, locs, varps...) resolve through this cache's id map
+        com.gadscape.game.rev241.Gad211.checkAgainstCache(cache.getPath(), revision);
         return CacheManager.cache = cache;
     }
 

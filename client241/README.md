@@ -33,7 +33,8 @@ The old client in `client/` (build 211) is not used or changed by any of this.
 | `plugins/` | `gadscape-plugins.jar`: the GadScape Login plugin (sources ported from `client/.../plugins/gadscapelogin`). |
 | `launcher/` | Starts RuneLite with the patched game client, serves its jav_config and world list, writes GadScape's default RuneLite settings. |
 | `dist/` | `run.sh`, `run.bat`, the `README.txt` (templates: build.sh fills in the channel's names) and the `licenses/` folder that go into the portable folder. |
-| `exe/` | The Windows exe (Go): Java and the client packed into one file. Release icon/splash in `exe/`, test ones in `exe/test-res/`. |
+| `exe/` | The Windows exe (Go): Java and the client packed into one file. Release icon/splash in `exe/`, test ones in `exe/test-res/`. `exe/kit/` is the code it shares with the setup (loading window, safe unzip, starting the client). |
+| `setup/` | `GadScape-Setup.exe`, the small download that installs, updates and starts the client, and `gadscape-release`, the tool that makes signed releases for it (see "Setup and updates"). |
 | `devserver/TestServer.java` | A tiny stand-in server for testing the client alone (JS5 cache + login check). Development only. |
 | `build.sh` | Builds all of the above. |
 
@@ -125,6 +126,7 @@ Output in `--out` (release names):
 - `channel-release.properties` - the channel values baked into the launcher jar and the exe
 - `GadScape/` and `GadScape.zip` - portable folder: `run.bat`, `run.sh`, `server.txt`, jars
 - `GadScape.exe` - one file for Windows, Java inside (about 70 MB)
+- with `--setup` (instead of the above): `GadScape-Setup.exe` and `gadscape-release` (see "Setup and updates")
 
 Nothing downloaded or built goes into git: `client241/.gitignore` ignores every `build/` folder (including the
 default `client241/build/`), `exe/payload/`, and all `*.jar`, `*.zip` and `*.exe` files.
@@ -134,6 +136,140 @@ build), then `$ASM_DIR` (a folder with `asm-9.7.1.jar` and `asm-tree-9.7.1.jar`)
 (`~/.gradle/caches/modules-2`), and downloads it from Maven Central only if none has it. Every copy is hash-checked.
 The RuneLite jars come from `--runelite-jars DIR` and are only downloaded if missing; a jar with a wrong hash or
 size is deleted, so the next run downloads it again.
+
+## Setup and updates (GadScape-Setup.exe)
+
+Players download one small file, `GadScape-Setup.exe` (about 7 MB; Windows 10 or 11, 64-bit: the Go runtime it is
+built with does not run on Windows 7 or 8). It downloads Java, the client and the game cache from a folder you put
+on any static web host, installs them for this Windows user (no administrator rights), and starts the client. It is the same client as `GadScape.exe`: same folder `%LOCALAPPDATA%\GadScape` (`java\`,
+`app\`, `home\` with RuneLite's settings and saved logins), same `GadScape-server.txt`, so the two can be mixed.
+
+What the setup does:
+
+- **First run.** Shows the GadScape window (status, progress bar, Cancel). Downloads `manifest.json` and
+  `manifest.sig` from the address built into it and checks the signature with the public key built into it; a
+  manifest that is not signed with GadScape's key is refused and nothing is installed (a manifest and signature
+  that do not match are fetched once more first: both requests carry a random `?r=` so caches on the way cannot
+  mix two releases, and the two files are uploaded one after the other). Every redirect must be https as well.
+  Downloads the files the
+  manifest lists (Java zip, client zip, cache zip), each checked for size and SHA-256; a broken download is
+  continued where it stopped (HTTP Range), retried with back-off, and kept across runs (Cancel, closed window).
+  Unpacks safely (no `..`, absolute paths, drive letters, symbolic links or other special files; sizes limited to
+  what the signed manifest says) into a staging folder and swaps each part in with a rename. Writes
+  `GadScape-server.txt`, makes the "GadScape" shortcuts on the Desktop and in the Start menu, adds GadScape to
+  Apps & features (HKCU: name, icon, version, publisher GadScape, uninstall), copies itself to
+  `%LOCALAPPDATA%\GadScape\GadScape.exe` and starts the client. Renames and deletes are retried for a few
+  seconds while Windows reports a file busy (Windows Defender scanning the `java.exe` it just unpacked, say).
+- **Game cache.** The cache goes into `home\.runelite\jagexcache\oldschool\LIVE` only when there is none, or the
+  one there is older than the release's: the setup compares every index's reference table (revision and CRC, the
+  numbers the game itself checks with the server). A cache the game has already brought up to date from the server
+  (newer) is never replaced; one that only differs is replaced only if the setup itself seeded it from an older
+  release (`gadscape-cache-version.txt` in that folder). Only `main_file_cache.*` files are touched: the game's
+  `preferences2.dat` and everything RuneLite keeps in `.runelite` stay as they are. The release tool stores the
+  cache the way the 241 client does (every group with its full 4-byte version), so the client keeps all of it; a
+  cache packed by older tools has 2-byte versions, and the client throws away every group whose version is above
+  0xFFFF (about a third of `cacheV`) and downloads it from the game server on the first start.
+- **Every start** (the shortcuts run the installed `GadScape.exe`): checks the manifest (8 seconds at most),
+  downloads only what changed (by SHA-256), and starts the client. Files are only replaced while the client is
+  closed (otherwise it asks to close it, or starts the installed version). No connection, or the server is down:
+  it says so for a moment and starts the installed client. A release older than the installed one is never
+  installed (an old signed manifest cannot downgrade players); the installed client just starts, since that is
+  also what a cache still holding the previous release looks like. A newer setup in the release replaces the
+  installed launcher (only one built with the same key and channel), which then carries on. An update that a
+  crash or power cut interrupted is put back on the next start, with or without a connection, and a crash in the
+  launcher itself still starts the installed client (the crash goes to the log).
+- **Server address.** New installs get the manifest's `server` (the channel's default server unless the release
+  says otherwise). A `GadScape-server.txt` the player edited is never changed; one the setup wrote follows a
+  release that moves the server.
+- **Uninstall** (Apps & features, or `GadScape.exe --uninstall`): removes the program folder, then the shortcuts and
+  the Apps & features entry, and asks whether to delete the home folder too (settings, saved logins, game cache).
+  If a file cannot be deleted, the launcher and the entry stay, so the uninstall can be run again.
+- Logs: `%LOCALAPPDATA%\GadScape\setup.log` (the uninstaller: `%TEMP%\GadScape-uninstall.log`). Options for
+  support: `--silent` (no message boxes), `--no-start`, `--uninstall [--keep-home|--remove-home]`.
+- **Test builds only** (`--test` or `--setup-local-http`): a `GadScape-setup.txt` next to the exe whose first line
+  is `url=<address of a manifest.json>` makes the setup use another release folder; the launcher it installs keeps
+  using it until a setup without one is run. The key cannot be changed that way. Release builds ignore the file (a
+  downloaded setup sits in Downloads or a repacked zip, where anyone could put one), so to try a release before it
+  goes live, build a setup with that release's `--setup-url`.
+
+### For the owner: making and publishing a release
+
+All of this runs on Linux (macOS should work); nothing is uploaded by the tools.
+
+1. **Make the signing key, once.** Build the release tool and make the key pair:
+
+   ```
+   client241/build.sh --setup --out client241/build/out        # also builds gadscape-release
+   client241/build/out/gadscape-release keygen --out ~/gadscape-keys
+   ```
+
+   `~/gadscape-keys/gadscape-release.key` is the private key: keep it secret and backed up, never upload it, never
+   commit it. Anyone with it can publish a release every installed GadScape accepts; losing it means everyone has
+   to download a new setup. `gadscape-release.pub` is the public key that goes into the setup.
+
+2. **Pick the address** where the release folder will live, for example
+   `https://downloads.example.org/gadscape/manifest.json` (any static host with https: a web server, an S3/R2
+   bucket, GitHub Pages, ...). The folder must be served as plain files; HTTP Range support makes broken downloads
+   resume (most hosts have it).
+
+3. **Build the client and the setup** (client first, into the same `--out`: the setup and the release tool take
+   the channel's default server from the client build's `channel-release.properties`; with `--default-host` on
+   the client build, give the same one to the setup build or leave it out):
+
+   ```
+   client241/build.sh --jre-zip <Windows x64 JRE zip>                     # the release client (GadScape.zip)
+   client241/build.sh --setup --setup-url https://downloads.example.org/gadscape/manifest.json \
+                      --setup-key ~/gadscape-keys/gadscape-release.pub      # GadScape-Setup.exe
+   ```
+
+   A setup built without `--setup-key` (or address) refuses to install anything. `--setup-version N` (default
+   `setup/VERSION`) must go up for every setup you publish after the first; installed launchers then update
+   themselves.
+
+4. **Make the release folder** (signs `manifest.json` with the private key):
+
+   ```
+   client241/build/out/gadscape-release build --dist client241/build/out --jre-zip <the same JRE zip> \
+       --cache-dir <the game cache folder> --setup-exe client241/build/out/GadScape-Setup.exe \
+       --key ~/gadscape-keys/gadscape-release.key --out ~/gadscape-release
+   client241/build/out/gadscape-release verify --dir ~/gadscape-release --pub ~/gadscape-keys/gadscape-release.pub
+   ```
+
+   The folder holds `manifest.json`, `manifest.sig`, `files/` (the zips and the setup, named by their hash) and
+   `GadScape-Setup.exe` for your download button. The cache folder's `main_file_cache.dat2` and `.idx` files are
+   rewritten the way the 241 client stores them (every group the reference tables list, CRC-checked, with its
+   4-byte version; groups that do not match their table are left out with a warning, the game downloads them) and
+   zipped the same way every time, so an unchanged cache keeps its hash and nobody downloads it again. The game
+   server's own cache is not changed. `gadscape-release cachecheck --dir <cache folder>` shows how many groups the
+   client would keep of any cache folder. For
+   the next release build into the same folder: the previous manifest there must verify with your key, the
+   release number goes up (the time, by default), the cache version stays when the cache did not change, and files
+   no longer listed are deleted. The release prints the server address new installs get (the client build's
+   default server unless `--server HOST`). Options: `--server HOST`, `--label TEXT`, `--version N`,
+   `--cache-version N`, `--base-url URL` (files on another host). `gadscape-release inspect --setup-exe FILE` shows what a setup was
+   built with.
+
+5. **Upload** the whole folder to the address from step 2: `files/` first, then `manifest.sig`, then
+   `manifest.json`, so players never see a manifest whose files are not there yet. `manifest.sig` holds the
+   signatures of the new and the previous manifest, so the moment between the two uploads does no harm. If the
+   host is behind a CDN, let it keep `manifest.json` and `manifest.sig` for a short time only (a minute) or pass
+   query strings to the origin: the setup asks for both with a random `?r=`, and a mismatch that lasts makes new
+   installs fail with "try again in a few minutes". Then check what players will get: `gadscape-release verify --url https://downloads.example.org/gadscape/manifest.json --pub
+   ~/gadscape-keys/gadscape-release.pub`. Link players to `GadScape-Setup.exe`.
+
+To test a release locally first: build a test setup (`build.sh --test --setup --setup-local-http --setup-url
+http://127.0.0.1:8090/manifest.json --setup-key <test .pub>`), `gadscape-release serve --dir <release folder>`,
+and run the setup (or put a `GadScape-setup.txt` with `url=<address>` next to a test setup). Only test builds accept
+plain http, and only to 127.0.0.1. `setup/e2e/wine-e2e.sh` runs the whole cycle under Wine.
+
+Tests: `cd client241/setup && go test ./...` (signatures, hashes, resumed downloads, zip safety, cache seeding and
+repacking, update planning, manifest versions, redirects, retried renames) and `cd client241/exe && go test ./kit/`.
+
+Not covered: the setup exe is not Authenticode-signed (Windows SmartScreen will warn about a new download until
+it has a reputation; a code-signing certificate fixes that); Windows proxy settings are not read (only the
+`HTTPS_PROXY` environment variable); it was tested under Wine on Linux, not on real Windows. Before the first
+public release, run it once on real Windows 10 and 11 with Windows Defender on (first install, an update, the
+uninstall): Wine does not lock files the way Windows does.
 
 ## Run it against a server
 

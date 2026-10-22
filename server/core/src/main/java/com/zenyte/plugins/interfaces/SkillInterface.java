@@ -18,10 +18,10 @@ public final class SkillInterface implements UserInterface {
 		if (player.getTemporaryAttributes().get("viewingSkill") == null) {
 			return;
 		}
-		final int modifier = (componentId - 11) * 1024;
-		if (componentId == 11) {
-			player.getVarManager().sendVar(965, (int) player.getTemporaryAttributes().get("viewingSkill"));
-		} else if (componentId == 8) {
+		// Build 241 skill_guide (214): sections are switched client-side (script 9341); 211 sent varp 965 here, which is
+		// the level-up popup list in 241. Only the close button (30, 211: 25) and the item icons (32, 211: 8; 241 sets no
+		// "Check materials" op on them, so this only runs if a later cache adds it back) reach the server.
+		if (componentId == 32) {
 			final Furniture furn = Furniture.DISPLAYED_MAP.get(itemId);
 			final ItemDefinitions defs = ItemDefinitions.get(itemId);
 			if (furn == null) {
@@ -42,11 +42,9 @@ public final class SkillInterface implements UserInterface {
 			}
 			builder.delete(builder.length() - 2, builder.length());
 			player.sendMessage(builder.toString());
-		} else if (componentId == 25) {
+		} else if (componentId == 30) {
 			player.getTemporaryAttributes().remove("viewingSkill");
 			player.getInterfaceHandler().closeInterface(214);
-		} else {
-			player.getVarManager().sendVar(965, (int) player.getTemporaryAttributes().get("viewingSkill") + modifier);
 		}
 
 	}

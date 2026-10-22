@@ -8,7 +8,9 @@ import static com.zenyte.game.model.ui.testinterfaces.advancedsettings.SettingVa
  */
 public enum ToggleSettingVarBits implements SettingStructResolvable {
 
-    HIDE_ROOFS(HIDE_ROOFS_STRUCT_ID, HIDE_ROOFS_VARBIT_ID),
+    // Roofs hidden by default (build 241 varbit 12378 option_hide_rooftops). VarManager.refreshDefaults skips players
+    // whose character file already holds the base varp (3074), so a saved choice is kept.
+    HIDE_ROOFS(HIDE_ROOFS_STRUCT_ID, HIDE_ROOFS_VARBIT_ID, 1),
     MUSIC_UNLOCK_MESSAGE(MUSIC_UNLOCK_MESSAGE_STRUCT_ID, MUSIC_UNLOCK_MESSAGE_VARBIT_ID),
     HITSPLAT_TINTING(HITSPLAT_TINTING_STRUCT_ID, HITSPLAT_TINTING_VARBIT_ID, 1),
     SHOW_WIKI_ENTITY_LOOKUP(SHOW_WIKI_ENTITY_LOOKUP_STRUCT_ID, SHOW_WIKI_ENTITY_LOOKUP_VARBIT_ID, 1),

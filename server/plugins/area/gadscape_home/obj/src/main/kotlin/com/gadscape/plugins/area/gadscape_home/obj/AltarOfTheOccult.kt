@@ -1,5 +1,6 @@
 package com.gadscape.plugins.area.gadscape_home.obj
 
+import com.gadscape.game.rev241.Gad211
 import com.zenyte.game.content.skills.magic.Spellbook
 import com.zenyte.game.item.Item
 import com.zenyte.game.item.ItemId
@@ -39,7 +40,7 @@ class AltarOfTheOccult : ObjectAction {
         }
     }
 
-    override fun getObjects() = arrayOf(24911, ObjectId.ALTAR_OF_THE_OCCULT)
+    override fun getObjects() = arrayOf(Gad211.loc(24911), ObjectId.ALTAR_OF_THE_OCCULT)
 
     private companion object {
         const val PRAY_ANIM = 645

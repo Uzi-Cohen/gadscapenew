@@ -1,5 +1,6 @@
 package com.zenyte.game.content.godwars;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.godwars.instance.*;
 import com.zenyte.game.util.Colour;
 import com.zenyte.game.world.entity.ImmutableLocation;
@@ -13,17 +14,17 @@ import java.util.List;
  */
 public enum GodwarsInstancePortal {
     //@formatter:off
-    ARMADYL(Colour.LIGHT_GRAY.wrap("Armadyl"), InstanceConstants.INSTANCE_COST, 35016, 4674, 26365, ArmadylInstance.class, new ImmutableLocation(1194, 4243, 0),
+    ARMADYL(Colour.LIGHT_GRAY.wrap("Armadyl"), InstanceConstants.INSTANCE_COST, Gad211.loc(35016), 4674, 26365, ArmadylInstance.class, new ImmutableLocation(1194, 4243, 0),
             new ImmutableLocation(2828, 5290, 2), new ImmutableLocation(1197, 4233, 0), GodType.ARMADYL),
-    BANDOS(Colour.RS_GREEN.wrap("Bandos"), InstanceConstants.INSTANCE_COST, 35014, 4675, 26366, BandosInstance.class, new ImmutableLocation(1189, 4312, 0), new ImmutableLocation(2854
+    BANDOS(Colour.RS_GREEN.wrap("Bandos"), InstanceConstants.INSTANCE_COST, Gad211.loc(35014), 4675, 26366, BandosInstance.class, new ImmutableLocation(1189, 4312, 0), new ImmutableLocation(2854
             , 5363, 2), new ImmutableLocation(1196, 4303, 0), GodType.BANDOS),
-    ZAMORAK(Colour.RS_RED.wrap("Zamorak"), InstanceConstants.INSTANCE_COST, 35015, 4676, 26363, ZamorakInstance.class, new ImmutableLocation(1206, 4397, 0),
+    ZAMORAK(Colour.RS_RED.wrap("Zamorak"), InstanceConstants.INSTANCE_COST, Gad211.loc(35015), 4676, 26363, ZamorakInstance.class, new ImmutableLocation(1206, 4397, 0),
             new ImmutableLocation(2933, 5357, 2), new ImmutableLocation(1198, 4374, 0), GodType.ZAMORAK),
-    SARADOMIN(Colour.BLUE.wrap("Saradomin"), InstanceConstants.INSTANCE_COST, 35017, 4677, 26364, SaradominInstance.class, new ImmutableLocation(1199, 4426, 0),
+    SARADOMIN(Colour.BLUE.wrap("Saradomin"), InstanceConstants.INSTANCE_COST, Gad211.loc(35017), 4677, 26364, SaradominInstance.class, new ImmutableLocation(1199, 4426, 0),
             new ImmutableLocation(2927, 5258, 0), new ImmutableLocation(1182, 4433, 0), GodType.SARADOMIN),
     ANCIENT(Colour.RS_PURPLE.wrap("Nex"),
             InstanceConstants.ZAROS_INSTANCE_COST,
-            50083,
+            Gad211.loc(50083),
             11345,
             42965,
             "com.gadscape.game.content.boss.nex.NexGodwarsInstance",

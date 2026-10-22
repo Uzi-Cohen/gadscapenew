@@ -41,9 +41,11 @@ public class MasterScrollBookInterface extends Interface {
         put(41, "Mos Le'Harmless");
         put(45, "Lumberyard");
         put(49, "Zul-andra");
-        put(53, "Key Master");
+        // Build 241 bookofscrolls (597) buttons by name (the tsv aligns these three by position, which is wrong):
+        // teleportscroll_cerberus 56 (211: 53), teleportscroll_revenants 57 (211: 57), teleportscroll_watson 58 (211: 61).
+        put(56, "Key Master");
         put(57, "Revenant caves");
-        put(61, "Watson");
+        put(58, "Watson");
     }
 
     @Override

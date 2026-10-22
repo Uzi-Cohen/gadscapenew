@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.easter2020;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.Location;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -76,9 +77,9 @@ public class EasterConstants {
     public static final int EXPRESSION_NORMAL = 15242;
     public static final int EXPRESSION_SAY_NO = 15226;
 
-    public static final int BIRD_EXPRESSION_HAPPY = 15160;
-    public static final int BIRD_EXPRESSION_CHATTY = 15161;
-    public static final int BIRD_EXPRESSION_DRUNK = 15162;
+    public static final int BIRD_EXPRESSION_HAPPY = Gad211.seq(15160);
+    public static final int BIRD_EXPRESSION_CHATTY = Gad211.seq(15161);
+    public static final int BIRD_EXPRESSION_DRUNK = Gad211.seq(15162);
     public static final int BIRD_EXPRESSION_SAD = 15181;
     public static final int BIRD_EXPRESSION_SAY_NO = 15195;
     public static final int BIRD_EXPRESSION_SNORING = 15230;

@@ -19,7 +19,7 @@ public class SeedVaultInventoryInterface extends Interface implements SwitchPlug
 
     @Override
     protected void attach() {
-        put(1, "Container");
+        put(2, "Container"); // 241 seed_vault_deposit:inv (script 2811 builds the inventory there; 211: 1)
     }
 
     @Override

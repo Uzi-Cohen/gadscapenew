@@ -1,6 +1,7 @@
 package com.zenyte.game.content.skills.construction.costume;
 
 import com.google.gson.annotations.Expose;
+import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.magicstorageunit.StorableSetPiece;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.ui.InterfacePosition;
@@ -170,7 +171,7 @@ public final class TreasureChest {
 			firstHash = Utils.getShiftedValue(firstHash, 0);
 		}
 		player.getPacketDispatcher().sendClientScript(417, 100, firstHash, secondHash); // 417 takes 3 ints; the old title string made the client throw
-		player.getPacketDispatcher().sendComponentSettings(592, 2, 0, 156, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);
+		player.getPacketDispatcher().sendComponentSettings(GameInterface.MAGIC_STORAGE.getId(), 2, 0, 156, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);
 	}
 	
 	/**
@@ -178,9 +179,14 @@ public final class TreasureChest {
 	 * @param page the page to open up at.
 	 */
 	public void open(final int page) {
+		if (GameInterface.isReusedBy241(GameInterface.MAGIC_STORAGE.getId())) {
+			// GadScape's 211 costume screen 592 is another interface in build 241 until gadconv relocates it (CACHE NEED)
+			player.sendMessage("That isn't available right now.");
+			return;
+		}
 		player.getTemporaryAttributes().put("costumeRoomObject", "TREASURE_CHEST");
 		this.page = page;
-		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, 592);
+		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, GameInterface.MAGIC_STORAGE.getId());
 		player.getPacketDispatcher().sendUpdateItemContainer(100, TreasureChestData.CONTAINERS[page]);
 		refresh();
 	}

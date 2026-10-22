@@ -36,11 +36,13 @@ public class MinimizedMinimapOrbsInterface extends Interface {
 
     @Override
     protected void attach() {
+        // Build 241 orbs_osm_nomap (898; 211 used 311, which 241 reuses): xp_drops, healthbutton, prayerbutton,
+        // runbutton, specbutton, worldmap.
         put(3, "Experience Tracker");
         put(6, "Cure Toxins");
         put(17, "Prayer");
         put(25, "Run");
-        put(49, "View World Map");
+        put(55, "View World Map"); // 211 code: 49
         put(33, "Toggle special");
     }
 

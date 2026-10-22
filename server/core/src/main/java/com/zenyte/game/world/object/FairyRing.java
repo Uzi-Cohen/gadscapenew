@@ -1,5 +1,6 @@
 package com.zenyte.game.world.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.eventbus.Subscribe;
 import com.zenyte.game.content.achievementdiary.diaries.FremennikDiary;
 import com.zenyte.game.content.achievementdiary.diaries.KandarinDiary;
@@ -28,6 +29,11 @@ public enum FairyRing {
 	MUDSKIPPER_POINT(new Location(2996, 3114, 0), "AIQ", "Asgarnia: Mudskipper Point", "Mudskipper point"), ARDOUGNE_ISLAND(new Location(2700, 3247, 0), "AIR", "Islands: South-east of Ardougne", "Islands: SE of Ardy (Clue)"), DORGESH_KAAN(new Location(2735, 5221, 0), "AJQ", "Dungeons: Dorgesh-Kaan cave", "Cave south of Dorgesh-Kaan"), GOLDEN_APPLE_TREE(new Location(2780, 3613, 0), "AJR", "Kandarin: Slayer cave near Rellekka", "Rellekka slayer cave"), MISCELLANIA_SMALL(new Location(2500, 3896, 0), "AJS", "Islands: Penguins", "Penguins"), PISCATORIS(new Location(2319, 3619, 0), "AKQ", "Kandarin: Piscatoris Hunter area", "Piscatoris hunter area"), FELDIP_HILLS(new Location(2571, 2956, 0), "AKS", "Feldip Hills: Jungle Hunter area", "Feldip hunter area"), LIGHTHOUSE(new Location(2503, 3636, 0), "ALP", "Islands: Lighthouse", "Lighthouse"), HAUNTED_WOODS(new Location(3597, 3495, 0), "ALQ", "Morytania: Haunted Woods", "Haunted Woods near Canifis"), ABYSSAL_AREA(new Location(3059, 4875, 0), "ALR", "Other Realms: Abyss", "Abyssal Area"), MCGRUBBORS_WOOD(new Location(2644, 3495, 0), "ALS", "Kandarin: McGrubor's Wood", "McGrubor's Wood near Seers' Village"), MORT_MYRE_SWAMP(new Location(3410, 3324, 0), "BIP", "Islands: River Salve", "Islands: SW of Mort Myre (Clue)"), KALPHITE_LAIR(new Location(3251, 3095, 0), "BIQ", "Kharidian Desert: Near the Kalphite Hive", "Kharidian Desert near Kalphite Hive"), ARDOUGNE_ZOO(new Location(2635, 3266, 0), "BIS", "Kandarin: Ardougne Zoo unicorns", "Ardougne Zoo: Unicorns"), ZULANDRA(new Location(2150, 3070, 0), "BJS", "Islands: Near Zul-Andra", "Islands: Zul-Andra (Zulrah)"), CASTLE_WARS(new Location(2385, 3035, 0), "BKP", "Feldip Hills: South of Castle Wars", "South of Castle Wars"), ENCHANTED_VALLEY(new Location(3041, 4532, 0), "BKQ", "Other Realms: Enchanted Valley", "Enchanted Valley"), ZANARIS(new Location(2412, 4434, 0), "BKS", "Other Realms: Zanaris", "Zanaris"), TZHAAR(new Location(2437, 5126, 0), "BLP", "Dungeons: TzHaar area", "TzHaar area"), LEGENDS_GUILD(new Location(2740, 3351, 0), "BLR", "Kandarin: Legends' Guild", "Legends' Guild"), MYRE_SWAMP(new Location(3469, 3431, 0), "BKR", "Morytania: Mort Myre Swamp, south of Canifis", "Mort Myre Swamp"), MISCELLANIA(new Location(2513, 3884, 0), "CIP", "Islands: Miscellania", "Miscellania"), YANILLE(new Location(2528, 3127, 0), "CIQ", "Kandarin: North-west of Yanille", "North-west of Yanille"), FARMING_GUILD(new Location(1302, 3762, 0), "CIR", "Kebos Lowlands: South of Mount Karuulm", "North-east of Farming Guild"), ARCEUUS_HOUSE(new Location(1639, 3868, 0), "CIS", "Zeah: Arceuus House Library", "North of the Arceuus House Library"), SINCLAIR_MANSION(new Location(2705, 3576, 0), "CJR", "Kandarin: Sinclair Mansion", "Sinclair Mansion (east)"), SHILO_VILLAGE(new Location(2801, 3003, 0), "CKR", "Karamja: Tai Bwo Wannai Village", "Near Shilo Village (Nature Altar)"), CANIFIS(new Location(3447, 3470, 0), "CKS", "Morytania: Canifis", "Canifis"), DRAYNOR_ISLAND(new Location(3082, 3206, 0), "CLP", "Islands: South of Draynor Village", "Island: South of Draynor (Clues)"), APE_ATOLL(new Location(2740, 2738, 0), "CLR", "Islands: Ape Atoll", "Ape Atoll Agility Area"), YANILLE2(new Location(2682, 3081, 0), "CLS", "Islands: Hazelmere's home", "Jungle Spiders near Yanille"),
 	//ABYSSAL_NEXUS(107, new Location(3037, 4763, 0), "DIP", "Other Realms: Abyssal Nexus", "Abyssal Nexus (Abyssal Sire)"),
 	GORAKS(new Location(3038, 5348, 0), "DIR", "Other Realms: Goraks' plane", "Goraks' plane"), WIZARDS_TOWER(new Location(3108, 3149, 0), "DIS", "Misthalin: Wizards' Tower", "Wizards' Tower"), LIFE_TOWER(new Location(2658, 3230, 0), "DJP", "Kandarin: Tower of Life", "Tower of Life"), FIRE_CHASM(new Location(1455, 3658, 0), "DJR", "Zeah: Chasm of Fire", "Chasm of Fire"), KARAMJA(new Location(2900, 3111, 0), "DKP", "Karamja: Gnome Glider", "Karamja (Karambwan fishing spots)"), EDGEVILLE(new Location(3095, 3488, 0), "DKR", "Misthalin: Edgeville", "Edgeville"), KELDAGRIM(new Location(2744, 3719, 0), "DKS", "Kandarin: Polar Hunter area", "Snowy hunter area (Near Keldagrim)"), LIZARDS(new Location(3423, 3016, 0), "DLQ", "Kharidian Desert: North of Nardah", "North of Nardah (Desert"), POISON_WASTE(new Location(2213, 3099, 0), "DLR", "Islands: Poison Waste", "Islands: Poison Waste south of Isafdar"), REALM_OF_THE_FISHER_KING(new Location(2650, 4730, 0), "BJR", "Realm of the Fisher King", "Realm of the Fisher King"), COSMIC_ENTITYS_PLANE(new Location(2075, 4848, 0), "CKP", "Cosmic entity's plane", "Cosmic entity's plane"), ZANARIS_ENTRANCE(new Location(2452, 4473, 0), "---", "N/A", "N/A"), LUMBRIDGE_SHED(new Location(3202, 3169, 0), "---", "N/A", "N/A");
+	/**
+	 * Fairy ring log (381) favourites of build 241: fave_1.. (141..), fave_code_1.. (151..), fave_icon_1.. (161..164);
+	 * 211 used 140, 144 and 148. GadScape keeps four favourites (241 has room for ten).
+	 */
+	public static final int FAVE_FIRST = 141, FAVE_CODE_FIRST = 151, FAVE_ICON_FIRST = 161;
 	private final int component;
 	private final Location tile;
 	private final String code;
@@ -99,13 +105,16 @@ public enum FairyRing {
 		final List<String> favourites = getFavourites(player);
 		int index = -1;
 		if (option == 1) {
-			if (componentId >= 148 && componentId <= 151) {
-				index = componentId - 148;
+			if (componentId >= FAVE_ICON_FIRST && componentId < FAVE_ICON_FIRST + 4) {
+				index = componentId - FAVE_ICON_FIRST;
 			}
 		} else if (option == 2) {
-			if (componentId >= 140 && componentId <= 143) {
-				index = componentId - 140;
+			if (componentId >= FAVE_FIRST && componentId < FAVE_FIRST + 4) {
+				index = componentId - FAVE_FIRST;
 			}
+		}
+		if (index >= favourites.size()) {
+			return;
 		}
 		if (index == -1) {
 			return;
@@ -147,7 +156,7 @@ public enum FairyRing {
 				player.getAttributes().put("lastFairyRing", ring.getComponent());
 			});
 		}
-		if (object != null && object.getId() != 35003) {
+		if (object != null && object.getId() != Gad211.loc(35003)) {
 			player.addWalkSteps(object.getX(), object.getY(), 1, false);
 		}
 		player.getInterfaceHandler().closeInterface(InterfacePosition.SINGLE_TAB);

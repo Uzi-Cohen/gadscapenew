@@ -95,12 +95,13 @@ public class LootingBagInterface extends Interface {
         });
     }
 
+    /** Script 1235 (build 241): the inv id, then one long value per slot (211: 29 ints). */
     private static Object[] getValues(final Container container) {
-        final Integer[] values = new Integer[container.getContainerSize() + 1];
+        final Object[] values = new Object[container.getContainerSize() + 1];
         values[0] = ContainerType.LOOTING_BAG.getId(); //inventory id
         for (int index = 1; index < values.length; index++) {
             final Item item = container.get(index - 1);
-            values[index] = item == null ? -1 : item.getSellPrice();
+            values[index] = item == null ? -1L : (long) item.getSellPrice();
         }
         return values;
     }

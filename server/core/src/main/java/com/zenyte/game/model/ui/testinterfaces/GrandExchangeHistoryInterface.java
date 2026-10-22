@@ -38,7 +38,8 @@ public class GrandExchangeHistoryInterface extends Interface {
         int index = 0;
         while (lit.hasNext()) {
             final ExchangeHistory record = lit.next();
-            player.getPacketDispatcher().sendClientScript(1645, index++, record.getId(), record.getType().equals(ExchangeType.BUYING) ? 0 : 1, record.getQuantity(), record.getPrice());
+            // Script 1645 (build 241): index, obj, sold, quantity + longs total price, tax (211: the same as 6 ints).
+            player.getPacketDispatcher().sendClientScript(1645, index++, record.getId(), record.getType().equals(ExchangeType.BUYING) ? 0 : 1, record.getQuantity(), (long) record.getPrice(), 0L);
         }
         player.getPacketDispatcher().sendClientScript(1646);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), 3, 0, history.size() * 6, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);

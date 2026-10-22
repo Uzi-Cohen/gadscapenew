@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.achievementdiary.diaries.*;
 import com.zenyte.game.content.boons.impl.BoneCruncher;
 import com.zenyte.game.content.skills.prayer.Prayer;
@@ -100,7 +101,7 @@ public final class AltarOPlugin implements ObjectAction, ItemOnObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] { "Altar of Guthix", "Chaos altar", "Altar", ObjectId.ALTAR_20377, 18258, ObjectId.ALTAR};
+        return new Object[] { "Altar of Guthix", "Chaos altar", "Altar", ObjectId.ALTAR_20377, 18258, Gad211.loc(18258), ObjectId.ALTAR}; // 18258: 2746's and GadScape's (moved) Saradomin altar
     }
 
     private static final class OfferingAction extends Action {

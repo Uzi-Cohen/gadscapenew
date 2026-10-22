@@ -64,10 +64,13 @@ public class CollectionLogInterface extends Interface {
         put(6, CLCategoryType.CLUES.category());
         put(7, CLCategoryType.MINIGAMES.category());
         put(8, CLCategoryType.OTHER.category());
-        put(20, "Combat achievements");
-        put(79, "Close");
-        put(90, "Claim Reward");
-        int id = 41;
+        // Build 241 collection (621; GadScape's merged version): combat_achievements 21 (211: 20), close 1 (211: 79),
+        // GadScape's "Claim Reward" 97 (211: 90, appended by the ui-merge), search keys a.. from 42 (211: 41; 241
+        // inserted search_keyboard_listener at 41).
+        put(21, "Combat achievements");
+        put(1, "Close");
+        put(97, "Claim Reward");
+        int id = 42;
         for (char c : SEARCH_LETTERS.toCharArray()) {
             put(id++, "Search letter " + c);
         }
@@ -130,8 +133,10 @@ public class CollectionLogInterface extends Interface {
         final StructDefinitions subCatStruct = Objects.requireNonNull(StructDefinitions.get(value));
         final String name = subCatStruct.getValue(STRUCT_POINTER_SUB_ENUM_CAT_NAME).orElseThrow(RuntimeException::new).toString();
         final Function<Player, Integer>[] functions = CollectionLogCategories.getFunctions(name);
-        final IntArrayList options = new IntArrayList(5);
+        final IntArrayList options = new IntArrayList(7);
         final int layerComponent = getStructParam(struct, ELEMENTS_LAYER_COMPONENT_PARAM);
+        // Script 2730 (build 241) takes the tab struct first (2389 highlights the tab), then 211's six arguments.
+        options.add(type.struct());
         options.add(getStructParam(struct, SCROLL_LAYER_COMPONENT_PARAM));
         options.add(layerComponent);
         options.add(getStructParam(struct, ELEMENT_NAME_COMPONENT_PARAM));

@@ -55,13 +55,15 @@ public final class GrandExchangeOffersInterface implements UserInterface {
                     exchange.sell(exchangeSlot, true);
                 }
                 break;
-            case 22:
+            // Build 241 ge_offers (465; GadScape's 211 465 was the pre-2021 layout): details_status 23 (211: 22),
+            // details_collect 24 (23), setup 26 (24), setup_confirm 30 (27), GadScape's offer viewer button 34 (30).
+            case 23:
                 exchange.abortOffer();
                 return;
-            case 23:
+            case 24:
                 exchange.collectItems(optionId, slotId);
                 return;
-            case 24:
+            case 26:
                 if (slotId == 0) {
                     player.sendInputItem("What would you like to " + (buying ? "buy?" : "sell?"), exchange::buy);
                 } else if (slotId >= 1 && slotId <= 6) {
@@ -135,10 +137,10 @@ public final class GrandExchangeOffersInterface implements UserInterface {
                     }
                 }
                 break;
-            case 27:
+            case 30:
                 exchange.createOffer();
                 break;
-            case 30:
+            case 34:
                 GameInterface.GRAND_EXCHANGE_OFFERS_VIEWER.open(player);
                 break;
             }

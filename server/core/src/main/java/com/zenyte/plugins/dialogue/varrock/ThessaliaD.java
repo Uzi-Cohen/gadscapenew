@@ -101,10 +101,10 @@ public class ThessaliaD extends Dialogue {
 		player.getVarManager().sendBit(3945, topwear ? 0 : 1);
 		THESSALIA_MAKEOVER.open(player);
 		if (topwear) {
-			player.getPacketDispatcher().sendComponentSettings(591, 3, 0, 13, AccessMask.CLICK_OP1);
-			player.getPacketDispatcher().sendComponentSettings(591, 5, 0, 11, AccessMask.CLICK_OP1);
+			player.getPacketDispatcher().sendComponentSettings(THESSALIA_MAKEOVER.getId(), 3, 0, 13, AccessMask.CLICK_OP1);
+			player.getPacketDispatcher().sendComponentSettings(THESSALIA_MAKEOVER.getId(), 5, 0, 11, AccessMask.CLICK_OP1);
 		} else {
-			player.getPacketDispatcher().sendComponentSettings(591, 7, 0, 10, AccessMask.CLICK_OP1);
+			player.getPacketDispatcher().sendComponentSettings(THESSALIA_MAKEOVER.getId(), 7, 0, 10, AccessMask.CLICK_OP1);
 		}
 		player.getTemporaryAttributes().put("ThessaliaNPCId", npcId);
 		finish();

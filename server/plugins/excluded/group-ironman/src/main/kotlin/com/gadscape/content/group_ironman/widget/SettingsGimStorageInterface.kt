@@ -7,6 +7,9 @@ import com.zenyte.game.GameInterface
 import com.zenyte.game.model.ui.PaneType
 import com.zenyte.game.util.component
 
+/** shared_bank (724) popup layer the storage-unlocks screen opens into: 241 724:29 "popup" (211: 47). */
+private const val SHARED_BANK_POPUP = 29
+
 class SettingsGimStorageInterface : InterfaceScript() {
     init {
         GameInterface.SETTINGS_GIM_STORAGE {
@@ -14,7 +17,7 @@ class SettingsGimStorageInterface : InterfaceScript() {
                 if (player.interfaceHandler.isPresent(GameInterface.SETTINGS_GIM)) {
                     player.packetDispatcher.closeInterface(730 component 21)
                 } else {
-                    player.packetDispatcher.closeInterface(724 component 47)
+                    player.packetDispatcher.closeInterface(724 component SHARED_BANK_POPUP)
                 }
             }
             opened {
@@ -28,8 +31,8 @@ class SettingsGimStorageInterface : InterfaceScript() {
                     interfaceHandler.sendInterface(id, 21, PaneType.IRON_GROUP_SETTINGS, true)
                     packetDispatcher.sendClientScript(3127, 730 component 21, 730 component 1, 1)
                 } else {
-                    interfaceHandler.sendInterface(id, 47, PaneType.IRON_BANK, true)
-                    packetDispatcher.sendClientScript(3127, 724 component 47, 724 component 1, 1)
+                    interfaceHandler.sendInterface(id, SHARED_BANK_POPUP, PaneType.IRON_BANK, true)
+                    packetDispatcher.sendClientScript(3127, 724 component SHARED_BANK_POPUP, 724 component 1, 1)
                 }
             }
         }

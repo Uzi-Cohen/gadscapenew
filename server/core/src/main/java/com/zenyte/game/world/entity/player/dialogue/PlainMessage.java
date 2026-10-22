@@ -29,11 +29,11 @@ public class PlainMessage implements Message {
     @Override
     public final void display(final Player player) {
     	player.getInterfaceHandler().sendInterface(InterfacePosition.DIALOGUE, 229);
-		player.getPacketDispatcher().sendComponentText(229, 1, message);
+		player.getPacketDispatcher().sendComponentText(229, 3, message); // 241 messagebox:text (211: 1)
 		player.getPacketDispatcher().sendClientScript(600, 1, 1, lineSpacing, 15007745);
-		player.getPacketDispatcher().sendComponentSettings(229, 2, -1, -1, AccessMask.CONTINUE);
-        player.getPacketDispatcher().sendComponentText(229, 2, showContinue ? continueMessage(player) : "");
-		player.getPacketDispatcher().sendComponentVisibility(229, 2, !showContinue);
+		player.getPacketDispatcher().sendComponentSettings(229, 4, -1, -1, AccessMask.CONTINUE); // 241 messagebox:continue (211: 2)
+        player.getPacketDispatcher().sendComponentText(229, 4, showContinue ? continueMessage(player) : "");
+		player.getPacketDispatcher().sendComponentVisibility(229, 4, !showContinue);
     }
 
 	@Override

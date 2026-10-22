@@ -19,10 +19,14 @@ import java.util.Map;
 public class MakeOverInterface extends Interface {
     @Override
     protected void attach() {
-        put(2, "Select male");
-        put(6, "Select female");
-        put(9, "Select skin colour");
-        put(10, "Finish make-over");
+        // Build 241 makeover_mage (205), GadScape's skin-colour-only version merged by gadconv (body type and pronoun
+        // rows hidden). 211 ids in the comments.
+        put(2, "Select male"); // bodytype_a (hidden)
+        put(8, "Select female"); // bodytype_b (hidden) (211: 6)
+        put(13, "Select skin colour"); // colour (211: 9)
+        put(18, "Finish make-over"); // confirm_button (211: 10, a clickable text)
+        put(19, "Finish make-over text"); // confirm: the button's label
+        put(17, "Apply make-over"); // apply_button: 241 only, does the same as Confirm
     }
 
     @Override
@@ -35,7 +39,7 @@ public class MakeOverInterface extends Interface {
         player.getVarManager().sendBit(4804, 1);
         player.getVarManager().sendBit(6007, 1);
         player.getInterfaceHandler().sendInterface(getInterface());
-        player.getPacketDispatcher().sendComponentText(getInterface(), getComponent("Finish make-over"), "CONFIRM (" + MakeOverMageD.PRICE.getAmount() + " coins)");
+        player.getPacketDispatcher().sendComponentText(getInterface(), getComponent("Finish make-over text"), "CONFIRM (" + MakeOverMageD.PRICE.getAmount() + " coins)");
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Select skin colour"), 0, 12, AccessMask.CLICK_OP1);
     }
 
@@ -46,22 +50,25 @@ public class MakeOverInterface extends Interface {
             player.getVarManager().sendVar(262, value);
             player.getTemporaryAttributes().put("SelectedSkinColour", value);
         });
-        bind("Finish make-over", player -> {
-            final boolean male = player.getBooleanTemporaryAttribute("SelectedGender");
-            final int skinColour = player.getNumericTemporaryAttributeOrDefault("SelectedSkinColour", player.getAppearance().getColours()[4]).intValue();
-            if (male == player.getAppearance().isMale() && skinColour == player.getAppearance().getColours()[4]) {
-                player.sendMessage("You haven't changed anything yet.");
-                return;
-            }
-            final MakeOverInterface.SkinColour colour = SkinColour.get(skinColour);
-            if (colour != null && !player.getMemberRank().equalToOrGreaterThan(colour.getRank())) {
-                player.sendMessage("You need to be " + Utils.getAOrAn(colour.getRank().toString()) + " " + colour.getRank() + " to change into this skin colour!");
-                return;
-            }
-            player.getAppearance().modifyColour((byte) 4, (byte) skinColour);
-            player.getInventory().deleteItem(MakeOverMageD.PRICE);
-            player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
-        });
+        bind("Apply make-over", player -> finish(player));
+        bind("Finish make-over", player -> finish(player));
+    }
+
+    private static void finish(final Player player) {
+        final boolean male = player.getBooleanTemporaryAttribute("SelectedGender");
+        final int skinColour = player.getNumericTemporaryAttributeOrDefault("SelectedSkinColour", player.getAppearance().getColours()[4]).intValue();
+        if (male == player.getAppearance().isMale() && skinColour == player.getAppearance().getColours()[4]) {
+            player.sendMessage("You haven't changed anything yet.");
+            return;
+        }
+        final MakeOverInterface.SkinColour colour = SkinColour.get(skinColour);
+        if (colour != null && !player.getMemberRank().equalToOrGreaterThan(colour.getRank())) {
+            player.sendMessage("You need to be " + Utils.getAOrAn(colour.getRank().toString()) + " " + colour.getRank() + " to change into this skin colour!");
+            return;
+        }
+        player.getAppearance().modifyColour((byte) 4, (byte) skinColour);
+        player.getInventory().deleteItem(MakeOverMageD.PRICE);
+        player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
     }
 
     @Override

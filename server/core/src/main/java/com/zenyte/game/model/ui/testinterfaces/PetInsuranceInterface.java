@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 public class PetInsuranceInterface extends Interface {
 
     private static final Logger log = Logger.getLogger(PetInsuranceInterface.class.getName());
+    private static final int PET_WORDS = 3;
 
     @Override
     protected void attach() {
@@ -39,8 +40,10 @@ public class PetInsuranceInterface extends Interface {
 
     @Override
     public void open(Player player) {
-        long insureValue = 0;
-        long existingPetsValue = 0;
+        // Script 6126 (build 241): pet bitsets of 3 words x 31 bits (enum 985 index i -> word i / 31, bit i % 31),
+        // insured then owned, then 9 more ints (211: 2 + 2 words and 7 ints).
+        final int[] insureValue = new int[PET_WORDS];
+        final int[] existingPetsValue = new int[PET_WORDS];
         final IntEnum e = EnumDefinitions.getIntEnum(985);
         loop:
         for (final Pet pet : player.getPetInsurance().getInsuredPets()) {
@@ -48,14 +51,15 @@ public class PetInsuranceInterface extends Interface {
                 continue;
             }
             OptionalInt p = e.getKey(pet.itemId());
-            long mask = 0L;
-            if (p.isPresent()) {
-                mask = 1L << p.getAsInt();
-                insureValue |= mask;
+            final int bit = p.isPresent() && p.getAsInt() >= 0 && p.getAsInt() < PET_WORDS * 31 ? p.getAsInt() : -1;
+            if (bit != -1) {
+                insureValue[bit / 31] |= 1 << (bit % 31);
             }
             if (pet.hasPet(player)) {
-                existingPetsValue |= mask;
-                if (mask == 0) {
+                if (bit != -1) {
+                    existingPetsValue[bit / 31] |= 1 << (bit % 31);
+                }
+                if (bit == -1) {
                     log.log(Level.WARNING, "Insured pet that doesn't exist in an enum? " + pet, new Throwable());
                 }
                 continue;
@@ -68,7 +72,9 @@ public class PetInsuranceInterface extends Interface {
                         continue;
                     }
                     if (alternativePet.hasPet(player)) {
-                        existingPetsValue |= mask;
+                        if (bit != -1) {
+                            existingPetsValue[bit / 31] |= 1 << (bit % 31);
+                        }
                         continue loop;
                     }
                 }
@@ -76,7 +82,7 @@ public class PetInsuranceInterface extends Interface {
         }
 
         player.getInterfaceHandler().sendInterface(getInterface());
-        player.getPacketDispatcher().sendClientScript(6126, (int) insureValue, (int) (insureValue >>> 31), (int) (existingPetsValue & 2147483647), (int) (existingPetsValue >> 31), 0, 0, 0, 0, 0, 0, 0);
+        player.getPacketDispatcher().sendClientScript(6126, insureValue[0], insureValue[1], insureValue[2], existingPetsValue[0], existingPetsValue[1], existingPetsValue[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Reclaim Insured Pet"), 0, 400, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);
         player.getAchievementDiaries().update(ArdougneDiary.CHECK_INSURED_PETS);
     }

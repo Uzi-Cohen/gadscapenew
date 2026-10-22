@@ -1,6 +1,7 @@
 package com.gadscape.game.content.donator
 
 import com.gadscape.game.content.wilderness.event.WildernessEvent
+import com.gadscape.game.rev241.Gad211
 import com.gadscape.game.content.wilderness.event.WildernessEventManager
 import com.gadscape.game.content.wilderness.event.ganodermic_beast.GanodermicBeastEvent
 import com.zenyte.game.content.skills.magic.spells.teleports.Teleport
@@ -102,7 +103,8 @@ class DonatorPortalAction : ObjectAction {
     }
 
     companion object {
-        const val OBELISK: Int = 50101
-        const val OBELISK_2: Int = 50102
+        /** GadScape's donator obelisk locs (211 ids 50101/50102, moved by the 241 cache: see Gad211). */
+        @JvmField val OBELISK: Int = Gad211.loc(50101)
+        @JvmField val OBELISK_2: Int = Gad211.loc(50102)
     }
 }

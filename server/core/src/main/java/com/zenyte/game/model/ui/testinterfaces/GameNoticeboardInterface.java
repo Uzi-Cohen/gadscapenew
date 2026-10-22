@@ -1,5 +1,7 @@
 package com.zenyte.game.model.ui.testinterfaces;
 
+import com.gadscape.game.rev241.Gad211;
+import mgi.types.component.ComponentDefinitions;
 import com.gadscape.website.WebsiteService;
 import com.google.common.eventbus.Subscribe;
 import com.gadscape.api.service.user.UserPlayerAttributesKt;
@@ -53,6 +55,9 @@ public final class GameNoticeboardInterface extends Interface {
     @Subscribe
     public static void onLogin(final LoginEvent event) {
         final Player p = event.getPlayer();
+        if (!ComponentDefinitions.containsInterface(GameInterface.GAME_NOTICEBOARD.getId())) {
+            return; // custom interface absent (stock cache); script 10586 is custom
+        }
 
         p.getPacketDispatcher().sendClientScript(10586,
                 162 << 16 | 2, 1701 << 16 | 11, 1701 << 16 | 16,
@@ -68,7 +73,7 @@ public final class GameNoticeboardInterface extends Interface {
     }
 
     public static void refreshXericsWisdom(@NotNull final Player player) {
-        player.getVarManager().sendVar(3806, (int) (player.getVariables().getRaidsBoost() * 0.6F));
+        player.getVarManager().sendVar(Gad211.varp(3806), (int) (player.getVariables().getRaidsBoost() * 0.6F));
     }
 
     public static void refreshBonusXP() {
@@ -76,7 +81,7 @@ public final class GameNoticeboardInterface extends Interface {
                 BonusXpManager.expirationDate - System.currentTimeMillis())
         );
         for (final Player player : World.getPlayers()) {
-            player.getVarManager().sendVar(3805, bonusXPSecondsLeft);
+            player.getVarManager().sendVar(Gad211.varp(3805), bonusXPSecondsLeft);
         }
     }
 
@@ -91,22 +96,22 @@ public final class GameNoticeboardInterface extends Interface {
             updateStaffCounters(staffCount);
 
         for (final Player player : World.getPlayers()) {
-            player.getVarManager().sendVar(3803, displayedPlayerCount);
+            player.getVarManager().sendVar(Gad211.varp(3803), displayedPlayerCount);
             //player.getVarManager().sendVar(3508, mobile.intValue());
-            player.getVarManager().sendVar(3807, wildernessCount);
+            player.getVarManager().sendVar(Gad211.varp(3807), wildernessCount);
         }
     }
 
     private static void updateStaffCounters(int staffCount) {
         for (final Player player : World.getPlayers()) {
-            player.getVarManager().sendVar(3804, staffCount);
+            player.getVarManager().sendVar(Gad211.varp(3804), staffCount);
         }
         lastSentStaff = staffCount;
     }
 
     public static void refreshWildernessCounters(final int wildernessCount) {
         for (final Player player : World.getPlayers()) {
-            player.getVarManager().sendVar(3807, wildernessCount);
+            player.getVarManager().sendVar(Gad211.varp(3807), wildernessCount);
         }
     }
 
@@ -179,7 +184,7 @@ public final class GameNoticeboardInterface extends Interface {
 
     @Override
     public void open(Player player) {
-        player.getInterfaceHandler().sendInterface(getInterface().getId(), 33, PaneType.JOURNAL_TAB_HEADER, true);
+        player.getInterfaceHandler().sendInterface(getInterface().getId(), 43, PaneType.JOURNAL_TAB_HEADER, true); // 241 side_journal:tab_container (211: 33)
         player.getPacketDispatcher().sendComponentText(getInterface(), getComponent("Time"),
                 "Time: <col=ffffff>" + GameClock.gameTime());
         player.getPacketDispatcher().sendComponentText(getInterface(), getComponent("2FA"),

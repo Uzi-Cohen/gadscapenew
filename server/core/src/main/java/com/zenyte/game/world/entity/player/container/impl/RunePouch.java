@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.container.impl;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.gson.annotations.Expose;
 import com.zenyte.game.content.boons.impl.ArcaneKnowledge;
 import com.zenyte.game.content.skills.magic.Rune;
@@ -108,7 +109,7 @@ public class RunePouch implements TempPlayerStatePlugin.State {
 				return 14285;
 			}
 			case 4-> {
-				return 19494;
+				return Gad211.varbit(19494);
 			}
 			default -> {
 				return -1;
@@ -131,7 +132,7 @@ public class RunePouch implements TempPlayerStatePlugin.State {
 				return 14286;
 			}
 			case 4-> {
-				return 19495;
+				return Gad211.varbit(19495);
 			}
 			default -> {
 				return -1;

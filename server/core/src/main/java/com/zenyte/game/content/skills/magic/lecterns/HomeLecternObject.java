@@ -1,5 +1,6 @@
 package com.zenyte.game.content.skills.magic.lecterns;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.object.ObjectAction;
@@ -19,6 +20,6 @@ public class HomeLecternObject implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] { ObjectId.LECTERN_35008 };
+        return new Object[] { Gad211.loc(ObjectId.LECTERN_35008) };
     }
 }

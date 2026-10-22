@@ -1,18 +1,19 @@
 package com.zenyte.game.content.skills.afk;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.skills.afk.impl.*;
 
 public enum AFKSkillingObject {
-    FARMING(50084, AfkFarmingAction.class),
-    FIRE_MAKING(50085, AfkFiremakingAction.class),
-    CRAFTING(50093, AfkCraftingAction.class),
-    MINING(50087, AfkMiningAction.class),
-    SMITHING(50094, AfkSmithingAction.class),
-    WOODCUTTING(50090, AfkWoodCuttingAction.class),
+    FARMING(Gad211.loc(50084), AfkFarmingAction.class),
+    FIRE_MAKING(Gad211.loc(50085), AfkFiremakingAction.class),
+    CRAFTING(Gad211.loc(50093), AfkCraftingAction.class),
+    MINING(Gad211.loc(50087), AfkMiningAction.class),
+    SMITHING(Gad211.loc(50094), AfkSmithingAction.class),
+    WOODCUTTING(Gad211.loc(50090), AfkWoodCuttingAction.class),
     AGILITY(50061, AfkAgilityAction.class),
-    THIEVING(50089, AfkThievingAction.class),
-    RUNECRAFTING(50095, AfkRunecraftingAction.class),
-    FISHING(50096, AfkFishingAction.class),
+    THIEVING(Gad211.loc(50089), AfkThievingAction.class),
+    RUNECRAFTING(Gad211.loc(50095), AfkRunecraftingAction.class),
+    FISHING(Gad211.loc(50096), AfkFishingAction.class),
     ;
 
     private int objectId;

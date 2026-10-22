@@ -44,15 +44,16 @@ public class SeedVaultInterface extends Interface implements SwitchPlugin {
 
     @Override
     protected void attach() {
-        put(8, "Categories");
-        put(15, "Container");
-        put(19, "Withdraw-1");
-        put(20, "Withdraw-5");
-        put(21, "Withdraw-10");
-        put(22, "Withdraw-X");
-        put(23, "Withdraw-All");
-        put(24, "Search");
-        put(25, "Deposit-All");
+        // Build 241 seed_vault (631); 211 ids in the comments.
+        put(9, "Categories"); // category_list (211: 8)
+        put(18, "Container"); // obj_list (211: 15)
+        put(23, "Withdraw-1"); // x1 (211: 19)
+        put(24, "Withdraw-5"); // x5 (211: 20)
+        put(25, "Withdraw-10"); // x10 (211: 21)
+        put(26, "Withdraw-X"); // xx (211: 22)
+        put(27, "Withdraw-All"); // xall (211: 23)
+        put(28, "Search"); // search (211: 24)
+        put(29, "Deposit-All"); // deposit_all (211: 25)
     }
 
     @Override

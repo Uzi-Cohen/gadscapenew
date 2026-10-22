@@ -585,13 +585,23 @@ public final class Skills extends SkillConstants implements TempPlayerStatePlugi
 		return (int) Math.min(126, baseLevel);
 	}
 
+	/**
+	 * Opens the skill guide. {@code skill} is the skill guide id (enum 108 key: 1 attack, 2 strength, ...), {@code
+	 * subCategory} the 211 section index (0 = first section).
+	 * <p>
+	 * Build 241: skill_guide (214) draws itself from dbtable 212 through script 9340 (skill, tab, 0, 0) and switches
+	 * sections client-side; tab 0 is the new "Overview", so 211 section n is tab n + 1. The 211 varbits 4371/4372 (on
+	 * varp 965) are 241 option_level_up_popup_list / potionstore bits and varp 965 is the level-up popup list now, so
+	 * neither is written.
+	 */
 	public void sendSkillMenu(final int skill, final int subCategory) {
 		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, SkillConstants.SKILL_GUIDE_INTERFACE);
-		player.getVarManager().sendBit(4371, skill);
-		player.getVarManager().sendBit(4372, subCategory);
-		player.getPacketDispatcher().sendComponentSettings(SkillConstants.SKILL_GUIDE_INTERFACE, 8, 0, 75, AccessMask.CLICK_OP1);
+		player.getPacketDispatcher().sendClientScript(SKILL_GUIDE_OPEN_SCRIPT, skill, subCategory + 1, 0, 0);
 		player.getTemporaryAttributes().put("viewingSkill", skill);
 	}
+
+	/** 241 skill_guide_open (interface 214): skill guide id, tab, two ints only read for tab 31 (level-up unlocks). */
+	private static final int SKILL_GUIDE_OPEN_SCRIPT = 9340;
 
 	public void setSkill(final int skill, final int lvl, final double exp) {
 		forceSkill(skill, lvl, exp);

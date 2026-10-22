@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.easter2020.plugin;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.event.easter2020.EasterConstants;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
 import com.zenyte.game.world.entity.masks.Animation;
@@ -14,7 +15,7 @@ import com.zenyte.plugins.SkipPluginScan;
 public class ChocatriceCape extends ItemPlugin {
 
     private static final Animation animation = new Animation(15191);
-    private static final Graphics graphics = new Graphics(2509);
+    private static final Graphics graphics = new Graphics(Gad211.spot(2509));
 
     @Override
     public void handle() {

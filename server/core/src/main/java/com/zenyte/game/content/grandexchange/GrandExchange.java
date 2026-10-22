@@ -39,6 +39,7 @@ public class GrandExchange {
 
     public static boolean ENABLED = true;
 
+    /** Build 241 ge_offers; component ids are 241 (GadScape-211 22-26 are 23, 24, 26, 27, 28). */
     public static final int INTERFACE = 465;
     public static final int INVENTORY_INTERFACE = 467;
     public static final int TYPE_VARPBIT = 4397;
@@ -116,10 +117,10 @@ public class GrandExchange {
             dispatcher.sendComponentSettings(INTERFACE, i, 2, 2, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2);
             dispatcher.sendComponentSettings(INTERFACE, i, 3, 4, AccessMask.CLICK_OP1);
         }
-        dispatcher.sendComponentSettings(INTERFACE, 22, 0, 0, AccessMask.CLICK_OP1);
-        dispatcher.sendComponentSettings(INTERFACE, 23, 2, 3, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP10);
+        dispatcher.sendComponentSettings(INTERFACE, 23, 0, 0, AccessMask.CLICK_OP1);
+        dispatcher.sendComponentSettings(INTERFACE, 24, 2, 3, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP10);
         dispatcher.sendComponentSettings(INTERFACE, 6, 0, 0, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2);
-        dispatcher.sendComponentSettings(INTERFACE, 24, 0, 13, AccessMask.CLICK_OP1);
+        dispatcher.sendComponentSettings(INTERFACE, 26, 0, 13, AccessMask.CLICK_OP1);
         dispatcher.sendComponentSettings(INVENTORY_INTERFACE, 0, 0, 27, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);
         refreshOffers();
         player.setCloseInterfacesEvent(() -> {
@@ -173,8 +174,8 @@ public class GrandExchange {
         final PacketDispatcher dispatcher = player.getPacketDispatcher();
         player.getVarManager().sendBit(TYPE_VARPBIT, 1);
         if (dialogue) {
-            dispatcher.sendComponentText(INTERFACE, 25, "Choose an item from your inventory to sell.");
-            dispatcher.sendComponentText(INTERFACE, 26, "");
+            dispatcher.sendComponentText(INTERFACE, 27, "Choose an item from your inventory to sell.");
+            dispatcher.sendComponentText(INTERFACE, 28, "");
             dispatcher.sendComponentText(INTERFACE, 16, "");
             dispatcher.sendComponentText(INTERFACE, 17, "");
         }
@@ -208,8 +209,8 @@ public class GrandExchange {
         setItem(item.getId());
         setPrice(item.getSellPrice());
         player.getVarManager().sendBit(TYPE_VARPBIT, 1);
-        dispatcher.sendComponentText(INTERFACE, 25, item.getDefinitions().getExamine());
-        dispatcher.sendComponentText(INTERFACE, 26, item.getDefinitions().getName());
+        dispatcher.sendComponentText(INTERFACE, 27, item.getDefinitions().getExamine());
+        dispatcher.sendComponentText(INTERFACE, 28, item.getDefinitions().getName());
         return true;
     }
 
@@ -223,7 +224,7 @@ public class GrandExchange {
         viewOffer(slot);
         player.getVarManager().sendBit(TYPE_VARPBIT, 0);
         if (dialogue) {
-            dispatcher.sendComponentText(INTERFACE, 25, "Click the icon on the left to search for items.");
+            dispatcher.sendComponentText(INTERFACE, 27, "Click the icon on the left to search for items.");
             dispatcher.sendComponentText(INTERFACE, 16, "");
             dispatcher.sendComponentText(INTERFACE, 17, "");
             player.sendInputItem("What would you like to buy?", this::buy);
@@ -241,8 +242,8 @@ public class GrandExchange {
         setQuantity(1);
         player.getInterfaceHandler().closeInput();
         player.getVarManager().sendBit(TYPE_VARPBIT, 0);
-        dispatcher.sendComponentText(INTERFACE, 25, item.getDefinitions().getExamine());
-        dispatcher.sendComponentText(INTERFACE, 26, item.getDefinitions().getName());
+        dispatcher.sendComponentText(INTERFACE, 27, item.getDefinitions().getExamine());
+        dispatcher.sendComponentText(INTERFACE, 28, item.getDefinitions().getName());
     }
 
     public void viewOffer(final int slot) {
@@ -465,8 +466,8 @@ public class GrandExchange {
         setQuantity(1);
         setPrice(0);
         setItem(-1);
-        dispatcher.sendComponentText(INTERFACE, 25, "");
-        dispatcher.sendComponentText(INTERFACE, 26, "");
+        dispatcher.sendComponentText(INTERFACE, 27, "");
+        dispatcher.sendComponentText(INTERFACE, 28, "");
         dispatcher.sendComponentText(INTERFACE, 16, "");
         dispatcher.sendComponentText(INTERFACE, 17, "");
     }

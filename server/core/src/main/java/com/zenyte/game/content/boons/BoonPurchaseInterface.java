@@ -1,5 +1,6 @@
 package com.zenyte.game.content.boons;
 
+import com.gadscape.game.rev241.Gad211;
 import com.gadscape.game.content.shop.ShopCurrencyHandler;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.model.shop.ShopCurrency;
@@ -21,17 +22,17 @@ public class BoonPurchaseInterface extends Interface {
 
     @Override
     public void open(Player player) {
-        player.getVarManager().sendVarInstant(4506, ShopCurrencyHandler.getAmount(ShopCurrency.EXCHANGE_POINTS, player));
+        player.getVarManager().sendVarInstant(Gad211.varp(4506), ShopCurrencyHandler.getAmount(ShopCurrency.EXCHANGE_POINTS, player));
         updateAllUnlockedPerks(player);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), 8, 0, 10, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP5);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), 11, 0, BoonLoader.boonTypes.size() * 5, AccessMask.CLICK_OP3, AccessMask.CLICK_OP5);
-        player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, 866);
+        player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, PVPW_PERKS.getId()); // 866 on 211; gadconv moved it (idmap)
     }
 
     private void updateAllUnlockedPerks(Player player) {
         for(BoonWrapper wrapper: BoonWrapper.values()) {
             if(player.getBoonManager().hasBoon(wrapper.getPerk()) && wrapper.getId() != -1) {
-                player.getVarManager().sendBitInstant(19499 + wrapper.getId(), 1);
+                player.getVarManager().sendBitInstant(Gad211.varbit(19499 + wrapper.getId()), 1);
             }
         }
     }

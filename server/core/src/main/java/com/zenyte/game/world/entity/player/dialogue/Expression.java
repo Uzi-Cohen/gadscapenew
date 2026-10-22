@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.dialogue;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.event.easter2020.EasterConstants;
 
 public enum Expression {
@@ -36,14 +37,14 @@ public enum Expression {
 	WEISS_TROLL_NORMAL(8154),
 	ORRVOR_QUO_MATEN(8215),
 	IKKLE_HYDRA(8265),
-	HIGH_REV_NORMAL(15073),
-	HIGH_REV_SHOCKED(15075),
-	HIGH_REV_SAD(15076),
-	HIGH_REV_SCARED(15077),
-	HIGH_REV_MAD(15078),
-    HIGH_REV_WONDERING(15079),
-    HIGH_REV_JOLLY(15080),
-    HIGH_REV_HAPPY(15081),
+	HIGH_REV_NORMAL(Gad211.seq(15073)),
+	HIGH_REV_SHOCKED(Gad211.seq(15075)),
+	HIGH_REV_SAD(Gad211.seq(15076)),
+	HIGH_REV_SCARED(Gad211.seq(15077)),
+	HIGH_REV_MAD(Gad211.seq(15078)),
+    HIGH_REV_WONDERING(Gad211.seq(15079)),
+    HIGH_REV_JOLLY(Gad211.seq(15080)),
+    HIGH_REV_HAPPY(Gad211.seq(15081)),
 
     EASTER_BUNNY_SAD(EasterConstants.EXPRESSION_SAD),
     EASTER_BUNNY_HAPPY(EasterConstants.EXPRESSION_HAPPY),

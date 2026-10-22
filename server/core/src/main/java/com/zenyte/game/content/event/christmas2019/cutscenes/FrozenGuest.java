@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.util.Direction;
 import com.zenyte.game.world.entity.ImmutableLocation;
 import com.zenyte.game.world.entity.Location;
@@ -14,12 +15,12 @@ import com.zenyte.utils.Ordinal;
 
 @Ordinal
 public enum FrozenGuest {
-    GENERAL_WARTFACE('w', new ImmutableLocation(2078, 5401, 0), Direction.EAST, 15044, 15050, 46114, new Animation(15109), new Animation(15110)),
-    GENERAL_BENTNOZE('b', new ImmutableLocation(2080, 5401, 0), Direction.WEST, 15046, 15048, 46117, new Animation(15111), new Animation(15112)),
-    SIR_AMIK_VARZE('a', new ImmutableLocation(2074, 5402, 0), Direction.WEST, 15033, 15052, 46120, new Animation(15113), new Animation(15114)),
-    COOK('c', new ImmutableLocation(2074, 5405, 0), Direction.WEST, 15041, 15054, 46123, new Animation(15115), new Animation(15116)),
-    PARTYGOER('p', new ImmutableLocation(2084, 5402, 0), Direction.EAST, 15020, 15056, 46126, new Animation(15117), new Animation(15118)),
-    TINY_THOM('t', new ImmutableLocation(2080, 5405, 0), Direction.WEST, 15038, 15058, 46129, new Animation(15054), new Animation(15053));
+    GENERAL_WARTFACE('w', new ImmutableLocation(2078, 5401, 0), Direction.EAST, 15044, 15050, 46114, new Animation(Gad211.seq(15109)), new Animation(Gad211.seq(15110))),
+    GENERAL_BENTNOZE('b', new ImmutableLocation(2080, 5401, 0), Direction.WEST, 15046, 15048, 46117, new Animation(Gad211.seq(15111)), new Animation(Gad211.seq(15112))),
+    SIR_AMIK_VARZE('a', new ImmutableLocation(2074, 5402, 0), Direction.WEST, 15033, 15052, 46120, new Animation(Gad211.seq(15113)), new Animation(Gad211.seq(15114))),
+    COOK('c', new ImmutableLocation(2074, 5405, 0), Direction.WEST, 15041, 15054, 46123, new Animation(Gad211.seq(15115)), new Animation(Gad211.seq(15116))),
+    PARTYGOER('p', new ImmutableLocation(2084, 5402, 0), Direction.EAST, 15020, 15056, 46126, new Animation(Gad211.seq(15117)), new Animation(Gad211.seq(15118))),
+    TINY_THOM('t', new ImmutableLocation(2080, 5405, 0), Direction.WEST, 15038, 15058, 46129, new Animation(Gad211.seq(15054)), new Animation(Gad211.seq(15053)));
     private static final FrozenGuest[] values = values();
     private final char constant;
     private final Location tile;

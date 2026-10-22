@@ -1,10 +1,12 @@
 package com.zenyte.game.parser.impl;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.zenyte.game.world.DefaultGson;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -71,6 +73,10 @@ public final class BundledItemDefinitions {
     private static final Logger log = LoggerFactory.getLogger(BundledItemDefinitions.class);
 
     public static final String RESOURCE_DIR = "gadscape/items";
+    /** Entry key saying which ids the entry uses; see {@link #toCacheIds(JsonObject)}. */
+    static final String ID_SPACE = "idSpace";
+    /** Entry key naming a new GadScape obj by its gadconv key ({@code idmap.json} {@code _new.obj}). */
+    static final String NEW_OBJ = "newObj";
     private static final String FIRST_FILE = "base.json";
 
     /** Ids only the bundled files define, mapped to the object put in the loader's map. */
@@ -129,6 +135,7 @@ public final class BundledItemDefinitions {
                     continue;
                 }
                 final JsonObject entry = element.getAsJsonObject();
+                toCacheIds(entry);
                 if (!entry.has("id") || !entry.get("id").isJsonPrimitive()) {
                     log.warn("Bundled item entry without an id in {}: {}", fileName, entry);
                     bad++;
@@ -206,13 +213,79 @@ public final class BundledItemDefinitions {
     }
 
     /**
+     * The 241 cache moved a few of GadScape's 211 ids (gadconv {@code idmap.json}, see {@link Gad211}): items 34721,
+     * 34722, 34723 and 34726 (Raids 4 items hold those ids in 2746), Zenyte's event seqs 15000-15162, and others.
+     * Bundled entries are resolved here before they are applied:
+     * <ul>
+     *     <li>{@code "id"} names GadScape's item (the files were written for GadScape's items), so it is resolved;</li>
+     *     <li>{@code ifDataDir} describes the data-dir entry, which holds GadScape's 211 ids until it is migrated
+     *     ({@code docs/rev241/tools/migrate_data_ids.py}), so its {@code *Animation} seqs and
+     *     {@code interfaceVarbit} are resolved too, to match the migrated data dir;</li>
+     *     <li>the values the entry sets are kept as written: the areas wrote them against the 241 cache (for example
+     *     weapons.json's "live seqs tfa_human_obligator_* 15118-15123" are 2746's seqs).</li>
+     * </ul>
+     * {@code "idSpace": "gadscape211"} resolves the entry's own seqs and varbits as well (an entry copied from the 211
+     * data dir); {@code "idSpace": "cacheV"} resolves nothing, not even the item id (an entry for 2746 content at an
+     * id GadScape used, such as a Raids 4 item). A resolved id is never an old one, so resolving twice is harmless.
+     * {@code "newObj": "<key>"} names an obj GadScape added without a 211 id (gadconv's {@code _new.obj}, e.g. the
+     * SKSP-15 kit pieces): the entry's id becomes the id the cache gave it, {@code "id"} being the fallback.
+     */
+    static void toCacheIds(final JsonObject entry) {
+        final JsonElement newObj = entry.remove(NEW_OBJ);
+        if (newObj != null && newObj.isJsonPrimitive()) {
+            final JsonElement fallback = entry.get("id");
+            final int planned = fallback != null && fallback.isJsonPrimitive() && fallback.getAsJsonPrimitive().isNumber()
+                    ? fallback.getAsInt() : -1;
+            entry.addProperty("id", Gad211.newObj(newObj.getAsString(), planned));
+            return;
+        }
+        final JsonElement space = entry.get(ID_SPACE);
+        final String idSpace = space != null && space.isJsonPrimitive() ? space.getAsString().toLowerCase(Locale.ROOT) : "";
+        if (idSpace.equals("cachev") || idSpace.equals("241")) {
+            return;
+        }
+        final JsonElement id = entry.get("id");
+        if (id != null && id.isJsonPrimitive() && id.getAsJsonPrimitive().isNumber()) {
+            entry.addProperty("id", Gad211.obj(id.getAsInt()));
+        }
+        final boolean all = idSpace.equals("gadscape211") || idSpace.equals("211");
+        for (final Map.Entry<String, JsonElement> e : entry.entrySet()) {
+            if (e.getValue() != null && e.getValue().isJsonObject() && (all || e.getKey().equals("ifDataDir"))) {
+                mapNested(e.getValue().getAsJsonObject());
+            }
+        }
+    }
+
+    private static void mapNested(final JsonObject object) {
+        for (final Map.Entry<String, JsonElement> e : object.entrySet()) {
+            final JsonElement value = e.getValue();
+            if (value == null || value.isJsonNull()) {
+                continue;
+            }
+            if (value.isJsonObject()) {
+                mapNested(value.getAsJsonObject());
+                continue;
+            }
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) {
+                continue;
+            }
+            final String key = e.getKey();
+            if (key.endsWith("Animation")) {
+                e.setValue(new JsonPrimitive(Gad211.seq(value.getAsInt())));
+            } else if (key.equals("interfaceVarbit")) {
+                e.setValue(new JsonPrimitive(Gad211.varbit(value.getAsInt())));
+            }
+        }
+    }
+
+    /**
      * Deep-merges {@code patch} into {@code base}: objects key by key (except {@code requirements}, which is
      * replaced whole), {@code null} removes a key, anything else replaces. Bookkeeping keys are dropped.
      */
     static void merge(final JsonObject base, final JsonObject patch) {
         for (final Map.Entry<String, JsonElement> e : patch.entrySet()) {
             final String key = e.getKey();
-            if (key.equals("override") || key.equals("name") || key.equals("ifDataDir") || key.startsWith("_")) {
+            if (key.equals("override") || key.equals("name") || key.equals("ifDataDir") || key.equals(ID_SPACE) || key.equals(NEW_OBJ) || key.startsWith("_")) {
                 continue;
             }
             final JsonElement value = e.getValue();

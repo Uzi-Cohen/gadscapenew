@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.action;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.content.advent.AdventCalendarManager;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
@@ -23,9 +24,9 @@ import org.jetbrains.annotations.NotNull;
  * @see <a href="https://www.rune-server.ee/members/kris/">Rune-Server profile</a>
  */
 public class PeltAction extends Action {
-    private static final Animation animation = new Animation(15096);
-    private static final Graphics graphics = new Graphics(2504, 65, 0);
-    private static final Projectile projectile = new Projectile(2503, 25, 10, 45, 5, 20, 0, 0);
+    private static final Animation animation = new Animation(Gad211.seq(15096));
+    private static final Graphics graphics = new Graphics(Gad211.spot(2504), 65, 0);
+    private static final Projectile projectile = new Projectile(Gad211.spot(2503), 25, 10, 45, 5, 20, 0, 0);
 
     public PeltAction(@NotNull final Player target) {
         this.target = target;

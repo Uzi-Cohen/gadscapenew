@@ -5,6 +5,8 @@ import com.zenyte.game.model.ui.InterfacePosition;
 import com.zenyte.game.model.ui.NewInterfaceHandler;
 import com.zenyte.game.world.entity.player.LogLevel;
 import com.zenyte.game.world.entity.player.Player;
+import com.gadscape.game.rev241.Gad211;
+import mgi.types.component.ComponentDefinitions;
 import mgi.utilities.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,7 +154,7 @@ public enum GameInterface {
     GRAND_EXCHANGE_HISTORY(383),
     GRAND_EXCHANGE_COLLECTION_BOX(402),
     ORBS(160, InterfacePosition.ORBS),
-    MINIMIZED_ORBS(311, InterfacePosition.ORBS),
+    MINIMIZED_ORBS(898, InterfacePosition.ORBS), // 241 orbs_osm_nomap (211: 311, which 241 reuses for league_combat_mastery)
     WORLD_MAP(595, InterfacePosition.WORLD_MAP),
     COLOUR_PICKER(288, InterfacePosition.COLOUR_PICKER),
     DUEL_WINNINGS(108),
@@ -286,7 +288,9 @@ public enum GameInterface {
     }
 
     GameInterface(final int id, final InterfacePosition position) {
-        this.id = id;
+        // GadScape interfaces gadconv moved off an id the 241 cache uses (idmap.json "interface", e.g. 866 -> 5200)
+        // open at their cacheV id; every other id maps to itself.
+        this.id = Gad211.iface(id);
         this.position = position;
     }
 
@@ -296,7 +300,33 @@ public enum GameInterface {
         return Optional.of(field);
     }
 
+    /**
+     * GadScape-211 interfaces whose ids build 241 gave to other interfaces and that gadconv has not moved (idmap.json
+     * "interface" has no entry for them): hairdresser 82 (241 textfield_csv), Thessalia 591 (araxxor_scoreboard), ship
+     * chart 72 (sailing_menu), magic storage 592 (dizanas_quiver), tutorial make-over 269 (f2p_bond_redeem), polls 345 /
+     * 310 / 400 (sailing_intro_hud / gryphon_boss / trr_display), bond 64 (league_rank), report abuse 553
+     * (magictraining_main), Kourend favour 245 (dov_census). On a 241 cache their id shows the other interface, so they
+     * are not opened. Once gadconv relocates one, Gad211.iface gives it a new id and it opens again. CACHE NEED.
+     */
+    private static final it.unimi.dsi.fastutil.ints.IntSet REUSED_BY_241 = it.unimi.dsi.fastutil.ints.IntSet.of(82, 591, 72, 592, 269, 345, 310, 400, 64, 553, 245);
+
+    /** True when {@code interfaceId} is a GadScape-211 interface whose id the loaded build-241 cache uses for another one. */
+    public static boolean isReusedBy241(final int interfaceId) {
+        return mgi.tools.jagcached.CacheFormat.is241() && REUSED_BY_241.contains(interfaceId);
+    }
+
     public final void open(final Player player) {
+        if (isReusedBy241(id)) {
+            player.log(LogLevel.INFO, "Not opening interface " + this + ": build 241 uses " + id + " for another interface.");
+            player.sendMessage("That isn't available right now.");
+            return;
+        }
+        if (!ComponentDefinitions.containsInterface(id)) {
+            // an interface the cache does not have (e.g. a custom one missing from a stock cache): do not run its
+            // plugin, which would send scripts and component packets for components that do not exist.
+            player.log(LogLevel.INFO, "Not opening interface " + this + ": " + id + " is not in the cache.");
+            return;
+        }
         player.log(LogLevel.INFO, "Opening interface: " + this);
         final Interface plugin = NewInterfaceHandler.getInterface(id);
         if (plugin == null) {

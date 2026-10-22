@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.variables;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.eventbus.Subscribe;
 import com.gadscape.game.content.bountyhunter.WildyExtKt;
 import com.gadscape.game.world.entity.player.PlayerAttributesKt;
@@ -447,11 +448,11 @@ public final class PlayerVariables {
 
 	public void synchNoticeboardVars() {
 		final VarManager varManager = player.getVarManager();
-		varManager.sendVar(3800, (int) TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - Main.serverStartTime));
-		varManager.sendVar(3802, (int) (playTime * 0.6F));
-		varManager.sendVar(3805, Math.max(0, (int) TimeUnit.MILLISECONDS.toSeconds(BonusXpManager.expirationDate - System.currentTimeMillis())));
-		varManager.sendVar(3806, (int) (raidsBoost * 0.6F));
-		varManager.sendVar(3801, (int) (bonusXP * 0.6F));
+		varManager.sendVar(Gad211.varp(3800), (int) TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - Main.serverStartTime));
+		varManager.sendVar(Gad211.varp(3802), (int) (playTime * 0.6F));
+		varManager.sendVar(Gad211.varp(3805), Math.max(0, (int) TimeUnit.MILLISECONDS.toSeconds(BonusXpManager.expirationDate - System.currentTimeMillis())));
+		varManager.sendVar(Gad211.varp(3806), (int) (raidsBoost * 0.6F));
+		varManager.sendVar(Gad211.varp(3801), (int) (bonusXP * 0.6F));
 	}
 
 	public void setRunEnergy(double runEnergy) {

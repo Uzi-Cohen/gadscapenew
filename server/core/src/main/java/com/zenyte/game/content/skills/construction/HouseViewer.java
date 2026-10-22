@@ -117,7 +117,8 @@ public final class HouseViewer {
 		while(it.hasNext()) {
 			final RoomReference ref = it.next();
 			final int settings = ((ref.getY() * 8) + ref.getX()) | ref.getPlane() << 6 | ref.getRotation() << 8 | ref.getRoom().getInterfaceSlot() << 10 | getRoomContents(ref);
-			player.getPacketDispatcher().sendClientScript(ROOM_SCRIPT, count++, ref.getRoom().getEnumMap(), 0, settings, getAdditionalRoomContents(ref));
+			// Script 1376 (build 241) has a sixth int with extra hotspot bits (bits of args 3 and 4 unchanged from 211).
+			player.getPacketDispatcher().sendClientScript(ROOM_SCRIPT, count++, ref.getRoom().getEnumMap(), 0, settings, getAdditionalRoomContents(ref), 0);
 		}
 		final int xGrid = GRIDS[this.size - 5][0] | (displayDungeon ? 0 : 1) << 28;
 		final int yGrid = GRIDS[this.size - 5][1] | 1 << 28 | (displayUpperFloor ? 1 : 0) << 29;
@@ -132,7 +133,12 @@ public final class HouseViewer {
 	}
 	
 	public void handleInterface(final int interfaceId, final int componentId, final int slotId, final int itemId, final int option) {
-		if (componentId > 5 && componentId < 39) {
+		// Build 241 poh_viewer (422): room buttons 01..38 are 6..43, then move 63, rotate 64, clockwise 65,
+		// anticlockwise 66, delete 67, cancel 68, done 69 (the old code used 58-64, one below even the 211 ids 59-65).
+		if (componentId > 5 && componentId < 44) {
+			if (componentId - 6 >= player.getConstruction().getReferences().size()) {
+				return;
+			}
 			player.getTemporaryAttributes().remove("houseviewerMove");
 			room = player.getConstruction().getReferences().get(componentId - 6);
 			index = GRIDS[size - 5][2] + (82 * room.getPlane()) + (room.getY() * 9) + room.getX() + (2 - room.getPlane());
@@ -140,26 +146,26 @@ public final class HouseViewer {
 			player.getVarManager().sendBit(5329, roomComponent = (componentId - 5));
 			player.getVarManager().sendBit(5332, 0);
 			player.getVarManager().sendBit(5333, room.getRoom().getInterfaceSlot());
-		} else if (componentId == 58) {//move
+		} else if (componentId == 63) {//move
 			player.getTemporaryAttributes().put("houseviewerMove", true);
-		} else if (componentId == 59) {//rotate
+		} else if (componentId == 64) {//rotate
 			rotation = room.getRotation();
 			player.getVarManager().sendBit(5330, index);
 			player.getVarManager().sendBit(5332, 1);
 			player.getVarManager().sendBit(5331, rotation);
-		} else if (componentId == 60 || componentId == 61) {
-			rotate(componentId == 60);
-		} else if (componentId == 62) {
+		} else if (componentId == 65 || componentId == 66) {
+			rotate(componentId == 65);
+		} else if (componentId == 67) {//delete
 			player.getConstruction().getReferences().remove(room);
 			for (int i = 5329; i < 5335; i++) {
 				player.getVarManager().sendBit(i, 0);
 			}
 			reopen();
 			//openHouseViewer();
-		} else if (componentId == 63) {
+		} else if (componentId == 68) {//cancel
 			player.getVarManager().sendBit(5332, 0);
 			player.getVarManager().sendBit(5330, 0);
-		} else if (componentId == 64) {
+		} else if (componentId == 69) {//done
 			player.getVarManager().sendBit(5332, 0);
 			if (room.getRotation() == rotation) {
 				player.getVarManager().sendBit(5330, 0);

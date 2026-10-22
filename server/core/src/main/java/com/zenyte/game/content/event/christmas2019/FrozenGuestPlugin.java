@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.base.Preconditions;
 import com.zenyte.game.content.event.christmas2019.cutscenes.FrozenGuest;
 import com.zenyte.game.content.event.christmas2019.cutscenes.PastScourgeCutsceneP2Repeat;
@@ -58,8 +59,8 @@ public class FrozenGuestPlugin implements ObjectAction, ItemOnObjectAction {
             player.getInventory().deleteItem(ChristmasConstants.ICY_WATER_BUCKET, 1);
         }
         player.getInventory().addOrDrop(new Item(ItemId.BUCKET, 1));
-        player.setInvalidAnimation(new Animation(15082));
-        player.setGraphics(new Graphics(2501));
+        player.setInvalidAnimation(new Animation(Gad211.seq(15082)));
+        player.setGraphics(new Graphics(Gad211.spot(2501)));
         final NPC npc = World.findNPC(guest.getBaseNPC(), guest.getTile(), 1).orElseThrow(RuntimeException::new);
         npc.setInvalidAnimation(guest.getPreDefreezeAnimation());
         player.addAttribute(UNFROZEN_GUESTS_HASH_KEY, hash);

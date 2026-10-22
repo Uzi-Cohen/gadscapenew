@@ -2,6 +2,7 @@
 # Build the GadScape client (RuneLite 1.13.3 for Old School build 241, branded and patched for GadScape).
 #
 #   client241/build.sh [--test] [--runelite-jars DIR] [--modulus FILE] [--default-host HOST] [--out DIR] [--jre-zip FILE]
+#   client241/build.sh --setup --setup-url URL --setup-key FILE [--setup-version N] [--test] [--out DIR]
 #
 #   (default)        release build: "GadScape" everywhere, GadScape's live login key (release-rsa-public-modulus.hex,
 #                    the key of the 211 client), default server gadscape.duckdns.org, home %LOCALAPPDATA%\GadScape
@@ -16,12 +17,23 @@
 #   --out            output folder. default: client241/build/out
 #   --jre-zip        a Windows x64 Java 17+ JRE zip (one top folder). With it, the Windows exe is built too.
 #
+#   --setup          build only the setup instead (GadScape-Setup.exe: downloads, installs, updates and starts the
+#                    client; see setup/ and README "Setup and updates") and the release tool gadscape-release:
+#   --setup-url      https address of the release's manifest.json (where you upload the release folder)
+#   --setup-key      the release public key (.pub from `gadscape-release keygen`, or its base64 text)
+#                    Without --setup-url/--setup-key the setup is built but refuses to install (fail closed).
+#   --setup-version  the setup's version (default setup/VERSION); raise it for every new setup you publish
+#   --setup-local-http  TEST builds only: the setup also accepts http://127.0.0.1 (a local test server)
+#                    The setup takes the channel's names and default server from the client build in --out
+#                    (channel-<ch>.properties), so build the client first; --default-host must match it if given.
+#
 # Output in --out (release names; the test build uses GadScape-241-Test instead of GadScape):
 #   injected-client-1.13.3-gadscape.jar   the patched game client
 #   client-1.13.3-gadscape.jar            RuneLite's client jar with GadScape's name, icons, accent colour, login hook
 #   GadScape/                             portable folder: run.sh / run.bat, lib*/ jars, server.txt
 #   GadScape.zip                          the same folder zipped
 #   GadScape.exe                          (with --jre-zip) one-file Windows launcher with Java inside
+#   GadScape-Setup.exe, gadscape-release  (with --setup) the setup and the release tool
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 rl="$here/build/runelite-1.13.3"
@@ -29,13 +41,19 @@ modulus=""
 out="$here/build/out"
 jre=""
 channel=release
-host=""
+host=""; host_given=""
+setup=""; setup_url=""; setup_key=""; setup_version=""; setup_localhttp=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --test) channel=test; shift;;
+    --setup) setup=yes; shift;;
+    --setup-url) setup_url="$2"; shift 2;;
+    --setup-key) setup_key="$2"; shift 2;;
+    --setup-version) setup_version="$2"; shift 2;;
+    --setup-local-http) setup_localhttp=--local-http; shift;;
     --runelite-jars) rl="$2"; shift 2;;
     --modulus) modulus="$2"; shift 2;;
-    --default-host) host="$2"; shift 2;;
+    --default-host) host="$2"; host_given=yes; shift 2;;
     --out) out="$2"; shift 2;;
     --jre-zip) jre="$2"; shift 2;;
     *) echo "unknown option $1" >&2; exit 2;;
@@ -52,6 +70,40 @@ else
 fi
 lock="$here/runelite-1.13.3.lock"
 mkdir -p "$out"
+chprops="$out/channel-$channel.properties"
+write_channel_props() {
+  {
+    echo "# written by client241/build.sh"
+    echo "channel=$channel"
+    echo "title=$title"
+    echo "activity=$activity"
+    echo "default.host=$host"
+    echo "home.windows=$winDir"
+    echo "home.unix=$unixDir"
+    echo "exe.server_file=$serverFile"
+  } > "$chprops"
+}
+
+if [ -n "$setup" ]; then
+  # the setup only needs the channel's names: no RuneLite jars, Java or patcher. A client already built into
+  # --out keeps its channel file: gadscape-release build reads the release's server from it.
+  if [ -f "$chprops" ]; then
+    built_host="$(sed -n 's/^default.host=//p' "$chprops" | head -1)"
+    if [ -n "$host_given" ] && [ "$built_host" != "$host" ]; then
+      echo "the $channel client in $out was built with --default-host $built_host, not $host: build the client and the" \
+        "setup with the same --default-host (or use another --out)" >&2
+      exit 2
+    fi
+    echo "== using $chprops from the client build (default server ${built_host:-<none>})"
+  else
+    write_channel_props
+  fi
+  echo "== $channel setup: '$title', %LOCALAPPDATA%\\$winDir, manifest ${setup_url:-<none>}"
+  "$here/setup/build.sh" --out "$out/$name-Setup.exe" --channel-props "$chprops" --url "$setup_url" \
+    --key "$setup_key" ${setup_version:+--version "$setup_version"} $setup_localhttp --tool-out "$out/gadscape-release"
+  echo "done: $out ($channel setup)"
+  exit 0
+fi
 echo "== $channel build: '$title', key $(basename "$modulus"), default server $host"
 
 echo "== 1/6 RuneLite 1.13.3 jars"
@@ -75,17 +127,7 @@ echo "== 3/6 GadScape plugins (login screen)"
 "$here/plugins/build.sh" "$rl" "$branded"
 
 echo "== 4/6 launcher"
-chprops="$out/channel-$channel.properties"
-{
-  echo "# written by client241/build.sh"
-  echo "channel=$channel"
-  echo "title=$title"
-  echo "activity=$activity"
-  echo "default.host=$host"
-  echo "home.windows=$winDir"
-  echo "home.unix=$unixDir"
-  echo "exe.server_file=$serverFile"
-} > "$chprops"
+write_channel_props
 "$here/launcher/build.sh" "$rl" "$chprops"
 
 echo "== 5/6 portable folder"

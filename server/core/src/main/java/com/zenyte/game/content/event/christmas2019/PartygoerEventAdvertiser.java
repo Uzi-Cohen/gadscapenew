@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.util.Direction;
 import com.zenyte.game.util.Utils;
 import com.zenyte.game.world.entity.ForceTalk;
@@ -21,7 +22,7 @@ public class PartygoerEventAdvertiser extends NPC implements Spawnable {
             new ForceTalk("Come one, come all, to the Fantastic Festive Feast at the Land of Snow.")
     };
 
-    private static final Animation bellRingAnimation = new Animation(15083);
+    private static final Animation bellRingAnimation = new Animation(Gad211.seq(15083));
     
     private long chatDelay;
     

@@ -1,5 +1,6 @@
 package com.gadscape.game.model.ui.credit_store
 
+import com.gadscape.game.rev241.Gad211
 import com.google.common.eventbus.Subscribe
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
@@ -43,7 +44,7 @@ import java.util.*
 import kotlin.time.Duration.Companion.seconds
 
 private var Player.lastStoreUpdate by attribute("lastStoreUpdate", Instant.DISTANT_PAST)
-private var Player.storeCreditsVarp by varp(4700)
+private var Player.storeCreditsVarp by varp(Gad211.varp(4700))
 private var Player.storeCheckoutButtonEnabled by booleanVarbit(17005)
 private var Player.storeTabSelected by typeVarbit(17006, get=CreditStoreTab::get, set=CreditStoreTab::bitValue)
 private var Player.storeCategorySelected by typeVarbit(17007, get=CreditStoreCategory::get, set=CreditStoreCategory::ordinal)

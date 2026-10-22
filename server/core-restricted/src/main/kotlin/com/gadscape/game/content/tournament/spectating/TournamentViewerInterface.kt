@@ -76,20 +76,23 @@ class TournamentViewerInterface : Interface() {
             val left = pairObject.first?:return
             val right = pairObject.second?:return
             fun PacketDispatcher.sendPlayerStats(player: Player, index: Int) {
-                sendClientScript(
-                    2180 + index,
+                // Scripts 2180 / 2181 (build 241): 14 / 15 ints + name, combat. Against 211 (9 / 10 ints) 2182 gained
+                // two bar ints after the special energy and one at the end, and 9523 (2 ints) was added; all 0 here.
+                val ints = arrayListOf<Any>(
                     player.hitpoints,
                     player.maxHitpoints,
                     player.prayerManager.prayerPoints,
                     player.skills.getLevelForXp(SkillConstants.PRAYER),
                     player.combatDefinitions.specialEnergy * 10,
-                    0,
-                    0,
-                    0,
+                    0, 0, // 241 bar arguments of 2182
+                    0, 0, 0, // icons (5226)
                     index,
-                    player.name,
-                    player.skills.combatLevel.toString()
                 )
+                if (index == 1) ints.add(0) // 2184's second argument
+                ints.addAll(listOf(0, 0, 0)) // 9523 (2 ints), 2182's last int
+                ints.add(player.name)
+                ints.add(player.skills.combatLevel.toString())
+                sendClientScript(2180 + index, *ints.toTypedArray())
             }
             with(spectator.packetDispatcher) {
                 sendUpdateItemContainer(93, -70001, 0, left.inventory.container)

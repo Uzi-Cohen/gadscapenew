@@ -31,14 +31,14 @@ public class SpellbookInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(195, "Spell filters");
-        put(195, 0, "Show combat spells");
-        put(195, 1, "Show teleport spells");
-        put(195, 2, "Show utility spells");
-        put(195, 3, "Show spells you lack the magic level to cast");
-        put(195, 4, "Show spells you lack the runes to cast");
-        put(195, 5, "Show spells you lack the requirements to cast");
-        put(195, 6, "Enable icon resizing");
+        put(206, "Spell filters"); // 211: 195
+        put(206, 0, "Show combat spells"); // 211: 195
+        put(206, 1, "Show teleport spells"); // 211: 195
+        put(206, 2, "Show utility spells"); // 211: 195
+        put(206, 3, "Show spells you lack the magic level to cast"); // 211: 195
+        put(206, 4, "Show spells you lack the runes to cast"); // 211: 195
+        put(206, 5, "Show spells you lack the requirements to cast"); // 211: 195
+        put(206, 6, "Enable icon resizing"); // 211: 195
     }
 
     @Override

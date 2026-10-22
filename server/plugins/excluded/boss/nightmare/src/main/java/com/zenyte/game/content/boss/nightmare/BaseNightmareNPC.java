@@ -878,9 +878,9 @@ public abstract class BaseNightmareNPC extends NPC implements CombatScript {
 			};
 			getHitBars().add(removeHpBar);
 			forEachPlayers(player -> {
-				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 12, 9760);
-				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 13, 31846);
-				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 14, 53932);
+				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 13, 9760);
+				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 14, 31846);
+				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 15, 53932);
 				player.getHpHud().updateValue(hitpoints);
 				player.getHpHud().updateMaxValue(getMaxHitpoints());
 				if (phase.getNumber() != NightmarePhase.NightmarePhaseNumber.FIRST) {
@@ -900,9 +900,9 @@ public abstract class BaseNightmareNPC extends NPC implements CombatScript {
 			};
 			getHitBars().add(removeShieldBar);
 			forEachPlayers(player -> {
-				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 12, 13369344);
-				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 13, 38144);
-				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 14, 52224);
+				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 13, 13369344);
+				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 14, 38144);
+				player.getPacketDispatcher().sendClientScript(45, 303 << 16 | 15, 52224);
 				player.getHpHud().updateValue(hitpoints);
 				player.getHpHud().updateMaxValue(getMaxHitpoints());
 			});

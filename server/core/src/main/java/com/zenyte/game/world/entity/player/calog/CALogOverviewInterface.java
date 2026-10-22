@@ -14,8 +14,8 @@ import static com.zenyte.game.world.entity.player.calog.CALogTaskInterface.*;
 public class CALogOverviewInterface extends Interface {
 
 	@Override protected void attach() {
-		put(7, "Task selection");
-		put(16, "Navigation");
+		put(8, "Task selection"); // 241 ca_overview:ca_buttons_click (211: 7)
+		put(17, "Navigation"); // burger_menu_frame (211: 16)
 	}
 
 	@Override public void open(Player player) {
@@ -30,8 +30,8 @@ public class CALogOverviewInterface extends Interface {
 			}
 		}
 		super.open(player);
-		player.getPacketDispatcher().sendComponentSettings(GameInterface.CA_OVERVIEW, 7, 0, 100, AccessMask.CLICK_OP1);
-		player.getPacketDispatcher().sendComponentSettings(GameInterface.CA_OVERVIEW, 16, 0, 100, AccessMask.CLICK_OP1);
+		player.getPacketDispatcher().sendComponentSettings(GameInterface.CA_OVERVIEW, 8, 0, 100, AccessMask.CLICK_OP1);
+		player.getPacketDispatcher().sendComponentSettings(GameInterface.CA_OVERVIEW, 17, 0, 100, AccessMask.CLICK_OP1);
 	}
 
 	@Override protected void build() {

@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.collect.ImmutableList;
 import com.zenyte.game.content.achievementdiary.Diary;
 import com.zenyte.game.content.achievementdiary.DiaryUtil;
@@ -75,6 +76,6 @@ public class DailyBoard implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] { ObjectId.DAILY_BOARD };
+        return new Object[] { Gad211.loc(ObjectId.DAILY_BOARD) };
     }
 }

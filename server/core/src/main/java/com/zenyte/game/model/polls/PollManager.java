@@ -1,5 +1,6 @@
 package com.zenyte.game.model.polls;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.cores.CoresManager;
 import com.zenyte.cores.ScheduledExternalizable;
 import com.zenyte.game.model.polls.AnsweredPoll.AnsweredPollQuestion;
@@ -28,14 +29,62 @@ import java.util.*;
 public final class PollManager implements ScheduledExternalizable {
 	private static final Logger log = LoggerFactory.getLogger(PollManager.class);
 	public static final Int2ObjectOpenHashMap<Poll> map = new Int2ObjectOpenHashMap<>();
-	public static final int INTERFACE_ID = 345;
+	/* GadScape's 211 poll screens; on the 241 cache gadconv moved them (241 reuses the ids), idmap.json "interface". */
+	public static final int INTERFACE_ID_211 = 345;
+	public static final int HISTORY_INTERFACE_ID_211 = 310;
+	public static final int VOTING_INTERFACE_ID_211 = 400;
+	public static final int INTERFACE_ID = Gad211.iface(INTERFACE_ID_211);
 	private static final int SHIFTED_INTERFACE_ID = INTERFACE_ID << 16;
-	public static final int HISTORY_INTERFACE_ID = 310;
-	public static final int VOTING_INTERFACE_ID = 400;
+	public static final int HISTORY_INTERFACE_ID = Gad211.iface(HISTORY_INTERFACE_ID_211);
+	public static final int VOTING_INTERFACE_ID = Gad211.iface(VOTING_INTERFACE_ID_211);
 	private static final int SHIFTED_VOTING_INTERFACE_ID = VOTING_INTERFACE_ID << 16;
+	/*
+	 * The 211 poll scripts the server runs, resolved like the screens (idmap.json "script": gadconv ports a 211
+	 * vanilla script 241 replaced, e.g. 603 -> 47039). The values are their 211 headers (int, string arguments).
+	 */
+	private static final int SCRIPT_TITLE = Gad211.script(603);
+	private static final int SCRIPT_BUTTON = Gad211.script(604);
+	private static final int SCRIPT_TEXT = Gad211.script(609);
+	private static final int SCRIPT_LINK = Gad211.script(610);
+	private static final int SCRIPT_SCROLL = Gad211.script(618);
+	private static final int SCRIPT_QUESTION = Gad211.script(619);
+	private static final int SCRIPT_ANSWER = Gad211.script(620);
+	private static final int SCRIPT_RESULTS = Gad211.script(624);
+	private static final int SCRIPT_HISTORY = Gad211.script(627);
+	private static final int[][] SCRIPT_HEADERS_211 = {
+			{SCRIPT_TITLE, 5, 2}, {SCRIPT_BUTTON, 2, 1}, {SCRIPT_TEXT, 7, 1}, {SCRIPT_LINK, 1, 2}, {SCRIPT_SCROLL, 4, 0},
+			{SCRIPT_QUESTION, 2, 1}, {SCRIPT_ANSWER, 2, 0}, {SCRIPT_RESULTS, 36, 1}, {SCRIPT_HISTORY, 1, 2}};
 	private static final int DESCRIPTION_HEX_COLOUR = 16750623;
 	private static final int VOTES_HEX_COLOUR = 16777215;
 	private static final int VOTE_COMPONENT_OFFSET = 12;
+
+	/**
+	 * GadScape's poll screens are 211 interfaces 345 (poll, 13 components), 310 (history, 6) and 400 (voting, 14).
+	 * Build 241 reuses those ids (sailing_intro_hud, gryphon_boss, trr_display) and rewrote the vanilla poll scripts
+	 * 603-627. gadconv moves the screens (cacheV: 5202, 5201, 5203) and ports the 211 scripts whose name changed
+	 * (603-617, 622); the polls open only when the screens are GadScape's and every script the server runs has its
+	 * 211 header in the cache. CACHE NEED (cacheV): 618-620, 624 and 627 kept their names in 241 but not their
+	 * arguments, so gadconv keeps 2746's; until it ports them the polls stay "not available" instead of half-working.
+	 */
+	private static boolean pollInterfacesPresent() {
+		if (com.zenyte.game.GameInterface.isReusedBy241(INTERFACE_ID)
+				|| com.zenyte.game.GameInterface.isReusedBy241(HISTORY_INTERFACE_ID)
+				|| com.zenyte.game.GameInterface.isReusedBy241(VOTING_INTERFACE_ID)) {
+			return false;
+		}
+		for (final int[] header : SCRIPT_HEADERS_211) {
+			final mgi.types.clientscript.ClientScriptDefinitions script;
+			try {
+				script = mgi.types.clientscript.ClientScriptDefinitions.get(header[0]);
+			} catch (final RuntimeException e) {
+				return false;
+			}
+			if (script == null || script.getIntArgumentCount() != header[1] || script.getStringArgumentCount() != header[2]) {
+				return false;
+			}
+		}
+		return true;
+	}
 
 	public PollManager() {
 		player = null;
@@ -105,6 +154,10 @@ public final class PollManager implements ScheduledExternalizable {
 	 *            the poll to open up.
 	 */
 	public final void open(final Poll poll) {
+		if (!pollInterfacesPresent()) {
+			player.sendMessage("Polls are not available right now.");
+			return;
+		}
 		this.poll = poll;
 		sendLoadingScreen();
 		CoresManager.getServiceProvider().executeWithDelay(() -> sendPollStatistics(), 1);
@@ -116,10 +169,10 @@ public final class PollManager implements ScheduledExternalizable {
 	private final void sendLoadingScreen() {
 		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, INTERFACE_ID);
 		final PacketDispatcher dispatcher = player.getPacketDispatcher();
-		player.getPacketDispatcher().sendClientScript(603, poll.getTitle(), SHIFTED_INTERFACE_ID | 2, SHIFTED_INTERFACE_ID | 12, SHIFTED_INTERFACE_ID | 11, SHIFTED_INTERFACE_ID | 10, "Loading...");
-		dispatcher.sendClientScript(604, SHIFTED_INTERFACE_ID | 8, SHIFTED_INTERFACE_ID | 9);
-		dispatcher.sendClientScript(604, SHIFTED_INTERFACE_ID | 6, SHIFTED_INTERFACE_ID | 7);
-		dispatcher.sendClientScript(604, SHIFTED_INTERFACE_ID | 4, SHIFTED_INTERFACE_ID | 5);
+		player.getPacketDispatcher().sendClientScript(SCRIPT_TITLE, poll.getTitle(), SHIFTED_INTERFACE_ID | 2, SHIFTED_INTERFACE_ID | 12, SHIFTED_INTERFACE_ID | 11, SHIFTED_INTERFACE_ID | 10, "Loading...");
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_INTERFACE_ID | 8, SHIFTED_INTERFACE_ID | 9);
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_INTERFACE_ID | 6, SHIFTED_INTERFACE_ID | 7);
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_INTERFACE_ID | 4, SHIFTED_INTERFACE_ID | 5);
 		dispatcher.sendComponentText(INTERFACE_ID, 3, "");
 		player.getVarManager().sendVar(375, 8);
 	}
@@ -133,15 +186,15 @@ public final class PollManager implements ScheduledExternalizable {
 	private final void sendPollStatistics() {
 		player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
 		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, INTERFACE_ID);
-		player.getPacketDispatcher().sendClientScript(603, poll.getTitle(), SHIFTED_INTERFACE_ID | 2, SHIFTED_INTERFACE_ID | 12, SHIFTED_INTERFACE_ID | 11, SHIFTED_INTERFACE_ID | 10, "Building...");
+		player.getPacketDispatcher().sendClientScript(SCRIPT_TITLE, poll.getTitle(), SHIFTED_INTERFACE_ID | 2, SHIFTED_INTERFACE_ID | 12, SHIFTED_INTERFACE_ID | 11, SHIFTED_INTERFACE_ID | 10, "Building...");
 		final PacketDispatcher dispatcher = player.getPacketDispatcher();
 		dispatcher.sendComponentVisibility(INTERFACE_ID, SHIFTED_INTERFACE_ID | 10, true);
-		dispatcher.sendClientScript(609, poll.getDescription() + "|" + poll.getFormattedEndDate(), DESCRIPTION_HEX_COLOUR, 0, 495, 495, 12, 5, SHIFTED_INTERFACE_ID | 11);
+		dispatcher.sendClientScript(SCRIPT_TEXT, poll.getDescription() + "|" + poll.getFormattedEndDate(), DESCRIPTION_HEX_COLOUR, 0, 495, 495, 12, 5, SHIFTED_INTERFACE_ID | 11);
 		final String hyperlink = poll.getHyperlink();
 		if (hyperlink != null) {
-			dispatcher.sendClientScript(610, hyperlink, SHIFTED_INTERFACE_ID | 11);
+			dispatcher.sendClientScript(SCRIPT_LINK, hyperlink, SHIFTED_INTERFACE_ID | 11);
 		}
-		dispatcher.sendClientScript(609, "Votes: " + StringFormatUtil.format(poll.getVotes()), VOTES_HEX_COLOUR, 1, 496, 496, 12, 5, SHIFTED_INTERFACE_ID | 11);
+		dispatcher.sendClientScript(SCRIPT_TEXT, "Votes: " + StringFormatUtil.format(poll.getVotes()), VOTES_HEX_COLOUR, 1, 496, 496, 12, 5, SHIFTED_INTERFACE_ID | 11);
 		final AnsweredPoll answeredPoll = polls.get(poll.getPollId());
 		final boolean hasVoted = answeredPoll != null;
 		final PollQuestion[] questions = poll.getQuestions();
@@ -161,14 +214,14 @@ public final class PollManager implements ScheduledExternalizable {
 			for (int x = 0; x < pollAnswers.length; x++) {
 				list.add(pollAnswers[x].getVotes());
 			}
-			dispatcher.sendClientScript(624, list.toArray(new Object[0]));
+			dispatcher.sendClientScript(SCRIPT_RESULTS, list.toArray(new Object[0]));
 		}
-		dispatcher.sendClientScript(609, DESCRIPTION_HEX_COLOUR, 1, 496, 496, 12, 5, SHIFTED_INTERFACE_ID | 11);
-		dispatcher.sendClientScript(618, SHIFTED_INTERFACE_ID | 11, SHIFTED_INTERFACE_ID | 12, SHIFTED_INTERFACE_ID | 9, 1);
-		dispatcher.sendClientScript(604, SHIFTED_INTERFACE_ID | 8, SHIFTED_INTERFACE_ID | 9, "History");
+		dispatcher.sendClientScript(SCRIPT_TEXT, DESCRIPTION_HEX_COLOUR, 1, 496, 496, 12, 5, SHIFTED_INTERFACE_ID | 11);
+		dispatcher.sendClientScript(SCRIPT_SCROLL, SHIFTED_INTERFACE_ID | 11, SHIFTED_INTERFACE_ID | 12, SHIFTED_INTERFACE_ID | 9, 1);
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_INTERFACE_ID | 8, SHIFTED_INTERFACE_ID | 9, "History");
 		final boolean closed = poll.isClosed();
-		dispatcher.sendClientScript(604, SHIFTED_INTERFACE_ID | 6, SHIFTED_INTERFACE_ID | 7, closed || hasVoted && !poll.isAmendable() ? "" : "Refresh");
-		dispatcher.sendClientScript(604, SHIFTED_INTERFACE_ID | 4, SHIFTED_INTERFACE_ID | 5, closed || hasVoted && !poll.isAmendable() ? "" : (hasVoted ? "Amend" : "Vote"));
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_INTERFACE_ID | 6, SHIFTED_INTERFACE_ID | 7, closed || hasVoted && !poll.isAmendable() ? "" : "Refresh");
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_INTERFACE_ID | 4, SHIFTED_INTERFACE_ID | 5, closed || hasVoted && !poll.isAmendable() ? "" : (hasVoted ? "Amend" : "Vote"));
 		if (!closed) {
 			if (hasVoted) {
 				if (poll.isAmendable()) {
@@ -190,6 +243,10 @@ public final class PollManager implements ScheduledExternalizable {
 	 * close dates of the polls are shown.
 	 */
 	public final void sendHistory() {
+		if (!pollInterfacesPresent()) {
+			player.sendMessage("Polls are not available right now.");
+			return;
+		}
 		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, HISTORY_INTERFACE_ID);
 		final StringBuilder titleBuilder = new StringBuilder();
 		final StringBuilder dateBuilder = new StringBuilder();
@@ -202,7 +259,7 @@ public final class PollManager implements ScheduledExternalizable {
 			titleBuilder.append("<col=df780f>").append(poll.getTitle()).append("</col>|");
 			dateBuilder.append(poll.getFormattedPollDates()).append("|");
 		}
-		player.getPacketDispatcher().sendClientScript(627, map.size(), titleBuilder.toString(), dateBuilder.toString());
+		player.getPacketDispatcher().sendClientScript(SCRIPT_HISTORY, map.size(), titleBuilder.toString(), dateBuilder.toString());
 	}
 
 	/**
@@ -221,11 +278,11 @@ public final class PollManager implements ScheduledExternalizable {
 		player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, VOTING_INTERFACE_ID);
 		final PacketDispatcher dispatcher = player.getPacketDispatcher();
 		dispatcher.sendComponentSettings(VOTING_INTERFACE_ID, 1, 0, 3199, AccessMask.CLICK_OP1);
-		player.getPacketDispatcher().sendClientScript(603, poll.getTitle(), SHIFTED_VOTING_INTERFACE_ID | 3, SHIFTED_VOTING_INTERFACE_ID | 13, SHIFTED_VOTING_INTERFACE_ID | 10, SHIFTED_VOTING_INTERFACE_ID | 9, "Building...");
-		player.getPacketDispatcher().sendClientScript(609, poll.getDescription() + "|" + poll.getFormattedEndDate(), DESCRIPTION_HEX_COLOUR, 0, 495, 495, 12, 5, SHIFTED_VOTING_INTERFACE_ID | 10);
+		player.getPacketDispatcher().sendClientScript(SCRIPT_TITLE, poll.getTitle(), SHIFTED_VOTING_INTERFACE_ID | 3, SHIFTED_VOTING_INTERFACE_ID | 13, SHIFTED_VOTING_INTERFACE_ID | 10, SHIFTED_VOTING_INTERFACE_ID | 9, "Building...");
+		player.getPacketDispatcher().sendClientScript(SCRIPT_TEXT, poll.getDescription() + "|" + poll.getFormattedEndDate(), DESCRIPTION_HEX_COLOUR, 0, 495, 495, 12, 5, SHIFTED_VOTING_INTERFACE_ID | 10);
 		final String hyperlink = poll.getHyperlink();
 		if (hyperlink != null) {
-			player.getPacketDispatcher().sendClientScript(610, hyperlink, SHIFTED_INTERFACE_ID | 10);
+			player.getPacketDispatcher().sendClientScript(SCRIPT_LINK, hyperlink, SHIFTED_INTERFACE_ID | 10);
 		}
 		final PollQuestion[] questions = poll.getQuestions();
 		final int length = questions.length;
@@ -237,25 +294,25 @@ public final class PollManager implements ScheduledExternalizable {
 				/** TODO: +2 = CANCEL */
 				final int len = question.getAnswers().length;
 				final int offset = len == 2 ? -4 : len > 3 ? ((len - 3) << 2) : 0;
-				dispatcher.sendClientScript(619, VOTE_COMPONENT_OFFSET + (i * 256) + offset, message, 0);
+				dispatcher.sendClientScript(SCRIPT_QUESTION, VOTE_COMPONENT_OFFSET + (i * 256) + offset, message, 0);
 			}
 		} else {
 			for (int i = 0; i < length; i++) {
 				final PollQuestion question = questions[i];
 				final int len = question.getAnswers().length;
 				final int offset = len == 2 ? -4 : len > 3 ? ((len - 3) << 2) : 0;
-				dispatcher.sendClientScript(620, VOTE_COMPONENT_OFFSET + (i * 256) + offset, votes[i]);
+				dispatcher.sendClientScript(SCRIPT_ANSWER, VOTE_COMPONENT_OFFSET + (i * 256) + offset, votes[i]);
 			}
 		}
-		dispatcher.sendClientScript(618, SHIFTED_VOTING_INTERFACE_ID | 10, SHIFTED_VOTING_INTERFACE_ID | 13, SHIFTED_VOTING_INTERFACE_ID | 9, questionId == -1 ? 0 : 1);
+		dispatcher.sendClientScript(SCRIPT_SCROLL, SHIFTED_VOTING_INTERFACE_ID | 10, SHIFTED_VOTING_INTERFACE_ID | 13, SHIFTED_VOTING_INTERFACE_ID | 9, questionId == -1 ? 0 : 1);
 		if (questionId == -1) {
 			dispatcher.sendComponentText(VOTING_INTERFACE_ID, 4, "Cast your vote.");
 		} else {
 			dispatcher.sendComponentText(VOTING_INTERFACE_ID, 4, "<col=ff0000>Please answer question " + questionId + ".</col>");
 		}
-		dispatcher.sendClientScript(604, SHIFTED_VOTING_INTERFACE_ID | 5, SHIFTED_VOTING_INTERFACE_ID | 6, "Clear");
-		dispatcher.sendClientScript(604, SHIFTED_VOTING_INTERFACE_ID | 7, SHIFTED_VOTING_INTERFACE_ID | 8, "Cancel");
-		dispatcher.sendClientScript(604, SHIFTED_VOTING_INTERFACE_ID | 11, SHIFTED_VOTING_INTERFACE_ID | 12, "Vote");
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_VOTING_INTERFACE_ID | 5, SHIFTED_VOTING_INTERFACE_ID | 6, "Clear");
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_VOTING_INTERFACE_ID | 7, SHIFTED_VOTING_INTERFACE_ID | 8, "Cancel");
+		dispatcher.sendClientScript(SCRIPT_BUTTON, SHIFTED_VOTING_INTERFACE_ID | 11, SHIFTED_VOTING_INTERFACE_ID | 12, "Vote");
 	}
 
 	/**
@@ -269,8 +326,7 @@ public final class PollManager implements ScheduledExternalizable {
 	 *            the slot in that component being clicked.
 	 */
 	public final void handleInterface(final int interfaceId, final int componentId, final int slotId) {
-		switch (interfaceId) {
-		case INTERFACE_ID: 
+		if (interfaceId == INTERFACE_ID) {
 			switch (componentId) {
 			case 5: 
 				vote(true, -1);
@@ -283,7 +339,8 @@ public final class PollManager implements ScheduledExternalizable {
 				return;
 			}
 			return;
-		case HISTORY_INTERFACE_ID: 
+		}
+		if (interfaceId == HISTORY_INTERFACE_ID) {
 			if (componentId != 4) {
 				return;
 			}
@@ -293,7 +350,8 @@ public final class PollManager implements ScheduledExternalizable {
 			}
 			open(poll);
 			return;
-		case VOTING_INTERFACE_ID: 
+		}
+		if (interfaceId == VOTING_INTERFACE_ID) {
 			switch (componentId) {
 			case 2: 
 				final int questionId = slotId >> 5;

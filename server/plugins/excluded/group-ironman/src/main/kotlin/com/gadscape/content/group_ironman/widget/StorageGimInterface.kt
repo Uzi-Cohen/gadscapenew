@@ -51,31 +51,27 @@ class StorageGimInterface : InterfaceScript() {
                     depositEntireInventory(player)
                 }
             }
-            "Rearrange mode: Swap"(23) {
-                player.bank.toggleSetting(BankSetting.REARRANGE_MODE, false)
+            // Build 241 shared_bank (724): the Swap / Insert and Item / Note buttons became one toggle each
+            // (swap_insert 21, note 23; 211: 23 / 25 and 29 / 31), save 27 (211: 34), quantity1..all 31-39 (211: 37-45).
+            "Rearrange mode"(21) {
+                player.bank.toggleSetting(BankSetting.REARRANGE_MODE, player.bank.getSetting(BankSetting.REARRANGE_MODE) == 0)
             }
-            "Rearrange mode: Insert"(25) {
-                player.bank.toggleSetting(BankSetting.REARRANGE_MODE, true)
+            "Withdraw as"(23) {
+                player.bank.toggleSetting(BankSetting.WITHDRAW_MODE, player.bank.getSetting(BankSetting.WITHDRAW_MODE) == 0)
             }
-            "Withdraw as: Item"(29) {
-                player.bank.toggleSetting(BankSetting.WITHDRAW_MODE, false)
-            }
-            "Withdraw as: Note"(31) {
-                player.bank.toggleSetting(BankSetting.WITHDRAW_MODE, true)
-            }
-            "Save"(34) {
+            "Save"(27) {
                 player.save()
             }
-            "Quantity: 1"(37) {
+            "Quantity: 1"(31) {
                 player.bank.quantity = Bank.QuantitySelector.ONE
             }
-            "Quantity: 5"(39) {
+            "Quantity: 5"(33) {
                 player.bank.quantity = Bank.QuantitySelector.FIVE
             }
-            "Quantity: 10"(41) {
+            "Quantity: 10"(35) {
                 player.bank.quantity = Bank.QuantitySelector.TEN
             }
-            "Quantity: X"(43) {
+            "Quantity: X"(37) {
                 if (option == 2) {
                     player.sendInputInt("Set quantity selector amount:") { a: Int ->
                         val value = a.coerceAtLeast(1)
@@ -91,7 +87,7 @@ class StorageGimInterface : InterfaceScript() {
                 }
                 player.bank.quantity = Bank.QuantitySelector.X
             }
-            "Quantity: All"(45) {
+            "Quantity: All"(39) {
                 player.bank.quantity = Bank.QuantitySelector.ALL
             }
             closed {

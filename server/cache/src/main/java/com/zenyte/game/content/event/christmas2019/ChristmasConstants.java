@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.Location;
 
 /**
@@ -51,24 +52,24 @@ public class ChristmasConstants {
     public static final int CAGED_SANTA_2 = 46111;
     public static final int SCOURGE_STAIRS = 46102;
     public static final int ICY_WATER_FOUNTAIN = 46076;
-    public static final int REWARD_PRESENT_VARBIT = 15010;
-    public static final int WARTFACE_VAR = 15011;
-    public static final int BENTNOZE_VAR = 15012;
-    public static final int AMIK_VARZE_VAR = 15013;
-    public static final int COOK_VAR = 15014;
-    public static final int PARTYGOER_VAR = 15015;
-    public static final int TINY_THOM_VAR = 15016;
-    public static final int FREED_SANTA_VAR = 15006;
-    public static final int SE_CUPBOARD_VAR = 15020;
-    public static final int NE_CUPBOARD_VAR = 15022;
-    public static final int NW_CUPBOARD_VAR = 15023;
-    public static final int SW_CUPBOARD_VAR = 15021;
-    public static final int SNOW_IMP_VAR1 = 15000;
-    public static final int SNOW_IMP_VAR2 = 15001;
-    public static final int SNOW_IMP_VAR3 = 15002;
-    public static final int SNOW_IMP_VAR4 = 15003;
-    public static final int EBENEZER_SCOURGE_VAR = 15004;
-    public static final int FROZEN_NPCS_VAR = 15018;
+    public static final int REWARD_PRESENT_VARBIT = Gad211.varbit(15010);
+    public static final int WARTFACE_VAR = Gad211.varbit(15011);
+    public static final int BENTNOZE_VAR = Gad211.varbit(15012);
+    public static final int AMIK_VARZE_VAR = Gad211.varbit(15013);
+    public static final int COOK_VAR = Gad211.varbit(15014);
+    public static final int PARTYGOER_VAR = Gad211.varbit(15015);
+    public static final int TINY_THOM_VAR = Gad211.varbit(15016);
+    public static final int FREED_SANTA_VAR = Gad211.varbit(15006);
+    public static final int SE_CUPBOARD_VAR = Gad211.varbit(15020);
+    public static final int NE_CUPBOARD_VAR = Gad211.varbit(15022);
+    public static final int NW_CUPBOARD_VAR = Gad211.varbit(15023);
+    public static final int SW_CUPBOARD_VAR = Gad211.varbit(15021);
+    public static final int SNOW_IMP_VAR1 = Gad211.varbit(15000);
+    public static final int SNOW_IMP_VAR2 = Gad211.varbit(15001);
+    public static final int SNOW_IMP_VAR3 = Gad211.varbit(15002);
+    public static final int SNOW_IMP_VAR4 = Gad211.varbit(15003);
+    public static final int EBENEZER_SCOURGE_VAR = Gad211.varbit(15004);
+    public static final int FROZEN_NPCS_VAR = Gad211.varbit(15018);
     public static final String UNFROZEN_GUESTS_HASH_KEY = "A Christmas Warble unfrozen guests hash";
 
 }

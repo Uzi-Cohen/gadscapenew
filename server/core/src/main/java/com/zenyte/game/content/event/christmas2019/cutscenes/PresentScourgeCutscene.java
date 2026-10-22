@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.event.christmas2019.AChristmasWarble;
 import com.zenyte.game.content.event.christmas2019.ChristmasConstants;
@@ -58,7 +59,7 @@ public class PresentScourgeCutscene extends Cutscene {
         });
         addActions(5, unfadeRunnable);
         addActions(8, new CameraPositionAction(player, instance.getLocation(2471, 5407 - 3, 1), 350, 5, 0), new CameraLookAction(player, instance.getLocation(2471, 5390 - 3, 1), 200, 5, 0));
-        addActions(12, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(15001)), () -> dummy.setInvalidAnimation(new Animation(15001)));
+        addActions(12, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(Gad211.seq(15001))), () -> dummy.setInvalidAnimation(new Animation(Gad211.seq(15001))));
         addActions(21, new CameraPositionAction(player, instance.getLocation(2471, 5400, 1), 550, 255, 100), new CameraLookAction(player, instance.getLocation(2471, 5403, 1), 75, 255, 100), () -> {
             player.setRunSilent(2);
             player.addWalkSteps(instance.getX(2471), instance.getY(5403), 2);
@@ -73,11 +74,11 @@ public class PresentScourgeCutscene extends Cutscene {
             @Override
             public void buildDialogue() {
                 player("Greetings, Scourge.").executeAction(() -> turnLeft());
-                player("Psst, maybe we should leave, " + impName + ".").executeAction(() -> imp.setInvalidAnimation(new Animation(15029)));
+                player("Psst, maybe we should leave, " + impName + ".").executeAction(() -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))));
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "No way, dude! Say you is the 'Ghost of " +
                         "Christmas Present' - that'll scare 'im.", Expression.HIGH_REV_NORMAL).executeAction(() -> {
                     turnStraight();
-                    imp.setInvalidAnimation(new Animation(15028));
+                    imp.setInvalidAnimation(new Animation(Gad211.seq(15028)));
                 });
                 player("I am the Ghost of Christmas Present, Scourge, and I'm here to show you the pain you still " +
                         "cause.");
@@ -88,17 +89,17 @@ public class PresentScourgeCutscene extends Cutscene {
                 npcWithId(ChristmasConstants.PAJAMAS_SCOURGE_NPC_ID, "Ha! You think you're brave, do you, maggot?", Expression.HIGH_REV_MAD);
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "We know someone who you've really hurt, " +
                         "Scourge. This is gonna make you feel sooooo bad.", Expression.HIGH_REV_NORMAL);
-                player(20, "Okay, sor-").executeAction(() -> imp.setInvalidAnimation(new Animation(15029)));
+                player(20, "Okay, sor-").executeAction(() -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))));
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Stop!", Expression.HIGH_REV_NORMAL).executeAction(() -> turnLeft());
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "We aren't going anywhere.", Expression.HIGH_REV_NORMAL).executeAction(() -> {
-                    imp.setInvalidAnimation(new Animation(15028));
+                    imp.setInvalidAnimation(new Animation(Gad211.seq(15028)));
                     turnStraight();
                 });
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "We know someone who you've really hurt, " +
                         "Scourge. This is gonna make you feel sooooo bad.", Expression.HIGH_REV_NORMAL);
             }
         }));
-        addActions(30, () -> imp.setInvalidAnimation(new Animation(15029)), new DialogueAction(new Dialogue(player) {
+        addActions(30, () -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))), new DialogueAction(new Dialogue(player) {
             @Override
             public void buildDialogue() {
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Err, who was it again?", Expression.HIGH_REV_NORMAL).executeAction(() -> turnLeft());
@@ -121,7 +122,7 @@ public class PresentScourgeCutscene extends Cutscene {
                         "proof of my misdeeds? You've only confirmed the righteousness of my actions.", Expression.HIGH_REV_MAD);
                 npcWithId(selectedNPC.getId(), "Err, I'd better be going.", Expression.HIGH_REV_MAD).executeAction(() -> {
                     selectedNPC.finish();
-                    player.getPacketDispatcher().sendGraphics(new Graphics(2508), selectedNPC.getLocation());
+                    player.getPacketDispatcher().sendGraphics(new Graphics(Gad211.spot(2508)), selectedNPC.getLocation());
                 });
             }
         }));
@@ -131,12 +132,12 @@ public class PresentScourgeCutscene extends Cutscene {
                 npcWithId(ChristmasConstants.PAJAMAS_SCOURGE_NPC_ID, "You're lucky that your attempts have been so " +
                         "feeble they've bordered on the amusing, but I grow tired of your antics. Come back here " +
                         "again, 'ghost', and you shall not find me so merciful.", Expression.HIGH_REV_MAD).executeAction(() -> {
-                    imp.setInvalidAnimation(new Animation(15029));
+                    imp.setInvalidAnimation(new Animation(Gad211.seq(15029)));
                     turnLeft();
                 });
                 player("This isn't working. Come on, let's go.");
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "But, but... Okies.", Expression.HIGH_REV_NORMAL).executeAction(() -> {
-                    imp.setInvalidAnimation(new Animation(15028));
+                    imp.setInvalidAnimation(new Animation(Gad211.seq(15028)));
                     turnStraight();
                     AChristmasWarble.progress(player, AChristmasWarble.ChristmasWarbleProgress.CHRISTMAS_PRESENT_FAILED);
                 });
@@ -161,7 +162,7 @@ public class PresentScourgeCutscene extends Cutscene {
             public void buildDialogue() {
                 plain("The camel slowly looks around the room blankly.").executeAction(() -> {
                     turnStraight();
-                    imp.setInvalidAnimation(new Animation(15029));
+                    imp.setInvalidAnimation(new Animation(Gad211.seq(15029)));
                 });
             }
         }));
@@ -173,7 +174,7 @@ public class PresentScourgeCutscene extends Cutscene {
         }));
         addActions(117, () -> {
             selectedNPC.finish();
-            player.getPacketDispatcher().sendGraphics(new Graphics(2508), selectedNPC.getLocation());
+            player.getPacketDispatcher().sendGraphics(new Graphics(Gad211.spot(2508)), selectedNPC.getLocation());
             jumpToOptions();
             jump(31);
         });
@@ -194,9 +195,9 @@ public class PresentScourgeCutscene extends Cutscene {
         }));
         addActions(213, () -> {
             selectedNPC.finish();
-            player.getPacketDispatcher().sendGraphics(new Graphics(2508), selectedNPC.getLocation());
+            player.getPacketDispatcher().sendGraphics(new Graphics(Gad211.spot(2508)), selectedNPC.getLocation());
         });
-        addActions(215, () -> imp.setInvalidAnimation(new Animation(15029)), new DialogueAction(new Dialogue(player) {
+        addActions(215, () -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))), new DialogueAction(new Dialogue(player) {
             @Override
             public void buildDialogue() {
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "That's not who we were meant to summon!", Expression.HIGH_REV_NORMAL).executeAction(() -> turnLeft());
@@ -215,9 +216,9 @@ public class PresentScourgeCutscene extends Cutscene {
         }));
         addActions(313, () -> {
             selectedNPC.finish();
-            player.getPacketDispatcher().sendGraphics(new Graphics(2508), selectedNPC.getLocation());
+            player.getPacketDispatcher().sendGraphics(new Graphics(Gad211.spot(2508)), selectedNPC.getLocation());
         });
-        addActions(315, () -> imp.setInvalidAnimation(new Animation(15029)), new DialogueAction(new Dialogue(player) {
+        addActions(315, () -> imp.setInvalidAnimation(new Animation(Gad211.seq(15029))), new DialogueAction(new Dialogue(player) {
             @Override
             public void buildDialogue() {
                 npcWithId(ChristmasConstants.PERSONAL_SNOW_IMP, impName, "Mebbe we should summon someone more talkative.", Expression.HIGH_REV_NORMAL).executeAction(() -> turnLeft());
@@ -242,35 +243,35 @@ public class PresentScourgeCutscene extends Cutscene {
                     final int index = i;
                     optionsList.add(new DialogueOption(option, () -> {
                         setKey(10 + (index * 10));
-                        imp.setInvalidAnimation(new Animation(15028));
+                        imp.setInvalidAnimation(new Animation(Gad211.seq(15028)));
                         turnStraight();
                         final int id = option.equalsIgnoreCase("Jack Frost.") ? 15040 : option.equalsIgnoreCase("Tiny Thom.") ? 15059 : option.equalsIgnoreCase("Cook.") ? 15055 : 15043;
                         selectedNPC = new NPC(id, instance.getLocation(2469, 5401, 1), Direction.EAST, 0);
-                        selectedNPC.setGraphics(new Graphics(2508));
+                        selectedNPC.setGraphics(new Graphics(Gad211.spot(2508)));
                     }));
                 }
                 options("Choose an option:", optionsList.toArray(new DialogueOption[0]));
                 player(10, "Jack Frost.").executeAction(() -> {
                     selectedNPC = new NPC(15040, instance.getLocation(2469, 5401, 1), Direction.EAST, 0);
-                    selectedNPC.setGraphics(new Graphics(2508));
+                    selectedNPC.setGraphics(new Graphics(Gad211.spot(2508)));
                     lastOption = "Jack Frost.";
                     jump(200);
                 });
                 player(20, "Tiny Thom.").executeAction(() -> {
                     selectedNPC = new NPC(15059, instance.getLocation(2469, 5401, 1), Direction.EAST, 0);
-                    selectedNPC.setGraphics(new Graphics(2508));
+                    selectedNPC.setGraphics(new Graphics(Gad211.spot(2508)));
                     lastOption = "Tiny Thom.";
                     jump(32);
                 });
                 player(30, "Cook.").executeAction(() -> {
                     selectedNPC = new NPC(15055, instance.getLocation(2469, 5401, 1), Direction.EAST, 0);
-                    selectedNPC.setGraphics(new Graphics(2508));
+                    selectedNPC.setGraphics(new Graphics(Gad211.spot(2508)));
                     lastOption = "Cook.";
                     jump(300);
                 });
                 player(40, "Louis the Camel.").executeAction(() -> {
                     selectedNPC = new NPC(15043, instance.getLocation(2469, 5401, 1), Direction.EAST, 0);
-                    selectedNPC.setGraphics(new Graphics(2508));
+                    selectedNPC.setGraphics(new Graphics(Gad211.spot(2508)));
                     lastOption = "Louis the Camel.";
                     jump(100);
                 });
@@ -280,8 +281,8 @@ public class PresentScourgeCutscene extends Cutscene {
 
     private final void startSpawnSequence(final int startTime) {
         addActions(startTime, () -> {
-            imp.setInvalidAnimation(new Animation(15021));
-            imp.setGraphics(new Graphics(2506));
+            imp.setInvalidAnimation(new Animation(Gad211.seq(15021)));
+            imp.setGraphics(new Graphics(Gad211.spot(2506)));
             imp.setFaceLocation(selectedNPC.getLocation());
         });
         addActions(startTime + 2, new CameraPositionAction(player, instance.getLocation(2469, 5402, 1), 300, 255, 100), new CameraLookAction(player, instance.getLocation(2472, 5402, 1), 50, 255, 100));

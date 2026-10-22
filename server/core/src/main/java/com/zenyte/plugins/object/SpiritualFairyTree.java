@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.object.FairyRing;
 import com.zenyte.game.world.object.ObjectAction;
@@ -36,6 +37,6 @@ public class SpiritualFairyTree implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[] { ObjectId.SPIRITUAL_FAIRY_TREE_35003 };
+        return new Object[] { Gad211.loc(ObjectId.SPIRITUAL_FAIRY_TREE_35003) };
     }
 }

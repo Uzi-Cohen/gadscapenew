@@ -125,11 +125,16 @@ public class InterfaceHandler {
 			if (position.getGameframeInterfaceId() == -1 || position.equals(InterfacePosition.FRIENDS_TAB) || position.equals(InterfacePosition.JOURNAL_TAB_HEADER)) {
 				continue;
 			}
-			final Optional<GameInterface> gameInter = GameInterface.get(position.getGameframeInterfaceId());
+			int gameframeInterfaceId = position.getGameframeInterfaceId();
+			if (position == InterfacePosition.ACCOUNT_MANAGEMENT && !ComponentDefinitions.containsInterface(gameframeInterfaceId)) {
+				// custom GadScape tab (1702) absent, e.g. on a stock cache: use the vanilla account tab (109)
+				gameframeInterfaceId = GameInterface.ACCOUNT_MANAGEMENT.getId();
+			}
+			final Optional<GameInterface> gameInter = GameInterface.get(gameframeInterfaceId);
 			if (gameInter.isPresent()) {
 				gameInter.get().open(player);
 			} else {
-				sendInterface(position, position.getGameframeInterfaceId());
+				sendInterface(position, gameframeInterfaceId);
 			}
 		}
 		player.getSettings().refreshSetting(Setting.FRIEND_LIST_TOGGLE);
@@ -176,7 +181,7 @@ public class InterfaceHandler {
 		dispatcher.sendClientScript(2494, 1);
 		sendInterface(InterfacePosition.CHATBOX, 162);
 		sendInterface(InterfacePosition.PRIVATE_CHAT, 163);
-		sendInterface(378, 27, PaneType.FULL_SCREEN, false);
+		sendInterface(378, 28, PaneType.FULL_SCREEN, false); // 165:28 (211: 27)
 		dispatcher.sendClientScript(1080, "");
 		sendInterface(InterfacePosition.SKILLS_TAB, 320);
 		dispatcher.sendComponentSettings(399, 7, 0, EnumDefinitions.get(1374).getSize(), AccessMask.CLICK_OP1);
@@ -210,8 +215,7 @@ public class InterfaceHandler {
 		}
 		final PacketDispatcher dispatcher = player.getPacketDispatcher();
 		dispatcher.sendComponentSettings(216, 1, 0, 47, AccessMask.CLICK_OP1);
-		dispatcher.sendComponentSettings(261, 89, 1, 4, AccessMask.CLICK_OP1);
-		dispatcher.sendComponentSettings(261, 90, 1, 4, AccessMask.CLICK_OP1);
+		// (an old-revision settings tab's 261:89/261:90 events were sent here: 261 has 3 components in 211 and 241)
 		player.getVarManager().sendBit(4070, player.getCombatDefinitions().getSpellbook().ordinal());
 	}
 
@@ -247,7 +251,7 @@ public class InterfaceHandler {
 
 	/**
 	 * Closes whatever is open at pane:paneComponent; with closeEvent false the player's close-interfaces event is
-	 * left alone (for sub-interfaces closed as part of another screen, e.g. the fullscreen world map's 165:37).
+	 * left alone (for sub-interfaces closed as part of another screen, e.g. the fullscreen world map's 165:40).
 	 */
 	public void closeInterfaceSpecific(final int paneComponent, final PaneType pane, final boolean closeEvent) {
 		final boolean contains = visible.containsKey(pane.getId() << 16 | paneComponent);
@@ -271,6 +275,13 @@ public class InterfaceHandler {
 
 	public void sendInterface(final InterfacePosition position, final int id, final boolean walkable) {
 		if (!ComponentDefinitions.containsInterface(id)) {
+			return;
+		}
+		if (GameInterface.isReusedBy241(id)) {
+			// a GadScape-211 interface whose id build 241 gave to another one (GameInterface.REUSED_BY_241): sent by id
+			// it would open that other interface. CACHE NEED (gadconv relocation).
+			player.log(LogLevel.INFO, "Not opening interface " + id + ": build 241 uses it for another interface.");
+			player.sendMessage("That isn't available right now.");
 			return;
 		}
 		if (id == GameInterface.TOA_REWARD_POTENTIAL.getId()) {

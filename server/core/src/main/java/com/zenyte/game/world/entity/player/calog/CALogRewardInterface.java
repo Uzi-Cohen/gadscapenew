@@ -11,12 +11,12 @@ import com.zenyte.game.world.entity.player.Player;
 public class CALogRewardInterface extends Interface {
 
 	@Override protected void attach() {
-		put(14, "Navigation");
+		put(16, "Navigation"); // 241 ca_rewards:burger_menu_frame (211: 14)
 	}
 
 	@Override public void open(Player player) {
 		super.open(player);
-		player.getPacketDispatcher().sendComponentSettings(GameInterface.CA_REWARDS, 14, 0, 100, AccessMask.CLICK_OP1);
+		player.getPacketDispatcher().sendComponentSettings(GameInterface.CA_REWARDS, 16, 0, 100, AccessMask.CLICK_OP1);
 	}
 
 	@Override protected void build() {

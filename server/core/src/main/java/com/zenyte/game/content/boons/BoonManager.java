@@ -1,5 +1,6 @@
 package com.zenyte.game.content.boons;
 
+import com.gadscape.game.rev241.Gad211;
 import com.gadscape.game.content.shop.ShopCurrencyHandler;
 import com.zenyte.game.content.boons.impl.UnknownBoon;
 import com.zenyte.game.model.shop.ShopCurrency;
@@ -61,9 +62,11 @@ public class BoonManager {
             unlockedBoons.add(boon.getClass().getSimpleName());
             player.notification("Remnant Store", "Perk Unlocked:<br><br>" + Colour.WHITE.wrap(boon.name()), 16750623);
             player.sendMessage("You have unlocked " + Colour.BLUE.wrap(boon.name()) + " for " + boon.price() + " remnant points.");
-            player.getVarManager().sendVarInstant(4506, ShopCurrencyHandler.getAmount(ShopCurrency.EXCHANGE_POINTS, player));
-            player.getVarManager().sendBitInstant(19499 + index, 1);
-            player.getVarManager().sendBitInstant(19498, 1);
+            player.getVarManager().sendVarInstant(Gad211.varp(4506), ShopCurrencyHandler.getAmount(ShopCurrency.EXCHANGE_POINTS, player));
+            // boon unlock varbits are GadScape's 19500+ (19499 + boon index), moved by the 241 cache (Gad211)
+            player.getVarManager().sendBitInstant(Gad211.varbit(19499 + index), 1);
+            // (the old extra sendBitInstant(19498, 1) is gone: GadScape's cache never defined varbit 19498, so on 211 it
+            // did nothing; on the 241 cache 19498 is a 2746 varbit of varp 5168 and must not be written)
             player.getPacketDispatcher().sendClientScript(12586, 998, boon.name());
             return true;
         } else {

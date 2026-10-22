@@ -38,13 +38,13 @@ public class OrbsInterface extends Interface {
 
     @Override
     protected void attach() {
-        put(5, "Experience Tracker");
-        put(8, "Cure Toxins");
-        put(19, "Prayer");
-        put(27, "Run");
-        put(35, "Toggle special");
-        put(45, "Open Store");
-        put(53, "View World Map");
+        put(6, "Experience Tracker"); // 211: 5
+        put(9, "Cure Toxins"); // 211: 8
+        put(20, "Prayer"); // 211: 19
+        put(28, "Run"); // 211: 27
+        put(36, "Toggle special"); // 211: 35
+        put(46, "Open Store"); // 211: 45
+        put(55, "View World Map"); // 211: 53
     }
 
     @Override
@@ -71,7 +71,8 @@ public class OrbsInterface extends Interface {
                 player.sendMessage("Use of special attacks has been turned off for this duel.");
                 return;
             }
-            player.getCombatDefinitions().setSpecial(!player.getCombatDefinitions().isUsingSpecial(), false);
+            // 241 specbutton (160:36) has two ops: the special attack, and the off-hand special ("Use Offhand").
+            player.getCombatDefinitions().toggleSpecialBar(option == 2 ? 2 : 0);
         });
         bind("Experience Tracker", (player, slotId, itemId, option) -> {
             if (option == 1) {

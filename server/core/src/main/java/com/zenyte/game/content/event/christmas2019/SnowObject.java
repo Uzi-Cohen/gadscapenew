@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
 import com.zenyte.game.util.Utils;
@@ -15,7 +16,7 @@ import com.zenyte.game.world.object.WorldObject;
  */
 public class SnowObject implements ObjectAction {
 
-    private static final Animation animation = new Animation(15095);
+    private static final Animation animation = new Animation(Gad211.seq(15095));
 
     @Override
     public void handleObjectAction(Player player, WorldObject object, String name, int optionId, String option) {

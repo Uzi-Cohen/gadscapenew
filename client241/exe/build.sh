@@ -20,6 +20,8 @@ rel=$(unzip -p "$jre" '*/release' 2>/dev/null | sed -n 's/^JAVA_VERSION="\([0-9]
 if [ -n "$rel" ] && [ "$rel" -lt 17 ]; then echo "JRE is Java $rel; RuneLite 1.13.3 needs 17 or newer here" >&2; exit 1; fi
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 cp "$here"/*.go "$here/go.mod" "$here/splash.png" "$here/rsrc_windows_amd64.syso" "$work/"
+cp -R "$here/kit" "$work/kit"   # shared with the setup (client241/setup)
+rm -f "$work"/kit/*_test.go
 if [ "$ch" = "test" ]; then
   cp "$here/test-res/splash.png" "$here/test-res/rsrc_windows_amd64.syso" "$work/"
 fi

@@ -61,12 +61,13 @@ public class PriceChecker {
 		final Object[] params = new Object[container.getContainerSize()];
 		for (int i = 0; i < params.length; i++) {
 			final Item item = container.get(i);
+			// Script 785 (build 241): 28 long values (211: ints).
 			if (item == null) {
-				params[i] = 0;
+				params[i] = 0L;
 				continue;
 			}
 			final int valueOfStack = item.getSellPrice();
-			params[i] = item.getId() == 995 ? 1 : valueOfStack;
+			params[i] = item.getId() == 995 ? 1L : (long) valueOfStack;
 			totalValue += (long) item.getSellPrice() * item.getAmount();
 		}
 		final long totalVal = totalValue;

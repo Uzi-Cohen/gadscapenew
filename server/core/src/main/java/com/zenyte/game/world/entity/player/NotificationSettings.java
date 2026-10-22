@@ -132,7 +132,8 @@ public class NotificationSettings {
             builders[2].append(streaks).append("|");
         }
         player.getPacketDispatcher().sendComponentSettings(549, 16, 0, names.size(), AccessMask.CLICK_OP1);
-        player.getPacketDispatcher().sendClientScript(1584, builders[0].toString(), builders[1].toString(), builders[2].toString(), names.size(), type + " Kill Log");
+        // Build 241 moved the kill log builder from script 1584 (now an unrelated helper) to 9525, same arguments.
+        player.getPacketDispatcher().sendClientScript(9525, builders[0].toString(), builders[1].toString(), builders[2].toString(), names.size(), type + " Kill Log");
         player.getTemporaryAttributes().put("KillLogType", type);
     }
 }

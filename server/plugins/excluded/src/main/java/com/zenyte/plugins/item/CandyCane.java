@@ -1,5 +1,6 @@
 package com.zenyte.plugins.item;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.model.item.pluginextensions.ItemPlugin;
 import com.zenyte.game.world.entity.masks.Animation;
 
@@ -8,7 +9,7 @@ import com.zenyte.game.world.entity.masks.Animation;
  * @see <a href="https://www.rune-server.ee/members/kris/">Rune-Server profile</a>
  */
 public class CandyCane extends ItemPlugin {
-    private static final Animation animation = new Animation(15085);
+    private static final Animation animation = new Animation(Gad211.seq(15085));
     @Override
     public void handle() {
         bind("Spin", (player, item, slotId) -> player.setInvalidAnimation(animation));

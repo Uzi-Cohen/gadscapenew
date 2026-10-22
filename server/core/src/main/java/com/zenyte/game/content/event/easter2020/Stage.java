@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.easter2020;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.world.entity.ImmutableLocation;
 import com.zenyte.game.world.entity.masks.Graphics;
 import com.zenyte.game.world.entity.player.Player;
@@ -41,7 +42,7 @@ public enum Stage {
         mappedPositions.put(70, new ImmutableLocation(2208, 4395, 0));
     }
 
-    private static final Graphics poof = new Graphics(2508);
+    private static final Graphics poof = new Graphics(Gad211.spot(2508));
 
     public void sendVarbit(final Player player) {
         if (varbitValue != -1) {

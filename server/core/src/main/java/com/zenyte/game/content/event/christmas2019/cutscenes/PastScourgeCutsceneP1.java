@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.event.christmas2019.ChristmasConstants;
 import com.zenyte.game.content.event.christmas2019.ChristmasUtils;
@@ -53,7 +54,7 @@ public class PastScourgeCutsceneP1 extends Cutscene {
         });
         addActions(5, unfadeRunnable);
         addActions(9, new CameraPositionAction(player, instance.getLocation(2471, 5407 - 3, 1), 350, 5, 0), new CameraLookAction(player, instance.getLocation(2471, 5390 - 3, 1), 200, 5, 0));
-        addActions(13, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(15001)), () -> dummy.setInvalidAnimation(new Animation(15001)));
+        addActions(13, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(Gad211.seq(15001))), () -> dummy.setInvalidAnimation(new Animation(Gad211.seq(15001))));
         addActions(22, new CameraPositionAction(player, instance.getLocation(2471, 5400, 1), 550, 255, 100), new CameraLookAction(player, instance.getLocation(2471, 5403, 1), 75, 255, 100), () -> {
             player.setRunSilent(2);
             player.addWalkSteps(instance.getX(2471), instance.getY(5403), 2);
@@ -137,7 +138,7 @@ public class PastScourgeCutsceneP1 extends Cutscene {
                 options("Choose an option:", new DialogueOption("What about ruining the Christmas feast?", key(150)), new DialogueOption("What about betraying the Queen of Snow?", key(200)));
             }
         }));
-        addActions(30, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(15002)), () -> dummy.setInvalidAnimation(new Animation(15002)));
+        addActions(30, () -> World.sendObjectAnimation(new WorldObject(46180, 10, 2, instance.getLocation(2470, 5398, 1)), new Animation(Gad211.seq(15002))), () -> dummy.setInvalidAnimation(new Animation(Gad211.seq(15002))));
         addActions(41, new DialogueAction(new Dialogue(player) {
             @Override
             public void buildDialogue() {
@@ -149,7 +150,7 @@ public class PastScourgeCutsceneP1 extends Cutscene {
         }));
         addActions(43, () -> {
             imp.finish();
-            World.sendGraphics(new Graphics(2508), imp.getLocation());
+            World.sendGraphics(new Graphics(Gad211.spot(2508)), imp.getLocation());
         });
         final FadeScreen fadeScreen = new FadeScreen(player);
         addActions(45, fadeScreen::fade);

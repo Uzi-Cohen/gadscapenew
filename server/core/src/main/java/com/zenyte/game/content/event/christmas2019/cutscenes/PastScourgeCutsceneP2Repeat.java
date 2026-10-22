@@ -1,5 +1,6 @@
 package com.zenyte.game.content.event.christmas2019.cutscenes;
 
+import com.gadscape.game.rev241.Gad211;
 import com.google.common.base.Preconditions;
 import com.zenyte.game.content.event.christmas2019.ChristmasUtils;
 import com.zenyte.game.world.World;
@@ -37,7 +38,7 @@ public class PastScourgeCutsceneP2Repeat extends Cutscene {
                 if (isUnfrozen) {
                     final NPC npc = World.findNPC(respectiveGuest.getBaseNPC(), respectiveGuest.getTile(), 1).orElseThrow(RuntimeException::new);
                     npc.setInvalidAnimation(respectiveGuest.getPreFreezeAnimation());
-                    player.getPacketDispatcher().sendGraphics(new Graphics(2507), npc.getLocation());
+                    player.getPacketDispatcher().sendGraphics(new Graphics(Gad211.spot(2507)), npc.getLocation());
                 }
             }
             player.addAttribute(UNFROZEN_GUESTS_HASH_KEY, 0);
@@ -56,7 +57,7 @@ public class PastScourgeCutsceneP2Repeat extends Cutscene {
                 Preconditions.checkArgument(guest != null);
                 final Location tile = guest.getTile();
                 final WorldObject object = World.getObjectWithId(tile, guest.getBaseObject());
-                World.sendObjectAnimation(object, new Animation(15108));
+                World.sendObjectAnimation(object, new Animation(Gad211.seq(15108)));
                 player.getPacketDispatcher().sendGraphics(new Graphics(1010, 0, 150), tile);
             });
         }

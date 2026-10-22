@@ -1,5 +1,6 @@
 package com.zenyte.plugins.object;
 
+import com.gadscape.game.rev241.Gad211;
 import com.gadscape.api.service.user.UserPlayerHandler;
 import com.gadscape.game.world.entity.player.PlayerAttributesKt;
 import com.zenyte.game.world.entity.Location;
@@ -66,6 +67,6 @@ public class TutorialIslandPortal implements ObjectAction {
 
     @Override
     public Object[] getObjects() {
-        return new Object[]{55070};
+        return new Object[]{Gad211.loc(55070)};
     }
 }

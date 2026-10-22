@@ -54,7 +54,7 @@ public class RaidingPartiesInterface extends Interface {
     protected void attach() {
         put(3, 0, "Refresh");
         put(3, 1, "Make party");
-        put(14, "View party");
+        put(15, "View party"); // 241 raids_lobby_partylist:list (211: 14)
     }
 
     @Override
