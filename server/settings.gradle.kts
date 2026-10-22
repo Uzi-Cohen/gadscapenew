@@ -30,6 +30,7 @@ include(
     "crypto",
     "net",
     "cache",
+    "cache-convert",
     "core",
     "core-model",
     "core-restricted",
