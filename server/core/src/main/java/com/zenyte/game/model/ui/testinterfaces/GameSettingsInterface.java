@@ -44,7 +44,7 @@ public class GameSettingsInterface extends Interface {
             }
             setting.handleSetting(player);
         });
-        bind("Close", player -> player.sendMessage("This will be removed in the next cache update coming soon."));
+        bind("Close", player -> close(player));
     }
 
     @Override

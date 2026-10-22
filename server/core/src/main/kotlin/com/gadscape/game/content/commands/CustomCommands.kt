@@ -45,7 +45,7 @@ object CustomCommands {
                         add(Item(CustomItemId.GOLD_KEY, 10))
                         add(Item(CustomItemId.PLATINUM_KEY, 10))
                         add(Item(CustomItemId.DIAMOND_KEY, 10))
-                        add(Item(CustomItemId.NR_TABLET, 10))
+                        add(Item(CustomItemId.HOME_TELEPORT_TABLET, 10))
                         add(Item(CustomItemId.DEATH_CAPE, 10))
                         add(Item(CustomItemId.LIME_WHIP, 10))
                         add(Item(CustomItemId.LAVA_WHIP, 10))

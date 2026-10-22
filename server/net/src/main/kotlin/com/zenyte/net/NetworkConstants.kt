@@ -10,9 +10,9 @@ object NetworkConstants {
 
     const val PLAYER_CAP = 2_000
 
-    const val REVISION = 211
+    /** Client build this server speaks (rsprot 241); informational, the login checks the build through rsprot. */
+    const val REVISION = 241
     const val SUB_VERSION_DESKTOP = 1
-    const val SESSION_TOKEN = "ElZAIrq5NpKN6D3mDdihco3oPeYN2KFy2DCquj7JMmECPmLrDP3Bnw"
 
     const val MAX_CLIENT_BUFFER_SIZE = 5_000
     const val MAX_SERVER_BUFFER_SIZE = 40_000

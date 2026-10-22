@@ -88,7 +88,7 @@ fun DiscordCommunityBot.onVotesMilestone(player: Player, votes: Int, votesTillSp
                     description = thanksDescription(player, "**${player.name}** claimed $votes votes.")
                     color = Color(164, 244, 220)
                     thumbnail {
-                        url = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/2a4f6754-4bb1-4adb-034d-9503f0ceb400/public"
+                        url = discordImageUrl("vote")
                     }
                 }
                 actionRow {
@@ -173,7 +173,7 @@ private fun getImageUrl(worldBoost: WorldBoost) = when (worldBoost.getBoostType(
         itemInventoryImageUrl(ItemId.BLOOD_MONEY)
 
 //    XamphurBoost.BONUS_SEEDS_MSTR_FARMER_50PCNT ->
-//        "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/41fdaa6e-d16f-45d9-9e75-0876918f7500/public"
+//        discordImageUrl("farming")
 
     XamphurBoost.LARRANS_KEY_DROPS_X2 ->
         itemInventoryImageUrl(ItemId.LARRANS_KEY)
@@ -194,25 +194,25 @@ private fun getImageUrl(worldBoost: WorldBoost) = when (worldBoost.getBoostType(
         itemInventoryImageUrl(ItemId.CASKET_HARD)
 
     XamphurBoost.BONUS_BARROWS_DR_25 ->
-        "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/de2b685d-54a7-4f67-f6d0-ddca0c3f2600/public"
+        discordImageUrl("barrows")
 
     XamphurBoost.BONUS_ZALCANO_LOOT ->
-        "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/c240c03f-8b28-49b0-38aa-0786e5392c00/public"
+        discordImageUrl("zalcano")
 
 //    XamphurBoost.BONUS_GAUNTLET ->
-//        "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/cc1c940b-d1ab-4d2f-d7db-e75d2d6d1000/public"
+//        discordImageUrl("gauntlet")
 
     XamphurBoost.BONUX_COX_POINTS_25PCNT ->
-        "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/28ae5a41-ad3d-4bd6-8f8e-2a5580e82300/public"
+        discordImageUrl("chambers_of_xeric")
 
     XamphurBoost.BONUS_PET_RATES ->
-        "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/10e92f65-2a8d-45e1-4f35-54814fceb100/public"
+        discordImageUrl("pets")
     else ->
         null
 }
 private suspend fun NewsChannel.sendXamphur() = createEmbed {
     title = "Xamphur"
-    image = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/6162aafa-e37f-45b1-147e-ff49ac62b600/public"
+    image = discordImageUrl("xamphur")
     color = Color(164, 244, 220)
     description = "Xamphur has awakened from a deep slumber, " +
             "test your skills by facing him at ::event!"
@@ -220,7 +220,7 @@ private suspend fun NewsChannel.sendXamphur() = createEmbed {
 
 private suspend fun NewsChannel.sendGanodermicBeast(args: Array<out Any>) = createEmbed {
     title = "Ganodermic Beast"
-    image = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/8f680193-25ff-4e5a-f84e-9704a1676f00/public"
+    image = discordImageUrl("ganodermic_beast")
     color = Color(51, 92, 129)
     description = "The Ganodermic Beast's plan for world destruction is being put into motion!"
     field("Location") {
@@ -265,7 +265,7 @@ private suspend fun NewsChannel.sendInfernoCompletion(player: Player) = createEm
         else -> ""
     }
     title = "Inferno Completion!"
-    image = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/ed7f490f-d6a5-4911-15ed-ffad8c525b00/public"
+    image = discordImageUrl("inferno")
     color = Color(122, 62, 74)
     description = buildString {
         append("**${player.name}**")
@@ -298,7 +298,7 @@ private suspend fun NewsChannel.sendBoxLoot(player: Player, args: Array<out Any>
 private suspend fun NewsChannel.sendHCIMDeath(player: Player, args: Array<out Any>) = createEmbed {
     title = "Hardcore Ironman Death"
     thumbnail {
-        url = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/7768c644-c829-4fff-7bdd-fdd7f77afa00/public"
+        url = discordImageUrl("hardcore_death")
     }
     color = Color(109, 13, 13)
     description = buildString {
@@ -313,7 +313,7 @@ private suspend fun NewsChannel.sendHCIMDeath(player: Player, args: Array<out An
 private suspend fun NewsChannel.sendGroupHCIMDeath(player: Player, args: Array<out Any>) = createEmbed {
     title = "Group Hardcore Ironman Death"
     thumbnail {
-        url = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/7768c644-c829-4fff-7bdd-fdd7f77afa00/public"
+        url = discordImageUrl("hardcore_death")
     }
     color = Color(109, 13, 13)
     val cause = args.getOrNull(0)
@@ -464,7 +464,7 @@ fun main() {
         token = "CHANGE_ME"
     )
     val player = mockk<Player>()
-    every { player.name } returns "Stan"
+    every { player.name } returns "Test Player"
     every { player.getNumericAttribute(any()) } returns 1
     every { player.notificationSettings.getKillcount(any()) } returns 0
     every { player.gameMode } returns GameMode.REGULAR
@@ -475,7 +475,7 @@ fun main() {
     every { player.combatLevel } returns 69
 
     val attributes = mutableMapOf<String, Any?>()
-    attributes["discordUserId"] = 319978682016071681L
+    attributes["discordUserId"] = 0L
     every { player.attributes } returns attributes
 
     mockkStatic(InfernoCompletions::getCompletions)

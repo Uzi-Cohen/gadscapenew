@@ -40,7 +40,7 @@ object ChambersCommands {
                 raid.get().constructOrGetSharedStorage().depositFromGod(Item(20972, 250), true)
                 raid.get().constructOrGetSharedStorage().depositFromGod(Item(20984, 250), true)
                 raid.get().constructOrGetSharedStorage().depositFromGod(Item(20960, 250), true)
-                p.sendMessage("You have filled your team's storage with gifts from Kryeus")
+                p.sendMessage("You have filled your team's storage with gifts from the GadScape team.")
             }
 
         }

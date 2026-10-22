@@ -23,14 +23,14 @@ public class Hezaff extends NPCPlugin {
                 return;
             }
             final Inventory inventory = player.getInventory();
-            if (!inventory.hasFreeSlots() && !inventory.containsItem(CustomItemId.NR_TABLET, 1)) {
+            if (!inventory.hasFreeSlots() && !inventory.containsItem(CustomItemId.HOME_TELEPORT_TABLET, 1)) {
                 player.getDialogueManager().start(new NPCChat(player, npc.getId(), "You need some free inventory space to purchase these!"));
                 return;
             }
             final int price = 175;
             final int coins = inventory.getAmountOf(ItemId.COINS_995);
             final int maxAmountPurchaseable = coins / price;
-            final int count = inventory.getAmountOf(CustomItemId.NR_TABLET);
+            final int count = inventory.getAmountOf(CustomItemId.HOME_TELEPORT_TABLET);
             final int maxAvailablePurchase = Math.min(Math.min(maxAmountPurchaseable, 1000 - purchases), Integer.MAX_VALUE - count);
             if (maxAvailablePurchase <= 0) {
                 player.getDialogueManager().start(new NPCChat(player, npc.getId(), "You can't afford any teletabs!"));
@@ -39,7 +39,7 @@ public class Hezaff extends NPCPlugin {
             player.sendInputInt("How many would you like to purchase for " + price + " each? (0-" + maxAvailablePurchase + ")", value -> {
                 final int currentCoins = inventory.getAmountOf(ItemId.COINS_995);
                 final int currentMaxAmountPurchaseable = currentCoins / price;
-                final int currentCount = inventory.getAmountOf(CustomItemId.NR_TABLET);
+                final int currentCount = inventory.getAmountOf(CustomItemId.HOME_TELEPORT_TABLET);
                 final int currentMaxAvailablePurchase = Math.min(Math.min(currentMaxAmountPurchaseable, 1000 - purchases), Integer.MAX_VALUE - currentCount);
                 final int purchaseQuantity = Math.min(value, currentMaxAvailablePurchase);
                 if (purchaseQuantity <= 0) {
@@ -47,7 +47,7 @@ public class Hezaff extends NPCPlugin {
                 }
                 player.getVariables().setTeletabPurchases(purchases + purchaseQuantity);
                 inventory.deleteItem(new Item(ItemId.COINS_995, purchaseQuantity * price));
-                inventory.addOrDrop(new Item(CustomItemId.NR_TABLET, purchaseQuantity));
+                inventory.addOrDrop(new Item(CustomItemId.HOME_TELEPORT_TABLET, purchaseQuantity));
                 player.getDialogueManager().start(new NPCChat(player, npc.getId(), "Pleasure doing business with you!"));
             });
         });

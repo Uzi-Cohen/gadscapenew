@@ -37,7 +37,6 @@ public final class GrandExchangeHandler implements Parse {
     private static Map<String, Int2ObjectOpenHashMap<ExchangeOffer>> quarantinedOffers;
     public static final String OFFERS_FILE_DIRECTORY = "./data/grandexchange/offers.json";
     public static final String QUARANTINE_FILE_DIRECTORY = "./data/grandexchange/banned_offers.json";
-    public static final String PRICES_FILE_DIRECTORY = "./data/grandexchange/prices.json";
     private static boolean loaded;
     public static final MutableBoolean status = new MutableBoolean();
 

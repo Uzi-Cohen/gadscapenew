@@ -35,8 +35,8 @@ public final class MysteryBoxMan extends NPCPlugin {
 
                     if (enabled && (days >= 1 || hours >= 2) && !claimed && player.getSkills().getTotalLevel() > 750) {
                         npc("While I have you... Please accept this gift from our management and development teams as a token of our appreciation for your patience.");
-                        item(new Item(CustomItemId.OSNR_MYSTERY_BOX, 1), "The Mysterious Old Man gives you a " + GameConstants.SERVER_NAME + " Mystery Box.").executeAction(() -> {
-                            player.getInventory().addOrDrop(new Item(CustomItemId.OSNR_MYSTERY_BOX, 1));
+                        item(new Item(CustomItemId.GADSCAPE_MYSTERY_BOX, 1), "The Mysterious Old Man gives you a " + GameConstants.SERVER_NAME + " Mystery Box.").executeAction(() -> {
+                            player.getInventory().addOrDrop(new Item(CustomItemId.GADSCAPE_MYSTERY_BOX, 1));
                             player.getAttributes().put("claimed osnr box", true);
                             player.sendMessage(Colour.RS_GREEN + "Thank you for a great launch and goodluck with your mystery box!");
                             player.log(LogLevel.INFO, "Claimed mystery box for \"" + player.getUsername() +"\"");

@@ -31,14 +31,14 @@ public enum Drink implements Drinkable {
     MULLED_WINE(ChristmasConstants.MULLED_WINE, null, "You drink the mulled wine.", "Mmm, that tastes good - nice and fruity. It reminds me of lazy afternoons by the fire."), CHOCOLATEY_MILK(ItemId.CHOCOLATEY_MILK, new Item(ItemId.BUCKET), "You drink the chocolatey milk.", null, new Restoration(SkillConstants.HITPOINTS, 0, 4)), HALF_FULL_WINE_JUG(ItemId.HALF_FULL_WINE_JUG, jug, "It makes you feel a bit dizzy.", null, new Restoration(SkillConstants.HITPOINTS, 0, 7)), JUG_OF_BAD_WINE(ItemId.JUG_OF_BAD_WINE, jug, "It makes you feel a bit dizzy.", null, new Debuff(SkillConstants.ATTACK, 0, 3)), JUG_OF_WINE(ItemId.JUG_OF_WINE, jug, "It makes you feel a bit dizzy.", null, new Restoration(SkillConstants.HITPOINTS, 0, 11), new Debuff(SkillConstants.ATTACK, 0, 2)), VODKA(ItemId.VODKA, null, "You drink the vodka. You feel slightly reinvigorated...", "...and slightly dizzy too.", new Boost(SkillConstants.STRENGTH, 0, 3), new Debuff(SkillConstants.ATTACK, 0, 3)), WHISKY(ItemId.WHISKY, null, "You drink the whisky. You feel slightly reinvigorated...", "...and slightly dizzy too.", new Restoration(SkillConstants.HITPOINTS, 0, 5), new Boost(SkillConstants.STRENGTH, 0, 3), new Debuff(SkillConstants.ATTACK, 0, 4)), GIN(ItemId.GIN, null, "You drink the gin. You feel slightly reinvigorated...", "...and slightly dizzy too.", new Restoration(SkillConstants.HITPOINTS, 0, 2), new Boost(SkillConstants.STRENGTH, 0, 1), new Debuff(SkillConstants.ATTACK, 0, 4)), BRANDY(ItemId.BRANDY, null, "You drink the brandy. You feel slightly reinvigorated...", "...and slightly dizzy too.", new Restoration(SkillConstants.HITPOINTS, 0, 5), new Debuff(SkillConstants.ATTACK, 0, 3), new Debuff(SkillConstants.STRENGTH, 0, 3)), BRAINDEATH_RUM(ItemId.BRAINDEATH_RUM, null, "With a sense of impending doom you drink the 'rum'. You try very hard not to die.", null, new Debuff(SkillConstants.DEFENCE, 0.1F, 0), new Debuff(SkillConstants.ATTACK, 0.05F, 0), new Debuff(SkillConstants.PRAYER, 0.05F, 0), new Debuff(SkillConstants.MAGIC, 0.05F, 0), new Debuff(SkillConstants.AGILITY, 0.05F, 0), new Debuff(SkillConstants.HERBLORE, 0.05F, 0), new Boost(SkillConstants.STRENGTH, 0, 3), new Boost(SkillConstants.MINING, 0, 1)), RED_TROUBLE_BREWING_RUM(ItemId.RUM, null, null, null) {
         @Override
         public boolean canConsume(final Player player) {
-            player.sendMessage("Trouble brewing not implemented yet.");
+            player.sendMessage("You'd better save this rum for the Trouble Brewing minigame.");
             return false;
         }
     },
     BLUE_TROUBLE_BREWING_RUM(ItemId.RUM_8941, null, null, null) {
         @Override
         public boolean canConsume(final Player player) {
-            player.sendMessage("Trouble brewing not implemented yet.");
+            player.sendMessage("You'd better save this rum for the Trouble Brewing minigame.");
             return false;
         }
     },

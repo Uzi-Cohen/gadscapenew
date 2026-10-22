@@ -99,7 +99,7 @@ class RegionLoader(
         } catch (e: Exception) {
             return null
         }
-        // some private-server clients leave a byte of padding at the end (Roat Pkz does)
+        // some private-server clients leave a byte of padding at the end
         return if (inputStream.remaining() <= 2) regionDefinition else null
     }
 

@@ -1,6 +1,6 @@
 package com.gadscape.anticheat.tasks;
 
-import com.gadscape.anticheat.NRAntiCheatEngine;
+import com.gadscape.anticheat.GadScapeAntiCheatEngine;
 import com.gadscape.game.content.commands.DeveloperCommands;
 import com.zenyte.game.task.WorldTask;
 import com.zenyte.game.world.entity.player.Player;
@@ -16,6 +16,6 @@ public class SendCS2AntiCheatSetTask implements WorldTask {
     public void run() {
         if(!DeveloperCommands.INSTANCE.getAnticheatEnabled())
             return;
-        player.getPacketDispatcher().sendClientScript(NRAntiCheatEngine.CS2_SET_INSPECTION, "sun.java.command");
+        player.getPacketDispatcher().sendClientScript(GadScapeAntiCheatEngine.CS2_SET_INSPECTION, "sun.java.command");
     }
 }

@@ -3,6 +3,7 @@ package com.gadscape.tools.discord.community
 import com.gadscape.game.world.entity.player.killingBlowHit
 import com.gadscape.tools.discord.DiscordServer
 import com.gadscape.tools.discord.congratulate
+import com.gadscape.tools.discord.discordImageUrl
 import com.gadscape.tools.discord.itemInventoryImageUrl
 import com.gadscape.tools.discord.pity
 import com.zenyte.CacheManager
@@ -42,7 +43,7 @@ fun DiscordCommunityBot.onKill(attacker: Player, victim: Player) {
                 color = Color(136, 8, 8)
                 author {
                     name = "Death"
-                    icon = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/e9e9064a-af38-4ab4-f81f-d7691fe24b00/public"
+                    icon = discordImageUrl("pk_death")
                 }
                 if (killedWeapon != null)
                     thumbnail { url = itemInventoryImageUrl(killedWeapon.id) }
@@ -70,7 +71,7 @@ fun DiscordCommunityBot.onKill(attacker: Player, victim: Player) {
                 if (areaName != null) {
                     footer {
                         if (area is WildernessArea)
-                            icon = "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/e8be8c8f-aee3-4d5f-e3d0-72586652d300/public"
+                            icon = discordImageUrl("wilderness")
                         text = areaName
                     }
                 }
@@ -88,19 +89,19 @@ fun main() {
         DiscordServer.Main,
         token = "CHANGE_ME"
     )
-    val stan = mockPlayer("Stan", 319978682016071681L)
-    val jacmob = mockPlayer("Jacmob", 451982134320562196L)
+    val killer = mockPlayer("Test Killer", 0L)
+    val victim = mockPlayer("Test Victim", 0L)
 
-    val hit = spyk(Hit(stan, 70, HitType.MELEE, 0))
+    val hit = spyk(Hit(killer, 70, HitType.MELEE, 0))
     hit.setSpecialAttack()
     hit.weapon = Item(ItemId.ARMADYL_GODSWORD)
 
-    jacmob.killingBlowHit = hit
+    victim.killingBlowHit = hit
 
     mockkStatic(GlobalAreaManager::class)
     every { GlobalAreaManager.getArea(any()) } returns WildernessArea()
 
-    DiscordCommunityBot.onKill(stan, jacmob)
+    DiscordCommunityBot.onKill(killer, victim)
 }
 
 private fun mockPlayer(username: String, discordUserId: Long): Player {

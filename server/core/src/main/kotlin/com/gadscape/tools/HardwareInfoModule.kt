@@ -4,7 +4,7 @@ package com.gadscape.tools
 
 import com.google.common.eventbus.Subscribe
 import com.gadscape.net.HardwareInfo
-import com.gadscape.tools.logging.file.nrJson
+import com.gadscape.tools.logging.file.gameLogJson
 import com.zenyte.plugins.events.LoginEvent
 import com.zenyte.plugins.events.ServerLaunchEvent
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +56,7 @@ object HardwareInfoModule {
         val folder = getPath()
         val duration = measureTimeMillis {
             hardwareInfoByPlayer.putAll(Files.list(folder).filter { it.extension == "json" }.map {
-                val hardwareInfo: MutableSet<HardwareInfo> = it.inputStream().use(nrJson::decodeFromStream)
+                val hardwareInfo: MutableSet<HardwareInfo> = it.inputStream().use(gameLogJson::decodeFromStream)
                 it.nameWithoutExtension to hardwareInfo
             }.collect(Collectors.toUnmodifiableList()))
         }
@@ -87,7 +87,7 @@ object HardwareInfoModule {
 
             val tempFile = Files.createTempFile(folder, fileName, ".tmp")
             tempFile.outputStream().use {
-                nrJson.encodeToStream(hardwareInfoForPlayer, it)
+                gameLogJson.encodeToStream(hardwareInfoForPlayer, it)
             }
             Files.move(tempFile, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
 

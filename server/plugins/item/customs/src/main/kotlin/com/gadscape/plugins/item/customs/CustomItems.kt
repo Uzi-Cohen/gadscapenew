@@ -85,11 +85,11 @@ import com.zenyte.game.item.ItemId.MUSHROOM_SPORE
 import com.zenyte.game.item.ItemId.MYSTERY_BOX
 import com.zenyte.game.item.ItemId.MYSTIC_CARDS
 import com.zenyte.game.item.ItemId.GADSCAPE_PARTY_HAT
-import com.zenyte.game.item.ItemId.NR_TABLET
+import com.zenyte.game.item.ItemId.HOME_TELEPORT_TABLET
 import com.zenyte.game.item.ItemId.OCCULT_NECKLACE
 import com.zenyte.game.item.ItemId.OLD_SCHOOL_BOND_UNTRADEABLE
 import com.zenyte.game.item.ItemId.ORANGE_PARTYHAT
-import com.zenyte.game.item.ItemId.OSNR_MYSTERY_BOX
+import com.zenyte.game.item.ItemId.GADSCAPE_MYSTERY_BOX
 import com.zenyte.game.item.ItemId.PINK_PARTYHAT
 import com.zenyte.game.item.ItemId.PLATINUM_KEY
 import com.zenyte.game.item.ItemId.POLYPORE_SPORES
@@ -210,7 +210,7 @@ class CustomItems : ItemDefinitionsScript() {
 		GOLD_KEY.key()
 		PLATINUM_KEY.key()
 		DIAMOND_KEY.key()
-		NR_TABLET.invoke(VARROCK_TELEPORT) {}
+		HOME_TELEPORT_TABLET.invoke(VARROCK_TELEPORT) {}
 
 		LIME_WHIP.invoke(ABYSSAL_WHIP) {
 			equipment {
@@ -240,7 +240,7 @@ class CustomItems : ItemDefinitionsScript() {
 
 
 
-		OSNR_MYSTERY_BOX.invoke(MYSTERY_BOX) {}
+		GADSCAPE_MYSTERY_BOX.invoke(MYSTERY_BOX) {}
 
 		BLUE_ANKOU_SOCKS.invoke(ANKOU_SOCKS) {}
 		BLUE_ANKOU_GLOVES.invoke(ANKOU_GLOVES) {}

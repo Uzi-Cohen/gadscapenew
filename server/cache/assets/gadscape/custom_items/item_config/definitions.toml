@@ -831,7 +831,7 @@ notedtemplate=799
 invmodel=60049
 modelyaw=100
 
-# GadScape Nr tablet
+# GadScape Home teleport tablet
 [[item]]
 id=32056
 inherit=8007
@@ -3301,7 +3301,7 @@ placeholdertemplate=14401
 invmodel=60049
 modelyaw=100
 
-# GadScape Nr tablet (placeholder)
+# GadScape Home teleport tablet (placeholder)
 [[item]]
 id=33056
 inherit=22667

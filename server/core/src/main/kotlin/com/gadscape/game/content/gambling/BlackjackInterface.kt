@@ -7,8 +7,8 @@ import com.zenyte.game.model.ui.Interface
 import com.zenyte.game.world.entity.player.Player
 
 /**
- * The real "Roat Pkz Blackjack" experience: a persistent interface (not chat dialogues) with a
- * player-editable client seed (the "Seed" button, matching RoatPkz's Green Lock affordance - the
+ * GadScape Blackjack, modelled on a 317-server blackjack UI: a persistent interface (not chat dialogues) with a
+ * player-editable client seed (the "Seed" button, like that UI's green lock affordance - the
  * provably fair trust feature every gambling game here was missing, since they all hardcoded the
  * seed to the player's username), live session stats, a bet stepper with 1/2 and 2x shortcuts,
  * and Hit/Stand/Double/Split/Forfeit buttons once a hand is in play.

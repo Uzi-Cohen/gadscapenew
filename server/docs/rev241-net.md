@@ -36,7 +36,7 @@ Other properties:
 |---|---|---|
 | `gadscape.net.ports` | (none) | extra ports besides the world's `port` (43594), e.g. `443` |
 | `gadscape.js5.preload` | false | prepare every JS5 group at boot instead of on first request |
-| `gadscape.login.token` | (unset) | expected login "site settings" string (what rev 211 called the session token, `NetworkConstants.SESSION_TOKEN`). Unset = not checked, because stock RuneLite 241 sends an empty string. |
+| `gadscape.login.token` | (unset) | expected login "site settings" string (the jav_config param 9 value, which the rev-211 login compared with a hard-coded constant; that constant is gone). Unset = not checked, because stock RuneLite 241 sends an empty string. |
 | `gadscape.login.skipCrc` | false | do not compare the client's archive CRCs with the served cache at login |
 
 The RSA key file can be PEM PKCS#8 (`BEGIN PRIVATE KEY`, what `client241/patcher genkey` writes to

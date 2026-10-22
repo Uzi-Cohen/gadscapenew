@@ -39,5 +39,5 @@ class VoteShardOnPlayer : ItemOnPlayerPlugin {
         target.sendMessage("${player.name} has transferred ${item.amount} vote point${if(item.amount > 1) "s" else ""} to you.")
     }
 
-    override fun getItems(): IntArray = intArrayOf(CustomItemId.NR_VOTE_SHARD)
+    override fun getItems(): IntArray = intArrayOf(CustomItemId.VOTE_SHARD)
 }

@@ -219,8 +219,7 @@ class Deployer(private val log: (String) -> Unit) {
         if (pending.isEmpty()) { log("No edited shop or NPC spawn files yet. Save a shop (Tools > Shops) or your NPC spawns first."); return null }
         // entries are full paths (newer), paths from the server folder, or just a shop file name (oldest)
         // older entries are relative to whichever folder was picked back then: try every folder the server could be in
-        val roots = listOfNotNull(serverDirGuess, NpcSpawns.serverDir,
-            File(System.getProperty("user.home"), "Downloads/RSPS-NEAR-REALITY-main/RSPS-NEAR-REALITY-main/near-reality-server-main"),
+        val roots = listOfNotNull(serverDirGuess, NpcSpawns.serverDir, ServerSource.guess(),
             File("C:/GadScape")).filter { it.isDirectory }.distinct()
         val deep = roots.flatMap { r -> r.walkTopDown().maxDepth(3).filter { it.isDirectory && (File(it, "gradlew.bat").isFile || File(it, "gradlew").isFile) }.toList() }
         val allRoots = (roots + deep).distinct()
@@ -567,7 +566,7 @@ print('MERGED %d item(s)' % len(P))
             val now = (if (f.isFile) f.readLines() else emptyList()).map { it.trim() }.filter { it.isNotEmpty() }.toMutableSet()
             now.add(name); f.writeText(now.joinToString("\n"))
         }
-        /** The shops folder: com/gadscape/... in the current server, com/near_reality/... in older copies. */
+        /** The shops folder of the server source (com/gadscape/...). */
         fun shopsPath(server: File?): String = ServerSource.pkgPath(server, "plugins/shops/src/main/kotlin", "plugins/shops")
         @Volatile var lastBackup: String? = null
         fun settingsFile(): File = GadTools.templatesPath

@@ -3,7 +3,7 @@ package com.gadscape.game.content.gambling.provablyfair
 /*
  * Provably fair seed/hash utilities.
  *
- * Ported from https://github.com/roatpkz/rsps-provably-fair (MIT License, Copyright Roat Pkz).
+ * Ported from the rsps-provably-fair project (MIT License; copyright notice in THIRD_PARTY_NOTICES.md).
  * Algorithm unchanged: SHA-256 commit/reveal over "clientSeed:serverSeed[:nonce]".
  */
 

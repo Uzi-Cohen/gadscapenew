@@ -3,7 +3,7 @@
 package com.gadscape.tools.logging.file
 
 import com.gadscape.tools.logging.GameLogMessage
-import com.gadscape.tools.logging.nrSerializerModule
+import com.gadscape.tools.logging.gameLogSerializerModule
 import kotlinx.datetime.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.InternalSerializationApi
@@ -18,14 +18,14 @@ import kotlin.reflect.KClass
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
-val nrProtoBuf = ProtoBuf {
-    serializersModule = nrSerializerModule
+val gameLogProtoBuf = ProtoBuf {
+    serializersModule = gameLogSerializerModule
     encodeDefaults = true
 }
 
 @OptIn(InternalSerializationApi::class)
-val nrJson = Json {
-    serializersModule = nrSerializerModule
+val gameLogJson = Json {
+    serializersModule = gameLogSerializerModule
     encodeDefaults = true
 }
 
@@ -52,7 +52,7 @@ inline fun<reified M : GameLogMessage> File.readGameLogMessages(): List<M> {
     while (messagesBytes.hasRemaining()) {
         val messageSize = messagesBytes.int
         val messageBytes = ByteArray(messageSize).apply(messagesBytes::get)
-        messages += nrProtoBuf.decodeFromByteArray<GameLogMessage>(messageBytes) as M
+        messages += gameLogProtoBuf.decodeFromByteArray<GameLogMessage>(messageBytes) as M
 
     }
     return messages

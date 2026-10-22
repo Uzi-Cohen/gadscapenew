@@ -1,6 +1,7 @@
 package com.gadscape.tools.discord
 
 import com.gadscape.game.world.entity.player.discordUserId
+import com.zenyte.game.GameConstants
 import com.zenyte.game.item._Item
 import com.zenyte.game.world.World
 import com.zenyte.game.world.entity.player.Player
@@ -15,8 +16,18 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap
 import mgi.types.config.items.ItemDefinitions
 import kotlin.reflect.KSuspendFunction1
 
-fun itemInventoryImageUrl(itemId: Int) =
-    "https://imagedelivery.net/nzzTKI-8_OClTAbISD7cGQ/item/$itemId/public"
+/**
+ * Base address of the pictures Discord embeds show, hosted on GadScape's own site: worlds.yml `discordImageBase`,
+ * else `<website>/images/discord`. Item icons are `<base>/items/<id>.png`, other pictures `<base>/<name>.png`
+ * (the list of names is in [discordImageUrl]'s callers).
+ */
+val discordImageBase: String
+    get() = (GameConstants.WORLD_PROFILE?.discordImageBase?.takeIf { it.isNotBlank() }
+        ?: "${GameConstants.SERVER_WEBSITE_URL}/images/discord").trimEnd('/')
+
+fun discordImageUrl(name: String) = "$discordImageBase/$name.png"
+
+fun itemInventoryImageUrl(itemId: Int) = "$discordImageBase/items/$itemId.png"
 
 private val luckExpressions = listOf(
     "Such luck",

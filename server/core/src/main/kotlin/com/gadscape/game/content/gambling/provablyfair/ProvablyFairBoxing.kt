@@ -1,7 +1,7 @@
 package com.gadscape.game.content.gambling.provablyfair
 
 /*
- * Ported from https://github.com/roatpkz/rsps-provably-fair (MIT License, Copyright Roat Pkz).
+ * Ported from the rsps-provably-fair project (MIT License; copyright notice in THIRD_PARTY_NOTICES.md).
  *
  * Deterministic 0-16 hit value from SHA-256("p1Seed:p2Seed:serverSeed:hitNo"), first 8 hash
  * bytes read as an unsigned 64-bit long, taken mod 17. hitNo alternates by player per turn so

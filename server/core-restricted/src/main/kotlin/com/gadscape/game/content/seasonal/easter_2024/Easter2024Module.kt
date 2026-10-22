@@ -66,6 +66,10 @@ object Easter2024Module {
             }
         }
         Command(PlayerPrivilege.PLAYER, "easter") { player, _ ->
+            if (!Easter2024Manager.enabled) {
+                player.sendMessage("The Easter event isn't running right now.")
+                return@Command
+            }
             if (!player.isLocked) {
                 val teleport: Teleport = object : Teleport {
                     override fun getType(): TeleportType = TeleportType.CROP_CIRCLE

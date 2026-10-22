@@ -1,6 +1,6 @@
 package com.gadscape.anticheat.tasks;
 
-import com.gadscape.anticheat.NRAntiCheatEngine;
+import com.gadscape.anticheat.GadScapeAntiCheatEngine;
 import com.gadscape.api.model.SanctionLevel;
 import com.gadscape.api.model.SanctionType;
 import com.gadscape.api.service.sanction.SanctionPlayerHandler;
@@ -28,17 +28,18 @@ public class ApplyAutoSanctionTask extends TickTask {
     public ApplyAutoSanctionTask(Player player, String cmd) {
         this.player = player;
         this.command = cmd;
-        processAtTick = Utils.random(Long.valueOf(TimeUnit.MINUTES.toTicks(NRAntiCheatEngine.RNG_START_BOUND_MINUTES)).intValue(), Long.valueOf(TimeUnit.MINUTES.toTicks(NRAntiCheatEngine.RNG_END_BOUND_MINUTES)).intValue());
+        processAtTick = Utils.random(Long.valueOf(TimeUnit.MINUTES.toTicks(GadScapeAntiCheatEngine.RNG_START_BOUND_MINUTES)).intValue(), Long.valueOf(TimeUnit.MINUTES.toTicks(GadScapeAntiCheatEngine.RNG_END_BOUND_MINUTES)).intValue());
     }
 
     @Override
     public void run() {
         if(!DeveloperCommands.INSTANCE.getAnticheatEnabled())
             return;
-        NRAntiCheatEngine.getEngine().sanctionQueued(player);
+        GadScapeAntiCheatEngine.getEngine().sanctionQueued(player);
         if(!DeveloperCommands.INSTANCE.getAutomatedSanctions()) {
             CompletableFuture<Unit> suspendResult = new CompletableFuture<>();
-            NRAntiCheatEngine.sanctionBot.sendAutoDetection(player, command, false, new CoroutineJvmContinuation<>(suspendResult));
+            if (GadScapeAntiCheatEngine.sanctionBot != null)
+                GadScapeAntiCheatEngine.sanctionBot.sendAutoDetection(player, command, false, new CoroutineJvmContinuation<>(suspendResult));
             stop();
             return;
         }
@@ -46,7 +47,8 @@ public class ApplyAutoSanctionTask extends TickTask {
         if(ticks == processAtTick) {
             SanctionPlayerHandler.submitSanction(SanctionLevel.ACCOUNT, SanctionType.BAN, player, null, "Automated Detection");
             CompletableFuture<Unit> suspendResult = new CompletableFuture<>();
-            NRAntiCheatEngine.sanctionBot.sendAutoDetection(player, command, true, new CoroutineJvmContinuation<>(suspendResult));
+            if (GadScapeAntiCheatEngine.sanctionBot != null)
+                GadScapeAntiCheatEngine.sanctionBot.sendAutoDetection(player, command, true, new CoroutineJvmContinuation<>(suspendResult));
             stop();
             return;
         }

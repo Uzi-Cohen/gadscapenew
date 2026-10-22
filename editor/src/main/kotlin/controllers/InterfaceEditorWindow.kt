@@ -80,7 +80,7 @@ class InterfaceEditorWindow(private var spriteLoader: SpriteLoader, private val 
         val search = TextField().apply { promptText = "Interface id" }
         val list = ListView<Int>()
         // find text anywhere in the game's interfaces
-        val findText = TextField().apply { promptText = "Find text (e.g. Near-Reality)" }
+        val findText = TextField().apply { promptText = "Find text (e.g. GadScape)" }
         val findResults = ListView<String>().apply { prefHeight = 160.0 }
         val btnFind = Button("Find").apply {
             setOnAction {

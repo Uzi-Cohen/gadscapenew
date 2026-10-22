@@ -62,7 +62,6 @@ class CastleWarsStoreShop : ShopScript() {
             CASTLEWARS_HOOD_4515(100, 0, 10)
             CASTLEWARS_CLOAK_4516(100, 0, 10)
             DRAGON_LONGSWORD(100, 0, 100)
-            DRAGON_LONGSWORD(100, 0, 100)
             DECORATIVE_ARMOUR_11898(100, 0, 20)
             DECORATIVE_ARMOUR_11896(100, 0, 40)
             DECORATIVE_ARMOUR_11897(100, 0, 30)

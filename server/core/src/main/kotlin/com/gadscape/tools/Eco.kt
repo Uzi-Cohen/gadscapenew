@@ -32,10 +32,9 @@ object Eco {
         WealthScanner.loadDefault()
         JSONGEItemDefinitionsLoader().parse()
 
-        val snapshot1 =
-                    //EconomySnapshot.ofBackupArchive(File("/Users/stanvanderbend/IdeaProjects/GadScape/server-production/data/backup_20240530_181501.zip"))
-
-            EconomySnapshot.ofBackupArchive(File("C:\\Users\\Kryeus\\Documents\\NR\\backup_20240610_152501.zip"))
+        // Usage: Eco <path to a data/backup_*.zip made by the server's backup task>
+        val backup = args.firstOrNull() ?: error("Give the path of a server backup zip (data/backup_*.zip).")
+        val snapshot1 = EconomySnapshot.ofBackupArchive(File(backup))
 
         val result = snapshot1.calculate()
         println(result)
@@ -46,8 +45,8 @@ object Eco {
     }
 
     private fun compareEcoSnapshots() {
-        val snapshot1 = EconomySnapshot.ofBackupArchive(File("/Users/stanvanderbend/IdeaProjects/GadScape/server-production/data/backup_20240518_060401.zip"))
-        val snapshot2 = EconomySnapshot.ofBackupArchive(File("/Users/stanvanderbend/IdeaProjects/GadScape/server-production/data/backup_20240518_070401.zip"))
+        val snapshot1 = EconomySnapshot.ofBackupArchive(File("data/backup_1.zip"))
+        val snapshot2 = EconomySnapshot.ofBackupArchive(File("data/backup_2.zip"))
         val result1 = snapshot1.calculate()
         val result2 = snapshot2.calculate()
         val difference = result2 - result1
@@ -76,21 +75,9 @@ class EconomySnapshot(
     lateinit var sellOffers : Map<String, List<ExchangeOffer>>
     lateinit var buyOffers : Map<String, List<ExchangeOffer>>
 
-    private val usernamesToOmit = setOf(
-        "Effigyswiper",
-        "Stan",
-        "Kryeus",
-        "Mr Peanut",    // banned
-        "Jacmob",
-        "Jimba",
-        "Cayleb",
-        "woez",
-        "killerrun",
-        "i_kerim_i",    // banned
-        "inked",        // banned
-        "god",
-        "l1me"
-    ).map(::sanitize)
+    /** Staff and banned accounts left out of the economy totals (GadScape's own list; empty = count everyone). */
+    private val usernamesToOmit = (System.getProperty("gadscape.eco.omit") ?: "")
+        .split(',').filter { it.isNotBlank() }.map(::sanitize)
 
     private fun load() {
         players = runBlocking {  allAccounts().filterNot { omitUser(it.username) } }
@@ -398,7 +385,7 @@ class EconomySnapshot(
             CustomItemId.GAUNTLET_SLAYER_HELM,
             CustomItemId.CORRUPTED_GAUNTLET_SLAYER_HELM,
             CustomItemId.GADSCAPE_PARTY_HAT,
-            CustomItemId.OSNR_MYSTERY_BOX,
+            CustomItemId.GADSCAPE_MYSTERY_BOX,
             CustomItemId.GANODERMIC_RUNT,
             CustomItemId.BLUE_ANKOU_SOCKS,
             CustomItemId.BLUE_ANKOU_GLOVES,
@@ -440,7 +427,7 @@ class EconomySnapshot(
             ItemId.SANGUINE_SCYTHE_OF_VITUR,
             ItemId.SANGUINE_SCYTHE_OF_VITUR_UNCHARGED,
             ItemId.SCYTHE_OF_VITUR_UNCHARGED,
-            ItemId.NR_VOTE_SHARD,
+            ItemId.VOTE_SHARD,
             ItemId.ZARYTE_CROSSBOW,
             ItemId.ZARYTE_CROSSBOW_27186,
             ItemId.ZARYTE_BOW_UNCHARGED,
@@ -496,7 +483,7 @@ private val Item.value: Long
         ItemId.SANGUINE_SCYTHE_OF_VITUR,
         ItemId.SANGUINE_SCYTHE_OF_VITUR_UNCHARGED,
         ItemId.SCYTHE_OF_VITUR_UNCHARGED -> 1_000_000_000
-        ItemId.NR_VOTE_SHARD -> 1_000_000
+        ItemId.VOTE_SHARD -> 1_000_000
         ItemId.ZARYTE_CROSSBOW,
         ItemId.ZARYTE_CROSSBOW_27186,
         ItemId.ZARYTE_BOW_UNCHARGED -> 1_100_000_000

@@ -133,7 +133,7 @@ class XamphurDropTable : NPCDropTableScript() {
         limit = 900
         static {
             PET_MYSTERY_BOX quantity 1 rarity 100
-            NR_VOTE_SHARD quantity 5 rarity 100
+            VOTE_SHARD quantity 5 rarity 100
             ENHANCED_CRYSTAL_KEY quantity 3 rarity 100
             MYSTERY_BOX quantity 1 rarity 100
             DWARF_CANNON_SET quantity 1 rarity 100

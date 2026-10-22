@@ -51,7 +51,7 @@ object Cache2018Dump {
     @JvmStatic
     fun main(args: Array<String>) {
         val dumpPath =
-            Path("/Users/stanvanderbend/IdeaProjects/gadscape/server-production/cache/assets/osnr/easter_2024")
+            Path("/Users/stanvanderbend/IdeaProjects/gadscape/server-production/cache/assets/gadscape/easter_2024")
         val cache2018 = Cache.openCache("/Users/stanvanderbend/.qodat/downloads/2018-03-29-rev167/cache")
         val store = Store(File("/Users/stanvanderbend/.qodat/downloads/2018-03-29-rev167/cache"))
         store.load()

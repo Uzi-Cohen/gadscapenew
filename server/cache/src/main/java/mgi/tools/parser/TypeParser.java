@@ -151,7 +151,8 @@ public class TypeParser {
         return gson.get();
     }
 
-    public static boolean RUNESPAWN = false;
+    /** Also pack the legacy custom content (data/cache-legacy-content + assets/legacy_content). */
+    public static boolean LEGACY_CONTENT = false;
 
     public static String basePortCache = "cache-225";
     public static String altPortCache = "cache-latest";
@@ -182,7 +183,7 @@ public class TypeParser {
             type = args[0];
         }
         if (args.length > 1) {
-            RUNESPAWN = Boolean.parseBoolean(args[1]);
+            LEGACY_CONTENT = Boolean.parseBoolean(args[1]);
         }
         if(args.length > 2 && Objects.equals(args[2], "production")) {
             isProductionCacheGen = true;
@@ -221,7 +222,7 @@ public class TypeParser {
         }
 
         unzipCache("cache-219");
-        unzipCache("cache-runespawn");
+        unzipCache("cache-legacy-content");
 
         Cache cache = Cache.openCache("data/cache");
         CacheManager.loadCache(cache);
@@ -259,9 +260,9 @@ public class TypeParser {
         }
 
         try {
-            Cache runespawn_cache = Cache.openCache("data/cache-runespawn");
-            RuneSpawnMigration runespawn = new RuneSpawnMigration(cache, runespawn_cache);
-            runespawn.run();
+            Cache legacyCache = Cache.openCache("data/cache-legacy-content");
+            LegacyContentMigration legacyMigration = new LegacyContentMigration(cache, legacyCache);
+            legacyMigration.run();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -292,8 +293,8 @@ public class TypeParser {
 
         initializeKryo();
         parse(new File("assets/types"));
-        if (RUNESPAWN) {
-            parse(new File("assets/runespawn/types"));
+        if (LEGACY_CONTENT) {
+            parse(new File("assets/legacy_content/types"));
         }
         pack(NPCDefinitions.class);
         repackNPCOptions();
@@ -808,8 +809,8 @@ public class TypeParser {
             packModel(52010, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52010_item_snooker_097.dat")));
             packModel(52011, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52011_item_tsott_026.dat")));
             packModel(52012, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52012_item_tsott_027.dat")));
-            packModel(52013, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52013_item_nr_cape_equip.dat")));
-            packModel(52014, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52014_item_nr_cape_drop.dat")));
+            packModel(52013, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52013_item_founders_cape_equip.dat")));
+            packModel(52014, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/52014_item_founders_cape_drop.dat")));
             packModel(64000, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/64000_npc_mac.dat")));
             packModel(64001, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/64001_item_nid.dat")));
             packModel(64002, java.nio.file.Files.readAllBytes(Paths.get("assets/models/relaunch/64002_item_hcimhelm.dat")));
@@ -1428,8 +1429,8 @@ public class TypeParser {
     private static void packInterfaces() {
         final Cache cache = CacheManager.getCache();
         packInterfacesInner(cache, Paths.get("assets/interfaces").toFile().listFiles());
-        if (RUNESPAWN) {
-            packInterfacesInner(cache, Paths.get("assets/runespawn/interfaces").toFile().listFiles());
+        if (LEGACY_CONTENT) {
+            packInterfacesInner(cache, Paths.get("assets/legacy_content/interfaces").toFile().listFiles());
         }
             //packMackInterfaces(cache, 5006);
 
@@ -1863,18 +1864,18 @@ public class TypeParser {
         packMapPre209(13424, "assets/map/tutorial_island/tutorial_landscape.dat",
                 "assets/map/tutorial_island" +
                         "/tutorial_objects.dat");
-        packMapPre209(13426, "assets/map/osnr_tournament/final_landscape.dat",
-                "assets/map/osnr_tournament/final_objects.dat");
+        packMapPre209(13426, "assets/map/gadscape_tournament/final_landscape.dat",
+                "assets/map/gadscape_tournament/final_objects.dat");
         packMapPre209(8314, "assets/map/staff_landscape.dat",
                 "assets/map/staff_objects.dat");
-        packMapPre209(13428, java.nio.file.Files.readAllBytes(Paths.get("assets/map/osnr_tournament/tourney_landscape.dat")),
-                Regions.inject(java.nio.file.Files.readAllBytes(Paths.get("assets/map/osnr_tournament/tourney_objects.dat")), null,
+        packMapPre209(13428, java.nio.file.Files.readAllBytes(Paths.get("assets/map/gadscape_tournament/tourney_landscape.dat")),
+                Regions.inject(java.nio.file.Files.readAllBytes(Paths.get("assets/map/gadscape_tournament/tourney_objects.dat")), null,
                         new WorldObject(35006, 10, 1, new Location(3363, 7465, 0)),
                         new WorldObject(35007, 10, 0, new Location(3352, 7465, 0))));
         packMapPre209(11601, null,
                 Regions.inject(11601, null, new WorldObject(50083, 10, 1, new Location(2906, 5206, 0))));
-        //packMapPre209(12342, "assets/map/osnr_home/624.dat", "assets/map/osnr_home/625.dat");
-        //packMapsRSPSi(13382, "assets/osnr/custom_maps/NR_home.pack");
+        //packMapPre209(12342, "assets/map/gadscape_home/624.dat", "assets/map/gadscape_home/625.dat");
+        //packMapsRSPSi(13382, "assets/gadscape/custom_maps/old_home.pack");
         packMapsRSPSi(13430, "assets/map/donator_zones/LDI.pack");
         packMapsRSPSi(13433, "assets/map/donator_zones/UDI.pack");
         packMapsRSPSi(13550, "assets/map/donator_zones/rev_dungeon.pack");
@@ -1891,19 +1892,19 @@ public class TypeParser {
         packMapsRSPSi(13441, "assets/map/donator_zones/DIE.pack");
         packMapsRSPSi(14388, "assets/map/Meiyerditch.pack");
 
-        packMapsRSPSi(13443, "assets/map/donator_zones/nr_dzone.pack");
+        packMapsRSPSi(13443, "assets/map/donator_zones/donator_zone.pack");
         packMapsRSPSi(6457, "assets/map/kourend_castle.pack");
         packMapsRSPSi(10803, "assets/map/witchaven.pack");
 
-        if (RUNESPAWN) {
-            packMapPre209(12342, "assets/runespawn/edgarrock_landscape.dat",
-                    "assets/runespawn/edgarrock_objects.dat");
-            packMapPre209(13382, "assets/runespawn/darkedge_landscape.dat",
-                    "assets/runespawn/darkedge_objects.dat");
+        if (LEGACY_CONTENT) {
+            packMapPre209(12342, "assets/legacy_content/edgarrock_landscape.dat",
+                    "assets/legacy_content/edgarrock_objects.dat");
+            packMapPre209(13382, "assets/legacy_content/darkedge_landscape.dat",
+                    "assets/legacy_content/darkedge_objects.dat");
         } else {
-            packMapsRSPSi(12086, "assets/map/osnr_home/nr_home.pack");
-            //packMapPre209(12086, "assets/osnr/custom_maps/home_landscape.dat",
-                    //"assets/osnr/custom_maps/home_objects.dat");
+            packMapsRSPSi(12086, "assets/map/gadscape_home/home.pack");
+            //packMapPre209(12086, "assets/gadscape/custom_maps/home_landscape.dat",
+                    //"assets/gadscape/custom_maps/home_objects.dat");
         }
         packMapsRSPSi(10057, "assets/map/mage_bank.pack");
         packMapsRSPSi(12854, "assets/map/varrock_topr.pack");
@@ -1943,8 +1944,8 @@ public class TypeParser {
     }
 
     public static void wildernessVault() throws IOException {
-        packMapsRSPSi(7789, "assets/osnr/wilderness_vault/wilderness_vault.pack");
-        packMapPre209(8557, "assets/osnr/wilderness_vault/vault_0.dat", "assets/osnr/wilderness_vault/vault_1.dat");
+        packMapsRSPSi(7789, "assets/gadscape/wilderness_vault/wilderness_vault.pack");
+        packMapPre209(8557, "assets/gadscape/wilderness_vault/vault_0.dat", "assets/gadscape/wilderness_vault/vault_1.dat");
     }
 
     public static void removeCATasks() {

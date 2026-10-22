@@ -55,7 +55,7 @@ object GameLoggerFileAppender {
         }
 
         var buffer = messageWriteBuffers.getOrPut(messageClass, this::newBuffer)
-        val encodedMessage = nrProtoBuf.encodeToByteArray(message)
+        val encodedMessage = gameLogProtoBuf.encodeToByteArray(message)
         val encodedMessageSize = encodedMessage.size
 
         if (!buffer.isWritable(encodedMessageSize + Int.SIZE_BYTES)) {

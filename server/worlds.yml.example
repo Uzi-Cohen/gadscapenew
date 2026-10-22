@@ -58,6 +58,13 @@ worlds:
     verifyPasswords: true
     location: UNITED_STATES_OF_AMERICA
     logback: "logback-live"
+    # The GadScape owner account(s): only these usernames can use the owner-only commands (::checkowner,
+    # ::isolemnlysweariamuptonogood, ::magicbuffet, ...). Leave empty and nobody can. Register the name yourself
+    # before the world opens. Same for every world (or pass -Dgadscape.owners=name1,name2).
+    owners: []
+    # Where the Discord bot's embed pictures live (item icons at <base>/items/<id>.png, others at <base>/<name>.png).
+    # Default: https://gadscape.com/images/discord
+    # discordImageBase: "https://gadscape.com/images/discord"
     types:
       - MEMBERS
     # All three worlds must use the SAME rsaPrivateExponent/rsaModulus, since the

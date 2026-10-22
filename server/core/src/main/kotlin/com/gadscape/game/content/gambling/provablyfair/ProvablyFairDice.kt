@@ -1,7 +1,7 @@
 package com.gadscape.game.content.gambling.provablyfair
 
 /*
- * Ported from https://github.com/roatpkz/rsps-provably-fair (MIT License, Copyright Roat Pkz).
+ * Ported from the rsps-provably-fair project (MIT License; copyright notice in THIRD_PARTY_NOTICES.md).
  *
  * Deterministic 0.00-100.00 roll from SHA-256("clientSeed:serverSeed:nonce"): the first 4 hash
  * bytes read as an unsigned 32-bit int, taken mod 10001, divided by 100. Same inputs always

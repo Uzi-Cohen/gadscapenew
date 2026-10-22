@@ -17,7 +17,7 @@ import com.gadscape.game.content.universalshop.UnivShopItem.*
 class HomeVoteShopShop : ShopScript() {
     init {
         "Vote Shop"(1009, VOTE_POINTS, STOCK_ONLY) {
-            UnivShopItem(CustomItemId.NR_VOTE_SHARD, buyPrice = 1, sellPrice = 1).invoke()
+            UnivShopItem(CustomItemId.VOTE_SHARD, buyPrice = 1, sellPrice = 1).invoke()
             UnivShopItem(30210, buyPrice=1).invoke()
             UnivShopItem(30215, buyPrice=1).invoke()
             UnivShopItem(6199, buyPrice=6, ironmanRestricted = true).invoke()

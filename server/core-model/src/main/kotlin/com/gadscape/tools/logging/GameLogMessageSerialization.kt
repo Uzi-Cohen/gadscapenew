@@ -29,7 +29,7 @@ typealias SlotItemMap = @Contextual Int2ObjectLinkedOpenHashMap<out @Contextual 
 
 @InternalSerializationApi
 @ExperimentalSerializationApi
-val nrSerializerModule = SerializersModule {
+val gameLogSerializerModule = SerializersModule {
     contextual(LocationSerializer)
     contextual(ItemSerializer)
     contextual(SlotItemMapSerializer)
