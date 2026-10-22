@@ -9,15 +9,15 @@ import java.util.Arrays;
 
 import static mgi.tools.parser.TypeParser.POST_PACK_UNIV_SHOP;
 
-public class RuneSpawnMigration {
+public class LegacyContentMigration {
 
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RuneSpawnMigration.class);
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LegacyContentMigration.class);
 
     Cache newCache;
-    Cache runespawn;
-    public RuneSpawnMigration(Cache cache, Cache runespawn) {
+    Cache legacy;
+    public LegacyContentMigration(Cache cache, Cache legacy) {
         this.newCache = cache;
-        this.runespawn = runespawn;
+        this.legacy = legacy;
     }
 
     public void run() {
@@ -31,7 +31,7 @@ public class RuneSpawnMigration {
     }
 
     private void portEnums(int... i) {
-        Archive arc = runespawn.getArchive(ArchiveType.CONFIGS);
+        Archive arc = legacy.getArchive(ArchiveType.CONFIGS);
         Group grp = arc.findGroupByID(GroupType.ENUM);
         Archive newCacheArchive = newCache.getArchive(ArchiveType.CONFIGS);
         Group newGroup = newCacheArchive.findGroupByID(GroupType.ENUM);
@@ -45,7 +45,7 @@ public class RuneSpawnMigration {
         Archive oldConfigs = newCache.getArchive(ArchiveType.CONFIGS);
         Group oldRows = oldConfigs.findGroupByID(GroupType.DBTABLE);
 
-        Archive newConfigs = runespawn.getArchive(ArchiveType.CONFIGS);
+        Archive newConfigs = legacy.getArchive(ArchiveType.CONFIGS);
         Group newRows = newConfigs.findGroupByID(GroupType.DBTABLE);
 
         int live_count = newRows.getHighestFileId();
@@ -74,7 +74,7 @@ public class RuneSpawnMigration {
         Archive oldConfigs = newCache.getArchive(ArchiveType.CONFIGS);
         Group oldRows = oldConfigs.findGroupByID(GroupType.DBROW);
 
-        Archive newConfigs = runespawn.getArchive(ArchiveType.CONFIGS);
+        Archive newConfigs = legacy.getArchive(ArchiveType.CONFIGS);
         Group newRows = newConfigs.findGroupByID(GroupType.DBROW);
 
         int live_count = newRows.getHighestFileId();
@@ -100,7 +100,7 @@ public class RuneSpawnMigration {
     }
 
     private void portDBTables() {
-        Archive liveIdx = this.runespawn.getArchive(ArchiveType.DBTABLEINDEX);
+        Archive liveIdx = this.legacy.getArchive(ArchiveType.DBTABLEINDEX);
         Archive oldIdx  = this.newCache.getArchive(ArchiveType.DBTABLEINDEX);
 
         int live_count = liveIdx.getHighestGroupId();
@@ -126,7 +126,7 @@ public class RuneSpawnMigration {
     }
 
     private void portInterfaces(int... i) {
-        Archive arc = runespawn.getArchive(ArchiveType.INTERFACES);
+        Archive arc = legacy.getArchive(ArchiveType.INTERFACES);
         Archive newCacheArchive = newCache.getArchive(ArchiveType.INTERFACES);
         for(int inter : i) {
             Group group = arc.findGroupByID(inter);

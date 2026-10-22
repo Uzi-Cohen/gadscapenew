@@ -11,7 +11,7 @@ class PackRevivalHeadIconSprites(val cache: Cache) {
         // pack into pk head icons
         SpriteGroupDefinitions.get(439).apply {
             repeat(10) {
-                val sprite = ImageIO.read(File("assets/osnr/custom_sprites/revival_state_${it+1}.png"))
+                val sprite = ImageIO.read(File("assets/gadscape/custom_sprites/revival_state_${it+1}.png"))
                 setImage(21 + it, sprite)
             }
             encode()

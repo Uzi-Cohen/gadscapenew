@@ -12,7 +12,7 @@ import mgi.tools.parser.TypeParser
 object GadScapeCustomMapsPacker {
     @JvmStatic
     fun pack() {
-        assetsBase("assets/osnr/custom_maps/") {
+        assetsBase("assets/gadscape/custom_maps/") {
             fun packMap(id: Int, prefix: String, old: Boolean = true) {
                 val landScapeData = assetBytes("${prefix}_landscape.dat")
                 val objData = assetBytes("${prefix}_objects.dat")

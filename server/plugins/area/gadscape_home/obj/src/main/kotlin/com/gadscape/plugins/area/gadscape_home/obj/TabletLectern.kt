@@ -1,4 +1,4 @@
-package com.gadscape.plugins.area.osnr_home.obj
+package com.gadscape.plugins.area.gadscape_home.obj
 
 import com.zenyte.game.model.ui.InterfacePosition
 import com.zenyte.game.world.entity.player.Player

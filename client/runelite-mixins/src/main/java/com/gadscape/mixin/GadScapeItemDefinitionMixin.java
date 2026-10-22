@@ -7,7 +7,7 @@ import net.runelite.rs.api.RSBuffer;
 import net.runelite.rs.api.RSItemComposition;
 
 @Mixin(RSItemComposition.class)
-public abstract class NRItemDefinitionMixin implements RSItemComposition {
+public abstract class GadScapeItemDefinitionMixin implements RSItemComposition {
 
     @Copy("decode")
     @Replace("decode")

@@ -8,10 +8,10 @@ import java.util.HashMap;
 
 
 @Mixin(RSUserList.class)
-public abstract class NRFriendsChatMixin implements RSUserList {
+public abstract class GadScapeFriendsChatMixin implements RSUserList {
 
     @Replace("<init>")
-    public NRFriendsChatMixin(int var1) {
+    public GadScapeFriendsChatMixin(int var1) {
         var1 = 2000;
         this.setCapacity(var1);
         this.setNameables(newContainer(var1));

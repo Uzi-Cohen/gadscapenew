@@ -1,4 +1,4 @@
-package com.gadscape.plugins.area.osnr_home
+package com.gadscape.plugins.area.gadscape_home
 
 import com.gadscape.scripts.npc.spawns.NPCSpawnsScript
 import com.zenyte.ContentConstants

@@ -4,7 +4,7 @@ import com.gadscape.game.content.pvm_arena.area.PvmArenaBlueFightArea
 import com.gadscape.game.content.pvm_arena.area.PvmArenaFightArea
 import com.gadscape.game.content.pvm_arena.area.PvmArenaRedFightArea
 import com.gadscape.util.capitalize
-import com.runespawn.util.weakMutableSetOf
+import com.gadscape.util.weakMutableSetOf
 import com.zenyte.game.item.ItemId
 import com.zenyte.game.util.Colour
 import com.zenyte.game.world.entity.player.Player

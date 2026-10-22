@@ -7,7 +7,7 @@ import net.runelite.rs.api.RSBuffer;
 import net.runelite.rs.api.RSNPCComposition;
 
 @Mixin(RSNPCComposition.class)
-public abstract class NRNPCDefinitionMixin implements RSNPCComposition {
+public abstract class GadScapeNPCDefinitionMixin implements RSNPCComposition {
 
     @Copy("decode")
     @Replace("decode")

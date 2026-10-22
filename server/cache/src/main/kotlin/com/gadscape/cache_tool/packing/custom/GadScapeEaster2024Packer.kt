@@ -22,7 +22,7 @@ object GadScapeEaster2024Packer {
      */
     @JvmStatic
     fun pack() {
-        assetsBase("assets/osnr/easter_2024/map/") {
+        assetsBase("assets/gadscape/easter_2024/map/") {
             TypeParser.packMap(
                 CacheManager.getCache(),
                 7504,
@@ -32,7 +32,7 @@ object GadScapeEaster2024Packer {
         }
         // For bunny npc
         EasterMapPacker().packAll()
-        assetsBase("assets/osnr/easter_2024/") {
+        assetsBase("assets/gadscape/easter_2024/") {
             "items" {
                 ItemDefinitions(id, mgiBuffer).pack()
             }

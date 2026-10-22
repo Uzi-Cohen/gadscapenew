@@ -106,7 +106,7 @@ import java.io.File
 internal object GadScapeCustomItemPacker {
 
     @JvmStatic
-    fun pack() = assetsBase("assets/osnr/custom_items/") {
+    fun pack() = assetsBase("assets/gadscape/custom_items/") {
         "models" {
             val custom = fileNameCustomMap[name] ?: error("no id mapping found for $name")
             if (custom is CustomDefinition.Model)
@@ -301,7 +301,7 @@ internal object GadScapeCustomItemPacker {
         "platinum_key" to CustomDefinition.Model(60047),
         "diamond_key" to CustomDefinition.Model(60048),
         "n_tablet" to CustomDefinition.Model(60049),
-        "nr_tablet" to CustomDefinition.Model(60050),
+        "home_teleport_tablet" to CustomDefinition.Model(60050),
         "death_cape_equip" to CustomDefinition.Model(60051),
         "death_cape_drop" to CustomDefinition.Model(modelId = 60052),
         "lime_whip_equip" to CustomDefinition.Model(modelId = 60053),
@@ -323,7 +323,7 @@ internal object GadScapeCustomItemPacker {
         "corrupted_gauntlet_slayer_helm_drop" to CustomDefinition.Model(60038),
         "gadscape_party_hat_equip" to CustomDefinition.Model(modelId = 60065),
         "gadscape_party_hat_drop" to CustomDefinition.Model(modelId = 60066),
-        "nr_launch_box" to CustomDefinition.Model(modelId = 60067),
+        "gadscape_launch_box" to CustomDefinition.Model(modelId = 60067),
 
         "ankou_blue_boots_drop" to CustomDefinition.Model(modelId = 60068),
         "ankou_blue_boots_female_equip" to CustomDefinition.Model(modelId = 60069),

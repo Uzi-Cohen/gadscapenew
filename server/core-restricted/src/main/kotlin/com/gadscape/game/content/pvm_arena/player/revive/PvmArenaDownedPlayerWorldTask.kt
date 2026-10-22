@@ -2,7 +2,7 @@ package com.gadscape.game.content.pvm_arena.player.revive
 
 import com.gadscape.game.world.entity.player.pvmArenaInRevivalState
 import com.gadscape.game.world.entity.player.pvmArenaRevivalCount
-import com.runespawn.util.weakReference
+import com.gadscape.util.weakReference
 import com.zenyte.game.task.WorldTask
 import com.zenyte.game.task.WorldTasksManager
 import com.zenyte.game.world.entity.masks.*

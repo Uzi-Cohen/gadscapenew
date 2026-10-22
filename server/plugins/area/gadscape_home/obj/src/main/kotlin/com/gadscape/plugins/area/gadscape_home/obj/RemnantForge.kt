@@ -1,4 +1,4 @@
-package com.gadscape.plugins.area.osnr_home.obj
+package com.gadscape.plugins.area.gadscape_home.obj
 
 import com.gadscape.game.item.CustomObjectId
 import com.zenyte.game.GameInterface

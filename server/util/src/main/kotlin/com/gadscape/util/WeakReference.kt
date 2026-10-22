@@ -1,4 +1,4 @@
-package com.runespawn.util
+package com.gadscape.util
 
 import java.lang.ref.WeakReference
 import kotlin.properties.ReadWriteProperty

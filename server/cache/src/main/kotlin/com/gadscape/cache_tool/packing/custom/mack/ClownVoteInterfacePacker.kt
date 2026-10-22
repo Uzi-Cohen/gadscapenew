@@ -11,7 +11,7 @@ class ClownVoteInterfacePacker(cache: Cache) : ClownInterfacePacker(cache) {
     }
 
     override fun pack() {
-        assetsBase("assets/osnr/vote_interface/") {
+        assetsBase("assets/gadscape/vote_interface/") {
             "cs2" {
                 val groupId = name.substringBefore('_').toInt()
                 packAsFileInGroup(ArchiveType.CLIENTSCRIPTS, groupId, fileId = 0)

@@ -7,7 +7,7 @@ import com.gadscape.cache_tool.packing.AnimationDefinitionsPacking.packAnim
  */
 object InquisitorsGreatFlailPacker {
 
-    private const val ASSETS_PATH = "assets/osnr/inquisitors_great_flail/"
+    private const val ASSETS_PATH = "assets/gadscape/inquisitors_great_flail/"
 
     private const val ANIM_DEFS_PATH = "${ASSETS_PATH}animations/definitions/"
 

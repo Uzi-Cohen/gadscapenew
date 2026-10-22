@@ -3,8 +3,8 @@ package com.gadscape.game.content.tournament
 import com.gadscape.game.content.tournament.area.TournamentLobbyArea
 import com.gadscape.game.content.tournament.spectating.deadman_spectator_enable_script_id
 import com.gadscape.game.content.tournament.spectating.set_renderself_script_id
-import com.runespawn.util.weakMutableSetOf
-import com.runespawn.util.weakReference
+import com.gadscape.util.weakMutableSetOf
+import com.gadscape.util.weakReference
 import com.zenyte.game.GameInterface
 import com.zenyte.game.model.ui.InterfacePosition
 import com.zenyte.game.packet.out.FreeCam

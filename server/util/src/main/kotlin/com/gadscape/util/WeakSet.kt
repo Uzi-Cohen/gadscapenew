@@ -1,4 +1,4 @@
-package com.runespawn.util
+package com.gadscape.util
 
 import java.util.*
 

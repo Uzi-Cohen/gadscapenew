@@ -26,9 +26,9 @@ import static com.zenyte.game.GameConstants.WORLD_PROFILE;
  * This is the main engine for handling all anti-cheat processing, detection and response
  * @author John J. Woloszyk
  */
-public class NRAntiCheatEngine {
+public class GadScapeAntiCheatEngine {
 
-    public static Logger log = LoggerFactory.getLogger(NRAntiCheatEngine.class);
+    public static Logger log = LoggerFactory.getLogger(GadScapeAntiCheatEngine.class);
 
     public boolean debug;
 
@@ -66,7 +66,7 @@ public class NRAntiCheatEngine {
     public static final int RNG_END_BOUND_MINUTES = 10;
     public static DiscordBot sanctionBot;
 
-    public NRAntiCheatEngine() {
+    public GadScapeAntiCheatEngine() {
         debug = WORLD_PROFILE.isDevelopment();
         validatedPlayers = new ObjectArrayList<>(2048);
         pendingValidationPlayers = new ObjectArrayList<>(2048);
@@ -79,15 +79,26 @@ public class NRAntiCheatEngine {
     public ObjectArrayList<Player> awaitingValidationResponse;
     public Object2ObjectArrayMap<Player, String> sanctionQueue;
 
-    private static NRAntiCheatEngine antiCheatEngine;
+    private static GadScapeAntiCheatEngine antiCheatEngine;
     @Subscribe
     public static void onInitialization(ServerLaunchEvent event) {
-        antiCheatEngine = new NRAntiCheatEngine();
+        antiCheatEngine = new GadScapeAntiCheatEngine();
         queueEvents();
-        if (WORLD_PROFILE.isDiscordEnabled()) {
+        // The staff bot's token is never kept in the source: give it with -Dgadscape.discord.staffToken=... or the
+        // GADSCAPE_DISCORD_STAFF_TOKEN environment variable. Without one, detections are only logged.
+        final String staffToken = staffBotToken();
+        if (WORLD_PROFILE.isDiscordEnabled() && staffToken != null) {
             sanctionBot = new DiscordBot();
-            sanctionBot.initStaff("MTIxOTM5Nzc1NTkwMzE0ODAzMg.GO-Q32.xHiNkByNMzV_D2BtGt2Yvhrq2ytjAdiRzHSyWE");
+            sanctionBot.initStaff(staffToken);
         }
+    }
+
+    private static String staffBotToken() {
+        String token = System.getProperty("gadscape.discord.staffToken");
+        if (token == null || token.isBlank()) {
+            token = System.getenv("GADSCAPE_DISCORD_STAFF_TOKEN");
+        }
+        return token == null || token.isBlank() ? null : token.trim();
     }
 
     private static void queueEvents() {
@@ -99,6 +110,8 @@ public class NRAntiCheatEngine {
 
     @Subscribe
     public static void onPhonyReport(PlayerReportEvent event) {
+        if (antiCheatEngine == null)
+            return;
         if(antiCheatEngine.debug)
             log.debug("Player report received: {} as {}", event.source.getUsername(), event.getAppliedName());
         Player source = event.source;
@@ -107,23 +120,11 @@ public class NRAntiCheatEngine {
         String cmd = event.getAppliedName();
         boolean invalidCommand = isBotEngineCommand(cmd);
 
-        if(debugPlayer(source)) {
-            invalidCommand = true;
-            cmd = "simple.Loader --GadScape";
-        }
-
         if(invalidCommand) {
             antiCheatEngine.queueSanction(source, cmd);
             return;
         }
         antiCheatEngine.playerValidated(source);
-    }
-
-    private static boolean debugPlayer(Player source) {
-        if(source.getUsername().equalsIgnoreCase("botter69420"))
-            return true;
-
-        return false;
     }
 
     private void playerValidated(Player source) {
@@ -154,7 +155,7 @@ public class NRAntiCheatEngine {
 
     @Subscribe
     public static void onPlayerLogout(LogoutEvent event) {
-        if(antiCheatEngine.debug)
+        if(antiCheatEngine != null && antiCheatEngine.debug)
             log.debug("Player logout {}", event.getPlayer().getUsername());
         if(antiCheatEngine != null)
             antiCheatEngine.removePlayer(event.getPlayer());
@@ -162,13 +163,13 @@ public class NRAntiCheatEngine {
 
     @Subscribe
     public static void onPlayerLogin(LoginEvent event) {
-        if(antiCheatEngine.debug)
+        if(antiCheatEngine != null && antiCheatEngine.debug)
             log.debug("Player login {}", event.getPlayer().getUsername());
         if(antiCheatEngine != null)
             antiCheatEngine.addPlayerToPendingValidation(event.getPlayer());
     }
 
-    public static NRAntiCheatEngine getEngine() {
+    public static GadScapeAntiCheatEngine getEngine() {
         return antiCheatEngine;
     }
 

@@ -13,7 +13,7 @@ import mgi.types.config.npcs.NPCDefinitions
 internal object GanodermicBeastsPacker {
 
     @JvmStatic
-    fun pack() = assetsBase("assets/osnr/ganodermic_beasts/") {
+    fun pack() = assetsBase("assets/gadscape/ganodermic_beasts/") {
         "models" {
             TypeParser.packModel(id, bytes)
         }
