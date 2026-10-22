@@ -128,8 +128,8 @@ final class LoginScreen implements KeyListener, MouseListener
 	private final Map<String, Long> headTimes = new HashMap<>();
 	private long lastHeadCheck;
 
-	/** The saved mute setting has been put into the game (done once, when the login screen first shows). */
-	private volatile boolean muteApplied;
+	/** When the login screen last checked that muted music is still off. */
+	private long lastMuteCheck;
 
 	private final List<float[]> embers = new ArrayList<>(); // x, y, vx, vy, life, size (screen pixels)
 	private final Random rnd = new Random();
@@ -205,12 +205,18 @@ final class LoginScreen implements KeyListener, MouseListener
 		{
 			return;
 		}
-		if (!muteApplied)
+		// muted stays muted: the game turns its music back up on every logout (it plays the login track at the
+		// in-game volume), so check a few times a second while the login screen shows
+		if (saved.isMuted())
 		{
-			muteApplied = true;
-			if (saved.isMuted())
+			long now = System.currentTimeMillis();
+			if (now - lastMuteCheck > 300)
 			{
-				setMusic(true);
+				lastMuteCheck = now;
+				if (client.getMusicVolume() > 0)
+				{
+					setMusic(true);
+				}
 			}
 		}
 		int cw = Math.max(1, client.getCanvasWidth()), ch = Math.max(1, client.getCanvasHeight());
