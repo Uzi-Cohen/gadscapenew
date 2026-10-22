@@ -1130,9 +1130,12 @@ public class NPC extends AbstractEntity {
             lastAnimation = 0;
         } else {
             if (!isValidAnimation(animation.getId())) {
-                NPCDefinitions def = getDefinitions();
-                log.info("NPC {} (\"{}\") can't play invalid animation {}",
-                        getId(), def == null ? null : def.getName(), animation.getId());
+                // debug, not info: some NPCs (the Gnome Stronghold troops) ask for these every tick
+                if (log.isDebugEnabled()) {
+                    NPCDefinitions def = getDefinitions();
+                    log.debug("NPC {} (\"{}\") can't play invalid animation {}",
+                            getId(), def == null ? null : def.getName(), animation.getId());
+                }
                 return;
             }
             this.animation = animation;
@@ -1173,9 +1176,9 @@ public class NPC extends AbstractEntity {
             return;
         }
         if (animation != null && !AnimationMap.isValidAnimation(id, animation.getId())) {
-            if (log.isWarnEnabled()) {
+            if (log.isDebugEnabled()) {
                 NPCDefinitions def = getDefinitions();
-                log.warn("Invalid unprioritized animation ID {} for NPC {} (\"{}\")",
+                log.debug("Invalid unprioritized animation ID {} for NPC {} (\"{}\")",
                         animation.getId(), id, def == null ? null : def.getName());
             }
             return;

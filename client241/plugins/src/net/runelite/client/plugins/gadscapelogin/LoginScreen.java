@@ -128,6 +128,9 @@ final class LoginScreen implements KeyListener, MouseListener
 	private final Map<String, Long> headTimes = new HashMap<>();
 	private long lastHeadCheck;
 
+	/** The saved mute setting has been put into the game (done once, when the login screen first shows). */
+	private volatile boolean muteApplied;
+
 	private final List<float[]> embers = new ArrayList<>(); // x, y, vx, vy, life, size (screen pixels)
 	private final Random rnd = new Random();
 	private long lastFrame;
@@ -201,6 +204,14 @@ final class LoginScreen implements KeyListener, MouseListener
 		if (!active())
 		{
 			return;
+		}
+		if (!muteApplied)
+		{
+			muteApplied = true;
+			if (saved.isMuted())
+			{
+				setMusic(true);
+			}
 		}
 		int cw = Math.max(1, client.getCanvasWidth()), ch = Math.max(1, client.getCanvasHeight());
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -328,6 +339,11 @@ final class LoginScreen implements KeyListener, MouseListener
 	private void paintPanel(Graphics2D g, long now)
 	{
 		boolean busy = attempting || client.getGameState() == GameState.LOGGING_IN;
+
+		// music on / off, top right
+		Rectangle mb = new Rectangle(W - 46, 10, 34, 34);
+		speaker(g, mb, saved.isMuted(), "mute".equals(hover));
+		building.add(new Hit("mute", mb));
 
 		// logo
 		if (shield != null)
@@ -664,6 +680,74 @@ final class LoginScreen implements KeyListener, MouseListener
 		g.setStroke(new BasicStroke(hover ? 1.6f : 1.1f));
 		g.draw(new RoundRectangle2D.Float(r.x, r.y, r.width, r.height, 6, 6));
 		g.setStroke(new BasicStroke(1f));
+	}
+
+	/** A round gold button with a speaker: sound waves when the music plays, a red cross when it's muted. */
+	private static void speaker(Graphics2D g, Rectangle r, boolean muted, boolean hover)
+	{
+		float cx = r.x + r.width / 2f, cy = r.y + r.height / 2f, rad = r.width / 2f;
+		g.setPaint(new RadialGradientPaint(new Point2D.Float(cx, cy - rad * 0.3f), rad,
+			new float[]{0f, 1f}, new Color[]{hover ? new Color(0x3A1A10) : new Color(0x2A0E0A), new Color(0x0E0505)}));
+		g.fill(new Ellipse2D.Float(r.x, r.y, r.width, r.height));
+		g.setStroke(new BasicStroke(1.6f));
+		g.setColor(hover ? GOLD_LIGHT : GOLD_DARK);
+		g.draw(new Ellipse2D.Float(r.x, r.y, r.width, r.height));
+		g.setColor(new Color(255, 230, 160, hover ? 70 : 35));
+		g.draw(new Ellipse2D.Float(r.x + 2.5f, r.y + 2.5f, r.width - 5, r.height - 5));
+
+		// the speaker: a small box and its cone
+		float u = r.width / 34f;
+		Path2D.Float sp = new Path2D.Float();
+		sp.moveTo(cx - 9 * u, cy - 3.5f * u);
+		sp.lineTo(cx - 5 * u, cy - 3.5f * u);
+		sp.lineTo(cx + 1 * u, cy - 9 * u);
+		sp.lineTo(cx + 1 * u, cy + 9 * u);
+		sp.lineTo(cx - 5 * u, cy + 3.5f * u);
+		sp.lineTo(cx - 9 * u, cy + 3.5f * u);
+		sp.closePath();
+		g.setPaint(new GradientPaint(0, cy - 9 * u, hover ? new Color(0xFFF0B0) : GOLD_LIGHT, 0, cy + 9 * u, new Color(0xB07A22)));
+		g.fill(sp);
+		g.setStroke(new BasicStroke(2.1f * u, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+		if (muted)
+		{
+			g.setColor(new Color(0xD04A3A));
+			g.drawLine(Math.round(cx + 4 * u), Math.round(cy - 4.5f * u), Math.round(cx + 11 * u), Math.round(cy + 4.5f * u));
+			g.drawLine(Math.round(cx + 4 * u), Math.round(cy + 4.5f * u), Math.round(cx + 11 * u), Math.round(cy - 4.5f * u));
+		}
+		else
+		{
+			g.setColor(hover ? GOLD_LIGHT : GOLD);
+			g.draw(new java.awt.geom.Arc2D.Float(cx - 3 * u, cy - 5 * u, 10 * u, 10 * u, -50, 100, java.awt.geom.Arc2D.OPEN));
+			g.draw(new java.awt.geom.Arc2D.Float(cx - 6 * u, cy - 9 * u, 18 * u, 18 * u, -50, 100, java.awt.geom.Arc2D.OPEN));
+		}
+		g.setStroke(new BasicStroke(1f));
+	}
+
+	/** Mutes the game's music (remembering its volume) or puts it back, on the game's own thread. */
+	private void setMusic(boolean mute)
+	{
+		Runnable r = () ->
+		{
+			int vol = client.getMusicVolume();
+			if (mute)
+			{
+				saved.setMuted(true, vol);
+				client.setMusicVolume(0);
+			}
+			else
+			{
+				saved.setMuted(false, 0);
+				client.setMusicVolume(vol > 0 ? vol : saved.getMusicVolume());
+			}
+		};
+		if (clientThread != null)
+		{
+			clientThread.invokeLater(r);
+		}
+		else
+		{
+			r.run();
+		}
 	}
 
 	private static void arrow(Graphics2D g, Rectangle r, int dir, boolean hover)
@@ -1056,6 +1140,11 @@ final class LoginScreen implements KeyListener, MouseListener
 
 	private void click(String id)
 	{
+		if (id.equals("mute"))
+		{
+			setMusic(!saved.isMuted());
+			return;
+		}
 		if (message != null)
 		{
 			if (id.equals("close"))

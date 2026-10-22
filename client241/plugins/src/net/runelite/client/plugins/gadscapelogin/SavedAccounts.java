@@ -39,6 +39,9 @@ final class SavedAccounts
 	private final List<Account> accounts = new ArrayList<>();
 	private boolean remember = true;
 	private String lastUsername = "";
+	/** Music muted with the login screen's speaker button; the volume to go back to when it's unmuted (0-255). */
+	private boolean muted;
+	private int musicVolume = 255;
 
 	SavedAccounts(File dir)
 	{
@@ -54,6 +57,27 @@ final class SavedAccounts
 	synchronized boolean isRemember()
 	{
 		return remember;
+	}
+
+	synchronized boolean isMuted()
+	{
+		return muted;
+	}
+
+	synchronized int getMusicVolume()
+	{
+		return musicVolume;
+	}
+
+	/** Mutes or unmutes; [volume] is the volume to restore later (only kept when it's above 0). */
+	synchronized void setMuted(boolean value, int volume)
+	{
+		muted = value;
+		if (volume > 0)
+		{
+			musicVolume = Math.min(255, volume);
+		}
+		save();
 	}
 
 	synchronized String getLastUsername()
@@ -109,6 +133,15 @@ final class SavedAccounts
 			}
 			remember = !"false".equals(p.getProperty("remember"));
 			lastUsername = p.getProperty("last", "");
+			muted = "true".equals(p.getProperty("muted"));
+			try
+			{
+				musicVolume = Math.max(1, Math.min(255, Integer.parseInt(p.getProperty("musicVolume", "255"))));
+			}
+			catch (NumberFormatException e)
+			{
+				musicVolume = 255;
+			}
 			byte[] salt = Base64.getDecoder().decode(p.getProperty("salt", ""));
 			if (salt.length == 0)
 			{
@@ -147,6 +180,8 @@ final class SavedAccounts
 			p.setProperty("salt", Base64.getEncoder().encodeToString(salt));
 			p.setProperty("remember", Boolean.toString(remember));
 			p.setProperty("last", lastUsername == null ? "" : lastUsername);
+			p.setProperty("muted", Boolean.toString(muted));
+			p.setProperty("musicVolume", Integer.toString(musicVolume));
 			for (int i = 0; i < accounts.size(); i++)
 			{
 				p.setProperty("account." + i + ".user", accounts.get(i).username);
