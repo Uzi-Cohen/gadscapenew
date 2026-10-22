@@ -1,0 +1,20 @@
+# Commands GadScape's 211 scripts (or the vanilla 211 procs they call) use that RuneStar's Command.Basic table lacks.
+# Same columns as cs2-commands-211.tsv. Stack effects checked against the 241 client's handlers (audit/effects3.json:
+# the int/object stack pushes and pops each handler performs); types are left "int"/"string" where unknown.
+# opcode	name	args	defs	dot
+1928	_1928	I:int	-	1
+1130	_1130	S:string	-	1
+1131	_1131	I:int,I:int	-	1
+1132	_1132	I:int,S:string	-	1
+1707	_1707	-	I:int	0
+3170	_3170	-	I:int	0
+3177	_3177	-	-	0
+3178	_3178	S:string	-	0
+3179	_3179	-	-	0
+3180	_3180	S:string	-	0
+3189	_3189	I:int	-	0
+3500	_3500	I:int	I:int	0
+4122	_4122	S:string	S:string	0
+4123	text_gender3	S:string,S:string,S:string	S:string	0
+4213	_4213	I:int	I:int	0
+6809	_6809	I:int	S:string	0

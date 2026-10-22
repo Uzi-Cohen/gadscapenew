@@ -1,0 +1,7 @@
+# USER loc definitions absent from vanilla 211 and byte-identical to rev 225's (OpenRS2 1943): Jagex objects
+# GadScape's DataMigration imported, not GadScape customs. Ranges of loc ids.
+47337-47566
+47569-49999
+50227-54999
+55001-55069
+55072-55426

@@ -1,0 +1,18 @@
+# Vanilla procs whose build-241 signature differs from build 211 and that GadScape's own scripts or interfaces call.
+# Calls and hooks from custom content are redirected to a small adapter script: it takes the 211 arguments, pushes
+# what the 241 proc takes, calls it and drops the int results the 211 callers do not expect.
+#   argmap "-": the adapter passes the 211 int args in order, then extraInts (ScriptTrailer.adapter; byte-identical to
+#               the adapters of the hand-built cacheU).
+#   argmap "INTS|OBJS": one entry per 241 argument: iN / oN = the adapter's (the 211 caller's) int / object arg N, a
+#               number = that int constant (for an argument 241 inserted in the middle).
+# The step checks every row against the caches (211 args in USER, 241 args in the output) and fails on a stale row.
+# A signature change with no row here makes the converter port the 211 version of the proc instead (with a warning).
+# adapter "auto": the id is allocated by ui-relocate at the top of the reserved script range (47000-47999, highest free
+# id first, rows in target order) through the id map, and listed in idmap.json under _new as "adapter:TARGET". (The
+# hand-built cacheU used 46000/46001, outside the reserved range and unrecorded.)
+#
+# target	adapter	args211(int,obj)	args241(int,obj,long)	extraInts	dropIntReturns	argmap	note
+98	auto	11,0	12,0,0	1	1	-	create_graphic: 241 adds the tiling flag as the last arg (211 always called cc_settiling(1)) and returns the next child id (cs_2746: iload1 iconst1 add return)
+2064	auto	2,1	3,1,0	-	0	i0,9,i1|o0	2064: 241 turned the 211 constant 9 (instruction 9, "iconst 9") into a new int arg 1 and shifted the old arg 1 to arg 2; the rest only renumbers locals and remaps 109:54 -> 109:60
+6156	auto	8,0	9,0,0	1	0	-	scrollbar_horizontal: 241 adds a flag that gates the onscrollwheel hook (211 always set it: pass 1)
+4218	auto	10,1	10,1,0	-	1	i0,i1,i2,i3,i4,i5,i6,i7,i8,i9|o0	4218: same arguments, but 241 rewrote it (17 instructions, gosub 7137) and it now returns an int the 211 version did not; GadScape script 32000 calls it as a statement, so the adapter drops the result

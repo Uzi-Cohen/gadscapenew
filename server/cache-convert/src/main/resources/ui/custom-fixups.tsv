@@ -1,0 +1,9 @@
+# Known wrong interface ids inside GadScape's own content (audit findings, PRE_EXISTING in the 211 cache). Applied to
+# component references (typed script constants; IF3 hook int arguments) before any other component rewrite, only when
+# the target component exists. Disable with --ui.fixups=false.
+#
+# where	ids	fromInterface	toInterface	finding	note
+script	10034-10039,10042,10047,10048	710	1710	IF-WOF-1710-04	Wheel of Fortune scripts address vanilla 710 (6 components) instead of their own 1710
+script	10599,10607	707	1707	IF-TOURN-1707-05	Tournament preset scripts address 707 (chat channel tab) instead of 1707
+interface	1999	481	1999	IF-DUEL-1999-2000-06	Stake screen hook args still name the old duel interface 481
+interface	2000	482	2000	IF-DUEL-1999-2000-06	Duel settings hook args still name the old duel interface 482

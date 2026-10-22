@@ -1,0 +1,279 @@
+# BOSS-X1 regression list: 277 NPCs whose stand/walk seqs were broken in cacheU (npc id, name, stand, walk).
+# Their stand/walk must resolve in the output. Source: audit/bosses/npcs_broken_standwalk.json
+497	Callisto cub	10011	10010
+4189		9537	9536
+5536	Vet'ion Jr.	9965	9967
+5537	Vet'ion Jr.	9965	9967
+5558	Callisto cub	10011	10010
+5559	Vet'ion Jr.	9965	9967
+5560	Vet'ion Jr.	9965	9967
+6609	Callisto	10011	10009
+6611	Vet'ion	9965	9967
+6612	Vet'ion	9966	9968
+10680	Zebak	9618	-1
+11652	Tumeken's Guardian	9655	9651
+11653	Elidinis' Guardian	9656	9652
+11654	Apmeken	9537	9536
+11655	Apmeken	9535	9536
+11656	Apmeken	9535	9536
+11657	Crondis	9534	9533
+11659	Crondis	9532	9533
+11660	Crondis	9532	9533
+11661	Scabaras	9531	9530
+11662	Scabaras	9529	9530
+11663	Scabaras	9529	9530
+11686	Het	9540	9539
+11687	Het	9538	9539
+11688	Het	9538	9539
+11697	Scarab	9586	9584
+11709	Baboon Brawler	9741	9739
+11710	Baboon Thrower	9741	9739
+11711	Baboon Mage	9741	9739
+11712	Baboon Brawler	9741	9739
+11713	Baboon Thrower	9741	9739
+11714	Baboon Mage	9741	9739
+11715	Baboon Shaman	9741	9739
+11716	Volatile Baboon	9741	9739
+11717	Cursed Baboon	9741	9739
+11718	Baboon Thrall	9741	9739
+11719	Kephri	9572	9572
+11720	Kephri	9580	9580
+11721	Kephri	9572	9572
+11722	Kephri	9583	9583
+11723	Scarab Swarm	9606	9606
+11724	Soldier Scarab	9586	9584
+11725	Spitting Scarab	9586	9584
+11726	Arcane Scarab	9594	9592
+11727	Agile Scarab	9592	9592
+11730	Zebak	9618	-1
+11731	Zebak's Tail	9619	-1
+11732	Zebak	9618	-1
+11733	Zebak	9636	-1
+11734	Zebak's Tail	9637	-1
+11746	Elidinis' Warden	9665	9649
+11747	Tumeken's Warden	9665	9649
+11748	Elidinis' Warden	9665	9649
+11749	Tumeken's Warden	9665	9649
+11753	Elidinis' Warden	9653	9649
+11754	Elidinis' Warden	9653	9649
+11755	Elidinis' Warden	9671	9671
+11756	Tumeken's Warden	9653	9649
+11757	Tumeken's Warden	9653	9649
+11758	Tumeken's Warden	9671	9671
+11759	Elidinis' Warden	9654	9649
+11760	Tumeken's Warden	9654	9649
+11761	Elidinis' Warden	9657	9657
+11762	Tumeken's Warden	9657	9657
+11763	Elidinis' Warden	9683	9683
+11764	Tumeken's Warden	9683	9683
+11765		9696	9696
+11766		9696	9696
+11767	<col=00ffff>Phantom</col>	9716	9716
+11768	<col=00ffff>Phantom</col>	9717	9717
+11770	<col=00ffff>Core</col>	9704	-1
+11771	<col=00ffff>Core</col>	9704	-1
+11774	Zebak's Phantom	9618	-1
+11775	Ba-Ba's Phantom	9741	9737
+11776	Kephri's Phantom	9572	9572
+11777	Akkha's Phantom	9760	9764
+11778	Ba-Ba	9741	9737
+11779	Ba-Ba	9741	9737
+11780	Ba-Ba	9750	9737
+11781	Baboon	9741	9739
+11789	Akkha	9760	9764
+11790	Akkha	9760	9764
+11791	Akkha	9760	9764
+11792	Akkha	9760	9764
+11793	Akkha	9760	9764
+11794	Akkha	9760	9764
+11795	Akkha	9760	9764
+11796	Akkha	9760	9764
+11797	Akkha's Shadow	9760	9764
+11798	Akkha's Shadow	9760	9764
+11799	Akkha's Shadow	9760	9764
+11809	Apmeken	9535	9536
+11810	Crondis	9532	9533
+11811	Het	9538	9539
+11812	Tumeken's Guardian	9655	9651
+11813	Elidinis' Guardian	9656	9652
+11818		9535	9536
+11819		9535	9536
+11820		9534	9533
+11821		9532	9533
+11822		9532	9533
+11823		9531	9530
+11824		9529	9530
+11825		9529	9530
+11826		9540	9539
+11827		9538	9539
+11828		9538	9539
+11837		9535	9536
+11838		9532	9533
+11839		9538	9539
+11840	Akkhito	9760	9421
+11841	Babi	9741	9739
+11842	Kephriti	9572	9419
+11844	Tumeken's Damaged Guardian	9420	9420
+11845	Elidinis' Damaged Guardian	9420	9420
+11846	Akkhito	9760	9421
+11847	Babi	9741	9739
+11848	Kephriti	9572	9419
+11850	Tumeken's Damaged Guardian	9420	9420
+11851	Elidinis' Damaged Guardian	9420	9420
+11992	Artio	10011	10009
+11993	Calvar'ion	9965	9967
+11994	Calvar'ion	9966	9968
+11995	Calvar'ion	9965	9967
+11996		9966	9968
+12002	Vet'ion	9965	9967
+12005	Muphin	9913	9915
+12006	Muphin	9913	9915
+12007	Muphin	9913	9915
+12014	Muphin	9913	9915
+12015	Muphin	9913	9915
+12016	Muphin	9913	9915
+12063	Strange Creature	9913	9914
+12073	Strange Creature	9913	9914
+12074	Strange Creature	9913	9914
+12075	Strange Creature	9913	9914
+12076	Strange Creature	9913	9914
+12077	Phantom Muspah	9913	9914
+12078	Phantom Muspah	9913	9914
+12079	Phantom Muspah	9913	9914
+12080	Phantom Muspah	9913	9914
+12081	Strange Creature	9932	-1
+12082	Phantom Muspah	9932	-1
+12106		9966	9968
+12125	Kephri	9572	9572
+12126	Akkha	9760	9764
+12127	Ba-Ba	9741	9737
+12128	Zebak	9618	-1
+12129	Zebak's Tail	9619	-1
+12130	Tumeken's Warden	9665	9649
+12131	Elidinis' Warden	9653	9649
+12153	Wisp	10230	10233
+12154	Butch	10337	10339
+12156	Lil'viathan	10277	10292
+12157	Wisp	10230	10233
+12158	Butch	10337	10339
+12160	Lil'viathan	10277	10292
+12166	Duke Sucellus	10174	-1
+12167	Duke Sucellus	10174	-1
+12191	Duke Sucellus	10175	-1
+12192	Duke Sucellus	10183	-1
+12193	Duke Sucellus	10174	-1
+12194	Duke Sucellus	10174	-1
+12195	Duke Sucellus	10175	-1
+12196	Duke Sucellus	10183	-1
+12202		10174	-1
+12203	Odd Figure	10231	10231
+12204	The Whisperer	10230	10232
+12205	The Whisperer	10230	10232
+12206	The Whisperer	10230	10232
+12207	The Whisperer	10230	10232
+12208	<col=00ffff>Tentacle</col>	10264	-1
+12213	Odd Figure	10231	10231
+12214	The Leviathan	10276	10276
+12215	The Leviathan	10276	10276
+12216	Tail	10298	-1
+12217	Tail	10299	-1
+12218	Tail	10300	-1
+12219	The Leviathan	10276	10276
+12220	Abyssal pathfinder	10295	10295
+12223	Vardorvis	10337	10338
+12224	Vardorvis	10337	10338
+12225	Large Tendril	10363	-1
+12226	Vardorvis' Head	10348	-1
+12228	Vardorvis	10337	10338
+12229		10334	-1
+12356	Cerebral pathfinder	10295	10295
+12357	Cerebral pathbreaker	10295	10295
+12424	Strangled	10337	10338
+12425	Vardorvis	10337	10338
+12426	Vardorvis	10337	10338
+12427		10337	10338
+12436	Tail	10298	-1
+12437	Tail	10299	-1
+12438	Tail	10300	-1
+12520	<col=00ffff>Ritual circle (green)</col>	10549	-1
+12521	<col=00ffff>Ritual circle (yellow)</col>	10549	-1
+12522	<col=00ffff>Ritual circle (blue)</col>	10549	-1
+12523	<col=00ffff>Ritual circle (red)</col>	10549	-1
+12524	<col=00ffff>Ritual circle (green)</col>	10549	-1
+12525	<col=00ffff>Ritual circle (yellow)</col>	10549	-1
+12526	<col=00ffff>Ritual circle (blue)</col>	10549	-1
+12527	<col=00ffff>Ritual circle (red)</col>	10549	-1
+12528	<col=00ffff>Ritual circle (green)</col>	10549	-1
+12529	<col=00ffff>Ritual circle (yellow)</col>	10549	-1
+12530	<col=00ffff>Ritual circle (blue)</col>	10549	-1
+12531	<col=00ffff>Ritual circle (red)</col>	10549	-1
+12532	<col=00ffff>Ritual circle (green)</col>	10549	-1
+12533	<col=00ffff>Ritual circle (yellow)</col>	10549	-1
+12534	<col=00ffff>Ritual circle (blue)</col>	10549	-1
+12535	<col=00ffff>Ritual circle (red)</col>	10549	-1
+12543	Entling	10537	10538
+12544	Pruned Entling	10537	10538
+12590	Muspah	9913	9914
+12591	The Leviathan	10276	10276
+12767	Smol Heredit	10874	10880
+12817	Javelin Colossus	10889	10879
+12818	Manticore	10863	10864
+12819	Shockwave Colossus	10902	10881
+12821	Sol Heredit	10874	10878
+12827	Sol Heredit	10875	10875
+12857	Smol Heredit	10874	10880
+12866		10995	10991
+12867		10995	10991
+12868		10995	10991
+12878		10999	10991
+12879	Sulphur Nagua	10999	10991
+12958	Capybara	10961	10964
+12959	Capybara	10961	10964
+12960	Capybara Pup	10961	10964
+12961	Capybara	10961	10964
+12962	Capybara	10961	10964
+12963	Capybara pup	10961	10964
+12964	Capybara	10963	10963
+12965	Capybara	10963	10963
+12966	Capybara	10963	10963
+12967	Capybara	10963	10963
+12968	Capybara	10963	10963
+12969	Capybara	10963	10963
+12970	Capybara	10963	10963
+12971	Capybara	10963	10963
+13016		10999	-1
+13017		10999	-1
+13033	Sulphur Nagua	10999	10991
+13656	Vardorvis	10337	10338
+13685	Amoxliatl	11528	11529
+13686	Amoxliatl	11528	11529
+13687	Amoxliatl	11528	11529
+13689	Amoxliatl	11528	11529
+13728	Frost Nagua	10999	10991
+13787	Frost Nagua	10999	10991
+13788	Frost Nagua	10999	10991
+13957	Capybara	10961	10964
+14009	The Hueycoatl	11668	-1
+14010	The Hueycoatl	11668	-1
+14011	The Hueycoatl	11672	-1
+14012	The Hueycoatl	11680	-1
+14013	The Hueycoatl	11668	-1
+14014	Hueycoatl tail	11722	-1
+14015	Hueycoatl tail (broken)	11722	-1
+14033	Huberte	11732	11733
+14034	Moxi	11528	11529
+14045	Huberte	11732	11733
+14046	Moxi	11528	11529
+14354		10995	10991
+14355	Eyatlalli	10995	10991
+14533	Capybara	10961	10964
+14645	Entling	10537	10538
+15548	Scurrius	10687	10690
+15549	Phantom Muspah	9913	9914
+15551	Tumeken's Warden	9653	9649
+15552	Elidinis' Warden	9653	9649
+15554	Sol Heredit	10874	10878
+15571		10230	10233
+15695	Scurrius	10687	10690
+15696	Sol Heredit	10874	10878
+15698	Elidinis' Warden	9653	9649

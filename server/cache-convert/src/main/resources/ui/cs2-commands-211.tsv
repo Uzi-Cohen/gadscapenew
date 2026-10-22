@@ -1,0 +1,765 @@
+# opcode	name	args	defs	dot   (RuneStar cs2 Command.Basic, 211-era; args bottom-to-top, S:/I: = string/int stack : type)
+100	cc_create	I:component,I:int,I:int	-	1
+101	cc_delete	-	-	1
+102	cc_deleteall	I:component	-	0
+103	_103	I:newvar,I:int,I:int	-	0
+104	_104	I:newvar	-	0
+200	cc_find	I:component,I:int	I:int	1
+201	if_find	I:component	I:boolean	1
+202	_202	I:newvar	I:int	0
+203	_203	I:newvar	I:int	0
+1000	cc_setposition	I:int,I:int,I:int,I:int	-	1
+1001	cc_setsize	I:int,I:int,I:int,I:int	-	1
+1003	cc_sethide	I:boolean	-	1
+1005	cc_setnoclickthrough	I:boolean	-	1
+1006	cc_setnoscrollthrough	I:boolean	-	1
+1100	cc_setscrollpos	I:int,I:int	-	1
+1101	cc_setcolour	I:int	-	1
+1102	cc_setfill	I:boolean	-	1
+1103	cc_settrans	I:int	-	1
+1104	cc_setlinewid	I:int	-	1
+1105	cc_setgraphic	I:graphic	-	1
+1106	cc_set2dangle	I:int	-	1
+1107	cc_settiling	I:boolean	-	1
+1108	cc_setmodel	I:model	-	1
+1109	cc_setmodelangle	I:int,I:int,I:int,I:int,I:int,I:int	-	1
+1110	cc_setmodelanim	I:seq	-	1
+1111	cc_setmodelorthog	I:boolean	-	1
+1112	cc_settext	S:string	-	1
+1113	cc_settextfont	I:fontmetrics	-	1
+1114	cc_settextalign	I:int,I:int,I:int	-	1
+1115	cc_settextshadow	I:boolean	-	1
+1116	cc_setoutline	I:int	-	1
+1117	cc_setgraphicshadow	I:int	-	1
+1118	cc_setvflip	I:boolean	-	1
+1119	cc_sethflip	I:boolean	-	1
+1120	cc_setscrollsize	I:int,I:int	-	1
+1121	cc_resume_pausebutton	-	-	1
+1122	_1122	I:graphic	-	1
+1123	cc_setfillcolour	I:int	-	1
+1124	_1124	I:int	-	1
+1125	_1125	I:int	-	1
+1126	cc_setlinedirection	I:boolean	-	1
+1127	cc_setmodeltransparent	I:boolean	-	1
+1128	_1128	I:int,I:int	-	0
+1200	cc_setobject	I:obj,I:int	-	1
+1201	cc_setnpchead	I:npc	-	1
+1202	cc_setplayerhead_self	-	-	1
+1205	cc_setobject_nonum	I:obj,I:int	-	1
+1212	cc_setobject_always_num	I:obj,I:int	-	1
+1300	cc_setop	I:int,S:string	-	1
+1301	cc_setdraggable	I:component,I:int	-	1
+1302	cc_setdraggablebehavior	I:int	-	1
+1303	cc_setdragdeadzone	I:int	-	1
+1304	cc_setdragdeadtime	I:int	-	1
+1305	cc_setopbase	S:string	-	1
+1306	cc_settargetverb	S:string	-	1
+1307	cc_clearops	-	-	1
+1308	_1308	I:boolean	-	1
+1309	_1309	I:int	-	1
+1350	cc_setopkey	I:int,I:int,I:int,I:int,I:int,I:int,I:int,I:int,I:int,I:int,I:int	-	1
+1351	cc_setoptkey	I:int,I:int	-	1
+1352	cc_setopkeyrate	I:int,I:int,I:int	-	1
+1353	cc_setoptkeyrate	I:int,I:int	-	1
+1354	cc_setopkeyignoreheld	I:int	-	1
+1355	cc_setoptkeyignoreheld	-	-	1
+1500	cc_getx	-	I:int	1
+1501	cc_gety	-	I:int	1
+1502	cc_getwidth	-	I:int	1
+1503	cc_getheight	-	I:int	1
+1504	cc_gethide	-	I:boolean	1
+1505	cc_getlayer	-	I:component	1
+1600	cc_getscrollx	-	I:int	1
+1601	cc_getscrolly	-	I:int	1
+1602	cc_gettext	-	S:string	1
+1603	cc_getscrollwidth	-	I:int	1
+1604	cc_getscrollheight	-	I:int	1
+1605	cc_getmodelzoom	-	I:int	1
+1606	cc_getmodelangle_x	-	I:int	1
+1607	cc_getmodelangle_z	-	I:int	1
+1608	cc_getmodelangle_y	-	I:int	1
+1609	cc_gettrans	-	I:int	1
+1610	_1610	-	I:int	1
+1611	cc_getcolour	-	I:int	1
+1612	cc_getfillcolour	-	I:int	1
+1613	_1613	-	I:int	1
+1614	cc_getmodeltransparent	-	I:boolean	1
+1615	_1615	-	I:int	0
+1616	_1616	-	I:int	0
+1700	cc_getinvobject	-	I:obj	1
+1701	cc_getinvcount	-	I:int	1
+1702	cc_getid	-	I:int	1
+1800	cc_gettargetmask	-	I:int	1
+1801	cc_getop	I:int	S:string	1
+1802	cc_getopbase	-	S:string	1
+1927	cc_callonresize	I:boolean	-	0
+2000	if_setposition	I:int,I:int,I:int,I:int,I:component	-	0
+2001	if_setsize	I:int,I:int,I:int,I:int,I:component	-	0
+2003	if_sethide	I:boolean,I:component	-	0
+2005	if_setnoclickthrough	I:boolean,I:component	-	0
+2006	if_setnoscrollthrough	I:boolean,I:component	-	0
+2100	if_setscrollpos	I:int,I:int,I:component	-	0
+2101	if_setcolour	I:int,I:component	-	0
+2102	if_setfill	I:boolean,I:component	-	0
+2103	if_settrans	I:int,I:component	-	0
+2104	if_setlinewid	I:int,I:component	-	0
+2105	if_setgraphic	I:graphic,I:component	-	0
+2106	if_set2dangle	I:int,I:component	-	0
+2107	if_settiling	I:boolean,I:component	-	0
+2108	if_setmodel	I:model,I:component	-	0
+2109	if_setmodelangle	I:int,I:int,I:int,I:int,I:int,I:int,I:component	-	0
+2110	if_setmodelanim	I:seq,I:component	-	0
+2111	if_setmodelorthog	I:boolean,I:component	-	0
+2112	if_settext	S:string,I:component	-	0
+2113	if_settextfont	I:fontmetrics,I:component	-	0
+2114	if_settextalign	I:int,I:int,I:int,I:component	-	0
+2115	if_settextshadow	I:boolean,I:component	-	0
+2116	if_setoutline	I:int,I:component	-	0
+2117	if_setgraphicshadow	I:int,I:component	-	0
+2118	if_setvflip	I:boolean,I:component	-	0
+2119	if_sethflip	I:boolean,I:component	-	0
+2120	if_setscrollsize	I:int,I:int,I:component	-	0
+2121	if_resume_pausebutton	I:component	-	0
+2122	_2122	I:graphic,I:component	-	0
+2123	if_setfillcolour	I:int,I:component	-	0
+2124	_2124	I:int,I:component	-	0
+2125	_2125	I:int,I:component	-	0
+2126	if_setlinedirection	I:boolean,I:component	-	0
+2127	if_setmodeltransparent	I:boolean,I:component	-	0
+2128	_2128	I:int,I:int,I:component	-	0
+2200	if_setobject	I:obj,I:int,I:component	-	0
+2201	if_setnpchead	I:npc,I:component	-	0
+2202	if_setplayerhead_self	I:component	-	0
+2205	if_setobject_nonum	I:obj,I:int,I:component	-	0
+2212	if_setobject_always_num	I:obj,I:int,I:component	-	0
+2300	if_setop	I:int,S:string,I:component	-	0
+2301	if_setdraggable	I:component,I:int,I:component	-	0
+2302	if_setdraggablebehavior	I:int,I:component	-	0
+2303	if_setdragdeadzone	I:int,I:component	-	0
+2304	if_setdragdeadtime	I:int,I:component	-	0
+2305	if_setopbase	S:string,I:component	-	0
+2306	if_settargetverb	S:string,I:component	-	0
+2307	if_clearops	I:component	-	0
+2308	_2308	I:boolean,I:component	-	0
+2309	_2309	I:int,I:component	-	0
+2350	if_setopkey	I:int,I:int,I:int,I:component	-	0
+2351	if_setoptkey	I:int,I:int,I:component	-	0
+2352	if_setopkeyrate	I:int,I:int,I:int,I:component	-	0
+2353	if_setoptkeyrate	I:int,I:int,I:component	-	0
+2354	if_setopkeyignoreheld	I:int,I:component	-	0
+2355	if_setoptkeyignoreheld	I:component	-	0
+2500	if_getx	I:component	I:int	0
+2501	if_gety	I:component	I:int	0
+2502	if_getwidth	I:component	I:int	0
+2503	if_getheight	I:component	I:int	0
+2504	if_gethide	I:component	I:boolean	0
+2505	if_getlayer	I:component	I:component	0
+2600	if_getscrollx	I:component	I:int	0
+2601	if_getscrolly	I:component	I:int	0
+2602	if_gettext	I:component	S:string	0
+2603	if_getscrollwidth	I:component	I:int	0
+2604	if_getscrollheight	I:component	I:int	0
+2605	if_getmodelzoom	I:component	I:int	0
+2606	if_getmodelangle_x	I:component	I:int	0
+2607	if_getmodelangle_z	I:component	I:int	0
+2608	if_getmodelangle_y	I:component	I:int	0
+2609	if_gettrans	I:component	I:int	0
+2610	_2610	I:component	I:int	0
+2611	if_getcolour	I:component	I:int	0
+2612	if_getfillcolour	I:component	I:int	0
+2613	_2613	I:component	I:int	0
+2614	if_getmodeltransparent	I:component	I:boolean	0
+2615	_2615	I:component	I:int	0
+2616	_2616	I:component	I:int	0
+2700	if_getinvobject	I:component	I:obj	0
+2701	if_getinvcount	I:component	I:int	0
+2702	if_hassub	I:component	I:boolean	0
+2706	if_gettop	-	I:interface	0
+2800	if_gettargetmask	I:component	I:int	0
+2801	if_getop	I:int,I:component	S:string	0
+2802	if_getopbase	I:component	S:string	0
+2927	if_callonresize	I:component	-	1
+2928	if_triggerop	I:component,I:int,I:int	-	0
+3100	mes	S:string	-	0
+3101	anim	I:seq,I:int	-	0
+3103	if_close	-	-	0
+3104	resume_countdialog	S:string	-	0
+3105	resume_namedialog	S:string	-	0
+3106	resume_stringdialog	S:string	-	0
+3107	opplayer	I:int,S:string	-	0
+3108	if_dragpickup	I:component,I:int,I:int	-	0
+3109	cc_dragpickup	I:int,I:int	-	1
+3110	setmousecam	I:boolean	-	0
+3111	getremoveroofs	-	I:boolean	0
+3112	setremoveroofs	I:boolean	-	0
+3113	openurl	S:string,I:boolean	-	0
+3115	resume_objdialog	I:obj	-	0
+3116	bug_report	I:int,S:string,S:string	-	0
+3117	setshiftclickdrop	I:boolean	-	0
+3118	setshowmouseovertext	I:boolean	-	0
+3119	renderself	I:boolean	-	0
+3120	_3120	I:boolean	-	0
+3121	_3121	I:boolean	-	0
+3122	_3122	I:boolean	-	0
+3123	_3123	I:boolean	-	0
+3124	_3124	-	-	0
+3125	setshowmousecross	I:boolean	-	0
+3126	setshowloadingmessages	I:boolean	-	0
+3127	settaptodrop	I:boolean	-	0
+3128	gettaptodrop	-	I:boolean	0
+3129	_3129	I:int,I:int	-	0
+3130	_3130	I:int,I:int	-	0
+3131	_3131	I:int	-	0
+3132	getcanvassize	-	I:int,I:int	0
+3133	mobile_setfps	I:int	-	0
+3134	mobile_openstore	-	-	0
+3135	mobile_openstorecategory	I:int,I:boolean	-	0
+3136	_3136	I:boolean	-	0
+3137	_3137	I:boolean	-	0
+3138	_3138	-	-	0
+3139	_3139	-	-	0
+3140	_3140	-	-	1
+3141	sethideusername	I:boolean	-	0
+3142	gethideusername	-	I:boolean	0
+3143	setrememberusername	I:boolean	-	0
+3144	getrememberusername	-	I:boolean	0
+3145	show_ios_review	-	-	0
+3157	_3157	I:int,I:int	-	0
+3181	setbrightness	I:int	-	0
+3182	getbrightness	-	I:int	0
+3183	setantidrag	I:boolean	-	0
+3184	_3184	I:int	-	0
+3200	sound_synth	I:synth,I:int,I:int	-	0
+3201	sound_song	I:int	-	0
+3202	sound_jingle	I:int,I:int	-	0
+3203	setvolumemusic	I:int	-	0
+3204	getvolumemusic	-	I:int	0
+3205	setvolumesounds	I:int	-	0
+3206	getvolumesounds	-	I:int	0
+3207	setvolumeareasounds	I:int	-	0
+3208	getvolumeareasounds	-	I:int	0
+3209	_3209	I:int,I:int	-	0
+3210	_3210	I:int	I:int	0
+3300	clientclock	-	I:int	0
+3301	inv_getobj	I:inv,I:int	I:obj	0
+3302	inv_getnum	I:inv,I:int	I:int	0
+3303	inv_total	I:inv,I:obj	I:int	0
+3304	inv_size	I:inv	I:int	0
+3305	stat	I:stat	I:int	0
+3306	stat_base	I:stat	I:int	0
+3307	stat_xp	I:stat	I:int	0
+3308	coord	-	I:coord	0
+3309	coordx	I:coord	I:int	0
+3310	coordy	I:coord	I:int	0
+3311	coordz	I:coord	I:int	0
+3312	map_members	-	I:int	0
+3313	invother_getobj	I:inv,I:int	I:obj	0
+3314	invother_getnum	I:inv,I:int	I:int	0
+3315	invother_total	I:inv,I:obj	I:int	0
+3316	staffmodlevel	-	I:int	0
+3317	reboottimer	-	I:int	0
+3318	map_world	-	I:int	0
+3321	runenergy_visible	-	I:int	0
+3322	runweight_visible	-	I:int	0
+3323	playermod	-	I:boolean	0
+3324	worldflags	-	I:int	0
+3325	movecoord	I:coord,I:int,I:int,I:int	I:coord	0
+3326	mouse_getx	-	I:int	0
+3327	mouse_gety	-	I:int	0
+3330	_3330	-	I:coord	0
+3400	enum_string	I:enum,I:int	S:string	0
+3411	enum_getoutputcount	I:enum	I:int	0
+3600	friend_count	-	I:int	0
+3601	friend_getname	I:int	S:string,S:string	0
+3602	friend_getworld	I:int	I:int	0
+3603	friend_getrank	I:int	I:int	0
+3604	friend_setrank	S:string,I:int	-	0
+3605	friend_add	S:string	-	0
+3606	friend_del	S:string	-	0
+3607	ignore_add	S:string	-	0
+3608	ignore_del	S:string	-	0
+3609	friend_test	S:string	I:boolean	0
+3611	clan_getchatdisplayname	-	S:string	0
+3612	clan_getchatcount	-	I:int	0
+3613	clan_getchatusername	I:int	S:string	0
+3614	clan_getchatuserworld	I:int	I:int	0
+3615	clan_getchatuserrank	I:int	I:int	0
+3616	clan_getchatminkick	-	I:int	0
+3617	clan_kickuser	S:string	-	0
+3618	clan_getchatrank	-	I:int	0
+3619	clan_joinchat	S:string	-	0
+3620	clan_leavechat	-	-	0
+3621	ignore_count	-	I:int	0
+3622	ignore_getname	I:int	S:string,S:string	0
+3623	ignore_test	S:string	I:boolean	0
+3624	clan_isself	I:int	I:boolean	0
+3625	clan_getchatownername	-	S:string	0
+3626	clan_isfriend	I:int	I:boolean	0
+3627	clan_isignore	I:int	I:boolean	0
+3628	_3628	-	-	0
+3629	_3629	I:boolean	-	0
+3630	_3630	I:boolean	-	0
+3631	_3631	I:boolean	-	0
+3632	_3632	I:boolean	-	0
+3633	_3633	I:boolean	-	0
+3634	_3634	I:boolean	-	0
+3635	_3635	I:boolean	-	0
+3636	_3636	I:boolean	-	0
+3637	_3637	I:boolean	-	0
+3638	_3638	I:boolean	-	0
+3639	_3639	-	-	0
+3640	_3640	-	-	0
+3641	_3641	I:boolean	-	0
+3642	_3642	I:boolean	-	0
+3643	_3643	-	-	0
+3644	_3644	-	-	0
+3645	_3645	I:boolean	-	0
+3646	_3646	I:boolean	-	0
+3647	_3647	I:boolean	-	0
+3648	_3648	I:boolean	-	0
+3649	_3649	I:boolean	-	0
+3650	_3650	I:boolean	-	0
+3651	_3651	I:boolean	-	0
+3652	_3652	I:boolean	-	0
+3653	_3653	I:boolean	-	0
+3654	_3654	I:boolean	-	0
+3655	_3655	-	-	0
+3656	_3656	I:boolean	-	0
+3657	_3657	I:boolean	-	0
+3700	_3700	S:string,I:int,I:int	I:int	0
+3701	_3701	S:string,I:int,I:int	I:int	0
+3702	_3702	-	I:int	0
+3800	activeclansettings_find_listened	-	I:boolean	0
+3801	activeclansettings_find_affined	I:int	I:boolean	0
+3802	activeclansettings_getclanname	-	S:string	0
+3803	activeclansettings_getallowunaffined	-	I:boolean	0
+3804	activeclansettings_getranktalk	-	I:int	0
+3805	activeclansettings_getrankkick	-	I:int	0
+3806	activeclansettings_getranklootshare	-	I:int	0
+3807	activeclansettings_getcoinshare	-	I:int	0
+3809	activeclansettings_getaffinedcount	-	I:int	0
+3810	activeclansettings_getaffineddisplayname	I:int	S:string	0
+3811	activeclansettings_getaffinedrank	I:int	I:int	0
+3812	activeclansettings_getbannedcount	-	I:int	0
+3813	activeclansettings_getbanneddisplayname	I:int	S:string	0
+3814	activeclansettings_getaffinedextrainfo	I:int,I:int,I:int	I:int	0
+3815	activeclansettings_getcurrentowner_slot	-	I:int	0
+3816	activeclansettings_getreplacementowner_slot	-	I:int	0
+3817	activeclansettings_getaffinedslot	S:string	I:int	0
+3818	activeclansettings_getsortedaffinedslot	I:int	I:int	0
+3819	affinedclansettings_addbanned_fromchannel	I:int,I:int	-	0
+3820	activeclansettings_getaffinedjoinruneday	I:int	I:int	0
+3821	affinedclansettings_setmuted_fromchannel	I:int,I:boolean,I:int	-	0
+3822	activeclansettings_getaffinedmuted	I:int	I:boolean	0
+3850	activeclanchannel_find_listened	-	I:boolean	0
+3851	activeclanchannel_find_affined	I:int	I:boolean	0
+3852	activeclanchannel_getclanname	-	S:string	0
+3853	activeclanchannel_getrankkick	-	I:int	0
+3854	activeclanchannel_getranktalk	-	I:int	0
+3855	activeclanchannel_getusercount	-	I:int	0
+3856	activeclanchannel_getuserdisplayname	I:int	S:string	0
+3857	activeclanchannel_getuserrank	I:int	I:int	0
+3858	activeclanchannel_getuserworld	I:int	I:int	0
+3859	activeclanchannel_kickuser	I:int	-	0
+3860	activeclanchannel_getuserslot	S:string	I:int	0
+3861	activeclanchannel_getsorteduserslot	I:int	I:int	0
+3890	clanprofile_find	-	I:boolean	0
+3903	stockmarket_getoffertype	I:int	I:int	0
+3904	stockmarket_getofferitem	I:int	I:obj	0
+3905	stockmarket_getofferprice	I:int	I:int	0
+3906	stockmarket_getoffercount	I:int	I:int	0
+3907	stockmarket_getoffercompletedcount	I:int	I:int	0
+3908	stockmarket_getoffercompletedgold	I:int	I:int	0
+3910	stockmarket_isofferempty	I:int	I:boolean	0
+3911	stockmarket_isofferstable	I:int	I:boolean	0
+3912	stockmarket_isofferfinished	I:int	I:boolean	0
+3913	stockmarket_isofferadding	I:int	I:boolean	0
+3914	tradingpost_sortby_name	I:boolean	-	0
+3915	tradingpost_sortby_price	I:boolean	-	0
+3916	tradingpost_sortfilterby_world	I:boolean,I:boolean	-	0
+3917	tradingpost_sortby_age	I:boolean	-	0
+3918	tradingpost_sortby_count	I:boolean	-	0
+3919	tradingpost_gettotaloffers	-	I:int	0
+3920	tradingpost_getofferworld	I:int	I:int	0
+3921	tradingpost_getoffername	I:int	S:string	0
+3922	tradingpost_getofferpreviousname	I:int	S:string	0
+3923	tradingpost_getofferage	I:int	S:string	0
+3924	tradingpost_getoffercount	I:int	I:int	0
+3925	tradingpost_getofferprice	I:int	I:int	0
+3926	tradingpost_getofferitem	I:int	I:int	0
+4000	add	I:int,I:int	I:int	0
+4001	sub	I:int,I:int	I:int	0
+4002	multiply	I:int,I:int	I:int	0
+4003	div	I:int,I:int	I:int	0
+4004	random	I:int	I:int	0
+4005	randominc	I:int	I:int	0
+4006	interpolate	I:int,I:int,I:int,I:int,I:int	I:int	0
+4007	addpercent	I:int,I:int	I:int	0
+4008	setbit	I:int,I:int	I:int	0
+4009	clearbit	I:int,I:int	I:int	0
+4010	testbit	I:int,I:int	I:int	0
+4011	mod	I:int,I:int	I:int	0
+4012	pow	I:int,I:int	I:int	0
+4013	invpow	I:int,I:int	I:int	0
+4014	and	I:int,I:int	I:int	0
+4015	or	I:int,I:int	I:int	0
+4018	scale	I:int,I:int,I:int	I:int	0
+4025	bitcount	I:int	I:int	0
+4026	togglebit	I:int,I:int	I:int	0
+4027	setbit_range	I:int,I:int,I:int	I:int	0
+4028	clearbit_range	I:int,I:int,I:int	I:int	0
+4029	getbit_range	I:int,I:int,I:int	I:int	0
+4030	setbit_range_toint	I:int,I:int,I:int,I:int	I:int	0
+4032	sin_deg	I:int	I:int	0
+4033	cos_deg	I:int	I:int	0
+4034	_4034	I:int,I:int	I:int	0
+4035	abs	I:int	I:int	0
+4100	append_num	S:string,I:int	S:string	0
+4101	append	S:string,S:string	S:string	0
+4102	append_signnum	S:string,I:int	S:string	0
+4103	lowercase	S:string	S:string	0
+4104	fromdate	I:int	S:string	0
+4105	text_gender	S:string,S:string	S:string	0
+4106	tostring	I:int	S:string	0
+4107	compare	S:string,S:string	I:int	0
+4108	paraheight	S:string,I:int,I:fontmetrics	I:int	0
+4109	parawidth	S:string,I:int,I:fontmetrics	I:int	0
+4110	text_switch	I:int,S:string,S:string	S:string	0
+4111	escape	S:string	S:string	0
+4112	append_char	S:string,I:char	S:string	0
+4113	char_isprintable	I:char	I:boolean	0
+4114	char_isalphanumeric	I:char	I:boolean	0
+4115	char_isalpha	I:char	I:boolean	0
+4116	char_isnumeric	I:char	I:boolean	0
+4117	string_length	S:string	I:int	0
+4118	substring	S:string,I:int,I:int	S:string	0
+4119	removetags	S:string	S:string	0
+4120	string_indexof_char	S:string,I:char	I:int	0
+4121	string_indexof_string	S:string,S:string,I:int	I:int	0
+4200	oc_name	I:obj	S:string	0
+4201	oc_op	I:obj,I:int	S:string	0
+4202	oc_iop	I:obj,I:int	S:string	0
+4203	oc_cost	I:obj	I:int	0
+4204	oc_stackable	I:obj	I:boolean	0
+4205	oc_cert	I:obj	I:obj	0
+4206	oc_uncert	I:obj	I:obj	0
+4207	oc_members	I:obj	I:int	0
+4208	oc_placeholder	I:obj	I:obj	0
+4209	oc_unplaceholder	I:obj	I:obj	0
+4210	oc_find	S:string,I:boolean	I:int	0
+4211	oc_findnext	-	I:obj	0
+4212	oc_findreset	-	-	0
+5000	chat_getfilter_public	-	I:int	0
+5001	chat_setfilter	I:int,I:int,I:int	-	0
+5002	chat_sendabusereport	S:string,I:int,I:int	-	0
+5003	chat_gethistory_bytypeandline	I:int,I:int	I:int,I:int,S:string,S:string,S:string,I:int	0
+5004	chat_gethistory_byuid	I:int	I:int,I:int,S:string,S:string,S:string,I:int	0
+5005	chat_getfilter_private	-	I:int	0
+5008	chat_sendpublic	S:string,I:int	-	0
+5009	chat_sendprivate	S:string,S:string	-	0
+5010	chat_sendclan	S:string,I:int,I:int	-	0
+5015	chat_playername	-	S:string	0
+5016	chat_getfilter_trade	-	I:int	0
+5017	chat_gethistorylength	I:int	I:int	0
+5018	chat_getnextuid	I:int	I:int	0
+5019	chat_getprevuid	I:int	I:int	0
+5020	docheat	S:string	-	0
+5021	chat_setmessagefilter	S:string	-	0
+5022	chat_getmessagefilter	-	S:string	0
+5023	writeconsole	S:string	-	0
+5024	chat_settimestamps	I:int	-	0
+5025	chat_gettimestamps	-	I:int	0
+5030	chat_gethistoryex_bytypeandline	I:int,I:int	I:int,I:int,S:string,S:string,S:string,I:int,S:string,I:int	0
+5031	chat_gethistoryex_byuid	I:int	I:int,I:int,S:string,S:string,S:string,I:int,S:string,I:int	0
+5306	getwindowmode	-	I:int	0
+5307	setwindowmode	I:int	-	0
+5308	getdefaultwindowmode	-	I:int	0
+5309	setdefaultwindowmode	I:int	-	0
+5310	_5310	I:int	-	0
+5311	_5311	I:int,I:int	-	0
+5312	_5312	I:int	-	0
+5350	_5350	I:int,S:string,S:string	-	0
+5351	_5351	S:string	-	0
+5504	cam_forceangle	I:int,I:int	-	0
+5505	cam_getangle_xa	-	I:int	0
+5506	cam_getangle_ya	-	I:int	0
+5530	cam_setfollowheight	I:int	-	0
+5531	cam_getfollowheight	-	I:int	0
+5630	logout	-	-	0
+5631	federated_login	S:string,S:string	-	0
+5632	_5632	-	I:int	0
+5633	_5633	S:string,S:string	-	0
+6200	viewport_setfov	I:int,I:int	-	0
+6201	viewport_setzoom	I:int,I:int	-	0
+6202	viewport_clampfov	I:int,I:int,I:int,I:int	-	0
+6203	viewport_geteffectivesize	-	I:int,I:int	0
+6204	viewport_getzoom	-	I:int,I:int	0
+6205	viewport_getfov	-	I:int,I:int	0
+6210	_6210	I:int	-	0
+6212	_6212	-	-	0
+6220	_6220	-	I:int	0
+6221	_6221	-	I:int	0
+6222	_6222	-	I:int	0
+6223	_6223	-	I:int	0
+6500	worldlist_fetch	-	I:boolean	0
+6501	worldlist_start	-	I:int,I:int,S:string,I:int,I:int,S:string	0
+6502	worldlist_next	-	I:int,I:int,S:string,I:int,I:int,S:string	0
+6506	worldlist_specific	I:int	I:int,I:int,S:string,I:int,I:int,S:string	0
+6507	worldlist_sort	I:int,I:boolean,I:int,I:boolean	-	0
+6511	_6511	I:int	I:int,I:int,S:string,I:int,I:int,S:string	0
+6512	setfolloweropslowpriority	I:boolean	-	0
+6518	on_mobile	-	I:boolean	0
+6519	clienttype	-	I:int	0
+6520	_6520	-	-	0
+6521	mobile_keyboardhide	-	-	0
+6522	_6522	S:string,I:int	-	0
+6523	_6523	S:string,I:int	-	0
+6524	mobile_batterylevel	-	I:int	0
+6525	mobile_batterycharging	-	I:boolean	0
+6526	mobile_wifiavailable	-	I:boolean	0
+6527	_6527	-	I:int	0
+6600	_6600	-	-	0
+6601	worldmap_getmapname	I:maparea	S:string	0
+6602	worldmap_setmap	I:maparea	-	0
+6603	worldmap_getzoom	-	I:int	0
+6604	worldmap_setzoom	I:int	-	0
+6605	worldmap_isloaded	-	I:boolean	0
+6606	worldmap_jumptodisplaycoord	I:coord	-	0
+6607	worldmap_jumptodisplaycoord_instant	I:coord	-	0
+6608	worldmap_jumptosourcecoord	I:coord	-	0
+6609	worldmap_jumptosourcecoord_instant	I:coord	-	0
+6610	worldmap_getdisplayposition	-	I:int,I:int	0
+6611	worldmap_getconfigorigin	I:maparea	I:int	0
+6612	worldmap_getconfigsize	I:maparea	I:int,I:int	0
+6613	worldmap_getconfigbounds	I:maparea	I:int,I:int,I:int,I:int	0
+6614	worldmap_getconfigzoom	I:maparea	I:int	0
+6615	_6615	-	I:int,I:int	0
+6616	worldmap_getcurrentmap	-	I:maparea	0
+6617	worldmap_getdisplaycoord	I:coord	I:int,I:int	0
+6618	_6618	I:coord	I:int,I:int	0
+6619	_6619	I:int,I:coord	-	0
+6620	_6620	I:int,I:coord	-	0
+6621	worldmap_coordinmap	I:maparea,I:coord	I:boolean	0
+6622	worldmap_getsize	-	I:int,I:int	0
+6623	_6623	I:coord	I:maparea	0
+6624	_6624	I:int	-	0
+6625	_6625	-	-	0
+6626	_6626	I:int	-	0
+6627	_6627	-	-	0
+6628	worldmap_perpetualflash	I:boolean	-	0
+6629	worldmap_flashelement	I:mapelement	-	0
+6630	worldmap_flashelementcategory	I:category	-	0
+6631	worldmap_stopcurrentflashes	-	-	0
+6632	worldmap_disableelements	I:boolean	-	0
+6633	worldmap_disableelement	I:int,I:boolean	-	0
+6634	worldmap_disableelementcategory	I:category,I:boolean	-	0
+6635	worldmap_getdisableelements	-	I:boolean	0
+6636	worldmap_getdisableelement	I:int	I:boolean	0
+6637	worldmap_getdisableelementcategory	I:category	I:boolean	0
+6638	_6638	I:int,I:coord	I:int	0
+6639	worldmap_listelement_start	-	I:mapelement,I:coord	0
+6640	worldmap_listelement_next	-	I:mapelement,I:coord	0
+6693	mec_text	I:mapelement	S:string	0
+6694	mec_textsize	I:mapelement	I:int	0
+6695	mec_category	I:mapelement	I:category	0
+6696	mec_sprite	I:mapelement	I:int	0
+6697	worldmap_element	-	I:mapelement	0
+6698	_6698	-	I:coord	0
+6699	worldmap_elementcoord	-	I:coord	0
+6700	_6700	I:int,S:string,I:int	-	0
+6701	_6701	I:int	-	0
+6702	_6702	I:int,S:string,I:int	-	0
+6703	_6703	I:int	-	0
+6704	_6704	I:int,S:string,I:int	-	0
+6705	_6705	I:int	-	0
+6706	_6706	I:int,S:string,I:int	-	0
+6707	_6707	I:int	-	0
+6708	_6708	I:int,S:string,I:int	-	0
+6709	_6709	I:int	-	0
+6750	_6750	-	S:string	0
+6751	_6751	-	I:npc_uid	0
+6752	_6752	-	I:int	0
+6753	_6753	-	I:npc	0
+6754	nc_name	I:npc	S:string	0
+6800	_6800	-	S:string	0
+6801	_6801	-	I:coord	0
+6802	_6802	-	I:loc	0
+6850	_6850	-	S:string	0
+6851	_6851	-	I:coord	0
+6852	_6852	-	I:obj	0
+6853	_6853	-	I:int	0
+6900	_6900	-	S:string	0
+6902	_6902	-	I:int	0
+6903	_6903	I:int	I:coord	0
+6904	_6904	-	I:player_uid	0
+6905	_6905	-	I:player_uid	0
+6950	_6950	-	I:coord	0
+7000	_7000	I:int,I:int,I:int,I:int,I:int	-	0
+7001	highlight_npc_on	I:npc_uid,I:coord,I:int	-	0
+7002	highlight_npc_off	I:npc_uid,I:coord,I:int	-	0
+7003	_7003	I:npc,I:coord,I:int	I:boolean	0
+7004	_7004	I:int	-	0
+7005	_7005	I:int,I:int,I:int,I:int,I:int	-	0
+7006	highlight_npctype_on	I:npc,I:int	-	0
+7007	highlight_npctype_off	I:npc,I:int	-	0
+7008	_7008	I:npc,I:int	I:boolean	0
+7009	_7009	I:int	-	0
+7010	_7010	I:int,I:int,I:int,I:int,I:int	-	0
+7011	highlight_loc_on	I:loc,I:coord,I:int,I:int	-	0
+7012	highlight_loc_off	I:loc,I:coord,I:int,I:int	-	0
+7013	_7013	I:loc,I:int,I:int,I:int	I:boolean	0
+7014	_7014	I:int	-	0
+7015	_7015	I:int,I:int,I:int,I:int,I:int	-	0
+7016	highlight_loctype_on	I:loc,I:int	-	0
+7017	highlight_loctype_off	I:loc,I:int	-	0
+7018	_7018	I:loc,I:int	I:boolean	0
+7019	_7019	I:int	-	0
+7020	_7020	I:int,I:int,I:int,I:int,I:int	-	0
+7021	highlight_obj_on	I:obj,I:coord,I:int,I:int	-	0
+7022	highlight_obj_off	I:obj,I:coord,I:int,I:int	-	0
+7023	_7023	I:obj,I:coord,I:int,I:int	I:boolean	0
+7024	_7024	I:int	-	0
+7025	_7025	I:int,I:int,I:int,I:int,I:int	-	0
+7026	highlight_objtype_on	I:obj,I:int	-	0
+7027	highlight_objtype_off	I:obj,I:int	-	0
+7028	_7028	I:obj,I:int	I:boolean	0
+7029	_7029	I:int	-	0
+7030	_7030	I:int,I:int,I:int,I:int,I:int	-	0
+7031	highlight_player_on	S:string,I:int	-	0
+7032	highlight_player_off	S:string,I:int	-	0
+7033	_7033	S:string,I:int	I:int	0
+7034	_7034	I:int	-	0
+7035	_7035	I:int,I:int,I:int,I:int,I:int	-	0
+7036	highlight_tile_on	I:coord,I:int,I:int	-	0
+7037	highlight_tile_off	I:coord,I:int,I:int	-	0
+7038	_7038	I:coord,I:int,I:int	I:boolean	0
+7039	_7039	I:int	-	0
+7100	_7100	-	I:int	0
+7101	_7101	-	S:string,S:string	0
+7102	_7102	-	I:int	0
+7103	_7103	-	I:int	0
+7104	_7104	-	I:int	0
+7105	_7105	-	I:int	0
+7106	_7106	-	I:int	0
+7107	_7107	-	I:int	0
+7108	_7108	-	I:boolean	0
+7109	_7109	-	I:int	0
+7110	_7110	-	I:int	0
+7120	_7120	I:int	I:int	0
+7121	_7121	I:int,I:int	I:int	0
+7122	_7122	I:int,I:int	I:int	0
+7200	_7200	I:int,I:int,I:int,I:int,I:int	I:newvar	0
+7201	_7201	I:int,I:int,I:int,I:int,I:int	I:int	0
+7202	_7202	I:int,I:int,I:int,I:int,I:int	I:int	0
+7203	_7203	I:int,I:int,I:int,I:int,I:int	I:int	0
+7204	_7204	I:int,I:int,I:int,I:int,I:int,I:int	I:int	0
+7205	_7205	-	I:int	0
+7206	_7206	-	I:int	0
+7207	_7207	-	I:int	0
+7208	_7208	-	I:int	0
+7209	_7209	-	I:int	0
+7210	_7210	I:int	-	0
+7211	_7211	I:int	-	0
+7212	_7212	I:int	-	0
+7213	_7213	I:int	-	0
+7214	_7214	I:int,I:int	-	0
+7250	setminimaplock	I:boolean	-	0
+7252	_7252	I:int	-	0
+#special	60	switch
+#special	6	branch
+#special	3408	enum
+#special	40	gosub_with_params
+#special	21	return
+#special	37	join_string
+#special	44	define_array
+#special	45	push_array_int
+#special	46	pop_array_int
+#special	7	branch_not
+#special	8	branch_equals
+#special	9	branch_less_than
+#special	10	branch_greater_than
+#special	31	branch_less_than_or_equals
+#special	32	branch_greater_than_or_equals
+#special	38	pop_int_discard
+#special	39	pop_string_discard
+#special	0	push_constant_int
+#special	3	push_constant_string
+#special	1	push_var
+#special	2	pop_var
+#special	25	push_varbit
+#special	27	pop_varbit
+#special	33	push_int_local
+#special	34	pop_int_local
+#special	35	push_string_local
+#special	36	pop_string_local
+#special	42	push_varc_int
+#special	43	pop_varc_int
+#special	49	push_varc_string
+#special	50	pop_varc_string
+#special	74	push_varclansetting
+#special	76	push_varclan
+#special	6513	nc_param
+#special	6514	lc_param
+#special	6515	oc_param
+#special	6516	struct_param
+#hook	1400	cc_setonclick
+#hook	1401	cc_setonhold
+#hook	1402	cc_setonrelease
+#hook	1403	cc_setonmouseover
+#hook	1404	cc_setonmouseleave
+#hook	1405	cc_setondrag
+#hook	1406	cc_setontargetleave
+#hook	1407	cc_setonvartransmit
+#hook	1408	cc_setontimer
+#hook	1409	cc_setonop
+#hook	1410	cc_setondragcomplete
+#hook	1411	cc_setonclickrepeat
+#hook	1412	cc_setonmouserepeat
+#hook	1414	cc_setoninvtransmit
+#hook	1415	cc_setonstattransmit
+#hook	1416	cc_setontargetenter
+#hook	1417	cc_setonscrollwheel
+#hook	1418	cc_setonchattransmit
+#hook	1419	cc_setonkey
+#hook	1420	cc_setonfriendtransmit
+#hook	1421	cc_setonclantransmit
+#hook	1422	cc_setonmisctransmit
+#hook	1423	cc_setondialogabort
+#hook	1424	cc_setonsubchange
+#hook	1425	cc_setonstocktransmit
+#hook	1426	_1426
+#hook	1427	cc_setonresize
+#hook	1428	cc_setonclansettingstransmit
+#hook	1429	cc_setonclanchanneltransmit
+#hook	2400	if_setonclick
+#hook	2401	if_setonhold
+#hook	2402	if_setonrelease
+#hook	2403	if_setonmouseover
+#hook	2404	if_setonmouseleave
+#hook	2405	if_setondrag
+#hook	2406	if_setontargetleave
+#hook	2407	if_setonvartransmit
+#hook	2408	if_setontimer
+#hook	2409	if_setonop
+#hook	2410	if_setondragcomplete
+#hook	2411	if_setonclickrepeat
+#hook	2412	if_setonmouserepeat
+#hook	2414	if_setoninvtransmit
+#hook	2415	if_setonstattransmit
+#hook	2416	if_setontargetenter
+#hook	2417	if_setonscrollwheel
+#hook	2418	if_setonchattransmit
+#hook	2419	if_setonkey
+#hook	2420	if_setonfriendtransmit
+#hook	2421	if_setonclantransmit
+#hook	2422	if_setonmisctransmit
+#hook	2423	if_setondialogabort
+#hook	2424	if_setonsubchange
+#hook	2425	if_setonstocktransmit
+#hook	2426	_2426
+#hook	2427	if_setonresize
+#hook	2428	if_setonclansettingstransmit
+#hook	2429	if_setonclanchanneltransmit
+#hook	2415	if_setonstattransmit
+#hook	2414	if_setoninvtransmit
+#hook	2407	if_setonvartransmit

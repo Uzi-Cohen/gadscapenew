@@ -1,0 +1,10 @@
+# Hand-checked build-241 command stack effects that verify.CsLearn keeps fixed (same columns as cs2-241-stack.tsv).
+# These are rare commands (1-10 uses in the stock cache) that only occur next to each other, so learning them one at a
+# time gets stuck; each effect below was read off the stock scripts named in the note.
+# opcode	pops	pushes	source	name/note
+7602	i	s	manual	loottracker: index -> entry (stock 1220, 3234, 3292, 3507: "iload, 7602, sstore")
+7604	s	i	manual	entry -> int (stock 1220, 3292, 3507, 7160: "sload, 7604, istore")
+7606	i	i	manual	(stock 3233, 3234, 3292: "iload, 7606, istore")
+7611	is	ii	manual	entry, int -> two ints (stock 1220, 3234, 3507: "sload, iload, 7611, istore, istore"; pops is)
+7813	i	i	manual	(stock 7479: "iconst 2201, 7813, iconst 1, add, istore")
+7814	i	i	manual	(stock 7479: "iconst 0, iconst 1111, 7814, gosub 1045(ii)")
