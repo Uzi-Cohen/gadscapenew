@@ -165,7 +165,7 @@ public final class MagicWardrobe {
 			count++;
 		}
 		secondHash = Utils.getShiftedValue(secondHash, 8);
-		player.getPacketDispatcher().sendClientScript(417, 100, firstHash, secondHash, "Magic wardrobe");
+		player.getPacketDispatcher().sendClientScript(417, 100, firstHash, secondHash); // 417 takes 3 ints; the old title string made the client throw
 		player.getPacketDispatcher().sendComponentSettings(592, 2, 0, 156, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);
 	}
 	

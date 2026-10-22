@@ -32,6 +32,11 @@ public class QuestCompletedInterface extends Interface {
         final Item item = (Item) player.getTemporaryAttributes().get("quest completed item");
         @SuppressWarnings("unchecked")
         final List<String> rewards = (List<String>) player.getTemporaryAttributes().get("quest completed rewards");
+        if (title == null || item == null || rewards == null) {
+            // only opened by a quest that just set these; never show an empty scroll
+            player.sendMessage("You have no completed quest to view.");
+            return;
+        }
         player.getInterfaceHandler().sendInterface(this);
         player.getPacketDispatcher().sendComponentVisibility(getInterface().getId(), getComponent("Quest points"), true);
         player.getPacketDispatcher().sendComponentText(getInterface().getId(), getComponent("Quest completed title"), title);

@@ -83,12 +83,24 @@ public enum InterfacePosition {
 	 * @return the respective component type, or null if not found.
 	 */
 	public static InterfacePosition getPosition(final int componentId, final PaneType pane) {
-		for (final InterfacePosition position : VALUES) {
-			final EnumDefinitions e = pane.getEnum();
-			final int bitpacked = e.getIntValue(161 << 16 | componentId);
-			if (componentId == (bitpacked & 65535)) {
-				return position;
+		if (pane == null || componentId < 0) {
+			return null;
+		}
+		// The chatbox pane only holds the dialogue component (see InterfaceHandler.containsInterface).
+		if (pane == PaneType.CHATBOX) {
+			return componentId == DIALOGUE.getComponent(PaneType.RESIZABLE) ? DIALOGUE : null;
+		}
+		try {
+			for (final InterfacePosition position : VALUES) {
+				if (position == DIALOGUE) {
+					continue;
+				}
+				if (position.getComponent(pane) == componentId) {
+					return position;
+				}
 			}
+		} catch (final RuntimeException e) {
+			// a pane without a component enum (PaneType.getEnum throws): no known positions
 		}
 		return null;
 	}

@@ -205,7 +205,11 @@ object RsprotIncoming {
         }
 
         // --- chat / social -----------------------------------------------------------------------------
-        builder.on<MessagePublic> { _, m -> MessagePublicEvent(m.type, m.colour, m.effect, m.message, m.clanType) }
+        builder.on<MessagePublic> { _, m ->
+            // colours 13-20 carry a pattern (colour - 12 colour codes); kept so other players see the same pattern
+            val pattern = m.pattern?.takeIf { it.length == m.colour - 12 && it.to24BitRgbOrNull() != null }?.toByteArray()
+            MessagePublicEvent(m.type, m.colour, m.effect, m.message, m.clanType, pattern)
+        }
         builder.on<ClientCheat> { _, m -> CommandEvent(m.command.lowercase()) }
         builder.on<MessagePrivate> { _, m ->
             val huffman = HuffmanManager.encodeHuffmanBuf(m.message)

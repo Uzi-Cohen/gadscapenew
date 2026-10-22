@@ -39,7 +39,7 @@ public class OutsideCutscene extends Cutscene {
     @Override
     public void build() {
         addActions(0, player::lock, () -> closedTabs.forEach(tab -> player.getInterfaceHandler().closeInterface(tab)), () -> player.getInterfaceHandler().openGameTab(GameTab.FRIENDS_TAB));
-        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(10700, 1), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.DISABLED));
+        addActions(3, () -> instance.spawnAtDoor(player), () -> player.getVarManager().sendBit(4606, 1), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.DISABLED));
         addActions(4, new CameraPositionAction(player, instance.getLocation(3090 - 2, 3475, 0), 350, -128, 0), new CameraLookAction(player, instance.getLocation(3093, 3471, 0), 200, -128, 0), () -> {
             bunny = new NPC(EasterConstants.EASTER_BUNNY_OUTSIDE_CUTSCENE, instance.getLocation(3093, 3471, 0), Direction.WEST, 0);
             bunny.spawn();
@@ -51,7 +51,7 @@ public class OutsideCutscene extends Cutscene {
         });
         final FadeScreen fs = new FadeScreen(player);
         addActions(11, fs::fade);
-        addActions(13, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(3088, 3472, 0)), () -> player.getPacketDispatcher().sendClientScript(10700, 0), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED), () -> SplittingHeirs.advanceStage(player, Stage.POST_UNDRESS_CUTSCENE));
+        addActions(13, player::unlock, new CameraResetAction(player), () -> player.getVarManager().sendBit(4606, 0), () -> closedTabs.forEach(tab -> tab.open(player)), () -> player.setLocation(new Location(3088, 3472, 0)), () -> player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 0), () -> player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED), () -> SplittingHeirs.advanceStage(player, Stage.POST_UNDRESS_CUTSCENE));
         addActions(14, fs::unfade);
     }
 

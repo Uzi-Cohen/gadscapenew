@@ -118,3 +118,22 @@ changed) into `~/gadscape-upload/`, then on the VPS:
 sudo cp ~/gadscape-upload/server.jar /opt/gadscape/server.jar
 sudo systemctl restart gadscape
 ```
+
+## Rev 241 (RuneLite 1.13.3 client) - what changes
+
+The 241 server speaks the 241 protocol through rsprot and serves the rev 241 cache. Prepared, not yet deployed:
+
+- **Cache:** upload the rev 241 cache (built by the gadconv tool) as `gadscape-upload/cache241/`
+  (`main_file_cache.dat2`, `main_file_cache.idx*`). `setup.sh` copies it to `/opt/gadscape/cache241`;
+  `start.sh` refuses to start without it (otherwise the server would open the rev-211 cache in `cache/data/cache`).
+  `cache/data/grandexchange`, `objects` and `npcs` are still needed; `cache/data/cache` is not.
+- **Settings:** `/opt/gadscape/start.env` (from `deploy/start.env.example`, kept on later runs) sets the cache
+  directory, the login RSA key file (`keys/private.key`; falls back to worlds.yml), the launcher session token,
+  the extra port 443 and the per-IP connection limit. `start.sh` turns rsprot's development mode off
+  (`-Dnet.rsprot.protocol.internal.development=false`; the server also does this by itself on non-DEVELOPER worlds).
+- **Gradle:** `runProduction`, `runProductionUpdate`, `runBeta` and `runBetaUpdate` now fail at once without
+  `-Dgadscape.cache.dir=<241 cache>`; with it, `generateCacheProd` (the rev-211 cache build) is skipped.
+- **Docker:** the image is `eclipse-temurin:21-jre` (the classes are Java 21) and takes the 241 cache with
+  `docker build --build-arg CACHE241=<dir in the build context> .`
+- **Reconnects:** a client that loses its connection for a few seconds now continues its session instead of
+  going back to the login screen (`-Dgadscape.net.reconnect=false` restores the old behaviour).

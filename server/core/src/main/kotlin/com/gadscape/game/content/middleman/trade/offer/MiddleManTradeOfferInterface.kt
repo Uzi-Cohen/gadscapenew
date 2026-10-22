@@ -1,5 +1,6 @@
 package com.gadscape.game.content.middleman.trade.offer
 
+import com.gadscape.game.content.middleman.MiddleManState
 import com.gadscape.game.content.middleman.middleManController
 import com.gadscape.game.content.middleman.trade.MiddleManPendingTrade
 import com.zenyte.game.GameInterface
@@ -37,6 +38,11 @@ class MiddleManTradeOfferInterface : Interface() {
     }
 
     override fun open(player: Player) {
+        if (player.middleManController.state !is MiddleManState.AwaitConfirmation) {
+            // only reachable from an accepted request; never open an empty offer screen (or the developer state dialog)
+            player.sendMessage("You have no middle-man trade waiting for your offer.")
+            return
+        }
         player.middleManController.ifTradeAwaitConfirmation {
             player.interfaceHandler.apply {
                 sendInterface(this@MiddleManTradeOfferInterface)

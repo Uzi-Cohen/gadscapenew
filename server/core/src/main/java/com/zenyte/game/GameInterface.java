@@ -299,10 +299,20 @@ public enum GameInterface {
     public final void open(final Player player) {
         player.log(LogLevel.INFO, "Opening interface: " + this);
         final Interface plugin = NewInterfaceHandler.getInterface(id);
-        if (plugin != null) {
-            plugin.open(player);
-        } else {
+        if (plugin == null) {
             player.getInterfaceHandler().sendInterface(this);
+            return;
+        }
+        try {
+            plugin.open(player);
+        } catch (final RuntimeException e) {
+            // Never leave a half-filled screen open: an open() that fails part-way (missing context, bad state)
+            // closes what it sent and tells the player instead.
+            log.error("Failed to open interface {} for {}", this, player, e);
+            if (player.getInterfaceHandler().isVisible(id)) {
+                player.getInterfaceHandler().closeInterface(id);
+            }
+            player.sendMessage("That can't be opened right now.");
         }
     }
 

@@ -13,6 +13,8 @@ import net.rsprot.protocol.api.GameConnectionHandler
 import net.rsprot.protocol.api.NetworkService
 import net.rsprot.protocol.api.handlers.ExceptionHandlers
 import net.rsprot.protocol.api.handlers.GameMessageHandlers
+import net.rsprot.protocol.api.handlers.INetAddressHandlers
+import net.rsprot.protocol.api.implementation.DefaultInetAddressValidator
 import net.rsprot.protocol.api.handlers.LoginHandlers
 import net.rsprot.protocol.api.implementation.DefaultGameMessageCounter
 import net.rsprot.protocol.api.js5.Js5GroupProvider
@@ -37,6 +39,10 @@ import java.nio.file.Paths
  *  - `gadscape.js5.preload`   true = prepare every JS5 group at boot instead of on first request
  *  - `gadscape.login.token`   expected login "site settings" string (rev-211 session token); unset = not checked
  *  - `gadscape.login.skipCrc` true = do not compare the client's cache CRCs at login
+ *  - `gadscape.net.maxConnectionsPerIp` game (and, separately, JS5) connections allowed per IP (default 10, rsprot's)
+ *  - `gadscape.net.reconnect` false = refuse client reconnects (see [RsprotReconnect]); default true
+ *  - `net.rsprot.protocol.internal.development` rsprot's per-packet validation; defaults to false on BETA/PUBLIC/PRIVATE
+ *    worlds (rsprot asks for it to be off in production), true on DEVELOPER worlds
  */
 object Rsprot {
 
@@ -71,6 +77,7 @@ object Rsprot {
     @OptIn(ExperimentalUnsignedTypes::class, ExperimentalStdlibApi::class)
     fun start() {
         check(!isStarted) { "rsprot network service already started" }
+        configureDevelopmentMode()
         val js5 = RsprotJs5(RawJs5Cache(cacheDirectory()))
         if (java.lang.Boolean.getBoolean("gadscape.js5.preload")) js5.preloadAll()
         this.js5 = js5
@@ -90,6 +97,24 @@ object Rsprot {
         logger.info(
             "rsprot {} network service listening on {} (cache {})",
             REVISION, factory.ports, cacheDirectory().toAbsolutePath()
+        )
+    }
+
+    private const val RSPROT_DEVELOPMENT_PROPERTY = "net.rsprot.protocol.internal.development"
+
+    /**
+     * rsprot reads its flags once, when RSProtFlags is first loaded (by the first rsprot class that needs it),
+     * so this must run before anything rsprot is touched. An explicit -D always wins.
+     */
+    private fun configureDevelopmentMode() {
+        val explicit = System.getProperty(RSPROT_DEVELOPMENT_PROPERTY)
+        if (explicit == null) {
+            val developerWorld = runCatching { GameConstants.WORLD_PROFILE.isDevelopment() }.getOrDefault(true)
+            if (!developerWorld) System.setProperty(RSPROT_DEVELOPMENT_PROPERTY, "false")
+        }
+        logger.info(
+            "rsprot development mode (validation of every packet): {}",
+            System.getProperty(RSPROT_DEVELOPMENT_PROPERTY) ?: "true (rsprot default)"
         )
     }
 
@@ -149,6 +174,17 @@ class GadScapeNetworkServiceFactory(
     override fun getGameMessageHandlers(): GameMessageHandlers =
         GameMessageHandlers(gameMessageCounterProvider = { DefaultGameMessageCounter(clientEventLimit = 50, userEventLimit = 32) })
 
+    /**
+     * rsprot allows 10 game and 10 JS5 connections per IP by default; the rev-211 server had no limit.
+     * -Dgadscape.net.maxConnectionsPerIp=N raises it (e.g. for events where many players share one address).
+     */
+    override fun getINetAddressHandlers(): INetAddressHandlers {
+        val limit = Integer.getInteger("gadscape.net.maxConnectionsPerIp", DEFAULT_CONNECTIONS_PER_IP)
+            .coerceAtLeast(1)
+        logger.info("Allowing {} game and {} JS5 connections per IP", limit, limit)
+        return INetAddressHandlers(DefaultInetAddressValidator(limit))
+    }
+
     override fun getLoginHandlers(): LoginHandlers {
         val world = GameConstants.WORLD_PROFILE?.number ?: 1
         return LoginHandlers(
@@ -170,5 +206,6 @@ class GadScapeNetworkServiceFactory(
     private companion object {
         private val logger = LoggerFactory.getLogger(GadScapeNetworkServiceFactory::class.java)
         private const val HUFFMAN_ARCHIVE = 10
+        private const val DEFAULT_CONNECTIONS_PER_IP = 10
     }
 }

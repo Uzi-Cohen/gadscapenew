@@ -169,7 +169,7 @@ public final class TreasureChest {
 		if (page > 0) {
 			firstHash = Utils.getShiftedValue(firstHash, 0);
 		}
-		player.getPacketDispatcher().sendClientScript(417, 100, firstHash, secondHash, "Treasure chest");
+		player.getPacketDispatcher().sendClientScript(417, 100, firstHash, secondHash); // 417 takes 3 ints; the old title string made the client throw
 		player.getPacketDispatcher().sendComponentSettings(592, 2, 0, 156, AccessMask.CLICK_OP1, AccessMask.CLICK_OP10);
 	}
 	

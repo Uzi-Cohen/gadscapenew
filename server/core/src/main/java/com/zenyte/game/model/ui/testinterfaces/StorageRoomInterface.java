@@ -81,6 +81,11 @@ public class StorageRoomInterface extends Interface {
     @Override
     public void open(Player player) {
         final StorageType type = getType(player);
+        if (type == null) {
+            // the type is set by the costume-room furniture that opens this; without it the screen would be an empty outline
+            player.sendMessage("Open this from a costume room storage piece in your house.");
+            return;
+        }
         player.getVarManager().sendVarInstant(262, -1);
         player.getVarManager().sendVarInstant(261, 25);
         player.getInterfaceHandler().sendInterface(getInterface());

@@ -91,7 +91,7 @@ public class ZenyteGuide extends NPCPlugin {
                 //setting zoom depth
                 options("Would you like to view the tutorial?", "Yes. <col=00080>(Receive extra " + StringFormatUtil.format(EXTRA_TUTORIAL_GOLD.getAmount()) + " gold)</col>", "No, I want to skip it.").onOptionOne(() -> {
                     player.putBooleanTemporaryAttribute("viewed_tutorial", true);
-                    player.getPacketDispatcher().sendClientScript(10700, 1);
+                    player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1);
                     player.getPacketDispatcher().sendClientScript(42, 0, 200);
                     player.setLocation(SPAWN_LOCATION);
                     player.lock();
@@ -205,7 +205,7 @@ public class ZenyteGuide extends NPCPlugin {
                                 setKey(5);
                             }).onOptionTwo(() -> {
                                 player.lock();
-                                player.getPacketDispatcher().sendClientScript(10700, 1);
+                                player.getPacketDispatcher().sendClientScript(com.zenyte.game.packet.out.ClientScripts.HIDE_ROOFS, 1);
                                 player.getPacketDispatcher().sendClientScript(42, 0, 200); //setting zoom depth
                                 player.setLocation(SPAWN_LOCATION);
                                 player.addTemporaryAttribute("tutorial_rewatch", 1);

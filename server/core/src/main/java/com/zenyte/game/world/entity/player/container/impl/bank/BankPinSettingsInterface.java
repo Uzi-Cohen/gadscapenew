@@ -67,7 +67,7 @@ public class BankPinSettingsInterface extends Interface {
 
     private void refreshInterface(Player player) {
         var dispatcher = player.getPacketDispatcher();
-            dispatcher.sendClientScript(917, "ii", -1, -1);
+            dispatcher.sendClientScript(917, -1, -1);
             dispatcher.sendComponentVisibility(getInterface(), 0, false);
             dispatcher.sendComponentVisibility(getInterface(), 28, true);
             dispatcher.sendComponentText(getInterface(), 6, player.getBankPin().isPinEnabled() ? "Bank Protected" : "Not Protected!");

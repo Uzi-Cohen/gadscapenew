@@ -9,7 +9,11 @@ import com.zenyte.game.world.entity.player.Player
 import com.zenyte.game.world.region.area.wilderness.WildernessArea
 import com.zenyte.net.game.ServerEvent
 import com.zenyte.utils.TimeUnit
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import net.rsprot.protocol.api.Session
+import net.rsprot.protocol.game.outgoing.varp.VarpLarge
+import net.rsprot.protocol.game.outgoing.varp.VarpReset
+import net.rsprot.protocol.game.outgoing.varp.VarpSmall
 import net.rsprot.protocol.message.OutgoingGameMessage
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -26,7 +30,20 @@ class RsprotSession(
     val player: Player,
     /** The rsprot session. INFO/other code may queue rsprot messages directly via [queue]. */
     val rsprot: Session<Player>,
+    /**
+     * The last value of every varp sent since the login (carried over to the new session on a reconnect,
+     * which sends them again: packets lost while the connection was down are otherwise never repeated).
+     */
+    internal val sentVarps: Int2IntOpenHashMap = Int2IntOpenHashMap(),
 ) : com.zenyte.net.Session {
+
+    /** The ISAAC seed of the login (or last reconnect) on this connection; a reconnecting client sends it back. */
+    @Volatile
+    internal var seed: IntArray? = null
+
+    /** True once a reconnect moved the player to a new connection: this one must not log the player out. */
+    @Volatile
+    internal var replaced = false
 
     private val loginCycle = WorldThread.WORLD_CYCLE
 
@@ -81,6 +98,11 @@ class RsprotSession(
             if (event !is UpdateZonePartialEnclosed) RsprotDrops.dropped(event.javaClass.simpleName)
             return false
         }
+        when (message) {
+            is VarpSmall -> recordVarp(message.id, message.value)
+            is VarpLarge -> recordVarp(message.id, message.value)
+            is VarpReset -> synchronized(sentVarps) { sentVarps.clear() }
+        }
         queue(message)
         if (event.encoderMode() == GamePacketEncoderMode.WRITE_FLUSH) {
             rsprot.flush()
@@ -120,6 +142,30 @@ class RsprotSession(
         }
     }
 
+    private fun recordVarp(id: Int, value: Int) {
+        synchronized(sentVarps) { sentVarps.put(id, value) }
+    }
+
+    /** A copy of [sentVarps] (id -> last value sent). */
+    internal fun sentVarpsSnapshot(): Int2IntOpenHashMap = synchronized(sentVarps) { Int2IntOpenHashMap(sentVarps) }
+
+    /**
+     * Retires this connection after a reconnect moved the player to a new one: no logout, no info release
+     * (the new session owns the player's info slot), just close the old channel.
+     */
+    internal fun retire() {
+        replaced = true
+        infoLoggedIn = false
+        if (!closed.compareAndSet(false, true)) return
+        try {
+            rsprot.requestClose()
+        } catch (e: Throwable) {
+            logger.debug("requestClose of a replaced session failed for {}", player, e)
+        }
+        val channel = rsprot.ctx.channel()
+        if (channel.isActive) channel.close()
+    }
+
     override fun isActive(): Boolean = !closed.get() && rsprot.ctx.channel().isActive
 
     // right after login, allow more silence (the client may freeze while it loads the map)
@@ -139,6 +185,7 @@ class RsprotSession(
 
     /** Called by rsprot (netty thread) when the connection drops; the world thread logs the player out. */
     internal fun onDisconnected() {
+        if (replaced) return // the player already continues on a reconnected session
         try {
             if (player.logoutType == LogoutType.NONE) player.logoutType = LogoutType.CONNECTION_LOST
         } catch (e: Exception) {

@@ -13,6 +13,8 @@ import com.zenyte.game.GameConstants
 import com.zenyte.game.task.WorldTasksManager
 import com.zenyte.game.world.World
 import com.zenyte.game.world.entity.player.Player
+import com.zenyte.game.world.entity.player.LogoutType
+import io.netty.buffer.Unpooled
 import com.zenyte.game.world.entity.player.PlayerInformation
 import com.zenyte.net.ClientResponse
 import com.zenyte.net.NetworkConstants
@@ -84,12 +86,35 @@ class RsprotConnectionHandler : GameConnectionHandler<Player> {
         World.addLoginRequest(request, info)
     }
 
+    /**
+     * A client whose connection dropped asks to continue its session ("Connection lost - attempting to
+     * reestablish"). The rev-211 server answered every reconnect with a failure, so the player stayed in the
+     * world for the logout timeout (20 s, 60 s in the wilderness) and had to log in again afterwards. Now the
+     * player continues on the new connection if it is still in the world and the client proves it owns the
+     * session (it sends back the ISAAC seed of its last login); see [RsprotReconnect].
+     * -Dgadscape.net.reconnect=false restores the old behaviour.
+     */
     override fun onReconnect(
         responseHandler: GameLoginResponseHandler<Player>,
         block: LoginBlock<XteaKey>,
     ) {
-        // The rev-211 server never supported reconnects either; the client falls back to a full login.
-        responseHandler.writeFailedResponse(LoginResponse.ConnectFail)
+        try {
+            if (!RsprotReconnect.enabled || !Rsprot.acceptLogins) {
+                responseHandler.writeFailedResponse(LoginResponse.ConnectFail)
+                return
+            }
+            val early = RsprotLoginChecks.reconnectResponse(block)
+            if (early != null) {
+                logger.info("Rejected reconnect '{}': {}", block.username, early)
+                responseHandler.writeFailedResponse(early.toLoginResponse())
+                return
+            }
+            val previousSeed = block.authentication.key.copyOf()
+            WorldTasksManager.schedule { RsprotReconnect.complete(responseHandler, block, previousSeed) }
+        } catch (e: Throwable) {
+            logger.error("Reconnect failed for '{}'", block.username, e)
+            responseHandler.writeFailedResponse(LoginResponse.ConnectFail)
+        }
     }
 
     private companion object {
@@ -108,6 +133,17 @@ object RsprotLoginChecks {
 
     /** -Dgadscape.login.skipCrc=true disables the cache CRC check (like beta worlds did in rev 211). */
     private val skipCrcCheck: Boolean = java.lang.Boolean.getBoolean("gadscape.login.skipCrc")
+
+    /** The checks that still apply to a reconnect (the player is already in the world, so no capacity checks). */
+    fun reconnectResponse(block: LoginBlock<*>): ClientResponse? {
+        if (block.version != Rsprot.REVISION) return ClientResponse.CLIENT_UPDATED
+        if (!skipCrcCheck && !GameConstants.WORLD_PROFILE.isBeta()) {
+            val crcs = Rsprot.js5Crcs()
+            if (crcs != null && !block.crc.validate(crcs)) return ClientResponse.SERVER_UPDATED
+        }
+        if (expectedToken != null && expectedToken != block.siteSettings) return ClientResponse.BAD_SESSION_ID
+        return null
+    }
 
     fun preLoadResponse(block: LoginBlock<*>): ClientResponse? {
         if (block.version != Rsprot.REVISION) return ClientResponse.CLIENT_UPDATED
@@ -292,6 +328,7 @@ class RsprotLoginRequest(
             return
         }
         val session = RsprotSession(player, rsprotSession)
+        session.seed = block.seed.copyOf()
         player.session = session
         rsprotSession.setDisconnectionHook { session.onDisconnected() }
         try {
@@ -414,4 +451,98 @@ fun ClientResponse.toLoginResponse(): LoginResponse = when (this) {
     ClientResponse.PROMPT_DATE_OF_BIRTH -> LoginResponse.UpdateDob
     ClientResponse.DATE_OF_BIRTH_NEEDS_REVIEW -> LoginResponse.DobReview
     else -> LoginResponse.UnknownReplyFromLoginServer
+}
+
+/**
+ * Moves a still-logged-in player onto the connection of a reconnecting client (world thread).
+ *
+ * The client keeps its scene, interfaces and variables over a reconnect, but anything sent while the old
+ * connection was dead is lost, so the state is sent again: the player/NPC info restarts from the GPI block
+ * in the reconnect response, every varp is re-sent with its last value, the map is rebuilt and every zone
+ * re-synchronised (ground items, spawned/removed objects), and inventory, equipment, skills and run energy are
+ * refreshed. Modal screens (bank, trade, dialogues) are closed, since their contents may have changed unseen.
+ */
+object RsprotReconnect {
+
+    private val logger = LoggerFactory.getLogger(RsprotReconnect::class.java)
+
+    /** -Dgadscape.net.reconnect=false answers every reconnect with ConnectFail (the rev-211 behaviour). */
+    @JvmStatic
+    val enabled: Boolean = System.getProperty("gadscape.net.reconnect")?.toBoolean() ?: true
+
+    /** Size of the GPI block a reconnect response carries (rsprot LoginResponse.ReconnectOk.PLAYER_INFO_BLOCK_SIZE). */
+    private const val PLAYER_INFO_BLOCK_SIZE = 4608
+
+    fun complete(
+        responseHandler: GameLoginResponseHandler<Player>,
+        block: LoginBlock<*>,
+        previousSeed: IntArray,
+    ) {
+        val name = TextUtils.formatNameForProtocol(block.username)
+        var answered = false
+        try {
+            if (!responseHandler.ctx.channel().isActive) return
+            val player: Player? = World.getPlayerByUsername(name)
+            val old: RsprotSession? = if (player != null) RsprotSession.of(player) else null
+            if (player == null || old == null) {
+                refuse(responseHandler, name, "not in the world")
+                return
+            }
+            if (player.isFinished || old.replaced) {
+                refuse(responseHandler, name, "already leaving")
+                return
+            }
+            val logoutType = player.logoutType
+            if (logoutType != LogoutType.NONE && logoutType != LogoutType.CONNECTION_LOST) {
+                refuse(responseHandler, name, "logging out ($logoutType)")
+                return
+            }
+            if (old.seed?.contentEquals(previousSeed) != true) {
+                refuse(responseHandler, name, "seed mismatch")
+                return
+            }
+            RsprotInfo.onReconnect(player)
+            val gpi = Unpooled.buffer(PLAYER_INFO_BLOCK_SIZE)
+            RsprotInfo.writeAbsolutePlayerPositions(player, gpi)
+            val rsprotSession = responseHandler.writeSuccessfulResponse(LoginResponse.ReconnectOk(gpi), block, old.rsprot)
+            answered = true
+            old.retire()
+            val session = RsprotSession(player, rsprotSession, old.sentVarps)
+            session.seed = block.seed.copyOf()
+            session.infoLoggedIn = true
+            player.session = session
+            rsprotSession.setDisconnectionHook { session.onDisconnected() }
+            if (player.logoutType == LogoutType.CONNECTION_LOST) player.logoutType = LogoutType.NONE
+            resync(player, session)
+            session.flush()
+            logger.info("'{}' reconnected from {} (index {})", name, session.getHostAddress(), player.index)
+        } catch (e: Throwable) {
+            logger.error("Reconnect of '{}' failed", name, e)
+            // Before the answer the client can still be told; after it, the resync failed part-way and the
+            // session timeout / next login takes over.
+            if (!answered) runCatching { responseHandler.writeFailedResponse(LoginResponse.ConnectFail) }
+        }
+    }
+
+    private fun refuse(responseHandler: GameLoginResponseHandler<Player>, name: String, reason: String) {
+        logger.info("Reconnect of '{}' refused: {}", name, reason)
+        responseHandler.writeFailedResponse(LoginResponse.ConnectFail)
+    }
+
+    private fun resync(player: Player, session: RsprotSession) {
+        val dispatcher = player.packetDispatcher
+        for (entry in session.sentVarpsSnapshot().int2IntEntrySet()) {
+            dispatcher.sendConfig(entry.intKey, entry.intValue)
+        }
+        runCatching { player.interfaceHandler.closeInterfaces() }
+            .onFailure { logger.error("Failed to close the interfaces of {} after a reconnect", player, it) }
+        player.chunksInScope.clear()
+        player.loadMapRegions(false)
+        player.updateScopeInScene()
+        player.inventory.refreshAll()
+        player.equipment.refreshAll()
+        player.skills.refresh()
+        dispatcher.sendRunEnergy()
+        player.sendPlayerOptions()
+    }
 }
