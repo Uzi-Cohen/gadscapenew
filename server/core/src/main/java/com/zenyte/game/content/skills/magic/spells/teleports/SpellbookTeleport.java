@@ -180,6 +180,13 @@ public enum SpellbookTeleport implements TeleportSpell, Teleport {
 		public boolean canCast(final Player player) {
 			return player.getCombatDefinitions().getSpellbook() != Spellbook.ARCEUUS;
 		}
+
+		// No fixed destination: skip the wilderness-destination warning (it read the null destination and threw, so
+		// the spell silently did nothing). BountyTargetStructure checks the target and picks the landing tile.
+		@Override
+		public void teleport(final Player player) {
+			getType().getStructure().teleport(player, this);
+		}
 	};
 
 	private final double experience;
@@ -408,6 +415,15 @@ public enum SpellbookTeleport implements TeleportSpell, Teleport {
 			}
 		}
 		switch (option) {
+		case "Outside":
+		case "Inside":
+			// Teleport to House right-click options (construction area): land outside / inside regardless of the setting.
+			if (this == TELEPORT_TO_HOUSE) {
+				com.zenyte.game.content.skills.magic.spells.teleports.structures.HouseStructure.teleport(player, this,
+						option.equals("Outside") ? com.zenyte.game.content.skills.magic.spells.teleports.structures.HouseStructure.OUTSIDE
+								: com.zenyte.game.content.skills.magic.spells.teleports.structures.HouseStructure.INSIDE);
+			}
+			return;
 		case "Grand Exchange":
 			GRAND_EXCHANGE.teleport(player);
 			return;

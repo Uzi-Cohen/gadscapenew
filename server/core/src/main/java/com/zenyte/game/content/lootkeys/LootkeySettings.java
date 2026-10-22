@@ -22,6 +22,21 @@ public class LootkeySettings {
 
     private boolean withdrawAsNote;
 
+    /**
+     * True when these settings were created only to track statistics for a player who never bought the enchantment
+     * (they opened a key taken from someone else). Stored inverted so settings saved before this field existed count
+     * as unlocked.
+     */
+    private boolean enchantmentMissing;
+
+    public boolean isUnlocked() {
+        return !enchantmentMissing;
+    }
+
+    public void setUnlocked(boolean unlocked) {
+        this.enchantmentMissing = !unlocked;
+    }
+
     public boolean isWithdrawAsNote() {
         return withdrawAsNote;
     }
@@ -141,7 +156,14 @@ public class LootkeySettings {
 
     public static void clear(Player player) {
         sendClosedChest(player);
-        player.getLootkeySettings().setCurrentItemsInChest(null);
+        if (player.getLootkeySettings() != null) {
+            player.getLootkeySettings().setCurrentItemsInChest(null);
+        }
+    }
+
+    /** Whether loot from the old (pre-key-tab) chest flow is still stored for this player. */
+    public boolean hasLegacyChestLoot() {
+        return currentItemsInChest != null && !currentItemsInChest.isEmpty();
     }
 
 }

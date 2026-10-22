@@ -58,6 +58,9 @@ public final class WorldThread extends MainThread {
         return WORLD_CYCLE;
     }
 
+    /** Duration of the last completed world cycle in nanoseconds (0 before the first cycle). */
+    public static volatile long LAST_CYCLE_NANOS;
+
     private static boolean skipPlayer(Player player) {
         return player == null || player.isNulled() || !player.isInitialized() || player.isFinished();
     }
@@ -183,6 +186,7 @@ public final class WorldThread extends MainThread {
         final long finishNano = System.nanoTime();
 
         final long totalT = finishNano - nano;
+        LAST_CYCLE_NANOS = totalT; // read by the soak test harness (com.gadscape.tools.soak.SoakTest)
         final long totalMillis = TimeUnit.NANOSECONDS.toMillis(totalT);
         final boolean slowTick = totalMillis > GameConstants.WORLD_CYCLE_TIME / 2;
         final int playerCount = World.getPlayers().size();

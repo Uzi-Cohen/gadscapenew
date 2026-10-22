@@ -4,6 +4,7 @@ import com.gadscape.game.world.entity.player.PlayerAttributesKt;
 import com.zenyte.game.GameConstants;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.consumables.ConsumableEffects;
+import com.zenyte.game.content.pvpworld.PvpWorld;
 import com.zenyte.game.model.ui.testinterfaces.GameNoticeboardInterface;
 import com.zenyte.game.model.ui.testinterfaces.advancedsettings.SettingVariables;
 import com.zenyte.game.world.Position;
@@ -147,7 +148,9 @@ public class WildernessArea extends PolygonRegionArea implements
     @Override
     public void enter(final Player player) {
         final boolean canPvp = player.isCanPvp();
-        if (!canPvp) {
+        // On a PvP world the player may arrive already attackable (open world); the wilderness takes over then.
+        if (!canPvp || PvpWorld.isManaged(player)) {
+            PvpWorld.release(player);
             setAttackable(player);
         }
         if (player.getVariables().getTime(TickVariable.OVERLOAD) > 0) {
@@ -216,14 +219,8 @@ public class WildernessArea extends PolygonRegionArea implements
 
     @Override
     public boolean sendDeath(Player player, Entity source) {
-        if (source instanceof Player) {
-            final Player killer = (Player) source;
-            killer.getAttributes().put("WildernessKills", killer.getNumericAttribute("WildernessKills").intValue() + 1);
-            player.getAttributes().put("WildernessDeaths",
-                    player.getNumericAttribute("WildernessDeaths").intValue() + 1);
-            refreshKDR(player);
-            refreshKDR(killer);
-        }
+        // WildernessKills/WildernessDeaths (PvP hiscores, K/D varps) are counted in Killstreaks.handlePlayerKill once
+        // the kill passes the anti-farm checks; counting every kill here made the hiscores farmable (PVP-21).
         return false;
     }
 
@@ -255,7 +252,8 @@ public class WildernessArea extends PolygonRegionArea implements
             }
             final int level = getWildernessLevel(player.getLocation()).orElse(-1);
             final int otherLevel = getWildernessLevel(entity.getLocation()).orElse(-1);
-            final int minimumLevel = Math.min(level, otherLevel);
+            // PvP worlds: wilderness level + 15 (PvpWorld.wildernessLevelBonus() is 0 on normal worlds).
+            final int minimumLevel = Math.min(level, otherLevel) + (Math.min(level, otherLevel) >= 1 ? PvpWorld.wildernessLevelBonus() : 0);
             if (minimumLevel >= 1) {
                 if (PlayerAttributesKt.getBlackSkulled(target))
                     return true;

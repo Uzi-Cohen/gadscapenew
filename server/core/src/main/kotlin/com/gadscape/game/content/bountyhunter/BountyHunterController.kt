@@ -93,10 +93,15 @@ object BountyHunterController {
      */
     @JvmStatic fun unassignTarget(source: Player, overrideCooldown: Boolean) {
         if(source.isBountyPaired()) {
+            val other = source.getTarget().orElse(null)
             source.packetDispatcher.resetHintArrow()
-            if(source.getTarget().isPresent) source.getTarget().get().packetDispatcher.resetHintArrow()
+            other?.packetDispatcher?.resetHintArrow()
             bountyPairs.removeIf{ it.first == source || it.second == source }
             updateTargetAttributes(source, null, overrideCooldown)
+            if (other != null) {
+                other.updateTargetData()
+                other.sendMessage("You no longer have a target.", MessageType.UNFILTERABLE)
+            }
         }
     }
 
@@ -188,30 +193,29 @@ object BountyHunterController {
             matchmakingPlayers.add(player)
         }
 
+        matchmakingPlayers.removeIf { it.isNulled || it.isFinished || !it.isBHRegistered() || it.isBountyPaired() }
         if(matchmakingPlayers.size < 2)
             return
 
-        val pairsToMake = countMultiplesOf2(matchmakingPlayers.size)
-
-        repeat(pairsToMake) {
-            val pair = matchmakingPlayers.shuffled().take(2)
-            if(!pair[0].bountyHunterLastTarget.equals(pair[1].username, true) && !pair[1].bountyHunterLastTarget.equals(pair[0].username, true)) {
-                matchmakingPlayers.removeAll(pair)
-                assignTarget(pair[0], pair[1])
-            }
+        // Every searching player can be paired (the old countMultiplesOf2 made 0 pairs for 3 or 5 players).
+        // Partners must be able to fight: combat levels within max(15, the lower wilderness level of the two),
+        // and not each other's previous target.
+        val queue = matchmakingPlayers.shuffled().toMutableList()
+        while (queue.size >= 2) {
+            val first = queue.removeAt(0)
+            val partner = queue.firstOrNull { canBePaired(first, it) } ?: continue
+            queue.remove(partner)
+            matchmakingPlayers.remove(first)
+            matchmakingPlayers.remove(partner)
+            assignTarget(first, partner)
         }
     }
 
-    private fun countMultiplesOf2(number: Int): Int {
-        var count = 0
-        var n = number
-
-        while (n % 2 == 0 && n > 0) {
-            n /= 2
-            count++
-        }
-
-        return count
+    private fun canBePaired(a: Player, b: Player): Boolean {
+        if (a == b) return false
+        if (a.bountyHunterLastTarget.equals(b.username, true) || b.bountyHunterLastTarget.equals(a.username, true)) return false
+        val levelRange = maxOf(15, minOf(a.getWildernessLevel(), b.getWildernessLevel()))
+        return kotlin.math.abs(a.combatLevel - b.combatLevel) <= levelRange
     }
 
     /**
@@ -388,6 +392,29 @@ object BountyHunterController {
      * potentially drops a new emblem, and unassigns the pair, thus queueing
      * the player to be given a new target.
      */
+    /**
+     * Called from Player.sendDeath for a player who has a bounty target. Only the assigned target gets the bounty;
+     * any other death (NPC, poison, a third player) just ends the pair. Never throws, so a Bounty Hunter problem can
+     * never stop the death sequence (it used to NPE when no player had done damage).
+     */
+    @JvmStatic fun onPairedPlayerDeath(victim: Player, source: Player?) {
+        try {
+            val target = victim.getTarget().orElse(null)
+            victim.processBountyDeath()
+            if (source != null && target != null && source == target
+                && com.zenyte.game.content.killstreak.PvpKillValidator.validate(source, victim, "bounty")) {
+                completeBounty(source, victim)
+            } else {
+                unassignTarget(victim, false)
+            }
+            victim.setBountyCooldown(30)
+            updateInfoPanel(victim, true)
+        } catch (e: Exception) {
+            org.slf4j.LoggerFactory.getLogger(BountyHunterController::class.java)
+                .error("Bounty Hunter death handling failed for {}", victim.username, e)
+        }
+    }
+
     @JvmStatic fun completeBounty(killer: Player, killed: Player) {
         val hotspot = hotspotDeath(killer)
         /* Handle incrementing stats first */
@@ -407,8 +434,9 @@ object BountyHunterController {
         else if (killer.getBestEmblem().isEmpty)
             dropEmblem(killer, killed.position)
 
+        // The victim's emblem loses a tier (it used to downgrade the killer's own, just-upgraded emblem).
         if(killer.getTargetBestEmblem().isPresent)
-            downgradeEmblem(killer)
+            downgradeEmblem(killed)
 
         unassignTarget(killer, false)
         updateInfoPanel(killer, true)
@@ -431,6 +459,12 @@ object BountyHunterController {
         if(emblem.isEmpty)
             return
         val upgradeEmblem = BountyHunterEmblem.getNextOrLast(emblem.get())
+
+        /* Upgrade chance per tier (BountyHunterVars.T*_UPGRADE_CHANCE, percent); was never read before. */
+        if (com.zenyte.game.util.Utils.random(99) >= emblem.get().upgradeChance) {
+            p.sendMessage(Colour.RS_RED.wrap("Your emblem failed to upgrade this time."), MessageType.UNFILTERABLE)
+            return
+        }
 
         /* Sanity Check to make sure its actually there first */
         if(p.inventory.containsItem(emblem.get().itemId) && p.inventory.deleteItem(emblem.get().itemId, 1).succeededAmount == 1) {

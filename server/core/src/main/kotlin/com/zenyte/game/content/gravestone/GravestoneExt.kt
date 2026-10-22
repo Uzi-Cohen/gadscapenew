@@ -108,7 +108,8 @@ object GravestoneExt {
 
     fun Player.calculateGravestoneItems(pvp: Boolean, bypassGravestone: Boolean = false): Pair<List<Item>, List<Item>> {
         var keptCount = 0
-        if (prayerManager.isActive(Prayer.PROTECT_ITEM)) keptCount++
+        // High-risk PvP worlds (PvpWorld, off by default): Protect Item keeps nothing extra.
+        if (prayerManager.isActive(Prayer.PROTECT_ITEM) && !com.zenyte.game.content.pvpworld.PvpWorld.protectItemDisabled()) keptCount++
         if (!variables.isSkulled) keptCount += 3
         val wildernessLevel = WildernessArea.getWildernessLevel(location).orElse(0)
         val gravestoneItems = mutableListOf<Item>()
