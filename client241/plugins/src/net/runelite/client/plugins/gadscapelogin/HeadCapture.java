@@ -20,6 +20,8 @@ import net.runelite.api.widgets.WidgetInfo;
  */
 final class HeadCapture
 {
+	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(HeadCapture.class);
+
 	static final int SIZE = 160;
 	static final int FRAMES = 32;
 
@@ -124,8 +126,9 @@ final class HeadCapture
 		{
 			mesh = copy(chathead(p.getPlayerComposition()));
 		}
-		catch (Throwable ignored)
+		catch (Throwable e)
 		{
+			log.warn("GadScape face: couldn't build the chathead", e);
 			mesh = null;
 		}
 		if (mesh == null && ticks < 25)
@@ -135,6 +138,7 @@ final class HeadCapture
 		if (mesh == null)
 		{
 			// no chathead (an NPC look, or a cache entry it couldn't read): the top of the character
+			log.warn("GadScape face: no chathead for {}, drawing the top of the character", user);
 			mesh = copy(p.getModel());
 			part = 0.19;
 		}
@@ -147,11 +151,24 @@ final class HeadCapture
 		final HeadRenderer.Mesh fm = mesh;
 		final double fpart = part;
 		final String name = user;
+		final HeadRenderer.Mesh body = fpart == 1 ? copy(p.getModel()) : null;
 		Thread t = new Thread(() ->
 		{
 			try
 			{
-				BufferedImage strip = HeadRenderer.renderFrames(fm, fpart, SIZE, FRAMES, -1);
+				BufferedImage strip = null;
+				try
+				{
+					strip = HeadRenderer.renderFrames(fm, fpart, SIZE, FRAMES, -1);
+				}
+				catch (Exception e)
+				{
+					log.warn("GadScape face: couldn't draw the chathead", e);
+				}
+				if (strip == null && body != null)
+				{
+					strip = HeadRenderer.renderFrames(body, 0.19, SIZE, FRAMES, -1);
+				}
 				if (strip != null)
 				{
 					dir.mkdirs();
@@ -159,11 +176,12 @@ final class HeadCapture
 					ImageIO.write(strip, "png", tmp);
 					java.nio.file.Files.move(tmp.toPath(), new File(dir, fileName(name)).toPath(),
 						java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+					log.info("GadScape face: saved {} ({})", fileName(name), fpart == 1 ? "chathead" : "top of character");
 				}
 			}
-			catch (Exception ignored)
+			catch (Exception e)
 			{
-				// no picture this time; the tile shows the shield
+				log.warn("GadScape face: couldn't save the picture for {}", name, e);
 			}
 		}, "gadscape-face");
 		t.setDaemon(true);
@@ -212,11 +230,12 @@ final class HeadCapture
 		{
 			int v = eq[i];
 			Part part = null;
-			if (v >= 512)
+			// build 241 stores worn items as id + 2048 and body parts as kit id + 256
+			if (v >= PlayerComposition.ITEM_OFFSET)
 			{
-				part = itemHead(config.loadData(10, v - 512), female);
+				part = itemHead(config.loadData(10, v - PlayerComposition.ITEM_OFFSET), female);
 			}
-			else if (v >= 256)
+			else if (v >= PlayerComposition.KIT_OFFSET)
 			{
 				part = kitHead(config.loadData(3, v - 256));
 			}
