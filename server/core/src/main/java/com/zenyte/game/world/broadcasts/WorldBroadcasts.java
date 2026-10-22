@@ -45,7 +45,7 @@ public class WorldBroadcasts {
             "hall for cosmetic items.",
             "Did you know: You can imbue items such as slayer helmets and dagannoth rings using Imbue Tokens purchasable from the loyalty store.",
             "Did you know: You can use regular teleports, fairy rings, spirit trees, gnome gliders and the" +
-            " " + GameConstants.SERVER_NAME + " portal to travel around the world.", "Did you know: You can complete " +
+            " Teleportation nexus at home to travel around the world.", "Did you know: You can complete " +
             "daily challenges to obtain extra experience.", "Did you know: " + GameConstants.SERVER_NAME + " has full" +
             " RuneLite integration? You can click the wrench icon on the client to customize the RuneLite settings to" +
             " your liking.", "Did you know: You can enable two factor authentication (2FA) to prevent unauthorized " +
@@ -62,8 +62,6 @@ public class WorldBroadcasts {
             "Did you know: You can rewatch the " + GameConstants.SERVER_NAME + " tutorial by talking to the " + GameConstants.SERVER_NAME + " guide near the Grand Exchange at home.", "Did you know: You can change your spellbook using the occult altar north of the Grand Exchange.", "Did you know: The Magic shop sells " + GameConstants.SERVER_NAME + " home teleport tablets that allow you to instantly teleport to the home area.", "Did you know: You can vote for " + GameConstants.SERVER_NAME + " to receive a cash reward and vote points.", "Did you know: There's a chance Krystilia will upgrade your emblem when completing a Wilderness slayer assignment.", "Did you know: You can buy RFD gloves from the chest in the Lumbridge Castle Basement.", "Did you know: You can view current buy and sell offers in the Grand Exchange with the \"Offers Viewer\" on the G.E Interface.", "Did you know: All farming timers are half that of Oldschool Runescape.", "Did you know: We provide a Wiki command and quick link under the world map that directs you to the Oldschool Runescape Wiki which is rather accurate.", "Did you know: We have a help chat called \"" + GameConstants.SERVER_CHANNEL_NAME + "\" for any new and seasoned players alike. Join via the clan chat interface.",
 //            "Did you know: You can play " + GameConstants.SERVER_NAME + " on your favorite Android mobile device by " +
 //                    "downloading the APK via our website.",
-            "Did you know: You can find all of" +
-            " our community made guides with the ::guides command.",
             "Did you know: You can start Slayer South-West of the Grand Exchange with Turael. Higher level slayer masters can also be found here.",
             "Did you know: You can purchase fully charged custom starter weapons from the " + GameConstants.SERVER_NAME + " guide for 200K each.",
             "Did you know: You can link your Discord account with your in-game account by typing /link in the " + GameConstants.SERVER_NAME + " Discord",

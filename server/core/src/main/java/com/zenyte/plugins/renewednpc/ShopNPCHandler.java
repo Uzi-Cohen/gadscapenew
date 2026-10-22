@@ -33,7 +33,7 @@ public enum ShopNPCHandler {
     // TODO: Verify that npc exists + add access to it.
     ARDOUGNE_GEM_STALL("Ardougne Gem Stall", GEM_MERCHANT),
     // TODO: Verify that npc exists + add access to it.
-    ARDOUGNE_SILVER_STALL("Ardougne Silver Stall", SILVER_MERCHANT),
+    ARDOUGNE_SILVER_STALL("Ardougne Silver Stall", SILVER_MERCHANT, SILVER_MERCHANT_8722),
     // TODO: Verify that npc exists + add access to it.
     ARDOUGNE_SPICE_STALL("Ardougne Spice Stall", SPICE_SELLER),
     // TODO: Verify that npc exists + add access to it.
@@ -49,7 +49,7 @@ public enum ShopNPCHandler {
     // TODO: Add npc
     ARNOLDS_ECLECTIC_SUPPLIES("Arnold's Eclectic Supplies", ARNOLD_LYDSPOR),
     // TODO: Requires quest completion.
-    AUBURY_RUNES_SHOP("Aubury's Rune Shop", AUBURY),
+    AUBURY_RUNES_SHOP("Aubury's Rune Shop", AUBURY, AUBURY_11434, AUBURY_11435),
     // TODO: Requires quest completion.
     AURELS_SUPPLIES("Aurel's Supplies", AUREL),
     // TODO: Requires quest completion.
@@ -344,7 +344,7 @@ public enum ShopNPCHandler {
     // TODO: Open through dialogue, no trade option.
     QUARTERMASTERS_STORES("Quartermaster's Stores", QUARTERMASTER),
     // TODO: Open through dialogue, no trade op.
-    RAETUL_AND_COS_CLOTHS_STORE("Raetul and Co's Cloth Store", RAETUL),
+    RAETUL_AND_COS_CLOTHS_STORE("Raetul and Co's Cloth Store", RAETUL, RAETUL_11599),
     // TODO two options, no trade. Additionally quest
     RANAELS_SUPER_SKIRT_STORE("Ranael's Super Skirt Store", RANAEL),
     // TODO two options, no trade. Additionally quest
@@ -390,7 +390,7 @@ public enum ShopNPCHandler {
     // TODO: Add npc, trading done through dialogue.
     SOLIHIBS_FOOD_STAFF("Solihib's Food Stall", SOLIHIB),
     // TODO: Add npc, trading done through dialogue.
-    TAMAYUS_SPEAR_STALL("Tamayu's Spear Stall", TAMAYU),
+    TAMAYUS_SPEAR_STALL("Tamayu's Spear Stall", TAMAYU, TAMAYU_4704),
     // TODO: Multiple npcs open it.
     THE_ASP_AND_SNAKE_BAR("The Asp & Snake Bar", 3535),
     // TODO: Another npc opens through dialogue.
@@ -476,11 +476,11 @@ public enum ShopNPCHandler {
     WILLIAMS_WILDERNESS_CAPE_SHOP("William's Wilderness Cape Shop", WILLIAM),
     WYDINS_FOOD_STORE("Wydin's Food Store", WYDIN),
     YARSUL_PRODIGIUOUS_PICKAXES("Yarsul's Prodigious Pickaxes", YARSUL),
-    YE_OLDE_TEA_SHOPPE("Ye Olde Tea Shoppe", 1302),
+    YE_OLDE_TEA_SHOPPE("Ye Olde Tea Shoppe", TEA_SELLER), // was 1302, a sheep
     YRSAS_ACCPUNTREMENTS("Yrsa's Accoutrements", YRSA_3933),
     ZANARIS_GENERAL_STORE("Zanaris General Store", FAIRY_SHOP_KEEPER),
     ZEKES_SUPERIOR_SCIMITARS("Zeke's Superior Scimitars", ZEKE),
-    ZENESHAS_PLATE_MAIL_BODY_SHOP("Zenesha's Plate Mail Body Shop", ZENESHA),
+    ZENESHAS_PLATE_MAIL_BODY_SHOP("Zenesha's Plate Mail Body Shop", ZENESHA, ZENESHA_8681),
     LEKE_QUO_KERAN("Mount Karuulm Weapon Shop", NpcId.LEKE_QUO_KERAN),
     SLAYER_EQUIPMENT("Slayer Equipment", TURAEL, MAZCHNA, VANNAKA, CHAELDAR, DURADEL, 490, NIEVE, KONAR_QUO_MATEN, 16064),
     ;

@@ -2,13 +2,15 @@ package com.zenyte.game.world.entity.player.teleports
 
 import com.gadscape.cache.interfaces.teleports.Category
 import com.gadscape.cache.interfaces.teleports.Destination
+import com.gadscape.cache.interfaces.teleports.TeleportsList
 import com.zenyte.game.GameInterface
-import com.zenyte.game.model.item.containers.HerbSack
 import com.zenyte.game.model.ui.InterfacePosition
 import com.zenyte.game.world.entity.player.Player
-import java.util.*
 
 /**
+ * State of the GadScape teleport menu (interface 1601) for one player: selected category, favourites and the
+ * previous destination (used by the magic stone "Previous teleport" op, the home nexus and the teleport wizard).
+ *
  * @author Jire
  */
 class TeleportsManager(
@@ -25,20 +27,41 @@ class TeleportsManager(
     @Transient
     var previousDestination: Destination? = null
 
+    /** Saved by name so the previous teleport survives a relog (and a reordering of the menu). */
+    var previousDestinationName: String? = null
+
     var favoriteDestinations: MutableList<Int> = ArrayList()
 
-    fun initialize(teleportsManager: TeleportsManager) {
-        favoriteDestinations = teleportsManager.favoriteDestinations
+    fun initialize(teleportsManager: TeleportsManager?) {
+        if (teleportsManager == null) {
+            return
+        }
+        @Suppress("SENSELESS_COMPARISON")
+        if (teleportsManager.favoriteDestinations != null) {
+            favoriteDestinations = teleportsManager.favoriteDestinations
+        }
+        val name = teleportsManager.previousDestinationName
+        if (name != null) {
+            previousDestinationName = name
+            previousDestination = TeleportsList.allTeleports.firstOrNull { it.name == name }
+        }
+    }
+
+    /** Re-sends the "Previous teleport: <name>" label after login. */
+    fun refreshPreviousTeleportLabel() {
+        val destination = previousDestination ?: return
+        player.packetDispatcher.sendClientScript(PREVIOUS_TELEPORT_LABEL_SCRIPT, destination.name)
     }
 
     fun setPreviousTeleport(destination: Destination) {
         previousDestination = destination
-        player.packetDispatcher.sendClientScript(10592, destination.name)
+        previousDestinationName = destination.name
+        player.packetDispatcher.sendClientScript(PREVIOUS_TELEPORT_LABEL_SCRIPT, destination.name)
     }
 
-    fun attemptTeleport(destination: Destination) {
+    fun attemptTeleport(destination: Destination?) {
         if (destination == null) {
-            player.sendMessage("You don't have anywhere to teleport to.")
+            player.sendMessage("You don't have a previous teleport.")
             return
         }
 
@@ -58,9 +81,20 @@ class TeleportsManager(
         GameInterface.TELEPORTS.open(player)
     }
 
-    fun updateFavorites() {
-        var favoriteData = IntArray(7)
+    /** Opens the menu on [category] (by its lower-case name, e.g. "training teleports"); falls back to the last category. */
+    fun attemptOpen(categoryName: String) {
+        val category = TeleportsList.categories[categoryName.lowercase()]
+        if (category != null) {
+            selectedCategory = category
+            player.varManager.sendVar(CATEGORY_VARP, category.id)
+        }
+        attemptOpen()
+    }
 
+    fun updateFavorites() {
+        val favoriteData = IntArray(FAVORITE_VARPS.size)
+
+        @Suppress("SENSELESS_COMPARISON")
         if (favoriteDestinations != null) {
             for (destinationId in favoriteDestinations) {
                 val index = destinationId shr 5
@@ -71,19 +105,31 @@ class TeleportsManager(
                 } else {
                     favoriteData[index] = favoriteData[index] or (1 shl pos)
                 }
-                //println("tele=$destinationId, var=$index, bit=$pos, value=${favoriteData[index]}, mask=${1 shl pos}")
             }
         }
 
-        //println(favoriteData.contentToString())
+        for (i in FAVORITE_VARPS.indices) {
+            player.varManager.sendVar(FAVORITE_VARPS[i], favoriteData[i])
+        }
+    }
 
-        player.varManager.sendVar(263, favoriteData[0])
-        player.varManager.sendVar(264, favoriteData[1])
-        player.varManager.sendVar(265, favoriteData[2])
-        player.varManager.sendVar(266, favoriteData[3])
-        player.varManager.sendVar(262, favoriteData[4])
-        player.varManager.sendVar(3808, favoriteData[5])
-        player.varManager.sendVar(3809, favoriteData[6])
+    companion object {
+        /**
+         * Category varp: written by the server (spellbook/nexus) and by client script 10520, read by scripts 10504/10527.
+         * It is the vanilla temp varp 261 (also used by a few other interfaces); see content-work/teleports-shops/CACHE_NEEDS.md
+         * before moving it, the client scripts must change in the same release.
+         */
+        const val CATEGORY_VARP = 261
+
+        /**
+         * Favourite bit-sets, 32 destinations per varp, read by client script 10522 in this order (allTeleports index
+         * shr 5 selects the varp). 7 varps = 224 destinations; TeleportInterfaceDialog refuses favourites beyond that.
+         */
+        @JvmField
+        val FAVORITE_VARPS = intArrayOf(263, 264, 265, 266, 262, 3808, 3809)
+
+        /** Sets varcstr 1500, the magic stone's "Previous teleport: <name>" op text. */
+        const val PREVIOUS_TELEPORT_LABEL_SCRIPT = 10592
     }
 
 }

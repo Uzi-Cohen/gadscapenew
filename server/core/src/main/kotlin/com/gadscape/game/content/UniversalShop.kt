@@ -106,10 +106,14 @@ object UniversalShop {
 
     fun getCategoryRowIndexPair(selectedCategory: Int, targetChildId: Int): Pair<Int, Int> {
         if (selectedCategory != 0 && selectedCategory != 1) {
+            val size = categoriesToTable[selectedCategory]?.table?.items?.size ?: return 99 to 1
+            if (targetChildId !in 0 until size) return 99 to 1
             return selectedCategory to targetChildId
         }
-        val category = Categories.first { it.componentIds.contains(targetChildId) }
+        // A click on a header/spacer child of the "all" view matches no category: 99 = do nothing.
+        val category = Categories.firstOrNull { it.componentIds.contains(targetChildId) } ?: return 99 to 1
         val rowIndex = targetChildId - category.componentIds.first
+        if (rowIndex !in 0 until category.table.items.size) return 99 to 1
         return category.uniqueIndex to rowIndex
     }
 
@@ -179,10 +183,20 @@ object UniversalShop {
         if(debit > availableCurrency) {
             player.sendMessage("You do not have enough $currency to buy that many.")
             return
-        } else if(isNote){
+        } else if(isNote && ItemDefinitions.getOrThrow(Item.notedId(itemId)).isStackable()){
+            val notedId = Item.notedId(itemId)
+            // Pay only when the noted stack fits (an existing stack or a free slot); it used to be paid and then lost.
+            if (!player.inventory.containsItem(notedId) && !player.inventory.hasFreeSlots()) {
+                player.sendMessage("You don't have enough inventory space.")
+                return
+            }
             ShopCurrencyHandler.remove(currency, player, debit)
-            player.inventory.addItem(Item.notedId(itemId), quantity)
+            player.inventory.addItem(notedId, quantity)
         } else if(ItemDefinitions.getOrThrow(itemId).isStackable()){
+            if (!player.inventory.containsItem(itemId) && !player.inventory.hasFreeSlots()) {
+                player.sendMessage("You don't have enough inventory space.")
+                return
+            }
             ShopCurrencyHandler.remove(currency, player, debit)
             player.inventory.addItem(itemId, quantity)
         } else if(player.inventory.checkSpace(quantity)) {
@@ -190,6 +204,10 @@ object UniversalShop {
             player.inventory.addItem(itemId, quantity)
         } else {
             val newQuantity = player.inventory.freeSlots
+            if (newQuantity <= 0) {
+                player.sendMessage("You don't have enough inventory space.")
+                return
+            }
             val newDebit = price * newQuantity
             ShopCurrencyHandler.remove(currency, player, newDebit)
             player.inventory.addItem(itemId, newQuantity)

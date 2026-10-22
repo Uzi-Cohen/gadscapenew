@@ -10,7 +10,7 @@ import com.zenyte.game.world.entity.player.privilege.MemberRank;
 public enum HomeTeleport {
     HOME(new Location(3211, 3423), "Regular Home", MemberRank.EXPANSION),
     MAGE_BANK(new Location(2539, 4716), "Mage's Bank", MemberRank.EXPANSION),
-    FOREX_ENCLAVE(new Location(3150, 3636), "Forex Enclave", MemberRank.EXPANSION),
+    FEROX_ENCLAVE(new Location(3150, 3636), "Ferox Enclave", MemberRank.EXPANSION),
     DI(DonatorZoneTeleports.DI.getLocation(), "Donator Island", MemberRank.EXPANSION),
     DIE(DonatorZoneTeleports.DIE.getLocation(), "Super Donator Island", MemberRank.EXPANSION),
     RDI(DonatorZoneTeleports.RDI.getLocation(), "Extreme Donator Island", MemberRank.RESPECTED),

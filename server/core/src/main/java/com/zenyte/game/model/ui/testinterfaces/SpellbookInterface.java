@@ -67,16 +67,10 @@ public class SpellbookInterface extends Interface {
             final String option = getOptionString(componentId, optionId);
 
             final String spellName = SpellDefinitions.getSpellName(componentId);
-            if(componentId == 29) {
-                player.sendMessage("Construction is incomplete, therefore this teleport is disabled.");
-                return;
-            }
             if (spellName != null) {
                 final Category category = TeleportsList.getCategories().get(spellName.toLowerCase());
                 if (category != null) { // instead of executing the spell, open the respective category.
-                    player.getVarManager().sendVar(261, category.getId());
-                    player.getTeleportsManager().setSelectedCategory(category);
-                    player.getTeleportsManager().attemptOpen();
+                    player.getTeleportsManager().attemptOpen(category.getName());
                     return;
                 }
             }

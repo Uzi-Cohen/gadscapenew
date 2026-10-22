@@ -23,8 +23,17 @@ public class TeleportInterface extends Interface {
         put(17, "Favorite teleport to");
     }
 
+    /**
+     * The legacy teleport menu (interface 1700) has no client scripts in any cache (10000-10033 are missing on 211 and 241),
+     * so it rendered empty lists. Every opener now gets the GadScape teleport menu (interface 1601) instead.
+     */
     @Override
     public void open(Player player) {
+        player.getTeleportsManager().attemptOpen();
+    }
+
+    @SuppressWarnings("unused")
+    private void openLegacy(Player player) {
         final TeleportManager manager = player.getTeleportManager();
         player.getInterfaceHandler().sendInterface(getInterface());
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("View Category"), 0, (TeleportCategory.VALUES.length * 2) + 2, AccessMask.CLICK_OP1);
