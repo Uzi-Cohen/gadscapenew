@@ -1,5 +1,7 @@
 package com.zenyte.game.content.treasuretrails.plugins;
 
+import com.zenyte.game.content.treasuretrails.ClueStackLimit;
+
 import com.zenyte.game.content.treasuretrails.ClueItem;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
@@ -116,6 +118,14 @@ public class WatsonPlugin extends NPCPlugin {
         // Ensure that the starting index is valid.
         assert ClueItem.EASY.ordinal() == 1;
         final Inventory inventory = player.getInventory();
+        if (inventory.containsItem(type.getClue(), 1)) {
+            final int pending = player.getNumericAttribute("Watson handed in clue scrolls hash").intValue() | (1 << (type.ordinal() - 1));
+            if (pending == (1 | 2 | 4 | 8) && !ClueStackLimit.canReceive(player, ClueItem.MASTER)) {
+                player.getDialogueManager().finish();
+                player.sendMessage("You have too many master clues for Watson to give you another. Come back when you have room for one.");
+                return false;
+            }
+        }
         final boolean success = inventory.deleteItem(type.getClue(), 1).getSucceededAmount() > 0;
         if (success) {
             final int ordinal = type.ordinal() - 1;

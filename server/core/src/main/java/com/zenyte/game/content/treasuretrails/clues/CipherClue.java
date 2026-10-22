@@ -30,16 +30,19 @@ public enum CipherClue implements Clue {
 
 	BMJ_UIF_LFCBC_TFMMFS(MEDIUM, ChallengeScroll.ALI_THE_KEBAB_SELLER, 3536),
 	ECRVCKP_MJCNGF(MEDIUM, ChallengeScroll.CAPTAIN_KHALED, 6971, 6972),
-	//GBJSZ_RVFFO(HARD, null, 1161, 1842),//PUZZLE BOX
+	GBJSZ_RVFFO(HARD, null, 1161, 1842),//PUZZLE BOX
 	GUHCHO(MEDIUM, ChallengeScroll.DREZEL, 9636),
-	//HCKTA_IQFHCVJGT(HARD, ChallengeScroll.FAIRY_GODFATHER, 1840, 5837),
-	//OVEXON(HARD, ChallengeScroll.ELUNED, 889, 5304),
+	HCKTA_IQFHCVJGT(HARD, ChallengeScroll.FAIRY_GODFATHER, 1840, 5837),
+	OVEXON(HARD, ChallengeScroll.ELUNED, 889, 5304, 8766, 8767),
 	QSPGFTTPS_HSBDLMFCPOF(MEDIUM, ChallengeScroll.PROFESSOR_GRACKLEBONE, 7048),
-	USBJCPSO(MEDIUM, ChallengeScroll.TRAIBORN, 5081),
+	USBJCPSO(MEDIUM, "XJABSE USBJCPSO", ChallengeScroll.TRAIBORN, 5081),
 	UZZU_MUJHRKYYKJ(HARD, ChallengeScroll.OTTO_GODBLESSED_2, 2914, 2915),
-	VTYR_APCNTGLW(HARD, ChallengeScroll.KING_PERCIVAL, 4058), ZCZL(MEDIUM, ChallengeScroll.ADAM, 311),
+	VTYR_APCNTGLW(HARD, ChallengeScroll.KING_PERCIVAL, 4058), ZCZL(MEDIUM, "HQNM LZM STSNQ", ChallengeScroll.ADAM, 311),
 	ZHLUG_ROG_PDQ(HARD, ChallengeScroll.WEIRD_OLD_MAN, 954),
-	ZSBKDO_ZODO(HARD, null, 601, 602, 3389, 4814, 4816);
+	ZSBKDO_ZODO(HARD, null, 601, 602, 3389, 4814, 4816),
+	//Hard ciphers added from the OSRS wiki / RuneLite 1.13.3 (October 2026): both hand out a puzzle box.
+	IWPPLQTP(HARD, null, 2153),
+	BSOPME_MZETQPS(HARD, null, 4293);
 
 	//PUZZLE BOX
 	private static final CipherClue[] values = values();
@@ -59,8 +62,16 @@ public enum CipherClue implements Clue {
 	}
 
 	CipherClue(final ClueLevel level, final ChallengeScroll scroll, final int... npcIds) {
+		this(level, null, scroll, npcIds);
+	}
+
+	/**
+	 * @param text the cipher text when it differs from the constant's name (OSRS changed the text; the constant keeps
+	 *             its name so clue scrolls that already hold it stay valid).
+	 */
+	CipherClue(final ClueLevel level, final String text, final ChallengeScroll scroll, final int... npcIds) {
 		this.level = level;
-		this.cipher = name().replaceAll("_", " ");
+		this.cipher = text != null ? text : name().replaceAll("_", " ");
 		this.scroll = scroll;
 		this.challenge = scroll == null ? new PuzzleRequest(npcIds) : new TalkChallengeRequest(scroll, npcIds);
 		this.npcIds = npcIds;

@@ -58,10 +58,16 @@ public final class PuzzleBox {
      * @param id the id of the puzzle box that we're managing.
      */
     public final void openPuzzle(final int id) {
-        if (currentPuzzle == null || puzzle != null && puzzle.getPuzzleBox() != id) {
-            generatePuzzle(id);
+        if (Puzzle.getMap().get(id) == null) {
+            player.sendMessage("Nothing interesting happens.");
+            return;
         }
-        assert puzzle != null : "Puzzle is not yet set";
+        if (currentPuzzle == null || puzzle == null || puzzle.getPuzzleBox() != id) {
+            if (!generatePuzzle(id)) {
+                player.sendMessage("Nothing interesting happens.");
+                return;
+            }
+        }
         GameInterface.PUZZLE_BOX.open(player);
     }
 
@@ -73,7 +79,9 @@ public final class PuzzleBox {
      * Performs a full container and varp refresh on the current puzzle.
      */
     public void fullRefresh() {
-        assert puzzle != null : "Puzzle is not set yet.";
+        if (puzzle == null || currentPuzzle == null) {
+            return;
+        }
         currentPuzzle.setFullUpdate(true);
         currentPuzzle.refresh(player);
         Enums.PUZZLE_BOX_ENUMS.getKey(puzzle.getEnumId()).ifPresent(puzzleIndex -> player.getVarManager().sendVar(261, puzzleIndex));
@@ -85,7 +93,7 @@ public final class PuzzleBox {
      * @return whether or not a puzzle has been generated.
      */
     public boolean containsPuzzle() {
-        return puzzle != null;
+        return puzzle != null && currentPuzzle != null;
     }
 
     /**
@@ -94,7 +102,7 @@ public final class PuzzleBox {
      * @return the enum containing all of the puzzle pieces in the correct order.
      */
     private IntEnum getEnum() {
-        return EnumDefinitions.getIntEnum(puzzle.getEnumId());
+        return puzzle == null ? null : EnumDefinitions.getIntEnum(puzzle.getEnumId());
     }
 
     /**
@@ -104,8 +112,13 @@ public final class PuzzleBox {
      */
     private int emptySlot() {
         final IntAVLTreeSet slots = currentPuzzle.getAvailableSlots();
-        assert slots.size() == 1;
-        return slots.firstInt();
+        //The puzzle container holds 25 slots of which exactly one is empty.
+        for (final int slot : slots) {
+            if (slot >= 0 && slot < 25) {
+                return slot;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -116,6 +129,13 @@ public final class PuzzleBox {
      */
     private boolean canMove(final int slotId) {
         final int emptySlot = emptySlot();
+        if (emptySlot == -1 || slotId < 0 || slotId >= 25) {
+            return false;
+        }
+        //Horizontal moves may not wrap around to the previous or next row.
+        if ((slotId + 1 == emptySlot && slotId % 5 == 4) || (slotId - 1 == emptySlot && slotId % 5 == 0)) {
+            return false;
+        }
         return (slotId + 1) == emptySlot || (slotId - 1) == emptySlot || (slotId + 5) == emptySlot || (slotId - 5) == emptySlot;
     }
 
@@ -125,7 +145,7 @@ public final class PuzzleBox {
      * @param slot the slot that was clicked.
      */
     public void shiftPuzzle(final int slot) {
-        if (complete || !canMove(slot)) {
+        if (complete || currentPuzzle == null || !canMove(slot)) {
             return;
         }
         final Item movedTile = currentPuzzle.get(slot);
@@ -141,10 +161,13 @@ public final class PuzzleBox {
      * they've solved the puzzle.
      */
     public void checkCompletion() {
-        if (complete) {
+        if (complete || puzzle == null || currentPuzzle == null) {
             return;
         }
         final IntEnum enumList = getEnum();
+        if (enumList == null) {
+            return;
+        }
         for (int i = 0; i < 24; i++) {
             final OptionalInt optionalValue = enumList.getValue(i);
             final Item currentPiece = currentPuzzle.get(i);
@@ -169,25 +192,37 @@ public final class PuzzleBox {
     private Item findPuzzleItem() {
         final int puzzleBox = puzzle.getPuzzleBox();
         final Int2ObjectSortedMap.FastSortedEntrySet<Item> entrySet = player.getInventory().getContainer().getItems().int2ObjectEntrySet();
-        final Int2ObjectMap.Entry<Item> item = CollectionUtils.findMatching(entrySet, entry -> entry.getValue().getId() == puzzleBox);
-        return item.getValue();
+        final Int2ObjectMap.Entry<Item> item = CollectionUtils.findMatching(entrySet, entry -> entry.getValue() != null && entry.getValue().getId() == puzzleBox);
+        return item == null ? null : item.getValue();
     }
 
     /**
      * Generates the puzzle and fills it with with the pieces in a random order.
      *
      * @param id the puzzle box id to fill the puzzle with.
+     * @return whether a puzzle could be generated for the box.
      */
-    private final void generatePuzzle(final int id) {
-        puzzle = Puzzle.getMap().get(id);
+    private final boolean generatePuzzle(final int id) {
+        final Puzzle selected = Puzzle.getMap().get(id);
+        if (selected == null) {
+            return false;
+        }
+        final IntEnum pieces = EnumDefinitions.getIntEnum(selected.getEnumId());
+        if (pieces == null || !pieces.getValue(0).isPresent()) {
+            return false;
+        }
+        puzzle = selected;
         currentPuzzle = new Container(ContainerPolicy.NORMAL, ContainerType.PUZZLE_BOX, Optional.of(player));
         complete = false;
         currentPuzzle.clear();
-        final int firstPieceItemId = getEnum().getValue(0).orElseThrow(RuntimeException::new);
+        //The enum maps every slot of the solved puzzle to its piece; the last slot (24) is the empty one.
+        final int firstPieceItemId = pieces.getValue(0).getAsInt();
         for (int i = 0; i < 24; i++) {
-            currentPuzzle.set(i, new Item(firstPieceItemId + i));
+            final OptionalInt piece = pieces.getValue(i);
+            currentPuzzle.set(i, new Item(piece.isPresent() ? piece.getAsInt() : firstPieceItemId + i));
         }
         shuffle();
+        return true;
     }
 
     /**

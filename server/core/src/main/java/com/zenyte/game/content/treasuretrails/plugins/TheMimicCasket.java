@@ -1,5 +1,7 @@
 package com.zenyte.game.content.treasuretrails.plugins;
 
+import com.zenyte.game.content.treasuretrails.ClueStackLimit;
+
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.content.follower.impl.MiscPet;
 import com.zenyte.game.content.treasuretrails.ClueLevel;
@@ -103,6 +105,9 @@ public class TheMimicCasket extends ItemPlugin {
                 if (requirement != -1 && requirement <= count) {
                     tier.getMilestoneRewardConsumer().accept(player);
                 }
+                ClueStackLimit.filterRewards(player, loot);
+                ClueStackLimit.onTrailCompleted(player, tier, count);
+                ClueStackLimit.onMimicDefeated(player);
                 long value = 0;
                 for (final Item it : loot) {
                     value += it.getSellPrice() * it.getAmount();

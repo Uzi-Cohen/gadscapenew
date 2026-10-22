@@ -187,6 +187,7 @@ public class TreasureTrail {
             for (int i = 0; i < list.size(); i++) {
                 final String constant = list.get(i);
                 final Clue clueScroll = getClues().get(constant);
+                if (clueScroll == null) continue;//A step that no longer exists (removed or renamed constant).
                 final ClueChallenge challenge = clueScroll.getChallenge();
                 if (challenge == null) continue;
                 if (!clazz.isAssignableFrom(challenge.getClass())) {
@@ -377,8 +378,10 @@ public class TreasureTrail {
         }
         for (final String constantName : list) {
             final Clue clueScroll = TreasureTrail.getClues().get(constantName);
+            if (clueScroll == null || !(clueScroll.getChallenge() instanceof HotColdChallenge)) {
+                continue;
+            }
             final ClueChallenge challenge = clueScroll.getChallenge();
-            Preconditions.checkArgument(challenge instanceof HotColdChallenge);
             final HotColdChallenge hc = (HotColdChallenge) challenge;
             final Location center = hc.getCenter();
             final Location tile = player.getLocation();
@@ -387,7 +390,7 @@ public class TreasureTrail {
             final Optional<DeviceTemperature> temperature = DeviceTemperature.get(temps, distance);
             return Optional.of(new HotColdResult(slot.getAsInt(), clueItem, hc, distance, temperature.orElse(null)));
         }
-        throw new IllegalStateException();
+        return Optional.empty();
     }
 
     private static final OptionalInt findHotColdClue(@NotNull final Player player, final boolean beginner) {
@@ -541,7 +544,7 @@ public class TreasureTrail {
                             if (player.getInventory().getItem(clue.getSlot()) != clue.getItem()) {
                                 return;
                             }
-                            if (value != talkChallenge.getChallengeScroll().getAnswer() && !(value == 20 && talkChallenge.getChallengeScroll() == ChallengeScroll.FATHER_AERECK)) {
+                            if (!talkChallenge.getChallengeScroll().isCorrect(value)) {
                                 player.getDialogueManager().start(new NPCChat(player, transmogrifiedId, "That's " +
                                         "incorrect!"));
                                 return;
@@ -709,6 +712,21 @@ public class TreasureTrail {
     public static final OptionalInt getKey(@NotNull final Player player, @NotNull final NPC npc) {
         final Optional<ClueEntry> clue = findClueScroll(player, KeyRequest.class, predicate -> ArrayUtils.contains(predicate.getValidNPCs(), player.getTransmogrifiedId(npc.getDefinitions(), npc.getId())));
         return clue.map(clueEntry -> OptionalInt.of(((KeyRequest) clueEntry.getChallenge()).getKeyId())).orElseGet(OptionalInt::empty);
+    }
+
+    /**
+     * Whether talking to the NPC would progress one of the clue scrolls in the player's inventory (talk, challenge
+     * scroll, puzzle box or light box steps). Used by the NPC option handler so that a clue step works on any NPC,
+     * including NPCs whose Talk-to option belongs to another plugin.
+     */
+    public static final boolean hasTalkStep(@NotNull final Player player, @NotNull final NPC npc) {
+        final int transmogrifiedId = player.getTransmogrifiedId(npc.getDefinitions(), npc.getId());
+        if (findClueScroll(player, TalkChallengeRequest.class, clue -> ArrayUtils.contains(clue.getValidNPCs(), transmogrifiedId)).isPresent()
+                || findClueScroll(player, LightBoxRequest.class, clue -> ArrayUtils.contains(clue.getValidNPCs(), transmogrifiedId)).isPresent()
+                || findClueScroll(player, PuzzleRequest.class, clue -> ArrayUtils.contains(clue.getValidNPCs(), transmogrifiedId)).isPresent()) {
+            return true;
+        }
+        return findClueScroll(player, TalkRequest.class, clue -> ArrayUtils.contains(clue.getValidNPCs(), transmogrifiedId) && (clue.getPredicate() == null || clue.getPredicate().test(player))).isPresent();
     }
 
     public static final boolean talk(@NotNull final Player player, @NotNull final NPC npc) {

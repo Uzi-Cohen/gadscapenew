@@ -50,6 +50,19 @@ public enum TreasureTrailType {
 
     static TreasureTrailType[] values = values();
 
+    /**
+     * Steps OSRS removed or moved. They stay defined so clue scrolls that already hold them can still be read and
+     * finished, but new trails never pick them.
+     */
+    private static final Set<String> RETIRED = Set.of(
+            //Coordinates the OSRS wiki no longer lists (replaced by C02_56N_34_30E and C16_48N_30_01W, or removed).
+            "C02_58N_34_30E", "C13_28N_29_43E", "C14_20N_30_45W", "C16_43N_30_01W", "C24_45N_17_24E", "C25_00N_17_18E"
+    );
+
+    public static boolean isRetired(@NotNull final Clue clue) {
+        return RETIRED.contains(clue.getEnumName());
+    }
+
     static {
         totalWeights = new Object2IntOpenHashMap<>();
         allClues = new EnumMap<>(ClueLevel.class);
@@ -67,7 +80,15 @@ public enum TreasureTrailType {
                         }
                         labelledClues.put(name, clue);
                     }
-                    allClues.computeIfAbsent(level, __ -> new EnumMap<>(TreasureTrailType.class)).computeIfAbsent(value, __ -> new ObjectOpenHashSet<>()).addAll(values);
+                    final Set<Clue> active = new ObjectOpenHashSet<>();
+                    for (final Clue clue : values) {
+                        if (!RETIRED.contains(clue.getEnumName())) {
+                            active.add(clue);
+                        }
+                    }
+                    if (!active.isEmpty()) {
+                        allClues.computeIfAbsent(level, __ -> new EnumMap<>(TreasureTrailType.class)).computeIfAbsent(value, __ -> new ObjectOpenHashSet<>()).addAll(active);
+                    }
                 }
             }
         }

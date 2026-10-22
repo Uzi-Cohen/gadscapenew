@@ -21,7 +21,10 @@ public class PuzzleBoxInterface extends Interface {
     @Override
     public void open(Player player) {
         final PuzzleBox puzzleBox = player.getPuzzleBox();
-        assert puzzleBox.containsPuzzle() : "A puzzle has not yet been constructed.";
+        if (!puzzleBox.containsPuzzle()) {
+            //Only a puzzle box item (PuzzleBox#openPuzzle) builds a puzzle; there is nothing to show without one.
+            return;
+        }
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Puzzle piece"), 0, 25, AccessMask.CLICK_OP1);
         player.getInterfaceHandler().sendInterface(this);
         puzzleBox.fullRefresh();
@@ -30,8 +33,9 @@ public class PuzzleBoxInterface extends Interface {
     @Override
     public void close(final Player player, final Optional<GameInterface> replacement) {
         final PuzzleBox puzzleBox = player.getPuzzleBox();
-        assert puzzleBox.containsPuzzle() : "A puzzle has not yet been constructed.";
-        puzzleBox.checkCompletion();
+        if (puzzleBox.containsPuzzle()) {
+            puzzleBox.checkCompletion();
+        }
     }
 
     @Override

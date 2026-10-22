@@ -30,7 +30,7 @@ public enum MusicClue implements Clue {
     FAERIE(ClueLevel.MEDIUM),
     FORGOTTEN(ClueLevel.MEDIUM),
     KARAMJA_JAM(ClueLevel.MEDIUM),
-    SUBTERRANEA(ClueLevel.MEDIUM),
+    SUBTERRANEA(ClueLevel.HARD),//OSRS: hard (was medium here)
 
     COMPLICATION(ClueLevel.HARD),
     FOSSILISED(ClueLevel.HARD),
@@ -38,7 +38,7 @@ public enum MusicClue implements Clue {
     LA_MORT(ClueLevel.HARD),
     LITTLE_CAVE_OF_HORRORS(ClueLevel.HARD),
     ROC_AND_ROLL(ClueLevel.HARD),
-    SCORPIA_DANCES(ClueLevel.MEDIUM);
+    SCORPIA_DANCES(ClueLevel.HARD);//OSRS: hard (was medium here)
 
     private final ClueLevel level;
 

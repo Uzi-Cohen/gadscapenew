@@ -11,6 +11,7 @@ import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.npc.NpcId;
 import com.zenyte.game.world.entity.player.Bonuses;
 import com.zenyte.game.world.entity.player.Player;
+import com.zenyte.game.world.entity.player.container.impl.equipment.EquipmentSlot;
 import com.zenyte.game.world.object.ObjectId;
 import com.zenyte.game.world.object.WorldObject;
 import com.zenyte.utils.IntArray;
@@ -74,7 +75,7 @@ public enum CrypticClue implements Clue {
    /*CRYPTIC_31(EASY,
             "Search the bucket in the Port Sarim jail.",
             new SearchRequest(new GameObject[]{ new GameObject(9568, new Location(3013, 3179, 0),  "Search") })),
-    //OSRS has long dialogue to get into the cell, not finished on zenyte*/
+    //OSRS has long dialogue to get into the cell, not finished on GadScape*/
    CRYPTIC_32(EASY, "Search the bush at the digsite centre.", new SearchRequest(new GameObject[] {new GameObject(2357, new Location(3345, 3378, 0), "Search")})),
 
    /* Disabled CRYPTIC_33 because GadScape map does not have barbarian village
@@ -144,7 +145,8 @@ public enum CrypticClue implements Clue {
    //Replace drawer ID with open drawer ID
    CRYPTIC_68(EASY, "Search the drawers, upstairs in the bank to the East of Varrock.", new SearchRequest(new GameObject[] {new GameObject(7194, new Location(3250, 3420, 1), "Search")})),
    //Replace drawer ID with open drawer ID
-   CRYPTIC_69(EASY, "Search the drawers upstairs of houses in the eastern part of Falador.", new SearchRequest(new GameObject[] {new GameObject(350, new Location(3035, 3347, 1), "Search")})),
+   //OSRS moved this step downstairs: the old upstairs tile (3035, 3347, 1) holds a different drawer object.
+   CRYPTIC_69(EASY, "Search the drawers downstairs of houses in the eastern part of Falador.", new SearchRequest(new GameObject[] {new GameObject(350, new Location(3038, 3342, 0), "Search"), new GameObject(350, new Location(3039, 3342, 0), "Search")})),
 
    //Replace drawer ID with open drawer ID
 
@@ -161,7 +163,7 @@ public enum CrypticClue implements Clue {
    CRYPTIC_76(EASY, "Search upstairs in the houses of Seers' Village for some drawers.", new SearchRequest(new GameObject[] {new GameObject(25766, new Location(2716, 3471, 1), "Search")})),
    //Replace drawer ID with open drawer ID
    CRYPTIC_77(EASY, "Someone watching the fights in the Duel Arena is your next destination.", new TalkRequest(IntArray.of(3351))),
-   //NPC isn't on zenyte at the moment
+   //NPC is not on GadScape at the moment
    CRYPTIC_78(EASY, "Speak to Arhein in Catherby.", new TalkRequest(IntArray.of(3200))),
    CRYPTIC_79(EASY, "Speak to Doric, who lives north of Falador.", new TalkRequest(IntArray.of(3893))),
    CRYPTIC_80(EASY, "Speak to Ellis in Al Kharid.", new TalkRequest(IntArray.of(3231))),
@@ -241,9 +243,9 @@ public enum CrypticClue implements Clue {
                    IntArray.of(NpcId.PIRATE_522, NpcId.PIRATE_GUARD),
                    new GameObject[] {new GameObject(ObjectId.DRAWERS, new Location(2809, 3165, 1), "Search")})),
    //Change drawer ID to open drawer ID
-   /*CRYPTIC_116(MEDIUM,
+   CRYPTIC_116(MEDIUM,
             "Speak to a referee.",
-            new TalkChallengeRequest(ChallengeScroll.GNOME_BALL_REFEREE, IntArray.of(3157))),*/
+            new TalkChallengeRequest(ChallengeScroll.GNOME_BALL_REFEREE, IntArray.of(3157))),
    CRYPTIC_117(MEDIUM, "Speak to Donovan, the Family Handyman.", new TalkRequest(IntArray.of(4212))),
    CRYPTIC_118(MEDIUM, "Speak to Hajedy.", new TalkRequest(IntArray.of(5356))),
    CRYPTIC_119(MEDIUM, "Speak to Hazelmere.", new TalkChallengeRequest(ChallengeScroll.HAZELMERE, IntArray.of(1422, 4647))),
@@ -283,10 +285,10 @@ public enum CrypticClue implements Clue {
    CRYPTIC_132(HARD, "A I Q 0 4 4 0", new DigRequest(new Location(3000, 3110, 0))),
    CRYPTIC_133(HARD, "A I R 2 3 3 1", new DigRequest(new Location(2702, 3246, 0))),
    CRYPTIC_134(HARD, "A L P 1 1 4 0", new DigRequest(new Location(2504, 3633, 0))),
-   /*CRYPTIC_135(HARD,
+   CRYPTIC_135(HARD,
             "And so on, and so on, and so on. " +
                     "Walking from the land of many unimportant things leads to a choice of paths.",
-            new DigRequest(new Location(2592, 3879, 0))),*/
+            new DigRequest(new Location(2591, 3879, 0))),
    CRYPTIC_136(HARD, "Between where the best are commemorated for a year, and a celebratory cup, not just for beer.", new DigRequest(new Location(3388, 3152, 0))),
    CRYPTIC_137(HARD, "B I P 7 0 1 3", new DigRequest(new Location(3407, 3330, 0))),
    CRYPTIC_138(HARD, "B J R 1 1 2 3", new DigRequest(new Location(2648, 4729, 0))),
@@ -294,9 +296,9 @@ public enum CrypticClue implements Clue {
    CRYPTIC_141(HARD, "C I S 0 0 0 9", new DigRequest(new Location(1630, 3868, 0))),
    CRYPTIC_142(HARD, "Citric cellar.", new PuzzleRequest(IntArray.of(16))),
    CRYPTIC_143(HARD, "C K P 0 2 2 4", new DigRequest(new Location(2073, 4846, 0))),
-   /*CRYPTIC_144(HARD,
+   CRYPTIC_144(HARD,
             "Come have a cip with this great soot covered denizen.",
-            new TalkChallengeRequest(ChallengeScroll.MINER_MAGNUS, IntArray.of(3654))),*/
+            new TalkChallengeRequest(ChallengeScroll.MINER_MAGNUS, IntArray.of(3654))),
 //    CRYPTIC_145(HARD,
    //           "Come to the evil ledge, Yew know yew want to. Try not to get stung.",
    //           new DigRequest(new Location(1630, 3868, 0))),
@@ -403,7 +405,7 @@ public enum CrypticClue implements Clue {
             new KillRequest(IntArray.of(5566))),*/
    //Requires a lot more work
    CRYPTIC_218(ELITE, "The beasts retreat, for their Queen is gone; the song of this town still plays on. Dig near the birthplace of a blade, be careful not to melt your spade.", new DigRequest(new Location(2342, 3677, 0))),
-   CRYPTIC_219(ELITE, "Varrock is where I reside, not the land of the dead, but I am so old, I should be there instead. Let's hope your reward is as good as it says, just 1 gold one and you can have it read.", new TalkRequest(IntArray.of(5082))),
+   CRYPTIC_219(ELITE, "Varrock is where I reside, not the land of the dead, but I am so old, I should be there instead. Let's hope your reward is as good as it says, just 1 gold one and you can have it read.", new TalkRequest(IntArray.of(NpcId.ARIS, NpcId.ARIS_11890, NpcId.ARIS_11891, 4847, 4848))),
    CRYPTIC_220(ELITE, "With a name like that, you'd expect a little more than just a few scimitars.", new TalkRequest(IntArray.of(5250))),
    CRYPTIC_221(ELITE, "W marks the spot.", new DigRequest(new Location(2867, 3546, 0))),
    CRYPTIC_222(ELITE, "You'll get licked.", new KillRequest(IntArray.of(484, 485, 486, 487, 3138))),
@@ -418,9 +420,9 @@ public enum CrypticClue implements Clue {
    //Area not accessible
    CRYPTIC_229(MASTER, "A chisel and hammer reside in his home, strange for one of magic. Impress him with your magical equipment.", new TalkRequest(IntArray.of(8480, 8481), player -> player.getBonuses().getBonus(Bonuses.Bonus.ATT_MAGIC) >= 100)),
    //Need +100 magical attack bonus
-   /*CRYPTIC_230(MASTER,
+   CRYPTIC_230(MASTER,
             "A dwarf, approaching death, but very much in the light.",
-            new TalkRequest(IntArray.of(4010))),*/
+            new TalkRequest(IntArray.of(4010))),
    //Not accessible
    /*CRYPTIC_231(MASTER,
             "A massive battle rages beneath so be careful when you dig by the large broken crossbow.",
@@ -439,9 +441,9 @@ public enum CrypticClue implements Clue {
    //       "Come brave adventurer, your sense is on fire. If you talk to me, it's an old god you desire.",
    //       new TalkRequest(IntArray.of(11111))),
    //NPC isn't on the npcn list.
-   /*CRYPTIC_236(MASTER,
+   CRYPTIC_236(MASTER,
             "Darkness wanders around me, but fills my mind with knowledge.",
-            new TalkRequest(IntArray.of(7045))),*/
+            new TalkRequest(IntArray.of(7045))),
    /*CRYPTIC_237(MASTER,
             "Dig in front of the icy arena where 1 of 4 was fought.",
             new DigRequest(new Location(2874, 3757, 0))),*/
@@ -461,10 +463,10 @@ public enum CrypticClue implements Clue {
             "Here, there are tears, but nobody is crying. Speak to the guardian and show off your alignment to balance.",
             new TalkRequest(IntArray.of(5785))),
     //TODO Need at least three guthix related items, not accessible, maybe wrong ID not sure*/
-   /*CRYPTIC_245(MASTER,
+   CRYPTIC_245(MASTER,
             "Hopefully this set of armour will help you to keep surviving.",
             new TalkRequest(IntArray.of(4736),
-                    player -> (player.getEquipment().getId(EquipmentSlot.PLATE) == ItemId.WHITE_PLATEBODY) && player.getEquipment().getId(EquipmentSlot.LEGS) == ItemId.WHITE_PLATELEGS)),*/
+                    player -> (player.getEquipment().getId(EquipmentSlot.PLATE) == ItemId.WHITE_PLATEBODY) && (player.getEquipment().getId(EquipmentSlot.LEGS) == ItemId.WHITE_PLATELEGS || player.getEquipment().getId(EquipmentSlot.LEGS) == ItemId.WHITE_PLATESKIRT))),
    //Need white platebody and platelegs.
    //CRYPTIC_246(MASTER,
    //        "If you're feeling brave, dig beneath the dragon's eye",
@@ -502,7 +504,41 @@ public enum CrypticClue implements Clue {
             "Talk to Charlie the Tramp in Varrock.",
             new TalkRequest(IntArray.of(5209))),//TODO: Charlie's tasks./Handled differently.*/
    CRYPTIC_265(BEGINNER, "Near the open desert I reside, to get past me you must abide. Go forward if you dare, for " +
-           "when you pass me, you'll be sweating by your hair.", new TalkRequest(IntArray.of(4642)));
+           "when you pass me, you'll be sweating by your hair.", new TalkRequest(IntArray.of(4642))),
+   //Cryptic clues added from the OSRS wiki / RuneLite 1.13.3 (October 2026). Objects and NPC spawns were checked
+   //against the map (cacheU / 2746) and the spawn scripts; Varlamore, Sailing and minigame-only steps are left out.
+   CRYPTIC_266(EASY, "Search the chest in Fred the Farmer's bedroom.", new SearchRequest(new GameObject[] {new GameObject(ObjectId.OPEN_CHEST_378, new Location(3185, 3274, 0), "Search")})),
+   CRYPTIC_267(EASY, "Search the eastern bookcase in Father Urhney's house.", new SearchRequest(new GameObject[] {new GameObject(9523, new Location(3149, 3177, 0), "Search")})),
+   CRYPTIC_268(EASY, "Talk to Morgan in his house at Draynor Village.", new TalkRequest(IntArray.of(3479))),
+   CRYPTIC_269(EASY, "Talk to Charles at Port Piscarilius.", new TalkRequest(IntArray.of(7004))),
+   CRYPTIC_270(EASY, "Search the crate in Rommiks crafting shop in Rimmington.", new SearchRequest(new GameObject[] {new GameObject(9533, new Location(2946, 3207, 0), "Search")})),
+   CRYPTIC_271(EASY, "Talk to Ali the Leaflet Dropper north of the Al Kharid mine.", new TalkRequest(IntArray.of(5956))),
+   CRYPTIC_272(EASY, "Talk to the cook in the Blue Moon Inn in Varrock.", new TalkRequest(IntArray.of(2895))),
+   CRYPTIC_273(EASY, "Search the single crate in Horvik's smithy in Varrock.", new SearchRequest(new GameObject[] {new GameObject(5106, new Location(3228, 3433, 0), "Search")})),
+   CRYPTIC_274(EASY, "Search the crates in Falador General store.", new SearchRequest(new GameObject[] {new GameObject(24088, new Location(2955, 3390, 0), "Search")})),
+   CRYPTIC_275(EASY, "Talk to Wayne at Wayne's Chains in Falador.", new TalkRequest(IntArray.of(5897))),
+   CRYPTIC_276(EASY, "Search the boxes next to a chest that needs a crystal key.", new SearchRequest(new GameObject[] {new GameObject(360, new Location(2915, 3452, 0), "Search"), new GameObject(360, new Location(2916, 3452, 0), "Search")})),
+   CRYPTIC_277(EASY, "Search the open crate found in the Hosidius kitchens.", new SearchRequest(new GameObject[] {new GameObject(27533, new Location(1683, 3616, 0), "Search")})),
+   CRYPTIC_278(EASY, "Search the crates in the fruit store just east of the Hosidius town centre.", new SearchRequest(new GameObject[] {new GameObject(27533, new Location(1799, 3613, 0), "Search")})),
+   CRYPTIC_279(MEDIUM, "Speak to Uglug Nar.", new TalkChallengeRequest(ChallengeScroll.UGLUG_NAR, IntArray.of(861))),
+   CRYPTIC_280(MEDIUM, "A graceful man of many colours, his crates must be full of many delights.",
+           new KeyRequest(ItemId.KEY_MEDIUM_19761,
+                   IntArray.of(2098, 2099, 2100, 2101, 2102, 2103, 7261, 10374, 10375, 10376, 11195, 11467, 12848, 12849, 12850, 13502, 13503, 13504),
+                   new GameObject[] {new GameObject(42067, new Location(1506, 3590, 2), "Search")})),
+   CRYPTIC_281(MEDIUM, "Search the basket of apples in an orchard, south of the unknown grave surrounded by white roses.", new SearchRequest(new GameObject[] {new GameObject(27522, new Location(1718, 3626, 0), "Search")})),
+   CRYPTIC_282(HARD, "If a man carried my burden, he would break his back. I am not rich, but leave silver in my track. Speak to the keeper of my trail.", new TalkRequest(IntArray.of(2891))),
+   CRYPTIC_283(HARD, "Surprising? I bet he is...", new TalkRequest(IntArray.of(5083))),
+   CRYPTIC_284(HARD, "Where the best are commemorated, and a celebratory cup, not just for beer.", new DigRequest(new Location(3388, 3152, 0))),
+   CRYPTIC_285(HARD, "A general who sets a 'shining' example.", new PuzzleRequest(IntArray.of(3437))),
+   CRYPTIC_286(HARD, "Try not to let yourself be dazzled when you search these drawers.", new SearchRequest(new GameObject[] {new GameObject(ObjectId.DRAWERS_350, new Location(2561, 3323, 0), "Search")})),
+   CRYPTIC_287(HARD, "Dig in the lair of red wings, within the temple of the Sun and Moon.", new DigRequest(new Location(1820, 9935, 0))),
+   CRYPTIC_288(ELITE, "More resources than I can handle, but in a very dangerous area. Can't wait to strike gold!", new DigRequest(new Location(3183, 3941, 0))),
+   CRYPTIC_289(ELITE, "Observing someone in a swamp, under the telescope lies treasure.", new DigRequest(new Location(2221, 3091, 0))),
+   CRYPTIC_290(ELITE, "Three rule below and three sit at top. Come dig at my entrance.", new DigRequest(new Location(2523, 3739, 0))),
+   CRYPTIC_291(ELITE, "Has no one told you it is rude to ask a lady her age?", new TalkRequest(IntArray.of(5300))),
+   CRYPTIC_292(MASTER, "Elvish onions.", new DigRequest(new Location(3303, 6092, 0))),
+   //Total melee strength bonus of 100 or more (OSRS wiki).
+   CRYPTIC_293(MASTER, "The doorman of the Warriors' Guild wishes to be impressed by how strong your equipment is.", new TalkRequest(IntArray.of(NpcId.GHOMMAL), player -> player.getBonuses().getBonus(Bonuses.Bonus.STRENGTH) >= 100));
    private final ClueLevel level;
    private final String hint;
    private final ClueChallenge challenge;

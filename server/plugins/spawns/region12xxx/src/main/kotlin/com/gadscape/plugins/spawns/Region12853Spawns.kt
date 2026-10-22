@@ -72,5 +72,10 @@ class Region12853Spawns : NPCSpawnsScript() {
         GRAND_EXCHANGE_CLERK(3214, 3428, 0, EAST, 3)
         GRAND_EXCHANGE_CLERK(3212, 3427, 0, SOUTH, 0)
         GRAND_EXCHANGE_CLERK(3213, 3427, 0, SOUTH, 0)
+        // Treasure trail NPCs (clue steps A_BARAEK, A_LOWE, CRYPTIC_168, CRYPTIC_219 had nobody to talk to).
+        BARAEK(3217, 3434, 0, SOUTH, 0)
+        WILOUGH(3221, 3435, 0, SOUTH, 2)
+        LOWE(3233, 3422, 0, SOUTH, 2)
+        ARIS(3204, 3424, 0, WEST, 0)
     }
 }

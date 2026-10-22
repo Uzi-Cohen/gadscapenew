@@ -524,6 +524,8 @@ object DeveloperCommands {
                 put("Music Clues", MusicClue.values().asList())
                 put("Anagram Clues", Anagram.values().asList())
                 put("Bard Clues", FaloTheBardClue.values().asList())
+                put("Coordinate Clues", CoordinateClue.values().asList())
+                put("Hot Cold Clues", HotColdClue.values().asList())
             }
             player.options {
                 "view all" {

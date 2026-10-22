@@ -45,7 +45,10 @@ public class MasterRewardsTable extends ClueRewardTable {
             notedItem(GRIMY_SNAPDRAGON, 5, 10),
             notedItem(RUNITE_ORE, 5, 8),
             notedItem(RUNITE_BAR, 5, 7),
-            notedItem(BLACK_DRAGONHIDE, 5, 25)
+            notedItem(BLACK_DRAGONHIDE, 5, 25),
+            //OSRS wiki (Reward casket (master)) supplies missing here.
+            item(BLOOD_RUNE, 83, 500),
+            notedItem(RAW_MANTA_RAY, 2, 15)
     );
 
     private final List<ImmutableItem> uncommonItemsTable = tableOf(

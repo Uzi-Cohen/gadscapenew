@@ -85,6 +85,21 @@ public enum NPCHandler {
             }
             player.setRun(true);
         }
+        // Treasure trails: a clue step that asks to talk to this NPC wins over the NPC's own Talk-to handler.
+        if ((op.equalsIgnoreCase("Talk-to") || op.equalsIgnoreCase("Talk"))
+                && com.zenyte.game.content.treasuretrails.TreasureTrail.hasTalkStep(player, npc)) {
+            final NPCPlugin.NPCPluginHandler fallback = plugin;
+            player.setRouteEvent(new EntityEvent(player, new EntityStrategy(npc), () -> {
+                player.stopAll();
+                player.setFaceEntity(npc);
+                if (npc.getRadius() > 0)
+                    npc.setInteractingWith(player);
+                if (!com.zenyte.game.content.treasuretrails.TreasureTrail.talk(player, npc) && fallback != null) {
+                    fallback.getOption().handle(player, npc);
+                }
+            }, true));
+            return;
+        }
         if (plugin != null) {
             plugin.getOption().click(player, npc, new NPCPlugin.NPCOption(option, Utils.getOrDefault(op, "null")));
             return;

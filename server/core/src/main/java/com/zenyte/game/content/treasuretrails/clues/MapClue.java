@@ -29,7 +29,7 @@ public enum MapClue implements Clue {
     MAP_1(337, new Location(2970, 3415, 0), EASY),
     MAP_2(338, new Location(3021, 3912, 0), HARD),
     MAP_3(339, new Location(2722, 3338, 0), HARD),
-    //MAP_4(340, new Location(2536, 3865, 0), MEDIUM),
+    MAP_4(340, new Location(2536, 3865, 0), MEDIUM),//Miscellania: reachable by the Miscellania teleport and fairy ring CIP.
     MAP_5(341, new Location(3434, 3265, 0), MEDIUM),
     MAP_6(342, new Location(2454, 3230, 0), MEDIUM),
     MAP_7(343, new Location(2578, 3597, 0), MEDIUM),

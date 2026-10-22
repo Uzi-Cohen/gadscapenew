@@ -58,7 +58,8 @@ public enum StashUnit {
     CATHERBY_BANK(MEDIUM, 29001, EmoteClue.EMOTE_85),
     DIGSITE_EASTERN_WINCH(MEDIUM, 28997, EmoteClue.EMOTE_18),
     CATHERBY_FISHING_SHOP(MEDIUM, 29003, EmoteClue.EMOTE_41),
-    EDGEVILLE_GENERAL_STORE(MEDIUM, 6657, EmoteClue.EMOTE_30),
+    //The unit stands at GadScape's home (object 6657); the S.T.A.S.H. chart enums list it as OSRS' 29005 (north of Evil Dave's house).
+    EDGEVILLE_GENERAL_STORE(MEDIUM, 6657, EmoteClue.EMOTE_30, 29005),
     ARCEUUS_LIBRARY(MEDIUM, 29007, EmoteClue.EMOTE_108),
     MOUNT_KARUULM(MEDIUM, 34647, EmoteClue.EMOTE_39),
     TAI_BWO_WANNAI(MEDIUM, 28990, EmoteClue.EMOTE_19),
@@ -129,6 +130,20 @@ public enum StashUnit {
     SECOND_FLOOR_CASTLE_DRAKAN(MASTER, 29044, null /* TODO: EMOTE_101 */),
     SEVENTH_ROOM_PYRAMIND_PLUNDER(MASTER, 29045, null /* TODO: EMOTE_102 */),
     TOP_WATCHTOWER(MASTER, 29057, null /* TODO: EMOTE_109 */),//Should implement this one tbf. Others not.
+    //Units of the newer OSRS emote clues. Those without a step on this server (Varlamore, Sailing) are listed so the
+    //S.T.A.S.H. chart (enums 1440/1525) and the world objects know them; they report "cannot be built at the time".
+    CRYSTALLINE_MAPLE_TREES(MASTER, 34953, EmoteClue.EMOTE_116),
+    CHARCOAL_BURNERS(ELITE, 41758, EmoteClue.EMOTE_117),
+    FORTIS_GRAND_MUSEUM(EASY, 50738, null),
+    PANDEMONIUM_BAR(EASY, 58130, null),
+    TWILIGHT_TEMPLE_MINE(MEDIUM, 55403, null),
+    ORTUS_MEETS_PROUDSPIRE(MEDIUM, 55404, null),
+    OUTSIDE_TWILIGHT_TEMPLE(HARD, 55405, null),
+    TEMPLE_SOUTHEAST_OF_THE_BAZAAR(ELITE, 50739, null),
+    WINTUMBER_ISLAND(ELITE, 58131, null),
+    CAM_TORUM_ENTRANCE(MASTER, 50740, null),
+    WESTERN_SALVAGER_OVERLOOK(MASTER, 54275, null),
+    BRITTLE_ISLE(MASTER, 58132, null),
 
     ;
 
@@ -136,16 +151,38 @@ public enum StashUnit {
     private static final StashUnit[] values = values();
     private final int objectId;
     private final EmoteClue clue;
+    /**
+     * The object id the S.T.A.S.H. chart enums (1440 and 1525) use for this unit; equal to {@link #objectId} unless the
+     * unit was moved on GadScape's map.
+     */
+    private final int chartObjectId;
     private static final Int2ObjectMap<StashUnit> map = Int2ObjectMaps.unmodifiable((Int2ObjectMap<StashUnit>) CollectionUtils.populateMap(values, new Int2ObjectOpenHashMap<>(), StashUnit::getObjectId));
+    private static final Int2ObjectMap<StashUnit> chartMap = Int2ObjectMaps.unmodifiable((Int2ObjectMap<StashUnit>) CollectionUtils.populateMap(values, new Int2ObjectOpenHashMap<>(), StashUnit::getChartObjectId));
 
     StashUnit(StashUnitType type, int objectId, EmoteClue clue) {
+        this(type, objectId, clue, objectId);
+    }
+
+    StashUnit(StashUnitType type, int objectId, EmoteClue clue, int chartObjectId) {
         this.type = type;
         this.objectId = objectId;
         this.clue = clue;
+        this.chartObjectId = chartObjectId;
     }
 
     public static Int2ObjectMap<StashUnit> getMap() {
         return map;
+    }
+
+    /**
+     * @return the units keyed by the object id the S.T.A.S.H. chart enums use.
+     */
+    public static Int2ObjectMap<StashUnit> getChartMap() {
+        return chartMap;
+    }
+
+    public int getChartObjectId() {
+        return chartObjectId;
     }
 
     public final boolean isDisabled() {

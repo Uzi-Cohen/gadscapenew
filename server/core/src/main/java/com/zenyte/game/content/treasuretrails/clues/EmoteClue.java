@@ -85,7 +85,7 @@ public enum EmoteClue implements Clue {
             item(CLIMBING_BOOTS), item(RING_OF_VISIBILITY)),*/
 
     EMOTE_5(ClueLevel.HARD, emotes(Emote.CHEER), true,
-            "Cheer at the top of the agility pyramid. Beware of double agents! Equip a blue mystic robe top, and any rune heraldic shield.",
+            "Cheer at the top of the agility pyramid. Beware of double agents! Equip a blue mystic robe top and any rune heraldic shield.",
             get(new int[][]{
                     { 3042, 4701 },
                     { 3048, 4701 },
@@ -135,7 +135,7 @@ public enum EmoteClue implements Clue {
                     item(PIRATE_BANDANA_7136)), item(DRAGON_NECKLACE), item(MAGIC_LONGBOW)),
 
     EMOTE_10(ClueLevel.MASTER, emotes(Emote.JIG), true,
-            "Do a jig at the barrow's chest. Beware of double agents! Equip any full barrows set.",
+            "Do a jig at the barrows chest. Beware of double agents! Equip any full barrows set.",
             get(new int[][]{
                     { 3547, 9700 },
                     { 3547, 9690 },
@@ -294,7 +294,7 @@ public enum EmoteClue implements Clue {
             }), item(GREEN_DHIDE_CHAPS), any("Ring of dueling", item(RING_OF_DUELING1), item(RING_OF_DUELING2), item(RING_OF_DUELING3), item(RING_OF_DUELING4), item(RING_OF_DUELING5), item(RING_OF_DUELING6), item(RING_OF_DUELING7), item(RING_OF_DUELING8)), item(MITHRIL_MED_HELM)),
 
     EMOTE_20(ClueLevel.MEDIUM, emotes(Emote.BECKON, Emote.ANGRY), false,
-            "Beckon in the combat ring of Shayzien. Show your anger before you talk to me. Equip an adamant platebody, adamant full helm and adamant platelegs.",
+            "Beckon in the Shayzien Combat Ring. Show your anger before you talk to me. Equip an adamant platebody, adamant full helm and adamant platelegs.",
             get(new int[][]{
                     { 1541, 3617 },
                     { 1538, 3621 },
@@ -307,7 +307,7 @@ public enum EmoteClue implements Clue {
             }), item(ADAMANT_PLATELEGS), item(ADAMANT_PLATEBODY), item(ADAMANT_FULL_HELM)),
 
     EMOTE_21(ClueLevel.MASTER, emotes(Emote.BOW), true,
-            "Bow in the Iorwerth Camp. Beware of double agents! Equip a charged crystal bow.",
+            "Bow near Lord Iorwerth. Beware of double agents! Equip a charged crystal bow.",
             get(new int[][]{
                     { 2198, 3261 },
                     { 2189, 3252 },
@@ -333,7 +333,7 @@ public enum EmoteClue implements Clue {
             }), item(IRON_PLATELEGS), item(OAK_LONGBOW), item(EMERALD_AMULET)),
 
     EMOTE_23(ClueLevel.ELITE, emotes(Emote.BOW), false,
-            "Bow on the ground floor of the Legend's guild. Equip Legend's cape, a dragon battleaxe and an amulet of glory.",
+            "Bow on the ground floor of the Legends' Guild. Equip a Cape of Legends, a dragon battleaxe and an amulet of glory.",
             get(new int[][]{
                     { 2724, 3383 },
                     { 2724, 3381 },
@@ -353,7 +353,7 @@ public enum EmoteClue implements Clue {
             item(AMULET_OF_GLORY4), item(AMULET_OF_GLORY5), item(AMULET_OF_GLORY6))),
 
     EMOTE_24(ClueLevel.EASY, emotes(Emote.BOW), false,
-            "Bow in the ticket office of the Duel Arena. Equip an iron chain body, leather chaps and coif.",
+            "Bow in the office of the Emir's Arena. Equip an iron chain body, leather chaps and coif.",
             get(new int[][]{
                     { 3311, 3245 },
                     { 3311, 3240 },
@@ -532,7 +532,7 @@ public enum EmoteClue implements Clue {
 
     //TODO: Verify text due to runelite.
     EMOTE_39(ClueLevel.MEDIUM, emotes(Emote.CLAP, Emote.SPIN), false,
-            "Clap your hands north of Mount Karuulm<br> Spin before you talk to me. Equip an adamant warhammer, a ring of life and a pair of mithril boots.",
+            "Clap your hands north of Mount Karuulm Spin before you talk to me. Equip an adamant warhammer, a ring of life and a pair of mithril boots.",
             get(new int[][]{
                     { 1286, 3870 },
                     { 1288, 3833 },
@@ -675,7 +675,7 @@ public enum EmoteClue implements Clue {
             }), item(GREEN_ROBE_TOP), item(MITHRIL_PLATELEGS), item(IRON_2H_SWORD)),
 
     EMOTE_51(ClueLevel.MASTER, emotes(Emote.DANCE), true,
-            "Dance in the King Black Dragon's lair. Beware of double agents! Equip a black dragonhide body, black dragonhide vambs and a black dragon mask.",
+            "Dance in the King Black Dragon's lair. Beware of double agents! Equip a black dragonhide body, black dragonhide vambraces and a black dragon mask.",
             get(new int[][]{
                     { 2240, 4736 },
                     { 2240, 4672 },
@@ -725,7 +725,7 @@ public enum EmoteClue implements Clue {
             }), item(DESERT_SHIRT), item(LEATHER_GLOVES), item(LEATHER_BOOTS)),
 
     EMOTE_55(ClueLevel.HARD, emotes(Emote.HEADBANG), true,
-            "Headbang at the exam center. Beware of double agents! Equip a mystic fire staff, a diamond bracelet and rune boots.",
+            "Headbang at the exam centre. Beware of double agents! Equip a mystic fire staff, a diamond bracelet and rune boots.",
             get(new int[][]{
                     { 3357, 3349 },
                     { 3368, 3349 },
@@ -962,7 +962,7 @@ public enum EmoteClue implements Clue {
             item(RED_SLAYER_HELMET), item(TURQUOISE_SLAYER_HELMET), item(SLAYER_HELMET_I), item(BLACK_SLAYER_HELMET_I), item(GREEN_SLAYER_HELMET_I), item(PURPLE_SLAYER_HELMET_I), item(RED_SLAYER_HELMET_I), item(TURQUOISE_SLAYER_HELMET_I), item(HYDRA_SLAYER_HELMET), item(HYDRA_SLAYER_HELMET_I))),
 */
     EMOTE_77(ClueLevel.MASTER, emotes(Emote.RASPBERRY), true,
-            "Blow a raspberry at the bank of the Warrior's guild. Beware of double agents! Equip a dragon battleaxe, a dragon defender and a slayer helm of any kind.",
+            "Blow a raspberry in the bank of the Warriors' Guild. Beware of double agents! Equip a dragon battleaxe, a slayer helm of any kind and a dragon defender or avernic defender.",
             get(new int[][]{
                     { 2841, 3546 },
                     { 2841, 3540 },
@@ -974,7 +974,7 @@ public enum EmoteClue implements Clue {
                     { 2848, 3537 },
                     { 2849, 3537 },
                     { 2849, 3546 }
-            }), item(DRAGON_BATTLEAXE), item(DRAGON_DEFENDER), any("Any slayer helmet", item(SLAYER_HELMET), item(BLACK_SLAYER_HELMET), item(GREEN_SLAYER_HELMET), item(PURPLE_SLAYER_HELMET),
+            }), item(DRAGON_BATTLEAXE), any("Dragon or avernic defender", item(DRAGON_DEFENDER), item(DRAGON_DEFENDER_T), item(AVERNIC_DEFENDER)), any("Any slayer helmet", item(SLAYER_HELMET), item(BLACK_SLAYER_HELMET), item(GREEN_SLAYER_HELMET), item(PURPLE_SLAYER_HELMET),
             item(RED_SLAYER_HELMET), item(TURQUOISE_SLAYER_HELMET), item(SLAYER_HELMET_I), item(BLACK_SLAYER_HELMET_I), item(GREEN_SLAYER_HELMET_I), item(PURPLE_SLAYER_HELMET_I), item(RED_SLAYER_HELMET_I), item(TURQUOISE_SLAYER_HELMET_I), item(HYDRA_SLAYER_HELMET), item(HYDRA_SLAYER_HELMET_I))),
 
     EMOTE_78(ClueLevel.EASY, emotes(Emote.RASPBERRY), false,
@@ -1048,7 +1048,7 @@ public enum EmoteClue implements Clue {
             }), item(DIAMOND_RING), item(AMULET_OF_POWER), emptySlot("Nothing on chest & legs", EquipmentSlot.PLATE, EquipmentSlot.LEGS)),
 
     EMOTE_82(ClueLevel.ELITE, emotes(Emote.SALUTE), true,
-            "Salute in the Warriors' guild bank. Equip only a black salamander.",
+            "Salute in the Warriors' Guild bank. Equip only a black salamander.",
             get(new int[][]{
                     { 2841, 3546 },
                     { 2841, 3540 },
@@ -1064,7 +1064,7 @@ public enum EmoteClue implements Clue {
             EquipmentSlot.BOOTS, EquipmentSlot.RING, EquipmentSlot.AMMUNITION)),
 
     EMOTE_83(ClueLevel.HARD, emotes(Emote.SALUTE), true,
-            "Salute in the centre of the mess hall. Beware of double agents! Equip a rune halberd rune platebody, and an amulet of strength.",
+            "Salute in the centre of the mess hall. Beware of double agents! Equip a rune halberd rune platebody and an amulet of strength.",
             get(new int[][]{
                     { 1643, 3616 },
                     { 1649, 3616 },
@@ -1130,26 +1130,18 @@ public enum EmoteClue implements Clue {
             }), item(MAPLE_LONGBOW), item(GREEN_DHIDE_CHAPS), item(IRON_MED_HELM)),
 
     EMOTE_86(ClueLevel.HARD, emotes(Emote.SHRUG), true,
-            "Shrug in the Zamorak temple found in the Eastern Wilderness. Beware of double agents! Equip rune platelegs, an iron platebody and blue dragonhide vambraces.",
+            "Shrug in the woods east of the Level 19 Wilderness Obelisk. Beware of double agents! Equip rune platelegs, an iron platebody and blue dragonhide vambraces.",
             get(new int[][]{
-                    { 3239, 3617 },
-                    { 3239, 3616 },
-                    { 3238, 3615 },
-                    { 3237, 3615 },
-                    { 3234, 3612 },
-                    { 3234, 3606 },
-                    { 3237, 3603 },
-                    { 3243, 3603 },
-                    { 3246, 3606 },
-                    { 3246, 3612 },
-                    { 3243, 3615 },
-                    { 3242, 3615 },
-                    { 3241, 3616 },
-                    { 3241, 3617 }
+                    //OSRS moved this step from the eastern Zamorak temple to the woods east of the level 19 obelisk
+                    //(RuneLite 1.13.3: 3241, 3672; STASH 29009 at 3243, 3662).
+                    { 3233, 3658 },
+                    { 3233, 3682 },
+                    { 3252, 3682 },
+                    { 3252, 3658 }
             }), item(RUNE_PLATELEGS), item(IRON_PLATEBODY), item(BLUE_DHIDE_VAMB)),
 
     EMOTE_87(ClueLevel.ELITE, emotes(Emote.SHRUG), false,
-            "Shrug in the Shayzien command tent. Equip a blue mystic robe bottom, a rune kiteshield and any bob shirt.",
+            "Shrug in the Shayzien war tent. Equip a blue mystic robe bottom, a rune kiteshield and any bob shirt.",
             get(new int[][]{
                     { 1488, 3635 },
                     { 1488, 3636 },
@@ -1158,7 +1150,7 @@ public enum EmoteClue implements Clue {
             }), item(MYSTIC_ROBE_BOTTOM), item(RUNE_KITESHIELD), range("Any bob shirt", BOBS_RED_SHIRT, BOBS_PURPLE_SHIRT)),
 
     EMOTE_88(ClueLevel.MASTER, emotes(Emote.SLAP_HEAD), true,
-            "Slap your head in the centre of the Kourend catacombs. Beware of double agents! Equip the arclight and the amulet of the damned.",
+            "Slap your head in the centre of the Kourend catacombs. Beware of double agents! Equip arclight or emberlight along with the amulet of the damned.",
             get(new int[][]{
                     { 1665, 10054 },
                     { 1663, 10054 },
@@ -1184,7 +1176,7 @@ public enum EmoteClue implements Clue {
                     { 1669, 10051 },
                     { 1667, 10053 },
                     { 1666, 10053 }
-            }), item(ARCLIGHT), any("Amulet of the damned", item(AMULET_OF_THE_DAMNED), item(AMULET_OF_THE_DAMNED_FULL))),
+            }), any("Arclight or emberlight", item(ARCLIGHT), item(EMBERLIGHT)), any("Amulet of the damned", item(AMULET_OF_THE_DAMNED), item(AMULET_OF_THE_DAMNED_FULL))),
 
     EMOTE_89(ClueLevel.EASY, emotes(Emote.SPIN), false,
             "Spin at the crossroads north of Rimmington. Equip a green gnome hat, cream gnome top and leather chaps.",
@@ -1345,7 +1337,7 @@ public enum EmoteClue implements Clue {
             }), item(GREEN_ROBE_TOP), item(HAM_ROBE), item(IRON_WARHAMMER)),
 
     EMOTE_104(ClueLevel.EASY, emotes(Emote.YAWN), false,
-            "Yawn in Draynor Marketplace. Equip studded leather chaps, an iron kiteshield and a steel longsword.",
+            "Yawn in Draynor marketplace. Equip studded leather chaps, an iron kiteshield and a steel longsword.",
             get(new int[][]{
                     { 3072, 3258 },
                     { 3072, 3244 },
@@ -1425,7 +1417,7 @@ public enum EmoteClue implements Clue {
             }), item(LAVA_BATTLESTAFF), item(BLACK_DHIDE_VAMB), item(MIND_SHIELD)),
 
     EMOTE_108(ClueLevel.MEDIUM, emotes(Emote.YAWN, Emote.YES), false,
-            "Yawn in the centre of Arceuus library. Nod your head before you talk to me. Equip blue dragonhide vambraces, adamant boots and an adamant dagger.",
+            "Yawn in the centre of the Arceuus Library. Nod your head before you talk to me. Equip blue dragonhide vambraces, adamant boots and an adamant dagger.",
             get(new int[][]{
                     { 1628, 3819 },
                     { 1622, 3813 },
@@ -1453,7 +1445,7 @@ public enum EmoteClue implements Clue {
 */
 
     EMOTE_110(ClueLevel.BEGINNER, emotes(Emote.RASPBERRY), false,
-            "Blow a raspberry in Gypsy Aris' tent. Equip a gold ring and a gold necklace.",
+            "Blow a raspberry at Aris in her tent. Equip a gold ring and a gold necklace.",
             get(new int[][]{
                     { 3199, 3427 },
                     { 3199, 3421 },
@@ -1530,7 +1522,26 @@ public enum EmoteClue implements Clue {
                     { 2948, 3385 },
                     { 2953, 3385 },
                     { 2953, 3391 }
-            }));
+            })),
+
+    //Emote steps added from the OSRS wiki / RuneLite 1.13.3 (October 2026), with their STASH units.
+    EMOTE_116(ClueLevel.MASTER, emotes(Emote.BECKON), true,
+            "Beckon by a collection of crystalline maple trees. Beware of double agents! Equip Bryophyta's staff and a nature tiara.",
+            get(new int[][]{
+                    { 2204, 3419 },
+                    { 2204, 3435 },
+                    { 2219, 3435 },
+                    { 2219, 3419 }
+            }), range("Bryophyta's staff", BRYOPHYTAS_STAFF_UNCHARGED, BRYOPHYTAS_STAFF), item(NATURE_TIARA)),
+
+    EMOTE_117(ClueLevel.ELITE, emotes(Emote.SALUTE), false,
+            "Salute by the Charcoal Burners. Equip a Farmer's strawhat, Shayzien platebody (5) and Pyromancer robes.",
+            get(new int[][]{
+                    { 1705, 3459 },
+                    { 1705, 3477 },
+                    { 1723, 3477 },
+                    { 1723, 3459 }
+            }), any("Farmer's strawhat", item(FARMERS_STRAWHAT), item(FARMERS_STRAWHAT_13647)), item(SHAYZIEN_PLATEBODY_5), item(PYROMANCER_ROBE));
 
     private final Set<Emote> emotes;
     private final boolean agents;

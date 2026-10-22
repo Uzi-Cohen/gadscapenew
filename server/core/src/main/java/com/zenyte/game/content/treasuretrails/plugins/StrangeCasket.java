@@ -63,10 +63,11 @@ public class StrangeCasket implements ObjectAction {
             public void buildDialogue() {
                 final NPCMessage message = npc(1, "The Mimic has... found you!<br>Will you fight now?", key);
                 message.setOnDisplay(() -> {
-                    // Very unsafe but I cannot see a way to do it in any other way as the casket isn't an NPC.
-                    player.getPacketDispatcher().sendComponentItem(231, 1, 405, 100);
-                    player.send(new IfSetAngle(231, 1, 150, 1580, 650));
-                    player.getPacketDispatcher().sendComponentText(231, 2, Colour.BLUE.wrap("Strange casket"));
+                    // The casket isn't an NPC: replace the chathead (231:2) with the casket model and the name (231:4).
+                    player.getPacketDispatcher().sendComponentAnimation(231, 2, -1);
+                    player.getPacketDispatcher().sendComponentItem(231, 2, 405, 100);
+                    player.send(new IfSetAngle(231, 2, 150, 1580, 650));
+                    player.getPacketDispatcher().sendComponentText(231, 4, Colour.BLUE.wrap("Strange casket"));
                 });
                 options(TITLE, new DialogueOption("Fight the Mimic", () -> {
                     final Item item = CollectionUtils.findMatching(player.getInventory().getContainer().getItems().values(), it -> it.getId() == ItemId.MIMIC && it.getNumericAttribute("The Mimic slain").intValue() == 0);
