@@ -2005,6 +2005,9 @@ public final class GameCommands {
         });
         new Command(PlayerPrivilege.DEVELOPER, "qasweep", "TEST BUILD: steps through every interface, shop or special attack. " +
                 "Arguments: iface|shop|spec [from] | stop", (p, args) -> com.gadscape.qa.QaSweep.start(p, args));
+        new Command(PlayerPrivilege.PLAYER, "archive", "TEST BUILD: The Fractured Archive (Raids 4) preview. " +
+                "Arguments: entrance|lobby|guardian|ezekiel|bork|moia|dreadnoth|dagonhai|xarth|ocellus|vault|bosses",
+                (p, args) -> com.gadscape.qa.ArchivePreview.handle(p, args));
         new Command(PlayerPrivilege.ADMINISTRATOR, "sound",
                 (p, args) -> p.getPacketDispatcher().sendSoundEffect(new SoundEffect(parseInt(args[0]), 1, 0, 0)));
         new Command(PlayerPrivilege.FORUM_MODERATOR, new String[]{"heal", "hitpoints", "hp"}, "Sets your health to your" +
