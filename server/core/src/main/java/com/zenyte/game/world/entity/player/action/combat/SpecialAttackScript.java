@@ -32,8 +32,8 @@ public interface SpecialAttackScript {
 	Projectile ANNIHILATE_PROJ = new Projectile(698, 42, 30, 40, 15, 10, 64, 5);
 	Projectile SOULSHOT_PROJ = new Projectile(473, 42, 30, 40, 5, 3, 0, 5);
     Projectile CHAINHIT_PROJ = new Projectile(258, 40, 36, 41, 0, 5, 11, 5);
-    Projectile HAMSTRING_PROJ = new Projectile(1625, 42, 30, 40, 15, 3, 64, 5);
-    Projectile PHANTOM_STRIKE_PROJ = new Projectile(1622, 42, 30, 40, 15, 3, 64, 5);
+    Projectile HAMSTRING_PROJ = new Projectile(2922, 42, 30, 40, 15, 3, 64, 5);
+    Projectile PHANTOM_STRIKE_PROJ = new Projectile(2920, 42, 30, 40, 15, 3, 64, 5);
     Projectile CHAINHIT_CHAIN_PROJ = new Projectile(258, 40, 36, 61, 0, 8, 11, 5);
 	Projectile MOMENTUM_THROW_PROJ = new Projectile(1318, 34, 30, 40, 15, 3, 64, 5);
 	Projectile TOXIC_SIPHON_PROJ = new Projectile(1043, 35, 36, 32, 21, 0, 105, 7);

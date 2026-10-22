@@ -39,23 +39,18 @@ import java.util.Stack;
  */
 public final class Vetion extends NPC implements CombatScript {
 
-    // 9969 - spawn or some shit, same as 9970
-    // 9971, 9972
-    // 9973, 9974 - shields
-    // 9975 - idfk
-    // 9980 - death
+    // 241 seqs (RuneLite AnimationID), *_01 = first form, *_02 = second (enraged) form = id + 1:
+    // 9969/9970 ATTACK_MAGIC, 9971/9972 ATTACK_MELEE, 9973/9974 DEFEND_PARRY, 9975/9976 DEFEND_SHIELD,
+    // 9977 SPAWN, 9978/9979 ENRAGE, 9980/9981 DEATH (death and parry come from the combat definitions).
+    // Spotanims: blue lightning 2346, orange lightning 2347, sword thing 2348.
 
-    // blue lighting 2346
-    // orange lighting 2347
-    // sword thing 2348
+    private static final int LIGHTNING_ANIMATION_SMITE = 9969;
 
-    private static final Animation LIGHTNING_ANIMATION_SMITE = new Animation(9969);
+    private static final int LIGHTNING_ANIMATION_STRIKE = 9971;
 
-    private static final Animation LIGHTNING_ANIMATION_STRIKE = new Animation(9971);
+    private static final int SHIELD_BASH_ANIMATION = 9975;
 
-    private static final Animation SHIELD_BASH_ANIMATION = new Animation(9973);
-
-    private static final Animation HELLHOUND_SUMMON_ANIMATION = new Animation(9975);
+    private static final int HELLHOUND_SUMMON_ANIMATION = 9978;
 
     private static final Graphics REGULAR_LIGHTNING = new Graphics(2346);
 
@@ -138,9 +133,7 @@ public final class Vetion extends NPC implements CombatScript {
             }
         };
 
-        // Manually set the death delay for this NPC because the new animation system broke animation duration calculation
-        // TODO we can remove this if we properly find out how to calculate animation durations for new anim system
-        deathDelay = 2;
+        // The death delay now comes from the skeletal death animation (AnimationDefinitions.getSkeletalCycles).
     }
 
     @Override
@@ -162,26 +155,58 @@ public final class Vetion extends NPC implements CombatScript {
     @Override
     public int attack(Entity target) {
         List<Entity> targets = getPossibleTargets(EntityType.PLAYER, 4);
+        // OSRS: 6-tick attacks in the first form, 5 in the enraged form.
+        final int speed = phase == Phase.ENRAGED ? 5 : 6;
         if (!targets.isEmpty() && Utils.roll(50)) {
             Player player = (Player) Utils.getRandomCollectionElement(targets);
-            setFaceEntity(player);
-            setAnimation(SHIELD_BASH_ANIMATION);
-            return 6;
+            shieldBashAttack(player);
+            return speed;
         }
 
         // Default lightning attack
         forceTalk(Utils.random(FORCE_CHATS));
         lightningAttack(target);
-        return 6;
+        return speed;
     }
 
-    private void shieldBashAttack() {
+    /** The second (enraged) form plays the _02 variant of each seq, which is always the _01 id + 1. */
+    private Animation formAnimation(final int firstFormId) {
+        final boolean secondForm = id == 6612 || id == NpcId.CALVARION_11994;
+        return new Animation(secondForm ? firstFormId + 1 : firstFormId);
+    }
 
+    /**
+     * Shield bash (OSRS): Vet'ion braces his shield towards a nearby player and bashes the area in front of him; players
+     * in that area or underneath him are hit and briefly stunned. The wiki gives no numbers: 3x3 area in front, up to
+     * 30 (Calvar'ion 20) damage and a 4-tick stun are used here.
+     */
+    private void shieldBashAttack(final Player player) {
+        setFaceEntity(player);
+        setAnimation(formAnimation(SHIELD_BASH_ANIMATION));
+        final Location middle = getMiddleLocation();
+        final int dx = Integer.signum(player.getX() - middle.getX());
+        final int dy = Integer.signum(player.getY() - middle.getY());
+        final int reach = (getSize() >> 1) + 2;
+        final Location front = middle.transform(dx * reach, dy * reach, 0);
+        final int maxHit = calvarion ? 20 : 30;
+        WorldTasksManager.schedule(() -> {
+            if (isDead() || isFinished()) {
+                return;
+            }
+            for (final Player p : GlobalAreaManager.getArea(area).getPlayers()) {
+                final boolean underneath = p.getX() >= getX() && p.getX() < getX() + getSize() && p.getY() >= getY() && p.getY() < getY() + getSize();
+                final boolean inFront = Math.abs(p.getX() - front.getX()) <= 1 && Math.abs(p.getY() - front.getY()) <= 1;
+                if (p.getPlane() != getPlane() || (!underneath && !inFront)) {
+                    continue;
+                }
+                delayHit(0, p, new Hit(this, Utils.random(maxHit), HitType.DEFAULT));
+                p.stun(4);
+            }
+        }, 1);
     }
 
     private void lightningAttack(Entity target) {
-        Animation animation = Utils.roll(50) ? LIGHTNING_ANIMATION_SMITE : LIGHTNING_ANIMATION_STRIKE;
-        setAnimation(animation);
+        setAnimation(formAnimation(Utils.roll(50) ? LIGHTNING_ANIMATION_SMITE : LIGHTNING_ANIMATION_STRIKE));
 
         // Find list of eligible tiles based on the radius around the target
         List<Location> radius = new ArrayList<>(5 * 5);
@@ -264,7 +289,7 @@ public final class Vetion extends NPC implements CombatScript {
                 middle.transform(-1, 3)
         };
 
-        setAnimation(LIGHTNING_ANIMATION_SMITE);
+        setAnimation(formAnimation(LIGHTNING_ANIMATION_SMITE));
         combat.setCombatDelay(6);
         freeze(6);
 
@@ -346,7 +371,7 @@ public final class Vetion extends NPC implements CombatScript {
                 talk = talk.toUpperCase();
             }
             setForceTalk(talk);
-            setAnimation(HELLHOUND_SUMMON_ANIMATION);
+            setAnimation(formAnimation(HELLHOUND_SUMMON_ANIMATION));
             combat.setCombatDelay(6);
         }
 

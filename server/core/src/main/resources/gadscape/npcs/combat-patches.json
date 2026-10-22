@@ -1,0 +1,157 @@
+{
+  "_doc": "Bundled fixes to cache/data/npcs/combat/*.npc.json, applied by BundledNpcCombatPatches before NPCCDLoader indexes the definitions. Keys: id, name (cache name check), merge (deep-merged into the definition), copyFrom/onlyIfAbsent. Animation ids are build-241 seqs (RuneLite gameval AnimationID names in _why). Area: bosses (BOSS-02/03/04/08/09/10/11/13, PVP-27).",
+  "patches": [
+    {
+      "id": 11246, "name": "Revenant maledictus",
+      "_why": "BOSS-11/PVP-27: block 10015 / spawn 10016 were Callisto's skeletal anims (dropped on the classic revenant skeleton 1996). There is no maledictus defend seq; spawn = 9281 NPC_REVENANT_SUPERIOR_SPAWN.",
+      "merge": {
+        "blockDefinitions": { "animation": { "id": -1, "delay": 0 } },
+        "spawnDefinitions": { "spawnAnimation": { "id": 9281, "delay": 0 } }
+      }
+    },
+    {
+      "id": 6609, "name": "Callisto",
+      "_why": "BOSS-03: the reworked Callisto has no defend seq; 10015 NPC_CALLISTO_ENRAGED01 (the roar) played on every hit.",
+      "merge": { "blockDefinitions": { "animation": { "id": -1, "delay": 0 } } }
+    },
+    {
+      "id": 11992, "name": "Artio",
+      "_why": "BOSS-03: as Callisto.",
+      "merge": { "blockDefinitions": { "animation": { "id": -1, "delay": 0 } } }
+    },
+    {
+      "id": 6611, "name": "Vet'ion",
+      "_why": "BOSS-04: 5485/5489 are SKELETON_UPDATE anims (skeleton 1291, dropped). 9971 NPC_VETION_ATTACK_MELEE_01, 9973 NPC_VETION_DEFEND_PARRY_01.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 9971, "delay": 0 } },
+        "blockDefinitions": { "animation": { "id": 9973, "delay": 0 } }
+      }
+    },
+    {
+      "id": 11993, "name": "Calvar'ion",
+      "_why": "BOSS-04: as Vet'ion.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 9971, "delay": 0 } },
+        "blockDefinitions": { "animation": { "id": 9973, "delay": 0 } }
+      }
+    },
+    {
+      "id": 6612, "name": "Vet'ion",
+      "_why": "BOSS-04: second (enraged) form uses the _02 seqs: 9972 ATTACK_MELEE_02, 9974 DEFEND_PARRY_02, 9981 DEATH_02.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 9972, "delay": 0 } },
+        "blockDefinitions": { "animation": { "id": 9974, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 9981, "delay": 0 } }
+      }
+    },
+    {
+      "id": 11994, "name": "Calvar'ion",
+      "_why": "BOSS-04: as Vet'ion's second form.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 9972, "delay": 0 } },
+        "blockDefinitions": { "animation": { "id": 9974, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 9981, "delay": 0 } }
+      }
+    },
+    {
+      "id": 12204, "name": "The Whisperer",
+      "_why": "BOSS-08: 5568/5569 are ZOMBIE_UPDATE anims (skeleton 1288): the Whisperer died with no animation. 10234 NPC_WHISPERER_01_ATTACK_MELEE_01, 10260 NPC_WHISPERER_01_DEATH_01.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 10234, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 10260, "delay": 0 } }
+      }
+    },
+    {
+      "id": 12205, "name": "The Whisperer", "copyFrom": 12204, "onlyIfAbsent": true,
+      "_why": "BOSS-08: WHISPERER_MELEE had no combat definition."
+    },
+    {
+      "id": 12077, "name": "Phantom Muspah",
+      "_why": "BOSS-02: zombie placeholders 5568/5569. Attacks are scripted (PhantomMuspah); death 9939 NPC_MUSPAH_DEATH_01 (only the final form 12080 really dies, with 9941).",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": -1, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 9939, "delay": 0 } }
+      }
+    },
+    {
+      "id": 12078, "name": "Phantom Muspah",
+      "_why": "BOSS-02: as 12077.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": -1, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 9939, "delay": 0 } }
+      }
+    },
+    {
+      "id": 12079, "name": "Phantom Muspah",
+      "_why": "BOSS-02: as 12077.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": -1, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 9939, "delay": 0 } }
+      }
+    },
+    {
+      "id": 12080, "name": "Phantom Muspah",
+      "_why": "BOSS-02: zombie attack placeholder 5568 (death 9941 is right).",
+      "merge": { "attackDefinitions": { "animation": { "id": -1, "delay": 0 } } }
+    },
+    {
+      "id": 12082, "name": "Phantom Muspah",
+      "_why": "BOSS-02: as 12077.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": -1, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 9939, "delay": 0 } }
+      }
+    },
+    {
+      "id": 13666, "name": "Araxyte",
+      "_why": "BOSS-09: death 11481 / spawn 11482 are Araxxor's (skeleton 2351, dropped on the araxyte skeleton 1800). 11502 NPC_ARAXYTE02_DEATH, 11503 NPC_ARAXYTE02_HATCH.",
+      "merge": {
+        "spawnDefinitions": { "deathAnimation": { "id": 11502, "delay": 0 }, "spawnAnimation": { "id": 11503, "delay": 0 } }
+      }
+    },
+    {
+      "id": 13671, "name": "Mirrorback Araxyte",
+      "_why": "BOSS-09: 11510 NPC_ARAXYTE_MIRROR_BACK_DEATH, 11500 NPC_ARAXYTE_MIRROR_BACK_01_ATTACK.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 11500, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 11510, "delay": 0 }, "spawnAnimation": { "id": 11503, "delay": 0 } }
+      }
+    },
+    {
+      "id": 13673, "name": "Ruptura Araxyte",
+      "_why": "BOSS-09: 11502 NPC_ARAXYTE02_DEATH, 11503 NPC_ARAXYTE02_HATCH.",
+      "merge": {
+        "spawnDefinitions": { "deathAnimation": { "id": 11502, "delay": 0 }, "spawnAnimation": { "id": 11503, "delay": 0 } }
+      }
+    },
+    {
+      "id": 13675, "name": "Acidic Araxyte",
+      "_why": "BOSS-09: 11498 NPC_ARAXYTE_ACIDIC_01_ATTACK, 11502 NPC_ARAXYTE02_DEATH, 11503 NPC_ARAXYTE02_HATCH.",
+      "merge": {
+        "attackDefinitions": { "animation": { "id": 11498, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 11502, "delay": 0 }, "spawnAnimation": { "id": 11503, "delay": 0 } }
+      }
+    },
+    {
+      "id": 13600, "name": "Tormented Demon", "copyFrom": 13599, "onlyIfAbsent": true,
+      "_why": "BOSS-10: only 13599 had a definition, so 13600 had no block/death animation. (13602 is GadScape's Smoldering Demon pet and is left alone.)"
+    },
+    {
+      "id": 13601, "name": "Tormented Demon", "copyFrom": 13599, "onlyIfAbsent": true,
+      "_why": "BOSS-10: as 13600."
+    },
+    {
+      "id": 3129, "name": "K'ril Tsutsaroth",
+      "_why": "BOSS-13: generic demon 65/67 -> 6947 GODWARS_ZAMORAK_DEFEND / 6949 GODWARS_ZAMORAK_DEATH (same skeleton 1078).",
+      "merge": {
+        "blockDefinitions": { "animation": { "id": 6947, "delay": 0 } },
+        "spawnDefinitions": { "deathAnimation": { "id": 6949, "delay": 0 } }
+      }
+    },
+    {
+      "id": 2045, "name": "Snakeling",
+      "_why": "BOSS-13: 2405 is SNAKEBOSS_PET_WALK_FORWARD; 1741 SNAKEBOSS_PET_ATTACK.",
+      "merge": { "attackDefinitions": { "animation": { "id": 1741, "delay": 0 } } }
+    }
+  ]
+}

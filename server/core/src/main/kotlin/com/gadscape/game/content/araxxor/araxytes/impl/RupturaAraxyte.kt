@@ -3,10 +3,10 @@ package com.gadscape.game.content.araxxor.araxytes.impl
 import com.gadscape.game.content.araxxor.AraxxorInstance
 import com.gadscape.game.content.araxxor.araxytes.Araxyte
 import com.gadscape.game.content.seq
-import com.gadscape.game.content.spotanim
 import com.zenyte.game.task.WorldTasksManager.schedule
 import com.zenyte.game.world.entity.Entity
 import com.zenyte.game.world.entity.Location
+import com.zenyte.game.world.entity.masks.Graphics
 import com.zenyte.game.world.entity.masks.Hit
 import com.zenyte.game.world.entity.masks.HitType
 import com.zenyte.game.world.entity.npc.NpcId.RUPTURA_ARAXYTE
@@ -33,7 +33,7 @@ class RupturaAraxyte(
         if (this.middleLocation.withinDistance(target, 2)) {
             exploding = true
             lock()
-            this seq 11510
+            this seq 11504 // NPC_ARAXYTE_EXPLODE (11510 is the mirrorback death)
             schedule(2) {
                 if (instance.araxxor.middleLocation.withinDistance(this.location, 5))
                     instance.araxxor.applyHit(Hit(this, 80, HitType.DEFAULT))
@@ -56,7 +56,7 @@ class RupturaAraxyte(
     override fun hatchEgg(target: Entity?) {
         if (target == null) return
         this seq 11509
-        this spotanim 2928
+        graphics = Graphics(2928) // ARAXYTE_EXPLOSIVE_SPIDER_EGG
         schedule(1) {
             setTransformationPreservingStats(RUPTURA_ARAXYTE)
             addWalkSteps(instance.centerArenaTile.x, instance.centerArenaTile.y, 6)

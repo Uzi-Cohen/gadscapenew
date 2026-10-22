@@ -57,7 +57,11 @@ public class Callisto extends NPC implements CombatScript {
 
     private static final Animation MAGIC_ANIMATION = new Animation(10014);
 
-    private static final Animation HOWL_ANIMATION = new Animation(10016, 18);
+    /** NPC_CALLISTO_ENRAGED01: the roar at 66% and 33% hitpoints. */
+    private static final Animation HOWL_ANIMATION = new Animation(10015);
+
+    /** NPC_CALLISTO_SPAWN01: played when Callisto/Artio (re)spawns. */
+    private static final Animation SPAWN_ANIMATION = new Animation(10016);
 
     public static final Animation KNOCKBACK_ANIMATION = new Animation(1157);
 
@@ -93,9 +97,7 @@ public class Callisto extends NPC implements CombatScript {
         super(id, tile, facing, radius);
         this.artio = id == NpcId.ARTIO;
         this.area = artio ? HuntersEnd.class : CallistosDen.class;
-        // Manually set the death delay for this NPC because the new animation system broke animation duration calculation
-        // TODO we can remove this if we properly find out how to calculate animation durations for new anim system
-        deathDelay = 2;
+        // The death delay now comes from the skeletal death animation (AnimationDefinitions.getSkeletalCycles).
     }
 
     @Override
@@ -285,10 +287,11 @@ public class Callisto extends NPC implements CombatScript {
     @Override
     public void postHitProcess(Hit hit) {
         // At certain increments Callisto will howl, reset his freeze and attack timers, and start laying traps.
-        if (getHitpointsAsPercentage() < 66 && phase != Phase.TWO) {
+        // Each roar happens once: phase one -> two below 66%, phase two -> three below 33%.
+        if (getHitpointsAsPercentage() < 66 && phase == Phase.ONE) {
             howl();
             phase = Phase.TWO;
-        } else if (getHitpointsAsPercentage() < 33 && phase != Phase.ONE) {
+        } else if (getHitpointsAsPercentage() < 33 && phase == Phase.TWO) {
             howl();
             phase = Phase.THREE;
         }
@@ -315,7 +318,7 @@ public class Callisto extends NPC implements CombatScript {
 
     @Override
     public NPC spawn() {
-        setAnimation(HOWL_ANIMATION);
+        setAnimation(SPAWN_ANIMATION);
         if (!isPvmArenaVariant && showHpHud) {
             List<Entity> targets = getPossibleTargets(EntityType.PLAYER);
             for (Entity entity : targets) {

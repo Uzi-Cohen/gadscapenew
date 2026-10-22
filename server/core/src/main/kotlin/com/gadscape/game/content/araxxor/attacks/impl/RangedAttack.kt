@@ -21,11 +21,12 @@ import com.zenyte.game.world.entity.player.action.combat.CombatUtilities
  */
 class RangedAttack: Attack {
 
-    private val projectileBlob : Projectile = Projectile(2924, 64, 32, 64, 0)
+    // 241: spotanim 1621 ARAXXOR_RANGED_PROJECTILE (was 2924 ARAXXOR_POOLS_PROJ placeholder).
+    private val projectileBlob : Projectile = Projectile(1621, 64, 32, 64, 0)
 
     override fun invoke(araxxor: Araxxor, target: Entity?) {
         if (target == null) return
-        araxxor seq 11478
+        araxxor seq 11476 // NPC_ARAXXOR_01_ATTACK_RANGED_01
         var maxHit = 34
         if ((target as Player).prayerManager.isActive(Prayer.PROTECT_FROM_MISSILES))
             maxHit = (maxHit * 0.20).toInt()

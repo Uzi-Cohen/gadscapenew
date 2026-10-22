@@ -27,7 +27,8 @@ val West = Direction.WEST
 val WestEast = Direction.NORTH_EAST
 
 infix fun Player.sanity(i: Int) = run { this.sanityValue += i }
-infix fun Pair<AbstractEntity, Int>.delay(i: Int) : Graphics = Graphics(this.second, i, 0)
+/** `entity spotanim id delay ticks` plays the spotanim on the entity after the delay (it used to only build the Graphics). */
+infix fun Pair<AbstractEntity, Int>.delay(i: Int) : Graphics = Graphics(this.second, i, 0).also { this.first.graphics = it }
 infix fun Graphics.send(location: Location) = run { World.sendGraphics(this, location) }
 infix fun NPC.hit(target: Entity) : Hit = Hit(this, 0, HitType.DEFAULT)
 infix fun Hit.damage(dmg: Int) : Hit = run { this.damage = dmg; return this }
@@ -41,7 +42,8 @@ infix fun AbstractEntity.prayerActive(prayer: Prayer) : Boolean {
 
 infix fun AbstractEntity.under(entity: AbstractEntity) : Boolean = !this.collides(listOf(entity), entity.x, entity.y)
 infix fun AbstractEntity.nextTo(entity: AbstractEntity) : Boolean = this.location.getAxisDistance(this.size, entity.position, entity.size) == 1
-infix fun AbstractEntity.spotanim(gfx: Int) : Pair<AbstractEntity, Int> = (this to gfx)
+/** `entity spotanim id` plays the spotanim on the entity now; chain `delay n` to delay it (the delayed one replaces it). */
+infix fun AbstractEntity.spotanim(gfx: Int) : Pair<AbstractEntity, Int> = (this to gfx).also { this.graphics = Graphics(gfx) }
 infix fun AbstractEntity.seq(sequence: Int) = run { this.animation = Animation(sequence) }
 infix fun AbstractEntity.faceDir(direction: Direction)  = this.faceDirection(direction)
 infix fun AbstractEntity.fire(data: Projectile) = this to data
