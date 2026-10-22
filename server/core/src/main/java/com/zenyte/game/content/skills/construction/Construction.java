@@ -1,7 +1,6 @@
 package com.zenyte.game.content.skills.construction;
 
 import com.google.gson.annotations.Expose;
-import com.zenyte.game.GameConstants;
 import com.zenyte.game.content.achievementdiary.diaries.ArdougneDiary;
 import com.zenyte.game.content.skills.construction.constants.Furniture;
 import com.zenyte.game.content.skills.construction.constants.FurnitureSpace;
@@ -9,6 +8,7 @@ import com.zenyte.game.content.skills.construction.constants.House;
 import com.zenyte.game.content.skills.construction.constants.RoomType;
 import com.zenyte.game.content.skills.construction.costume.*;
 import com.zenyte.game.content.skills.construction.dialogue.BuildStaircaseD;
+import com.zenyte.game.content.skills.construction.servant.ServantManager;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.MinimapState;
 import com.zenyte.game.model.ui.InterfacePosition;
@@ -19,6 +19,7 @@ import com.zenyte.game.util.Utils;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity._Location;
+import com.zenyte.game.world.entity.masks.Animation;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.SkillConstants;
 import com.zenyte.game.world.entity.player.container.impl.Inventory;
@@ -37,25 +38,54 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.zenyte.game.content.skills.construction.ConstructionConstants.*;
 
 /**
+ * A player-owned house. One instance per player (the owner); guests share the owner's instance while they visit.
+ * <p>
+ * Coordinates: a room's {@code x}/{@code y} are "room coordinates", which include {@link #yardOffset} so that rooms keep their
+ * place when the yard grows with the Construction level. The world chunk of a room is
+ * {@code chunkX + room.x - yardOffset} (see {@link #roomChunkX(int)}); every tile lookup goes through {@link #getRoomBase} /
+ * {@link #getRoomTile} so it works for any instance alignment ({@link MapBuilder} instances start 13 chunks into a region, so
+ * the old "% 64" arithmetic pointed at the wrong tiles).
+ *
  * @author Tommeh 13 nov. 2017 : 22:36:26
  * @author Kris | 21. nov 2017 : 2:32.54
  * @see <a href="https://www.rune-server.ee/members/tommeh/">Rune-Server profile</a>}
  * @see <a href="https://www.rune-server.ee/members/kris/">Rune-Server profile</a>}
- * @see <a href="https://rune-status.net/members/kris.354/">Rune-Status profile</a>} TODO: Dungeon floor space reminder: If rocnar exists,
- * leave 15351 empty (and spawn rocnar there) Otherwise, spawn whatever floor space you had. TODO: Configure tip jar to work with other
- * people!
+ * @see <a href="https://rune-status.net/members/kris.354/">Rune-Status profile</a>}
  */
 public final class Construction {
 
     private static final Logger log = LoggerFactory.getLogger(Construction.class);
+
+    /**
+     * Temporary attribute with the house a player is inside right now (their own or a friend's). {@link Player#getCurrentHouse()}
+     * reads the same key.
+     */
+    public static final String VISITING_ATTR = "VisitingHouse";
+
+    /* House options tab (interface 370, GadScape's 211 layout) varbits. */
+    public static final int BUILDING_MODE_VARBIT = 2176;
+    /** 0 = teleport inside (on), 1 = teleport outside (off). */
+    public static final int TELEPORT_INSIDE_VARBIT = 4744;
+    public static final int DEFAULT_BUILDING_MODE_VARBIT = 14670;
+    /** 0 = doors closed, 1 = open, 2 = no doors. */
+    public static final int DOORS_VARBIT = 6269;
+    public static final int HOUSE_OPTIONS_INTERFACE = 370;
+    public static final int ROOM_COUNT_COMPONENT = 23;
+
+    public static final int DOORS_CLOSED = 0;
+    public static final int DOORS_OPEN = 1;
+    public static final int DOORS_NONE = 2;
+
+    /** Ticks before an instance that the house moved away from is wiped (players need a tick to leave it). */
+    private static final int OLD_AREA_DESTROY_DELAY = 3;
+    /** Ticks after which a player waiting for the house map to load is unlocked anyway. */
+    private static final int LOAD_TIMEOUT_TICKS = 25;
+    private static final Animation DEATH_ANIMATION = new Animation(836);
 
     @Expose
     private final List<RoomReference> references = new ArrayList<RoomReference>();
@@ -87,9 +117,8 @@ public final class Construction {
 
     private transient boolean buildingMode;
 
-    private transient boolean renderDoorsOpen;
-
-    private transient boolean teleportInside;
+    /** Building mode chosen in the house options while outside the house; used by the next house teleport. */
+    private transient Boolean nextBuildingMode;
 
     private transient int chunkX;
 
@@ -115,12 +144,59 @@ public final class Construction {
     @Expose
     private int servantsCash;
 
+    /* House options (persisted; false/0 defaults match OSRS: teleport inside, doors closed, no default building mode). */
+    @Expose
+    private boolean teleportOutside;
+
+    @Expose
+    private boolean defaultBuildingMode;
+
+    @Expose
+    private int doorMode;
+
+    @Expose
+    private ServantManager.ServantData servantData;
+
+    /* Portal Nexus room: destinations (PortalNexus.Destination names), left-click destination, mounted jewellery defaults. */
+    @Expose
+    private List<String> nexusDestinations = new ArrayList<>();
+
+    @Expose
+    private String nexusDefault;
+
+    @Expose
+    private int xericDefault;
+
+    @Expose
+    private int digsiteDefault;
+
+    /** Pets (item ids) kept in the menagerie's pet house. */
+    @Expose
+    private List<Integer> menageriePets = new ArrayList<>();
+
+    private final transient List<com.zenyte.game.world.entity.npc.NPC> roamingPets = new ArrayList<>();
+
     private transient AllocatedArea allocatedArea;
+
+    /** Whether the owner is inside the loaded instance. */
+    private transient boolean ownerInside;
+
+    /** Guests currently inside the owner's instance. */
+    private final transient Set<Player> guests = new LinkedHashSet<>();
+
+    /** Exit portal "Lock": no new guests may enter while locked. */
+    private transient boolean locked;
+
+    private final transient ServantManager servantManager;
+
+    private final transient com.zenyte.game.content.skills.construction.combat.HouseCombat combat;
 
     public Construction(final Player player) {
         this.player = player;
         houseViewer = new HouseViewer(player);
         tipJar = new TipJar(player);
+        servantManager = new ServantManager(this);
+        combat = new com.zenyte.game.content.skills.construction.combat.HouseCombat(this);
     }
 
     public final void setFields(final Construction construction) {
@@ -151,28 +227,95 @@ public final class Construction {
             treasureChest.getItems().putAll(construction.treasureChest.getItems());
         }
         treasureChest.setPlayer(player);
-        house = construction.house;
+        if (construction.house != null) {
+            house = construction.house;
+        }
         decoration = construction.decoration;
         servantsCash = construction.servantsCash;
+        teleportOutside = construction.teleportOutside;
+        defaultBuildingMode = construction.defaultBuildingMode;
+        doorMode = construction.doorMode < DOORS_CLOSED || construction.doorMode > DOORS_NONE ? DOORS_CLOSED : construction.doorMode;
+        servantData = construction.servantData;
+        if (construction.nexusDestinations != null) {
+            nexusDestinations.addAll(construction.nexusDestinations);
+        }
+        nexusDefault = construction.nexusDefault;
+        xericDefault = construction.xericDefault;
+        digsiteDefault = construction.digsiteDefault;
+        if (construction.menageriePets != null) {
+            menageriePets.addAll(construction.menageriePets);
+        }
         if (construction.tipJar != null) {
             tipJar.set(construction.tipJar);
         }
-        for (final RoomReference roomReference : construction.getReferences()) {
-            if (roomReference == null) {
-                continue;
+        if (construction.getReferences() != null) {
+            for (final RoomReference roomReference : construction.getReferences()) {
+                if (roomReference == null || roomReference.getRoom() == null) {
+                    continue;
+                }
+                if (roomReference.getFurnitureData() == null) {
+                    roomReference.setFurnitureData(new ArrayList<>());
+                }
+                roomReference.getFurnitureData().removeIf(data -> data == null || data.getFurniture() == null || data.getSpace() == null || data.getLocation() == null);
+                references.add(roomReference);
             }
-            references.add(roomReference);
         }
     }
 
+    /**
+     * The house the player is standing in: a friend's house while visiting, otherwise their own.
+     */
+    public static Construction current(final Player player) {
+        final Construction visiting = player.getCurrentHouse();
+        return visiting != null ? visiting : player.getConstruction();
+    }
+
     public void refreshHouseOptions() {
-        player.getVarManager().sendBit(2176, buildingMode ? 1 : 0);
-        player.getVarManager().sendBit(3983, renderDoorsOpen ? 1 : 0);
-        player.getVarManager().sendBit(4744, teleportInside ? 0 : 1);
+        final boolean building = ownerInside ? buildingMode : nextBuildingMode != null ? nextBuildingMode : defaultBuildingMode;
+        player.getVarManager().sendBit(BUILDING_MODE_VARBIT, building ? 1 : 0);
+        player.getVarManager().sendBit(TELEPORT_INSIDE_VARBIT, teleportOutside ? 1 : 0);
+        player.getVarManager().sendBit(DEFAULT_BUILDING_MODE_VARBIT, defaultBuildingMode ? 1 : 0);
+        player.getVarManager().sendBit(DOORS_VARBIT, doorMode);
+        sendRoomCount();
+    }
+
+    public void sendRoomCount() {
+        player.getPacketDispatcher().sendComponentText(HOUSE_OPTIONS_INTERFACE, ROOM_COUNT_COMPONENT, "Number of rooms: " + getAmountOfRooms());
+    }
+
+    /* ------------------------------------------------------------------------------------------------------------------------
+     * Coordinates
+     * ---------------------------------------------------------------------------------------------------------------------- */
+
+    /** World chunk x of the room at room coordinate {@code roomX}. */
+    public int roomChunkX(final int roomX) {
+        return chunkX + roomX - yardOffset;
+    }
+
+    /** World chunk y of the room at room coordinate {@code roomY}. */
+    public int roomChunkY(final int roomY) {
+        return chunkY + roomY - yardOffset;
+    }
+
+    /** South-west tile of a room in the current instance. */
+    public Location getRoomBase(final RoomReference room) {
+        return new Location(roomChunkX(room.getX()) << 3, roomChunkY(room.getY()) << 3, room.getPlane());
+    }
+
+    /** A tile of a room in the current instance, from coordinates inside the room's chunk (0-7). */
+    public Location getRoomTile(final RoomReference room, final int localX, final int localY) {
+        return new Location((roomChunkX(room.getX()) << 3) + localX, (roomChunkY(room.getY()) << 3) + localY, room.getPlane());
+    }
+
+    /** The objects the house template put on a room tile (hotspots, walls, windows), unaffected by built furniture. */
+    private WorldObject[] getTemplateObjects(final Location tile) {
+        final Region region = World.getRegion(tile.getRegionId(), true);
+        return region.getObjects(tile.getPlane(), tile.getXInRegion(), tile.getYInRegion());
     }
 
     /**
-     * TODO fix clicking off multiple times.
+     * The player's position as a tile in room coordinates (house-relative, including the yard offset), so that it can be
+     * mapped back into a rebuilt instance by {@link #enterHouse(boolean, Location)}.
      */
     public Location getRelationalSpawnTile() {
         final int xInChunk = player.getLocation().getXInChunk();
@@ -182,101 +325,436 @@ public final class Construction {
         return new Location(roomX * 8 + xInChunk, roomY * 8 + yInChunk, player.getPlane());
     }
 
+    private Location getWorldTile(final int mapX, final int mapY, final int plane) {
+        return new Location(chunkX * 8 + mapX, chunkY * 8 + mapY, plane);
+    }
+
+    /**
+     * Where players arrive: next to the exit portal, or the middle of the yard when the house has no exit portal.
+     */
+    public Location getPortalTile() {
+        if (portal != null) {
+            return new Location(portal);
+        }
+        final Location center = getCenter();
+        return getWorldTile(center.getX(), center.getY(), 1);
+    }
+
+    public boolean contains(final Location location) {
+        return allocatedArea != null && location != null && allocatedArea.inside(location);
+    }
+
+    /* ------------------------------------------------------------------------------------------------------------------------
+     * Entering, leaving and guests
+     * ---------------------------------------------------------------------------------------------------------------------- */
+
+    public boolean isLoaded() {
+        return allocatedArea != null;
+    }
+
+    public boolean isOwnerInside() {
+        return ownerInside;
+    }
+
+    public boolean isOwner(final Player p) {
+        return p == player;
+    }
+
+    public Set<Player> getGuests() {
+        return guests;
+    }
+
+    public boolean hasGuests() {
+        guests.removeIf(guest -> guest == null || guest.isFinished() || guest.getCurrentHouse() != this);
+        return !guests.isEmpty();
+    }
+
+    /**
+     * Enters the house through a portal or a teleport, building mode chosen by the house options.
+     */
+    public boolean enterHouseByTeleport() {
+        final boolean building = nextBuildingMode != null ? nextBuildingMode : defaultBuildingMode;
+        if (building && hasGuests()) {
+            return enterHouse(false, null);
+        }
+        return enterHouse(building, null);
+    }
+
     public void enterHouse(final boolean building) {
         enterHouse(building, null);
     }
 
+    /**
+     * Enters (and, when needed, rebuilds) the owner's house.
+     *
+     * @param building  whether to enter in building mode.
+     * @param spawnTile where to place the owner, in room coordinates (see {@link #getRelationalSpawnTile()}), or null for the
+     *                  exit portal.
+     */
     public boolean enterHouse(final boolean building, final Location spawnTile) {
-        if (!GameConstants.isOwner(player)) {
-            player.sendMessage("Construction is incomplete, therefore disabled.");
+        if (house == null) {
+            house = House.RIMMINGTON;
+        }
+        if (building && hasGuests()) {
+            player.sendMessage("You can't turn on building mode while you have guests in your house.");
+            return false;
+        }
+        // The house is up (the owner is inside, or guests stayed after the owner left): join it instead of rebuilding.
+        if (!building && spawnTile == null && isLoaded() && !buildingMode) {
+            join(player);
+            return true;
+        }
+        return build(building, spawnTile);
+    }
+
+    private boolean build(final boolean building, Location spawnTile) {
+        final AllocatedArea previous = allocatedArea;
+        final AllocatedArea area;
+        try {
+            area = MapBuilder.findEmptyChunk(generateYardSpace(), generateYardSpace());
+        } catch (Exception e) {
+            log.error("", e);
+            player.sendMessage("Your house could not be loaded right now, please try again.");
             return false;
         }
         try {
-            if (house.equals(House.YANILLE)) {
+            if (house == House.YANILLE) {
                 player.getAchievementDiaries().update(ArdougneDiary.ENTER_YOUR_POH);
             }
-            player.getTemporaryAttributes().put("VisitingHouse", this);
+            if (spawnTile != null && !isInsideHouseBounds(spawnTile)) {
+                spawnTile = null;
+            }
             buildingMode = building;
+            nextBuildingMode = null;
             portal = null;
-            final long time = System.nanoTime();
-            player.getPacketDispatcher().sendComponentText(370, 16, "Number of rooms: " + getAmountOfRooms());
             yardSpace = generateYardSpace();
             yardOffset = generateYardOffset();
             player.getTemporaryAttributes().put("yard", yardOffset);
-            player.getControllerManager().startController(new ConstructionController());
-            if (references.size() == 0) {
+            if (references.isEmpty()) {
                 final RoomReference garden = new RoomReference(RoomType.GARDEN, 4, 4, 1, 1);
                 references.add(0, garden);
                 garden.getFurnitureData().add(new FurnitureData(FurnitureSpace.CENTREPIECE_SPACE, Furniture.EXIT_PORTAL, new Location(3, 3, 1), 10, 1));
             }
-            allocatedArea = MapBuilder.findEmptyChunk(yardSpace, yardSpace);
+            allocatedArea = area;
             chunkX = allocatedArea.getChunkX();
             chunkY = allocatedArea.getChunkY();
-            player.getInterfaceHandler().sendInterface(InterfacePosition.OVERLAY, 71);
-            player.getPacketDispatcher().sendMinimapState(MinimapState.MAP_DISABLED);
-            final Location location = getCenter();
-            if (spawnTile != null) {
-                player.setLocation(new Location(chunkX * 8 + spawnTile.getX(), chunkY * 8 + spawnTile.getY(), spawnTile.getPlane()));
-            } else {
-                player.setLocation(getWorldTile(location.getX(), location.getY(), 1));
-            }
             createLandscape();
             createRooms();
-            final int regionId = (((chunkX * 8) >> 6) << 8) + ((chunkY * 8) >> 6);
-            final Region region = World.getRegion(regionId, true);
-            player.lock();
-            if (portal == null) {
-                portal = getWorldTile(location.getX(), location.getY(), 1);
-            }
             fillRooms();
             if (!buildingMode) {
                 addDoors();
             }
-            WorldTasksManager.schedule(new WorldTask() {
-
-                @Override
-                public void run() {
-                    if (player.isLoadingRegion() || region.getLoadStage() != 2) {
-                        return;
-                    }
-                    player.unlock();
-                    player.getInterfaceHandler().closeInterface(InterfacePosition.OVERLAY);
-                    player.getPacketDispatcher().sendSoundEffect(ENTER_SOUND);
-                    player.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED);
-                    stop();
+            final Location destination = spawnTile != null
+                    ? getWorldTile(spawnTile.getX() - yardOffset * 8, spawnTile.getY() - yardOffset * 8, spawnTile.getPlane())
+                    : getPortalTile();
+            ownerInside = true;
+            enterInstance(player, destination);
+            for (final Player guest : new ArrayList<>(guests)) {
+                if (guest == null || guest.isFinished()) {
+                    guests.remove(guest);
+                    continue;
                 }
-            }, 0, 0);
+                enterInstance(guest, getPortalTile());
+            }
+            if (previous != null && previous != allocatedArea) {
+                scheduleDestroy(previous);
+            }
+            combat.onHouseLoaded();
+            roamingPets.clear();
+            com.zenyte.game.content.skills.construction.objects.menagerie.PetHouse.spawnPets(this);
+            servantManager.onHouseLoaded();
+            refreshHouseOptions();
+            return true;
         } catch (Exception e) {
             log.error("", e);
+            return true;
         }
-        return true;
     }
 
-    public void leaveHouse() {
-        MapBuilder.destroy(allocatedArea);
-        player.setLocation(new Location(house.getLocation()));
-        if (catsOnBlanket.remove(player) != null) {
-            if (player.getFollower() != null) {
-                player.getFollower().unlock();
-            }
+    /** Whether a tile in room coordinates lies inside the yard of the house being built. */
+    private boolean isInsideHouseBounds(final Location roomTile) {
+        final int space = generateYardSpace();
+        final int offset = (10 - space) / 2;
+        final int roomX = (roomTile.getX() >> 3) - offset;
+        final int roomY = (roomTile.getY() >> 3) - offset;
+        return roomTile.getX() >= 0 && roomTile.getY() >= 0 && roomX >= 0 && roomY >= 0 && roomX < space && roomY < space
+                && roomTile.getPlane() >= 0 && roomTile.getPlane() <= 3;
+    }
+
+    /** Puts a player (the owner returning to a house guests kept open, or a guest) into the loaded instance at the portal. */
+    private void join(final Player p) {
+        if (p == player) {
+            ownerInside = true;
+        } else {
+            guests.add(p);
+        }
+        enterInstance(p, getPortalTile());
+        if (p == player) {
+            servantManager.onHouseLoaded();
+            refreshHouseOptions();
         }
     }
+
+    private void enterInstance(final Player p, final Location destination) {
+        final Construction previous = p.getCurrentHouse();
+        if (previous != null && previous != this) {
+            // Straight from another house (e.g. a guest teleporting home): that house loses its occupant.
+            previous.onLeft(p, false);
+        }
+        p.getTemporaryAttributes().put(VISITING_ATTR, this);
+        if (!(p.getControllerManager().getController() instanceof ConstructionController)) {
+            p.getControllerManager().startController(new ConstructionController());
+        }
+        p.getInterfaceHandler().sendInterface(InterfacePosition.OVERLAY, 71);
+        p.getPacketDispatcher().sendMinimapState(MinimapState.MAP_DISABLED);
+        p.setLocation(destination);
+        p.lock();
+        final int regionId = destination.getRegionId();
+        WorldTasksManager.schedule(new WorldTask() {
+            private int ticks;
+
+            @Override
+            public void run() {
+                if (p.isFinished()) {
+                    stop();
+                    return;
+                }
+                ticks++;
+                if (ticks < LOAD_TIMEOUT_TICKS) {
+                    final Region region = World.getRegion(regionId);
+                    if (ticks < 2 || p.isLoadingRegion() || region == null || region.getLoadStage() != 2) {
+                        return;
+                    }
+                }
+                p.unlock();
+                p.getInterfaceHandler().closeInterface(InterfacePosition.OVERLAY);
+                p.getPacketDispatcher().sendSoundEffect(ENTER_SOUND);
+                p.getPacketDispatcher().sendMinimapState(MinimapState.ENABLED);
+                stop();
+            }
+        }, 0, 0);
+    }
+
+    /**
+     * Lets another player in, as long as the owner is home and not building.
+     */
+    public void enterAsGuest(final Player guest) {
+        if (guest == player) {
+            enterHouseByTeleport();
+            return;
+        }
+        if (player.isFinished() || !isLoaded() || !ownerInside) {
+            guest.sendMessage("That player is not at home.");
+            return;
+        }
+        if (player.getSocialManager().getIgnores().contains(com.zenyte.game.world.entity.player.SocialManager.formatName(guest))) {
+            guest.sendMessage("That player is not at home.");
+            return;
+        }
+        if (buildingMode) {
+            guest.sendMessage("That player is in building mode.");
+            return;
+        }
+        if (locked) {
+            guest.sendMessage("That player's house is locked.");
+            return;
+        }
+        join(guest);
+    }
+
+    /** Owner or guest leaves through the exit portal (or a command): placed outside the house's portal. */
+    public void leaveHouse() {
+        exit(player);
+    }
+
+    public void exit(final Player p) {
+        final Location outside = new Location(house.getLocation());
+        onLeft(p, true);
+        p.setLocation(outside);
+    }
+
+    /** Removes every guest from the house. */
+    public void expelGuests(final String message) {
+        for (final Player guest : new ArrayList<>(guests)) {
+            if (guest == null) {
+                continue;
+            }
+            if (message != null && !guest.isFinished()) {
+                guest.sendMessage(message);
+            }
+            if (guest.getCurrentHouse() == this) {
+                exit(guest);
+            }
+            guests.remove(guest);
+        }
+        closeIfEmpty();
+    }
+
+    /**
+     * Bookkeeping for a player who is no longer in the house (left, teleported out, logged out or died).
+     *
+     * @param stopController whether to stop their {@link ConstructionController} here (not when the controller manager is
+     *                       already removing it).
+     */
+    public void onLeft(final Player p, final boolean stopController) {
+        if (p.getTemporaryAttributes().get(VISITING_ATTR) == this) {
+            p.getTemporaryAttributes().remove(VISITING_ATTR);
+        }
+        p.getTemporaryAttributes().remove("FurnitureSpace");
+        p.getTemporaryAttributes().remove("RoomCreation");
+        if (catsOnBlanket.remove(p) != null && p.getFollower() != null) {
+            p.getFollower().unlock();
+        }
+        if (p == player) {
+            ownerInside = false;
+            servantManager.onOwnerLeft();
+        } else {
+            guests.remove(p);
+        }
+        if (stopController && p.getControllerManager().getController() instanceof ConstructionController) {
+            p.getControllerManager().forceStop();
+        }
+        closeIfEmpty();
+    }
+
+    /** Called by the controller when a player inside the house logs out. */
+    public void onLogout(final Player p) {
+        p.forceLocation(new Location(house.getLocation()));
+        if (p == player) {
+            expelGuests("The owner of the house has left.");
+        }
+        onLeft(p, false);
+    }
+
+    /**
+     * Safe death inside a house (combat ring, dungeon, PvP worlds): no items are lost, the player is placed outside the house
+     * portal with their stats restored.
+     */
+    public void onDeath(final Player p) {
+        p.lock();
+        p.stopAll();
+        WorldTasksManager.schedule(new WorldTask() {
+            private int ticks;
+
+            @Override
+            public void run() {
+                if (p.isFinished()) {
+                    stop();
+                    return;
+                }
+                if (ticks == 0) {
+                    p.setAnimation(DEATH_ANIMATION);
+                } else if (ticks == 3) {
+                    p.sendMessage("Oh dear, you are dead!");
+                    p.reset();
+                    p.setAnimation(Animation.STOP);
+                    p.blockIncomingHits();
+                    if (p.getCurrentHouse() == Construction.this) {
+                        // Losing a ring fight puts you next to the ring (OSRS: "teleported to another spot in the room").
+                        final Location ringExit = combat.ringAt(p.getLocation()) != null ? combat.ringExit(p.getLocation()) : null;
+                        if (ringExit != null) {
+                            p.setLocation(ringExit);
+                        } else {
+                            exit(p);
+                        }
+                    }
+                } else if (ticks == 4) {
+                    p.unlock();
+                    p.getAppearance().resetRenderAnimation();
+                    stop();
+                    return;
+                }
+                ticks++;
+            }
+        }, 0, 1);
+    }
+
+    private void closeIfEmpty() {
+        if (allocatedArea == null || ownerInside || hasGuests()) {
+            return;
+        }
+        final AllocatedArea area = allocatedArea;
+        allocatedArea = null;
+        buildingMode = false;
+        locked = false;
+        servantManager.onHouseClosed();
+        combat.onHouseClosed();
+        roamingPets.clear();
+        scheduleDestroy(area);
+    }
+
+    private void scheduleDestroy(final AllocatedArea area) {
+        WorldTasksManager.schedule(() -> {
+            if (area == allocatedArea) {
+                return;
+            }
+            try {
+                MapBuilder.destroy(area);
+            } catch (Exception e) {
+                log.error("", e);
+            }
+        }, OLD_AREA_DESTROY_DELAY);
+    }
+
+    /**
+     * House options "Building mode": rebuilds the house in the other mode when the owner is inside, otherwise remembers the
+     * choice for the next house teleport.
+     */
+    public void setBuildingModeOption(final boolean building) {
+        if (ownerInside && player.getCurrentHouse() == this && contains(player.getLocation())) {
+            if (building == buildingMode) {
+                refreshHouseOptions();
+                return;
+            }
+            if (building && hasGuests()) {
+                player.sendMessage("You can't turn on building mode while you have guests in your house.");
+                refreshHouseOptions();
+                return;
+            }
+            enterHouse(building, getRelationalSpawnTile());
+            return;
+        }
+        nextBuildingMode = building;
+        refreshHouseOptions();
+    }
+
+    public void setDoorModeOption(final int mode) {
+        if (mode == doorMode || mode < DOORS_CLOSED || mode > DOORS_NONE) {
+            refreshHouseOptions();
+            return;
+        }
+        doorMode = mode;
+        refreshHouseOptions();
+        // Doors are only placed outside building mode; rebuild so the change shows straight away.
+        if (ownerInside && !buildingMode && player.getCurrentHouse() == this && contains(player.getLocation())) {
+            build(false, getRelationalSpawnTile());
+        }
+    }
+
+    public void toggleLock() {
+        locked = !locked;
+        player.sendMessage(locked ? "Your house is now locked; no more guests can enter." : "Your house is now unlocked; guests can enter again.");
+    }
+
+    public void leaveHouse(final Player p) {
+        if (p.getCurrentHouse() == this) {
+            exit(p);
+        }
+    }
+
+    /* ------------------------------------------------------------------------------------------------------------------------
+     * Map construction
+     * ---------------------------------------------------------------------------------------------------------------------- */
 
     private void createLandscape() {
         for (int x = 0; x < yardSpace; x++) {
             for (int y = 0; y < yardSpace; y++) {
-                // final AllocatedArea allocated, final int ratio, final int fromChunkX, final int fromChunkY, final int fromPlane,
-                // final int toChunkX, final int toChunkY, final int toPlane, final int rotation
                 try {
                     MapBuilder.copySquare(allocatedArea, 1, RoomType.DUNGEON_LAND.getChunkX(), RoomType.DUNGEON_LAND.getChunkY(), decoration == 2 ? 2 : decoration == 3 ? 3 : 0, chunkX + x, chunkY + y, 0, 0);
                     MapBuilder.copySquare(allocatedArea, 1, RoomType.LAND.getChunkX(), RoomType.LAND.getChunkY(), decoration == 2 ? 2 : decoration == 3 ? 3 : 0, chunkX + x, chunkY + y, 1, 0);
                 } catch (Exception e) {
                     log.error("", e);
                 }
-                // MapBuilder.copyChunk(Room.DUNGEON_LAND.getChunkX(), Room.DUNGEON_LAND.getChunkY(), decoration == 2 ?
-                // 2 : decoration == 3 ? 3 : 0, chunkX + x, chunkY + y, 0, 0);
-                // MapBuilder.copyChunk(Room.LAND.getChunkX(), Room.LAND.getChunkY(), decoration == 2 ? 2 :
-                // decoration == 3 ? 3 : 0, chunkX + x, chunkY + y, 1, 0);
             }
         }
     }
@@ -288,7 +766,7 @@ public final class Construction {
             }
             addRoof(reference);
             try {
-                MapBuilder.copySquare(allocatedArea, 1, reference.getRoom().getChunkX() + (decoration >= 4 ? 8 : 0), reference.getRoom().getChunkY(), decoration & 3, chunkX + reference.getX() - yardOffset, chunkY + reference.getY() - yardOffset, reference.getPlane(), reference.getRotation());
+                MapBuilder.copySquare(allocatedArea, 1, reference.getRoom().getChunkX() + (decoration >= 4 ? 8 : 0), reference.getRoom().getChunkY(), decoration & 3, roomChunkX(reference.getX()), roomChunkY(reference.getY()), reference.getPlane(), reference.getRotation());
             } catch (Exception e) {
                 log.error("", e);
             }
@@ -300,7 +778,7 @@ public final class Construction {
             if (reference == null) {
                 continue;
             }
-            for (final FurnitureData data : reference.getFurnitureData()) {
+            for (final FurnitureData data : new ArrayList<>(reference.getFurnitureData())) {
                 if (data == null) {
                     continue;
                 }
@@ -310,47 +788,36 @@ public final class Construction {
         }
     }
 
+    private static boolean isOutdoor(final RoomType room) {
+        return room == RoomType.FORMAL_GARDEN || room == RoomType.GARDEN || room == RoomType.MENAGERIE_OUTDOORS || room == RoomType.SUPERIOR_GARDEN;
+    }
+
     private void addDoors() {
+        if (doorMode == DOORS_NONE) {
+            return;
+        }
         for (final RoomReference room : references) {
-            if (room == null) {
+            if (room == null || isOutdoor(room.getRoom())) {
                 continue;
             }
-            if (room.getRoom() == RoomType.FORMAL_GARDEN || room.getRoom() == RoomType.GARDEN || room.getRoom() == RoomType.MENAGERIE_OUTDOORS || room.getRoom() == RoomType.SUPERIOR_GARDEN) {
-                continue;
-            }
-            final int minX = (room.getX() * 8 - (yardOffset * 8)) % 64;
-            final int minY = (room.getY() * 8 - (yardOffset * 8)) % 64;
-            final int regionId = ((((chunkX + room.getX()) * 8 >> 6) << 8) + (((chunkY + room.getY()) * 8) >> 6));
-            final int regionX = (regionId >> 8) << 6;
-            final int regionY = (regionId & 255) << 6;
+            final Location base = getRoomBase(room);
             for (int i = 0; i < DOOR_POSITIONS.length; i++) {
                 final int[] coords = DOOR_POSITIONS[i];
                 final int x = coords[0];
                 final int y = coords[1];
                 final int rotation = coords[2];
-                final int oppositeX = coords[3];
-                final int oppositeY = coords[4];
                 final int rx = x == 0 ? -1 : x == 7 ? 1 : 0;
                 final int ry = y == 0 ? -1 : y == 7 ? 1 : 0;
                 final int offset = decoration == 0 ? (i % 2 == 0 ? 0 : 1) : (i % 2 != 0 ? 0 : 1);
-                final WorldObject o = new WorldObject(DOOR_IDS[decoration] + offset, 0, rotation, (regionX + minX + x), regionY + minY + y, room.getPlane());
-                final int dir = DirectionUtil.getMoveDirection(oppositeX - x, oppositeY - y);
+                final WorldObject o = new WorldObject(DOOR_IDS[decoration] + offset, 0, rotation, base.getX() + x, base.getY() + y, room.getPlane());
                 final RoomReference ref = getReference(room.getX() + rx, room.getY() + ry, room.getPlane());
-                if (ref != null && ref.getRoom() != RoomType.FORMAL_GARDEN && ref.getRoom() != RoomType.GARDEN && ref.getRoom() != RoomType.MENAGERIE_OUTDOORS && ref.getRoom() != RoomType.SUPERIOR_GARDEN) {
+                if (ref != null && !isOutdoor(ref.getRoom())) {
                     continue;
                 }
-                /*if (!RegionMap.checkProjectileStep(room.getPlane(), o.getX(), o.getY(), dir, 1) || room.getPlane()
-               == 2 && ref == null) {
-
-                    o.setId(WALL_IDS[decoration]);
-                    World.spawnObject(o);
-                    continue;
-                }*/
-                // TODO: Fix clip checks.
                 if (!World.isTileFree(o, 1)) {
                     continue;
                 }
-                if (renderDoorsOpen) {
+                if (doorMode == DOORS_OPEN) {
                     adjustDoor(o, x, y);
                 }
                 World.spawnObject(o);
@@ -384,7 +851,7 @@ public final class Construction {
 
     private void addRoof(final RoomReference reference) {
         final RoomType room = reference.getRoom();
-        if (room == RoomType.FORMAL_GARDEN || room == RoomType.GARDEN || room == RoomType.MENAGERIE_OUTDOORS || room == RoomType.SUPERIOR_GARDEN) {
+        if (isOutdoor(room)) {
             return;
         }
         for (final RoomReference ref : references) {
@@ -395,9 +862,9 @@ public final class Construction {
         if (reference.getPlane() > 0) {
             try {
                 if (decoration < 4)
-                    MapBuilder.copySquare(allocatedArea, 1, RoomType.ROOFS_A.getChunkX(), RoomType.ROOFS_A.getChunkY(), decoration, chunkX + reference.getX() - yardOffset, chunkY + reference.getY() - yardOffset, reference.getPlane() + 1, reference.getRotation());
+                    MapBuilder.copySquare(allocatedArea, 1, RoomType.ROOFS_A.getChunkX(), RoomType.ROOFS_A.getChunkY(), decoration, roomChunkX(reference.getX()), roomChunkY(reference.getY()), reference.getPlane() + 1, reference.getRotation());
                 else
-                    MapBuilder.copySquare(allocatedArea, 1, RoomType.ROOFS_B.getChunkX(), RoomType.ROOFS_B.getChunkY(), decoration, chunkX + reference.getX() - yardOffset, chunkY + reference.getY() - yardOffset, reference.getPlane() + 1, reference.getRotation());
+                    MapBuilder.copySquare(allocatedArea, 1, RoomType.ROOFS_B.getChunkX(), RoomType.ROOFS_B.getChunkY(), decoration, roomChunkX(reference.getX()), roomChunkY(reference.getY()), reference.getPlane() + 1, reference.getRotation());
             } catch (Exception e) {
                 log.error("", e);
             }
@@ -410,9 +877,10 @@ public final class Construction {
     }
 
     public void removeObject(final RoomReference reference, final WorldObject object) {
-        for (final FurnitureData furniture : reference.getFurnitureData()) {
+        for (final FurnitureData furniture : new ArrayList<>(reference.getFurnitureData())) {
+            final boolean variant = com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.isVariantOf(furniture.getFurniture(), object.getId());
             for (final int i : furniture.getFurniture().getObjectIds()) {
-                if (i == object.getId() && object.getXInChunk() == furniture.getLocation().getX() && object.getYInChunk() == furniture.getLocation().getYInChunk()) {
+                if ((PohIds.resolve(i) == object.getId() || variant) && object.getXInChunk() == furniture.getLocation().getX() && object.getYInChunk() == furniture.getLocation().getY()) {
                     refreshObject(reference, furniture, true, true);
                     reference.getFurnitureData().remove(furniture);
                     if (furniture.getSpace() == FurnitureSpace.QUEST_RUG_SPACE || furniture.getSpace() == FurnitureSpace.SKILL_RUG_SPACE) {
@@ -445,7 +913,7 @@ public final class Construction {
             if (object.getPlane() == 2) {
                 final RoomReference bottomRef = getReference(roomX, roomY, 1);
                 final RoomType room = bottomRef == null ? null : bottomRef.getRoom();
-                if (bottomRef == null || room == RoomType.GARDEN || room == RoomType.FORMAL_GARDEN || room == RoomType.SUPERIOR_GARDEN || room == RoomType.MENAGERIE_OUTDOORS) {
+                if (bottomRef == null || isOutdoor(room)) {
                     player.sendMessage("You can't build a room that would have no room to support it.");
                     return;
                 }
@@ -465,14 +933,31 @@ public final class Construction {
         final int roomX = loc.getChunkX() - chunkX + yardOffset;
         final int roomY = loc.getChunkY() - chunkY + yardOffset;
         final RoomReference reference = getReference(roomX, roomY, player.getPlane());
+        if (reference == null) {
+            return;
+        }
         final Location chunkCoords = (Location) data[1];
-        final Location objectCoords = getWorldTile((reference.getX() * 8) + chunkCoords.getX(), (reference.getY() * 8) + chunkCoords.getY(), chunkCoords.getPlane());
+        final Location objectCoords = getRoomTile(reference, chunkCoords.getX(), chunkCoords.getY());
         final FurnitureSpace space = (FurnitureSpace) data[0];
+        if (slot < 0 || slot >= space.getFurnitures().length) {
+            return;
+        }
         final int type = (int) data[2];
         final int rotation = (int) data[3];
+        final Furniture furniture = space.getFurnitures()[slot];
+        if (player.getSkills().getLevel(SkillConstants.CONSTRUCTION) < furniture.getLevel()) {
+            player.sendMessage("You need a Construction level of " + furniture.getLevel() + " to build that.");
+            return;
+        }
+        if (!com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.checkBuild(player, furniture)) {
+            return;
+        }
+        if (!hasMaterials(furniture)) {
+            return;
+        }
         player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
-        final WorldObject object = new WorldObject(space.getFurnitures()[slot].getObjectId(), type, rotation, objectCoords);
-        final FurnitureData furnitureData = new FurnitureData(space, space.getFurnitures()[slot], chunkCoords, type, rotation);
+        final WorldObject object = new WorldObject(PohIds.resolve(furniture.getObjectId()), type, rotation, objectCoords);
+        final FurnitureData furnitureData = new FurnitureData(space, furniture, chunkCoords, type, rotation);
         if (player.getPlane() >= 1 && (space == FurnitureSpace.QUEST_HALL_STAIRCASE || space == FurnitureSpace.SKILL_HALL_STAIRCASE)) {
             player.getTemporaryAttributes().put("constStaircase", object);
             player.getTemporaryAttributes().put("constReference", reference);
@@ -482,6 +967,44 @@ public final class Construction {
             return;
         }
         build(object, furnitureData, reference, space);
+    }
+
+    /**
+     * The materials are taken when the piece is finished, so check up front that all of them are there. Pieces made of regular
+     * planks also need nails (one per plank, bent nails cost extra swings).
+     */
+    private boolean hasMaterials(final Furniture furniture) {
+        if (furniture.getNails() > 0 && (getBestNail(player.getInventory()) >> 16) <= 0) {
+            player.sendMessage("You need some nails to build that.");
+            return false;
+        }
+        for (final Item material : furniture.getMaterials()) {
+            // Nails are used while hammering; another piece of furniture in the recipe is the one being upgraded.
+            if (material == null || ArrayUtils.contains(NAILS, material.getId()) || Furniture.DISPLAYED_MAP.containsKey(material.getId())) {
+                continue;
+            }
+            if (material.getId() == WATERING_CAN.getId()) {
+                if (!hasWateringCan()) {
+                    player.sendMessage("You need a watering can with some water in it to plant that.");
+                    return false;
+                }
+                continue;
+            }
+            if (player.getInventory().getAmountOf(material.getId()) < material.getAmount()) {
+                player.sendMessage("You don't have the materials needed to build that.");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean hasWateringCan() {
+        for (int id = 5333; id <= 5340; id++) {
+            if (player.getInventory().containsItem(id, 1)) {
+                return true;
+            }
+        }
+        return player.getInventory().containsItem(13353, 1);
     }
 
     private void build(final WorldObject object, final FurnitureData data, final RoomReference reference, final FurnitureSpace space) {
@@ -508,6 +1031,7 @@ public final class Construction {
                         stop = true;
                         return;
                     }
+                    removeMaterials(furniture);
                     player.getSkills().addXp(SkillConstants.CONSTRUCTION, furniture.getXp());
                     if (water) {
                         player.getSkills().addXp(SkillConstants.FARMING, furniture.getXp());
@@ -523,6 +1047,16 @@ public final class Construction {
                 }
             }
         }, 1, 1);
+    }
+
+    /** Takes the materials of a finished piece (nails are used up while hammering; the watering can is a tool). */
+    private void removeMaterials(final Furniture furniture) {
+        for (final Item material : furniture.getMaterials()) {
+            if (material == null || material.getId() == WATERING_CAN.getId() || ArrayUtils.contains(NAILS, material.getId()) || Furniture.DISPLAYED_MAP.containsKey(material.getId())) {
+                continue;
+            }
+            player.getInventory().deleteItem(material.getId(), material.getAmount());
+        }
     }
 
     private int hammer(final int type, final int nails, final Inventory inventory, int count) {
@@ -683,13 +1217,10 @@ public final class Construction {
      * @param room room to refresh.
      */
     private void refreshWindows(final RoomReference room) {
-        final int minX = (room.getX() * 8 - (yardOffset * 8)) % 64;
-        final int minY = (room.getY() * 8 - (yardOffset * 8)) % 64;
-        final int regionId = ((((chunkX + room.getX()) * 8 >> 6) << 8) + (((chunkY + room.getY()) * 8) >> 6));
-        final Region region = World.getRegion(regionId, true);
+        final Location base = getRoomBase(room);
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
-                final WorldObject[] objects = region.getObjects(room.getPlane(), minX + x, minY + y);
+                final WorldObject[] objects = getTemplateObjects(base.transform(x, y, 0));
                 if (objects == null) {
                     continue;
                 }
@@ -725,26 +1256,26 @@ public final class Construction {
      * Refreshes a certain built hotspot.
      */
     private void refreshObject(final RoomReference room, final FurnitureData data, final boolean remove, final boolean adjustingFurniture) {
-        final int minX = (room.getX() * 8 - (yardOffset * 8)) % 64;
-        final int minY = (room.getY() * 8 - (yardOffset * 8)) % 64;
-        final int regionId = ((((chunkX + room.getX()) * 8 >> 6) << 8) + (((chunkY + room.getY()) * 8) >> 6));
-        final Region region = World.getRegion(regionId, true);
         if (data.getSpace() == FurnitureSpace.QUEST_HALL_STAIRCASE || data.getSpace() == FurnitureSpace.QUEST_HALL_STAIRCASE_DS || data.getSpace() == FurnitureSpace.SKILL_HALL_STAIRCASE || data.getSpace() == FurnitureSpace.SKILL_HALL_STAIRCASE_DS) {
-            refreshHalls(data, true, room.getPlane(), minX, minY, region);
+            refreshHalls(room, true);
         } else if (data.getSpace() == FurnitureSpace.QUEST_RUG_SPACE || data.getSpace() == FurnitureSpace.SKILL_RUG_SPACE) {
-            refreshHalls(data, false, room.getPlane(), minX, minY, region);
+            refreshHalls(room, false);
         }
-        refreshObjectsInChunk(room, data, remove, region, minX, minY, adjustingFurniture);
+        refreshObjectsInChunk(room, data, remove, adjustingFurniture);
     }
 
     /**
      * Refreshes all the tied objects in a specific chunk.
      */
-    private void refreshObjectsInChunk(final RoomReference room, final FurnitureData data, final boolean remove, final Region region, final int minX, final int minY, final boolean adjustingFurniture) {
+    private void refreshObjectsInChunk(final RoomReference room, final FurnitureData data, final boolean remove, final boolean adjustingFurniture) {
+        if (data.getSpace() == null || data.getFurniture() == null) {
+            return;
+        }
+        final Location base = getRoomBase(room);
         int refreshType = 0;
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
-                final WorldObject[] objects = region.getObjects(room.getPlane(), minX + x, minY + y);
+                final WorldObject[] objects = getTemplateObjects(base.transform(x, y, 0));
                 if (objects == null) {
                     continue;
                 }
@@ -752,37 +1283,39 @@ public final class Construction {
                     if (object == null) {
                         continue;
                     }
-                    if (data.getSpace() == null) {
-                        continue;
-                    }
-                    for (int i = 0; i < data.getSpace().getSpotIds().length; i++) {
-                        if (object.getId() == data.getSpace().getSpotIds()[i]) {
-                            if (remove) {
-                                final WorldObject o = new WorldObject(object);
-                                o.setId(data.getSpace().getSpotIds()[i]);
-                                World.spawnObject(o);
-                            } else {
-                                final WorldObject o = new WorldObject(object);
-                                final Furniture furniture = data.getFurniture();
-                                o.setId(data.getFurniture().getObjectIds()[i]);
-                                if (furniture.getAction() != null) {
-                                    furniture.getAction().onRefresh(this, room, data, o, !adjustingFurniture);
+                    final int[] spotIds = data.getSpace().getSpotIds();
+                    for (int i = 0; i < spotIds.length; i++) {
+                        if (object.getId() != spotIds[i]) {
+                            continue;
+                        }
+                        if (remove) {
+                            final WorldObject o = new WorldObject(object);
+                            o.setId(spotIds[i]);
+                            World.spawnObject(o);
+                        } else {
+                            final WorldObject o = new WorldObject(object);
+                            final Furniture furniture = data.getFurniture();
+                            final int[] objectIds = furniture.getObjectIds();
+                            o.setId(PohIds.resolve(objectIds[Math.min(i, objectIds.length - 1)]));
+                            if (furniture.getAction() != null) {
+                                furniture.getAction().onRefresh(this, room, data, o, !adjustingFurniture);
+                            }
+                            if (adjustingFurniture) {
+                                if (furniture.getRefreshType() == 2 && refreshType != 2) {
+                                    refreshType = 2;
+                                } else if (furniture.getRefreshType() == 1 && refreshType != 2) {
+                                    refreshType = 1;
                                 }
-                                if (adjustingFurniture) {
-                                    if (furniture.getRefreshType() == 2 && refreshType != 2) {
-                                        refreshType = 2;
-                                    } else if (furniture.getRefreshType() == 1 && refreshType != 2) {
-                                        refreshType = 1;
-                                    }
-                                }
-                                if (!buildingMode && o.getId() == 0) {
+                            }
+                            if (o.getId() <= 0) {
+                                if (!buildingMode) {
                                     World.removeObject(o);
-                                } else {
-                                    World.spawnObject(o);
                                 }
-                                if (o.getId() == 4525 && portal == null) {
-                                    portal = new Location(o.getX() - 1, o.getY() - 1, o.getPlane());
-                                }
+                            } else {
+                                World.spawnObject(o);
+                            }
+                            if (o.getId() == EXIT_PORTAL && portal == null) {
+                                portal = new Location(o.getX() - 1, o.getY() - 1, o.getPlane());
                             }
                         }
                     }
@@ -790,7 +1323,7 @@ public final class Construction {
             }
         }
         if (refreshType == 1) {
-            for (final FurnitureData dat : room.getFurnitureData()) {
+            for (final FurnitureData dat : new ArrayList<>(room.getFurnitureData())) {
                 if (dat == null) {
                     continue;
                 }
@@ -801,10 +1334,11 @@ public final class Construction {
         }
     }
 
-    private void refreshHalls(final FurnitureData data, final boolean rug, final int plane, final int minX, final int minY, final Region region) {
+    private void refreshHalls(final RoomReference room, final boolean rug) {
+        final Location base = getRoomBase(room);
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
-                final WorldObject[] objects = region.getObjects(plane, minX + x, minY + y);
+                final WorldObject[] objects = getTemplateObjects(base.transform(x, y, 0));
                 if (objects == null) {
                     continue;
                 }
@@ -823,21 +1357,20 @@ public final class Construction {
     public void sendFurnitureCreationMenu(final WorldObject object) {
         final FurnitureSpace space = FurnitureSpace.getSpaceByObject(object);
         if (space == null) {
-            player.sendMessage("SPACE IS NULL: " + object.getId());
+            player.sendMessage("Nothing can be built here yet.");
             return;
         }
         player.getInterfaceHandler().sendInterface(InterfacePosition.CENTRAL, 458);
-        String materials = "";
         final List<String> args = new ArrayList<String>();
         for (final Furniture furniture : space.getFurnitures()) {
-            materials = ItemDefinitions.get(furniture.getItemId()).getName() + "|";
+            final StringBuilder materials = new StringBuilder(ItemDefinitions.get(furniture.getItemId()).getName() + "|");
             for (final Item item : furniture.getMaterials()) {
                 if (item == null) {
                     continue;
                 }
-                materials += item.getDefinitions().getName() + ": " + item.getAmount() + "<br>";
+                materials.append(item.getDefinitions().getName()).append(": ").append(item.getAmount()).append("<br>");
             }
-            args.add(materials);
+            args.add(materials.toString());
         }
         for (int i = 0; i < space.getFurnitures().length; i++) {
             player.getPacketDispatcher().sendClientScript(1404, i + 1, space.getFurnitures()[i].getItemId(), space.getFurnitures()[i].getLevel(), args.get(i), 1);
@@ -848,9 +1381,16 @@ public final class Construction {
     }
 
     public void createRoom(final RoomReference reference) {
-        final Location location = new Location(player.getLocation().getXInRegion(), player.getLocation().getYInRegion(), player.getPlane());
-        references.add(reference);
         final RoomType room = reference.getRoom();
+        if (player.getSkills().getLevelForXp(SkillConstants.CONSTRUCTION) < room.getLevel()) {
+            player.getDialogueManager().start(new PlainChat(player, "You need a Construction level of " + room.getLevel() + " to build that room."));
+            return;
+        }
+        if (player.getInventory().getAmountOf(995) < room.getPrice()) {
+            player.sendMessage("You can't afford to build that room.");
+            return;
+        }
+        references.add(reference);
         if (room == RoomType.SKILL_HALL || room == RoomType.QUEST_HALL || room == RoomType.SKILL_HALL_DS || room == RoomType.QUEST_HALL_DS) {
             if (reference.getPlane() == 1) {
                 final RoomReference below = this.getReference(reference.getX(), reference.getY(), reference.getPlane() - 1);
@@ -868,45 +1408,29 @@ public final class Construction {
                 }
             }
         }
-        player.getInventory().deleteItem(new Item(995, reference.getRoom().getPrice()));
-        player.getPacketDispatcher().sendComponentText(370, 16, "Number of rooms: " + getAmountOfRooms());
+        player.getInventory().deleteItem(new Item(995, room.getPrice()));
         player.getTemporaryAttributes().remove("CreatingRoom");
-        if (player.getTemporaryAttributes().get("yard") != null) {
-            final int yard = (int) player.getTemporaryAttributes().get("yard");
-            final int yardOffset = (10 - generateYardSpace()) / 2;
-            if (yard != yardOffset) {
-                final int offset = yard - yardOffset;
-                location.moveLocation(offset * 8, offset * 8, 0);
-            }
-        }
         enterHouse(true, getRelationalSpawnTile());
+        sendRoomCount();
     }
 
-    /**
-     * if (reference.getPlane() == 0) { final RoomReference below = this.getReference(reference.getX(), reference.getY(),
-     * reference.getPlane() + 1); if (below != null) { final Room bRoom = below.getRoom(); if (bRoom == Room.SKILL_HALL || bRoom ==
-     * Room.QUEST_HALL) { final FurnitureData staircase = below.getStaircase(); if (staircase == null) { final FurnitureData carpet
-     * = below.getCarpet(); if (carpet == null) { final String name = staircase.getFurniture().name(); final FurnitureData
-     * aboveStaircase = new FurnitureData(room == Room.QUEST_HALL ? FurnitureSpace.QUEST_HALL_STAIRCASE :
-     * FurnitureSpace.SKILL_HALL_STAIRCASE, Furniture.valueOf(Furniture.class, name.substring(0, name.length() - 3)), new
-     * WorldTile(staircase.getLocation().getX(), staircase.getLocation().getY(), staircase.getLocation().getPlane() - 1),
-     * staircase.getType(), staircase.getRotation()); reference.getFurnitureData().enqueue(aboveStaircase); } } } } }
-     */
     public void createRoom(final int slot) {
-        final RoomType[] rooms = RoomType.VALUES;
         final int[] location = (int[]) player.getTemporaryAttributes().get("RoomCreation");
-        final int[] offsetLocation = new int[] { location[0] - yardOffset, location[1] - yardOffset };
         final RoomType room = RoomType.getRoomBySlot(slot);
-        if (slot - 1 > rooms.length || room == null || location == null) {
+        if (room == null || location == null) {
+            if (location != null && room == null) {
+                player.sendMessage("That room can't be built yet.");
+            }
             return;
         }
-        if (offsetLocation[0] < 0 || offsetLocation[1] < 0 || offsetLocation[0] > yardSpace || offsetLocation[1] > yardSpace) {
+        final int[] offsetLocation = new int[] { location[0] - yardOffset, location[1] - yardOffset };
+        if (offsetLocation[0] < 0 || offsetLocation[1] < 0 || offsetLocation[0] >= yardSpace || offsetLocation[1] >= yardSpace) {
             player.sendMessage("You can't place a room here.");
             player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
             return;
         }
         if (player.getPlane() == 0) {
-            if (room == RoomType.FORMAL_GARDEN || room == RoomType.GARDEN || room == RoomType.MENAGERIE_OUTDOORS || room == RoomType.SUPERIOR_GARDEN) {
+            if (isOutdoor(room)) {
                 player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
                 player.getDialogueManager().start(new PlainChat(player, "This room can only be built on the ground."));
                 return;
@@ -917,14 +1441,24 @@ public final class Construction {
                 player.getDialogueManager().start(new PlainChat(player, "This room can only be built at the bottom."));
                 return;
             }
+            if (player.getPlane() == 2 && isOutdoor(room)) {
+                player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
+                player.getDialogueManager().start(new PlainChat(player, "This room can only be built on the ground."));
+                return;
+            }
         }
-        if (player.getSkills().getLevel(SkillConstants.CONSTRUCTION) < room.getLevel()) {
+        if (player.getSkills().getLevelForXp(SkillConstants.CONSTRUCTION) < room.getLevel()) {
             player.getDialogueManager().start(new PlainChat(player, "You need a Construction level of " + room.getLevel() + " to build that room."));
             player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
             return;
         }
         if (player.getInventory().getAmountOf(995) < room.getPrice()) {
             player.sendMessage("You can't afford to build that room.");
+            return;
+        }
+        if (room == RoomType.PORTAL_NEXUS && !getRooms(RoomType.PORTAL_NEXUS).isEmpty()) {
+            player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
+            player.getDialogueManager().start(new PlainChat(player, "You can only have one Portal Nexus room in your house."));
             return;
         }
         player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
@@ -934,9 +1468,10 @@ public final class Construction {
     public void roomPreview(final RoomReference reference, final boolean remove) {
         final int realChunkX = reference.getRoom().getChunkX() + (decoration >= 4 ? 8 : 0);
         final int realChunkY = reference.getRoom().getChunkY();
-        final int boundX = (chunkX * 8 + reference.getX() * 8) - (yardOffset * 8);
-        final int boundY = (chunkY * 8 + reference.getY() * 8) - (yardOffset * 8);
-        final Region region = World.getRegion(_Location.getRegionId(realChunkX >> 3, realChunkY >> 3), true);
+        final Location base = getRoomBase(reference);
+        final int boundX = base.getX();
+        final int boundY = base.getY();
+        final Region region = World.getRegion(_Location.getRegionId(realChunkX << 3, realChunkY << 3), true);
         if (reference.getPlane() == 0) {
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
@@ -951,7 +1486,7 @@ public final class Construction {
         }
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
-                final WorldObject[] objects = region.getObjects(decoration & 3, realChunkX * 8 + x & 63, realChunkY * 8 + y & 63);
+                final WorldObject[] objects = region.getObjects(decoration & 3, (realChunkX * 8 + x) & 63, (realChunkY * 8 + y) & 63);
                 if (objects != null) {
                     for (final WorldObject object : objects) {
                         if (object == null) {
@@ -979,7 +1514,7 @@ public final class Construction {
     }
 
     public int getAmountOfRooms() {
-        return references == null ? 1 : references.size();
+        return references == null ? 1 : Math.max(1, references.size());
     }
 
     /**
@@ -1006,13 +1541,59 @@ public final class Construction {
         return getReference(roomX, roomY, tile.getPlane());
     }
 
+    /** Every player inside the house right now (the owner when home, and the guests). */
+    public List<Player> getOccupants() {
+        final List<Player> list = new ArrayList<>();
+        if (ownerInside && player.getCurrentHouse() == this) {
+            list.add(player);
+        }
+        for (final Player guest : guests) {
+            if (guest != null && !guest.isFinished() && guest.getCurrentHouse() == this) {
+                list.add(guest);
+            }
+        }
+        return list;
+    }
+
+    /** World tiles of a room where the template has one of the hotspots of a furniture space. */
+    public List<Location> getSpotTiles(final RoomReference room, final FurnitureSpace space) {
+        final List<Location> tiles = new ArrayList<>();
+        final Location base = getRoomBase(room);
+        for (int x = 0; x < 8; x++) {
+            for (int y = 0; y < 8; y++) {
+                final Location tile = base.transform(x, y, 0);
+                final WorldObject[] objects = getTemplateObjects(tile);
+                if (objects == null) {
+                    continue;
+                }
+                for (final WorldObject object : objects) {
+                    if (object != null && ArrayUtils.contains(space.getSpotIds(), object.getId())) {
+                        tiles.add(new Location(object.getX(), object.getY(), object.getPlane()));
+                    }
+                }
+            }
+        }
+        return tiles;
+    }
+
+    public com.zenyte.game.content.skills.construction.combat.HouseCombat getCombat() {
+        return combat;
+    }
+
+    /** Rooms of a type. */
+    public List<RoomReference> getRooms(final RoomType type) {
+        final List<RoomReference> list = new ArrayList<>();
+        for (final RoomReference reference : references) {
+            if (reference != null && reference.getRoom() == type) {
+                list.add(reference);
+            }
+        }
+        return list;
+    }
+
     private int generateYardSpace() {
         final int level = player.getSkills().getLevelForXp(SkillConstants.CONSTRUCTION);
         return level >= 75 ? 9 : 5 + (int) (level / 15.0F);
-    }
-
-    private Location getWorldTile(final int mapX, final int mapY, final int plane) {
-        return new Location(chunkX * 8 + mapX, chunkY * 8 + mapY, plane);
     }
 
     public Location getCenter() {
@@ -1073,23 +1654,41 @@ public final class Construction {
     }
 
     public void setBuildingMode(boolean buildingMode) {
-        this.buildingMode = buildingMode;
+        setBuildingModeOption(buildingMode);
     }
 
     public boolean isRenderDoorsOpen() {
-        return renderDoorsOpen;
+        return doorMode == DOORS_OPEN;
     }
 
     public void setRenderDoorsOpen(boolean renderDoorsOpen) {
-        this.renderDoorsOpen = renderDoorsOpen;
+        setDoorModeOption(renderDoorsOpen ? DOORS_OPEN : DOORS_CLOSED);
+    }
+
+    public int getDoorMode() {
+        return doorMode;
     }
 
     public boolean isTeleportInside() {
-        return teleportInside;
+        return !teleportOutside;
     }
 
     public void setTeleportInside(boolean teleportInside) {
-        this.teleportInside = teleportInside;
+        this.teleportOutside = !teleportInside;
+        refreshHouseOptions();
+    }
+
+    public boolean isDefaultBuildingMode() {
+        return defaultBuildingMode;
+    }
+
+    public void setDefaultBuildingMode(final boolean defaultBuildingMode) {
+        this.defaultBuildingMode = defaultBuildingMode;
+        refreshHouseOptions();
+    }
+
+    public boolean isLocked() {
+        return locked;
     }
 
     public int getChunkX() {
@@ -1106,6 +1705,10 @@ public final class Construction {
 
     public int getYardOffset() {
         return yardOffset;
+    }
+
+    public AllocatedArea getAllocatedArea() {
+        return allocatedArea;
     }
 
     public int getDecoration() {
@@ -1146,5 +1749,53 @@ public final class Construction {
 
     public void setServantsCash(int servantsCash) {
         this.servantsCash = servantsCash;
+    }
+
+    public List<String> getNexusDestinations() {
+        return nexusDestinations;
+    }
+
+    public String getNexusDefault() {
+        return nexusDefault;
+    }
+
+    public void setNexusDefault(final String nexusDefault) {
+        this.nexusDefault = nexusDefault;
+    }
+
+    public int getXericDefault() {
+        return xericDefault;
+    }
+
+    public void setXericDefault(final int xericDefault) {
+        this.xericDefault = xericDefault;
+    }
+
+    public int getDigsiteDefault() {
+        return digsiteDefault;
+    }
+
+    public void setDigsiteDefault(final int digsiteDefault) {
+        this.digsiteDefault = digsiteDefault;
+    }
+
+    public List<Integer> getMenageriePets() {
+        return menageriePets;
+    }
+
+    public List<com.zenyte.game.world.entity.npc.NPC> getRoamingPets() {
+        return roamingPets;
+    }
+
+    public ServantManager getServantManager() {
+        return servantManager;
+    }
+
+    public ServantManager.ServantData getServantData() {
+        return servantData;
+    }
+
+    public void setServantData(final ServantManager.ServantData servantData) {
+        this.servantData = servantData;
     }
 }

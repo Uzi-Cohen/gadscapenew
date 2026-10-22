@@ -626,7 +626,9 @@ public enum Furniture {
 	SPIRIT_TREE(75, 700, 29227, 20635, new Item(5375)),
 	OBELISK(80, 3000, 31554, 21788, new Item(21804, 4), new Item(8786, 4)),
 	FAIRY_RING(85, 535, 29228, 20636, new Item(6004, 10), new Item(20609)),
-	SPIRIT_TREE_AND_FAIRY_RING(95, 1170, 29422, 20637, new Item(5375), new Item(6004, 10), new Item(20609)),
+	// 29229: the spiritual fairy tree in both caches (211: multi-loc showing 29422+ by the last fairy ring code; 241: the tree
+	// itself; 29422 is an ornate trophy pedestal in 241).
+	SPIRIT_TREE_AND_FAIRY_RING(95, 1170, 29229, 20637, new Item(5375), new Item(6004, 10), new Item(20609)),
 	
 	TOPIARY_BUSH(65, 141, 29230, 20638, new Item(8443)),
 	
@@ -783,7 +785,17 @@ public enum Furniture {
     CHAMPIONS_CAPE(30403, 21439, -1),
     MOUNTED_MYTHICAL_CAPE(31983, 22114, -1),
 
-    QUEST_LIST(80, 310, 29226, 20633, new Item(970, 10), new Item(8784));
+    QUEST_LIST(80, 310, 29226, 20633, new Item(970, 10), new Item(8784)),
+
+	/**
+	 * Portal Nexus room (OSRS wiki "Portal Nexus"). The nexus objects change with the chosen left-click destination, the mounted
+	 * jewellery with its left-click teleport.
+	 */
+	MARBLE_PORTAL_NEXUS(72, 2000, 33408, 22705, (con, ref, data, object, onEnter) -> object.setId(com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.nexusObject(con, data.getFurniture())), new Item(8786, 4)),
+	GILDED_PORTAL_NEXUS(82, 2600, 33409, 22706, (con, ref, data, object, onEnter) -> object.setId(com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.nexusObject(con, data.getFurniture())), new Item(8786, 4), new Item(8784, 2)),
+	CRYSTALLINE_PORTAL_NEXUS(92, 2600, 33410, 22707, (con, ref, data, object, onEnter) -> object.setId(com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.nexusObject(con, data.getFurniture())), new Item(8788, 2), new Item(8784, 2)),
+	MOUNTED_XERICS_TALISMAN(72, 500, 33419, 22708, (con, ref, data, object, onEnter) -> object.setId(com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.xericObject(con)), new Item(8782), new Item(8784), new Item(13392), new Item(13391, 5000)),
+	MOUNTED_DIGSITE_PENDANT(82, 800, 33420, 22709, (con, ref, data, object, onEnter) -> object.setId(com.zenyte.game.content.skills.construction.objects.portalnexus.PortalNexus.digsiteObject(con)), new Item(8782), new Item(8784), new Item(22710));
 
     public static final Furniture[] VALUES = values();
     public static final Map<Integer, Furniture> MAP = new HashMap<Integer, Furniture>(VALUES.length * 2);

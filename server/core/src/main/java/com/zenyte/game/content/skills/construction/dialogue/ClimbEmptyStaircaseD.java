@@ -25,6 +25,11 @@ public final class ClimbEmptyStaircaseD extends Dialogue {
 	
 	@Override
 	public void buildDialogue() {
+		final com.zenyte.game.content.skills.construction.Construction house = com.zenyte.game.content.skills.construction.Construction.current(player);
+		if (!house.isOwner(player) || !house.isBuildingMode()) {
+			plain(object.getName().equals("Dungeon entrance") ? "This dungeon entrance does not lead anywhere." : "These stairs do not lead anywhere.");
+			return;
+		}
 		if (upstairs) {
 			plain("These stairs do not lead anywhere.<br>Do you want to build a room at the top?");
 			options(TITLE, "Skill hall", "Quest hall", "Cancel")

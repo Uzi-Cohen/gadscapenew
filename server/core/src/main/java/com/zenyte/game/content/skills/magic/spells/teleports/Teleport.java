@@ -57,7 +57,9 @@ public interface Teleport {
 
 	default void teleport(final Player player, final boolean alwaysWarnForDeepWilderness) {
 		try {
-			if(isWithinWilderness(this.getDestination()) && (alwaysWarnForDeepWilderness || !player.getBooleanAttribute("NO_WILDERNESS_TELEPORT_WARNING"))) {
+			// Teleports without a fixed destination (Teleport to House, ...) have none to warn about; reading it threw, and the
+			// spell silently did nothing.
+			if(this.getDestination() != null && isWithinWilderness(this.getDestination()) && (alwaysWarnForDeepWilderness || !player.getBooleanAttribute("NO_WILDERNESS_TELEPORT_WARNING"))) {
 				player.getDialogueManager().start(new Dialogue(player) {
 					@Override
 					public void buildDialogue() {

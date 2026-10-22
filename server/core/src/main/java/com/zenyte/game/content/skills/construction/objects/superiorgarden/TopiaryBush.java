@@ -110,9 +110,7 @@ public final class TopiaryBush implements ObjectInteraction {
             }
             player.lock();
             data.setFurniture(furn);
-            final int x = (reference.getX() * 8 - (player.getConstruction().getYardOffset() * 8)) % 64;
-            final int y = (reference.getY() * 8 - (player.getConstruction().getYardOffset() * 8)) % 64;
-            final Location tile = new Location(player.getConstruction().getChunkX() * 8 + x + data.getLocation().getX(), player.getConstruction().getChunkY() * 8 + y + data.getLocation().getY(), player.getPlane());
+            final Location tile = com.zenyte.game.content.skills.construction.Construction.current(player).getRoomTile(reference, data.getLocation().getX(), data.getLocation().getY());
             if (player.getInventory().containsItem(7409, 1))
                 player.setAnimation(MAGIC_SECATEURS_ANIM);
             else

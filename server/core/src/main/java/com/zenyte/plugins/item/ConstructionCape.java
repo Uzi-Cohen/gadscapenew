@@ -11,8 +11,7 @@ import com.zenyte.plugins.item.capes.NewMaxCapes;
 public class ConstructionCape extends ItemPlugin {
     @Override
     public void handle() {
-        bind("Tele to POH", (player, item, slotId) -> player.sendMessage("Construction is currently disabled."
-        ));
+        bind("Tele to POH", (player, item, slotId) -> com.zenyte.game.content.skills.construction.HouseTeleport.CAPE.teleport(player, (String) null));
         bind("Teleport", (player, item, slotId) -> NewMaxCapes.sendPOHPortalTeleports(player));
     }
 

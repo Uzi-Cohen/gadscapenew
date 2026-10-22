@@ -140,7 +140,7 @@ public class NewMaxCapes extends ItemPlugin {
             }
         }));
 
-        bind("Tele to POH", ((player, item, slotId) -> player.sendMessage("Construction is currently disabled.")));
+        bind("Tele to POH", ((player, item, slotId) -> com.zenyte.game.content.skills.construction.HouseTeleport.CAPE.teleport(player, (String) null)));
         bind("Fishing Teleports", (player, item, slotId) -> {
             player.getDialogueManager().start(new OptionDialogue(player, TITLE, new String[] {"Fishing Guild", "Otto" +
                     "'s Grotto"}, new Runnable[] {() -> teleport(player, ItemTeleport.MAX_CAPE_FISHING_GUILD), () -> teleport(player, ItemTeleport.MAX_CAPE_OTTOS_GROTTO)}));
@@ -227,7 +227,9 @@ public class NewMaxCapes extends ItemPlugin {
         HOSIDIUS(new Location(1743, 3517, 0)),
         RELLEKKA(new Location(2670, 3632, 0)),
         BRIMHAVEN(new Location(2758, 3178, 0)),
-        YANILLE(new Location(2544, 3095, 0));
+        YANILLE(new Location(2544, 3095, 0)),
+        PRIFDDINAS(new Location(3239, 6076, 0)),
+        ALDARIN(new Location(1420, 2959, 0));
 
         POHPortal(final Location destination) {
             this.destination = destination;
@@ -292,7 +294,7 @@ public class NewMaxCapes extends ItemPlugin {
             public void handleClick(int slotId) {
                 final POHPortal type = POHPortal.values[slotId];
                 if (type == POHPortal.HOME) {
-                    player.sendMessage("Construction is currently disabled.");
+                    com.zenyte.game.content.skills.construction.HouseTeleport.CAPE.teleport(player, (String) null);
                     return;
                 }
                 type.teleport(player);

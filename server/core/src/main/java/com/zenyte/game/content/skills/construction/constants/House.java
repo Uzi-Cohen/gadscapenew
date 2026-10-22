@@ -12,7 +12,10 @@ public enum House {
 	KOUREND(25, 8750, 28822, new Location(1742, 3516, 0)),
 	RELLEKKA(30, 10000, 15480, new Location(2671, 3631, 0)),
 	BRIMHAVEN(40, 15000, 15481, new Location(2757, 3177, 0)),
-	YANILLE(50, 25000, 15482, new Location(2543, 3096, 0));
+	YANILLE(50, 25000, 15482, new Location(2543, 3096, 0)),
+	/* Portal locs 55353 (1420,2962) and 34947 (3237,6077) are in GadScape's cache; arrival tiles match the redirected tablets. */
+	ALDARIN(35, 12500, 55353, new Location(1420, 2959, 0)),
+	PRIFDDINAS(70, 50000, 34947, new Location(3239, 6076, 0));
 
 	private final Location location;
 	private final int level;

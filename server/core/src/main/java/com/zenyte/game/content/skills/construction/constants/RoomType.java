@@ -30,6 +30,9 @@ public enum RoomType {
 	DUNGEON_STAIRS_ROOM(70, 7500, 234, 715, 19, 1451),
 	TREASURE_ROOM(75, 250000, 239, 716, 20, 1452),
 	ACHIEVEMENT_GALLERY(80, 250000, 233, 720, 27, 1459),
+	/* Portal Nexus room (OSRS wiki: level 72, 200,000 coins, one per house). Template chunk 235,720 in GadScape's POH squares;
+	 * room creation slot 28 (script 648), house viewer furniture enum 1374. */
+	PORTAL_NEXUS(72, 200000, 235, 720, 28, 1374),
 	DUNGEON_LAND(-1, -1, 235, 712, -1, -1),
 	ROOFS_A(-1, -1, 233, 714, -1, -1),
 	ROOFS_B(-1, -1, 241, 714, -1, -1),
@@ -79,8 +82,32 @@ public enum RoomType {
         return chunkX;
     }
 
+    /**
+     * The house templates' chunk y. GadScape's 211 cache has the templates in map squares 7513/7514/7769/7770 (chunk y
+     * 712-720); OSRS moved them 168 chunks north (squares 7534/7535/7790/7791, chunk y 880-888, same locs) by the 2746 cache
+     * that GadScape's 241 cache is rebuilt from. Whichever set the loaded cache has is used.
+     */
     public int getChunkY() {
-        return chunkY;
+        return chunkY + templateChunkOffsetY();
+    }
+
+    private static volatile int templateOffsetY = -1;
+
+    public static int templateChunkOffsetY() {
+        int offset = templateOffsetY;
+        if (offset == -1) {
+            offset = 0;
+            try {
+                final mgi.tools.jagcached.cache.Cache cache = com.zenyte.CacheManager.getCache();
+                if (cache != null && !mgi.tools.jagcached.MapFiles.hasRegion(cache, 7513) && mgi.tools.jagcached.MapFiles.hasRegion(cache, 7534)) {
+                    offset = 168;
+                }
+            } catch (final Throwable ignored) {
+                offset = 0;
+            }
+            templateOffsetY = offset;
+        }
+        return offset;
     }
 
     public int getInterfaceSlot() {

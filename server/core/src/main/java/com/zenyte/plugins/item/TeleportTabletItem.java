@@ -16,12 +16,16 @@ import static com.zenyte.game.content.itemtransportation.TeleportTablet.TELEPORT
  * @see <a href="https://rune-status.net/members/kris.354/">Rune-Status profile</a>}
  */
 public class TeleportTabletItem extends ItemPlugin {
+	/** Wilderness crabs / Ice plateau tablets: "Configure" switches the Wilderness warning off and on (OSRS). */
+	private static final String WILDERNESS_WARNING_OFF = "tablet_wilderness_warning_off";
+
 	@Override
 	public void handle() {
 		bind("Break", (player, item, slotId) -> {
 			TeleportTablet tablet = TeleportTablet.getTeleportTab(item);
 			if (tablet == TELEPORT_TO_HOUSE) {
-				player.sendMessage("Construction is not yet available.");
+				// construction area: inside or outside by the house options setting.
+				com.zenyte.game.content.skills.construction.HouseTeleport.TABLET.teleport(player, (String) null);
 				return;
 			}
 			final Settings settings = player.getSettings();
@@ -42,7 +46,29 @@ public class TeleportTabletItem extends ItemPlugin {
 				}
 				break;
 			}
+			if ((tablet == TeleportTablet.WILDERNESS_CRABS || tablet == TeleportTablet.ICE_PLATEAU) && player.getNumericAttribute(WILDERNESS_WARNING_OFF).intValue() != 1) {
+				final TeleportTablet destination = tablet;
+				player.getDialogueManager().start(new Dialogue(player) {
+					@Override
+					public void buildDialogue() {
+						plain("This tablet will teleport you into the Wilderness (level " + (destination == TeleportTablet.ICE_PLATEAU ? 53 : 33) + ").<br>Are you sure you wish to continue?");
+						options("Teleport into the Wilderness?", "Yes, teleport me.", "No.").onOptionOne(() -> destination.teleport(player));
+					}
+				});
+				return;
+			}
 			tablet.teleport(player);
+		});
+		/* House tablet right-click options (construction area). */
+		bind("Inside", (player, item, slotId) -> com.zenyte.game.content.skills.construction.HouseTeleport.TABLET.teleport(player,
+				com.zenyte.game.content.skills.magic.spells.teleports.structures.HouseStructure.INSIDE));
+		bind("Outside", (player, item, slotId) -> com.zenyte.game.content.skills.construction.HouseTeleport.TABLET.teleport(player,
+				com.zenyte.game.content.skills.magic.spells.teleports.structures.HouseStructure.OUTSIDE));
+		bind("Group", (player, item, slotId) -> player.sendMessage("Only Group Ironmen can teleport to a group member's house."));
+		bind("Configure", (player, item, slotId) -> {
+			final boolean off = player.getNumericAttribute(WILDERNESS_WARNING_OFF).intValue() == 1;
+			player.addAttribute(WILDERNESS_WARNING_OFF, off ? 0 : 1);
+			player.sendMessage("The Wilderness warning of these tablets is now " + (off ? "on" : "off") + ".");
 		});
 		bind("Varrock", (player, item, slotId) -> TeleportTablet.VARROCK.teleport(player));
 		bind("Grand Exchange", (player, item, slotId) -> TeleportTablet.GRAND_EXCHANGE.teleport(player));
@@ -50,8 +76,6 @@ public class TeleportTabletItem extends ItemPlugin {
 		bind("Seers' Village", (player, item, slotId) -> TeleportTablet.SEERS_VILLAGE.teleport(player));
 		bind("Watchtower", (player, item, slotId) -> TeleportTablet.WATCHTOWER.teleport(player));
 		bind("Yanille", (player, item, slotId) -> TeleportTablet.YANILLE_ALT.teleport(player));
-		bind("Inside", (player, item, slotId) -> player.sendMessage("Construction is not yet available."));
-		bind("Outside", (player, item, slotId) -> player.sendMessage("Construction is not yet available."));
 		bind("Revert", (player, item, slotId) -> {
 			player.getDialogueManager().start(new Dialogue(player) {
 				@Override

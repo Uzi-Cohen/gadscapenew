@@ -26,7 +26,7 @@ public final class DungeonEnterD extends Dialogue {
 	@Override
 	public void buildDialogue() {
 		final Location tile = new Location(player.getX(), player.getY(), player.getPlane() - 1);
-		final RoomReference ref = player.getConstruction().getReference(tile);
+		final RoomReference ref = com.zenyte.game.content.skills.construction.Construction.current(player).getReference(tile);
 		if (ref == null) 
 			player.getDialogueManager().start(new ClimbEmptyStaircaseD(player, reference, reference.getRoom() == RoomType.SKILL_HALL || reference.getRoom() == RoomType.QUEST_HALL, object));
 		else 

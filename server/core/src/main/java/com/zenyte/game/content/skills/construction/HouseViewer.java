@@ -218,8 +218,14 @@ public final class HouseViewer {
 	
 	private void reopen() {
 		player.getInterfaceHandler().closeInterface(InterfacePosition.CENTRAL);
-		player.getConstruction().enterHouse(true, player.getConstruction().getRelationalSpawnTile());
-		WorldTasksManager.schedule(() -> openHouseViewer(), 3);
+		final Construction house = player.getConstruction();
+		// Rebuild straight away when the owner is in the house (same mode); otherwise the new layout shows next visit.
+		if (house.isOwnerInside() && player.getCurrentHouse() == house && house.contains(player.getLocation())) {
+			house.enterHouse(house.isBuildingMode(), house.getRelationalSpawnTile());
+			WorldTasksManager.schedule(() -> openHouseViewer(), 3);
+		} else {
+			openHouseViewer();
+		}
 	}
 	
 	private void rotate(final boolean clockwise) {

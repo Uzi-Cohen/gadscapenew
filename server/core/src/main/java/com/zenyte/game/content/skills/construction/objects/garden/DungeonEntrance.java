@@ -25,7 +25,7 @@ public final class DungeonEntrance implements ObjectInteraction {
     @Override
     public void handleObjectAction(Player player, Construction construction, RoomReference reference, WorldObject object, int optionId, String option) {
         if (optionId == 1) {
-            for (RoomReference room : player.getConstruction().getReferences()) {
+            for (RoomReference room : construction.getReferences()) {
                 if (reference.getX() == room.getX() && reference.getY() == room.getY() && room.getPlane() == 0) {
                     player.setLocation(new Location(player.getX(), player.getY(), 0));
                     return;

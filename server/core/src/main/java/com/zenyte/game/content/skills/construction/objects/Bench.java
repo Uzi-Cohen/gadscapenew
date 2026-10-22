@@ -44,7 +44,8 @@ public final class Bench implements ObjectInteraction {
             if (!(player.getControllerManager().getController() instanceof ConstructionController)) {
                 return;
             }
-            handleObjectAction(player, player.getConstruction(), player.getConstruction().getReference(object), object, optionId, option);
+            final Construction house = Construction.current(player);
+            handleObjectAction(player, house, house.getReference(object), object, optionId, option);
         }));
     }
 
