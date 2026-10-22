@@ -32,6 +32,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.IntInsnNode;
@@ -39,11 +40,13 @@ import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 /**
- * GadScape patcher for RuneLite's injected-client (the OSRS game client RuneLite ships).
+ * GadScape patcher for RuneLite's jars: the injected-client (the OSRS game client RuneLite ships) and RuneLite's
+ * own client jar (branding).
  *
- * <p>It makes exactly two changes, and fails if either one does not match exactly once:
+ * <p>{@code patch} (injected-client) makes these changes, and fails if any one does not match exactly once:
  * <ol>
  *   <li><b>RSA modulus.</b> The client encrypts the login block with {@code new BigInteger("<hex>", 16)} built in a
  *   static initializer next to {@code new BigInteger("10001", 16)}. The hex string is replaced with ours.</li>
@@ -51,13 +54,24 @@ import org.objectweb.asm.tree.TypeInsnNode;
  *   *.runescape.com, 127.0.0.1 or 192.168.1.x and otherwise stops with the error "invalidhost". The one copy of
  *   that check that is actually called is rewritten to {@code return true}, so any host from jav_config works.
  *   (The obfuscated client also carries uncalled duplicate copies; those are left alone and reported.)</li>
+ *   <li><b>Friends chat capacity</b> ({@code --fc-capacity}, default {@value #DEFAULT_FC_CAPACITY}, 0 = leave it).
+ *   The friends chat list is built with room for 500 members ({@code super(500)} in the constructor of the class
+ *   implementing {@code net.runelite.api.FriendsChatManager}); member 501 throws in the client. GadScape's 211
+ *   client raised it to 2000 (NRFriendsChatMixin) because the server's auto-joined "help" channel has no cap.</li>
  * </ol>
+ * It also records (without changing anything) where the login screen keeps its login index and response lines,
+ * for the GadScape Login plugin ({@code login.*} keys in the marker file).
  * Nothing else in the jar changes: every other entry is copied byte for byte.
+ *
+ * <p>{@code brand} (RuneLite's client jar) puts GadScape's name, icon, splash logo and gold accent colour into
+ * RuneLite and adds the paint hook the GadScape Login plugin draws the login screen with; see {@link #brand}.
  *
  * <p>Usage:
  * <pre>
  *   patch   --in injected-client-1.13.3.jar --out injected-client-1.13.3-gadscape.jar
- *           --modulus (hex | @file-with-hex) [--expect-sha256 hex]
+ *           --modulus (hex | @file-with-hex) [--expect-sha256 hex] [--fc-capacity N]
+ *   brand   --in client-1.13.3.jar --out client-1.13.3-gadscape.jar --title NAME --icon PNG --splash PNG
+ *           [--accent RRGGBB | none] [--expect-sha256 hex]
  *   inspect --in injected-client.jar          (prints what the patcher would match, changes nothing)
  *   genkey  --out-dir dir [--force]           (new TEST RSA key pair; see README.md)
  * </pre>
@@ -68,6 +82,10 @@ public final class Patcher
 	private static final String HOST_ERROR = "invalidhost";
 	/** Added to the patched jar so the launcher can tell a patched injected-client from a stock one. */
 	static final String MARKER = "gadscape-patch.properties";
+	/** Added to the branded RuneLite client jar. */
+	static final String CLIENT_MARKER = "gadscape-client-patch.properties";
+	/** Friends chat capacity of GadScape's 211 client (NRFriendsChatMixin). */
+	static final int DEFAULT_FC_CAPACITY = 2000;
 
 	public static void main(String[] args) throws Exception
 	{
@@ -83,6 +101,9 @@ public final class Patcher
 			{
 				case "patch":
 					patch(opts);
+					break;
+				case "brand":
+					brand(opts);
 					break;
 				case "inspect":
 					inspect(Paths.get(require(opts, "in")));
@@ -105,7 +126,8 @@ public final class Patcher
 	private static void usage()
 	{
 		System.out.println("gadscape patcher\n"
-			+ "  patch   --in <injected-client.jar> --out <patched.jar> --modulus <hex|@file> [--expect-sha256 <hex>]\n"
+			+ "  patch   --in <injected-client.jar> --out <patched.jar> --modulus <hex|@file> [--expect-sha256 <hex>] [--fc-capacity <n>]\n"
+			+ "  brand   --in <client.jar> --out <branded.jar> --title <name> --icon <png> --splash <png> [--accent <RRGGBB>|none] [--expect-sha256 <hex>]\n"
 			+ "  inspect --in <injected-client.jar>\n"
 			+ "  genkey  --out-dir <dir> [--force]");
 	}
@@ -213,18 +235,52 @@ public final class Patcher
 		System.out.println("host   " + host.owner.name + "." + m.name + m.desc + " (called from " + host.callers
 			+ ") now returns true; uncalled duplicate copies left as they are: " + host.deadCopies);
 
+		// 3. friends chat capacity (the GadScape 211 client's NRFriendsChatMixin raised it to 2000; the server's
+		// auto-joined "help" channel has no 95-member cap)
+		int fcCapacity = Integer.parseInt(opts.getOrDefault("fc-capacity", String.valueOf(DEFAULT_FC_CAPACITY)));
+		FcSite fc = null;
+		if (fcCapacity > 0)
+		{
+			if (fcCapacity > Short.MAX_VALUE)
+			{
+				fail("--fc-capacity must be at most " + Short.MAX_VALUE);
+			}
+			fc = findFriendsChat(classes);
+			System.out.println("fchat  " + fc.owner.name + ".<init> capacity " + fc.push.operand + " -> " + fcCapacity);
+			fc.push.operand = fcCapacity;
+		}
+
+		// 4. login screen fields for the GadScape Login plugin (read only, nothing is changed)
+		Map<String, String> login = findLogin(classes);
+		System.out.println("login  " + (login.isEmpty() ? "fields not found; the GadScape Login plugin will fall back to the game's own login screen" : login));
+
 		Map<String, byte[]> changed = new LinkedHashMap<>();
 		changed.put(rsa.owner.name + ".class", write(rsa.owner));
 		if (host.owner != rsa.owner)
 		{
 			changed.put(host.owner.name + ".class", write(host.owner));
 		}
-		String marker = "# Written by client241/patcher. The GadScape launcher refuses an injected-client without this file.\n"
+		if (fc != null && !changed.containsKey(fc.owner.name + ".class"))
+		{
+			changed.put(fc.owner.name + ".class", write(fc.owner));
+		}
+		StringBuilder marker = new StringBuilder("# Written by client241/patcher. The GadScape launcher refuses an injected-client without this file.\n"
 			+ "source.sha256=" + inSha + "\n"
 			+ "rsa.class=" + rsa.owner.name + "\n"
 			+ "rsa.modulus=" + newHex + "\n"
-			+ "host.check=" + host.owner.name + "." + m.name + m.desc + "\n";
-		byte[] outBytes = jar.write(changed, MARKER, marker.getBytes(StandardCharsets.US_ASCII));
+			+ "host.check=" + host.owner.name + "." + m.name + m.desc + "\n");
+		if (fc != null)
+		{
+			marker.append("friendschat.class=").append(fc.owner.name).append('\n')
+				.append("friendschat.capacity=").append(fcCapacity).append('\n');
+		}
+		for (Map.Entry<String, String> e : login.entrySet())
+		{
+			marker.append(e.getKey()).append('=').append(e.getValue()).append('\n');
+		}
+		Map<String, byte[]> added = new LinkedHashMap<>();
+		added.put(MARKER, marker.toString().getBytes(StandardCharsets.US_ASCII));
+		byte[] outBytes = jar.write(changed, added);
 
 		// verify the result by reading it back with the same matchers
 		Map<String, ClassNode> check = Jar.read(outBytes).classes();
@@ -252,12 +308,346 @@ public final class Patcher
 		{
 			fail("verification: host check was not rewritten");
 		}
+		if (fc != null && findFriendsChat(check, fcCapacity).push.operand != fcCapacity)
+		{
+			fail("verification: friends chat capacity was not rewritten");
+		}
 
 		Path tmp = out.resolveSibling(out.getFileName() + ".tmp");
 		Files.write(tmp, outBytes);
 		Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING);
 		System.out.println("output " + out + " sha256 " + sha256(outBytes) + " (" + changed.size() + " classes changed: "
 			+ String.join(", ", changed.keySet()) + ")");
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+	// brand (RuneLite's client jar)
+
+	/** Resources in RuneLite's client jar that carry RuneLite's look. */
+	private static final String ICON_128 = "net/runelite/client/ui/runelite_128.png";
+	private static final String ICON_16 = "net/runelite/client/ui/runelite_16.png";
+	private static final String SPLASH = "net/runelite/client/ui/runelite_splash.png";
+	private static final String PROPERTIES = "net/runelite/client/runelite.properties";
+	private static final String HOOK_CLASS = "net/runelite/client/callback/GadScapePaintHook";
+	/** The hook class, compiled by patcher/build.sh, inside the patcher jar. */
+	private static final String HOOK_RESOURCE = "/gadscape/patcher/GadScapePaintHook.class.bin";
+
+	/**
+	 * Brands RuneLite's own client jar (client-1.13.3.jar; not Jagex code) as GadScape. Each change must match
+	 * exactly once or the command fails:
+	 * <ol>
+	 *   <li>Window and tray icon ({@code ui/runelite_128.png}, {@code ui/runelite_16.png}) and the splash logo
+	 *   ({@code ui/runelite_splash.png}, 200 x 200) are replaced with --icon / --splash.</li>
+	 *   <li>{@code runelite.properties}: {@code runelite.title} (window title, tray, notifications) = --title and
+	 *   {@code runelite.discord.enable=false}. Every other line is kept as it is.</li>
+	 *   <li>The splash window's title "RuneLite Launcher" (shown in the task bar while loading) = --title.</li>
+	 *   <li>{@code ColorScheme.BRAND_ORANGE} and {@code BRAND_ORANGE_TRANSPARENT} (RuneLite's accent colour,
+	 *   220,138,0) = --accent, GadScape gold by default (same as the 211 client). {@code --accent none} keeps it.</li>
+	 *   <li>{@code Hooks.draw}, which runs once per frame on every game state (login screen included), calls
+	 *   {@code GadScapePaintHook.paint(graphics)} right after it gets the frame's Graphics2D. The hook class is added
+	 *   to the jar; it does nothing until a plugin (GadScape Login) registers a painter.</li>
+	 * </ol>
+	 */
+	private static void brand(Map<String, String> opts) throws Exception
+	{
+		Path in = Paths.get(require(opts, "in"));
+		Path out = Paths.get(require(opts, "out"));
+		String title = require(opts, "title").trim();
+		if (title.isEmpty() || !title.matches("[\\x20-\\x7E]+"))
+		{
+			fail("--title must be printable ASCII");
+		}
+		java.awt.image.BufferedImage icon = readImage(Paths.get(require(opts, "icon")));
+		java.awt.image.BufferedImage splash = readImage(Paths.get(require(opts, "splash")));
+		String accentArg = opts.getOrDefault("accent", "F0C450");
+		java.awt.Color accent = accentArg.equalsIgnoreCase("none") ? null : new java.awt.Color(Integer.parseInt(accentArg, 16));
+
+		byte[] inBytes = Files.readAllBytes(in);
+		String inSha = sha256(inBytes);
+		System.out.println("input  " + in + " sha256 " + inSha);
+		String expect = opts.get("expect-sha256");
+		if (expect != null && !expect.equalsIgnoreCase(inSha))
+		{
+			fail("input jar sha256 is " + inSha + " but --expect-sha256 says " + expect
+				+ "; refusing to brand a different RuneLite client than the one pinned in the lock file");
+		}
+		Jar jar = Jar.read(inBytes);
+		if (jar.data.containsKey(CLIENT_MARKER))
+		{
+			fail("this RuneLite client jar is already branded (" + CLIENT_MARKER + ")");
+		}
+		Map<String, byte[]> changed = new LinkedHashMap<>();
+
+		// 1. icons and splash logo
+		for (String r : new String[]{ICON_128, ICON_16, SPLASH})
+		{
+			if (!jar.data.containsKey(r))
+			{
+				fail("brand: no " + r + " in the jar");
+			}
+		}
+		changed.put(ICON_128, png(scaled(icon, 128, 128)));
+		changed.put(ICON_16, png(scaled(icon, 16, 16)));
+		changed.put(SPLASH, png(scaled(splash, 200, 200)));
+		System.out.println("images icon 128/16 and splash 200x200 replaced");
+
+		// 2. runelite.properties
+		byte[] props = jar.data.get(PROPERTIES);
+		if (props == null)
+		{
+			fail("brand: no " + PROPERTIES + " in the jar");
+		}
+		String text = new String(props, StandardCharsets.ISO_8859_1);
+		text = setProperty(text, "runelite.title", title);
+		text = setProperty(text, "runelite.discord.enable", "false");
+		changed.put(PROPERTIES, text.getBytes(StandardCharsets.ISO_8859_1));
+		System.out.println("props  runelite.title=" + title + ", runelite.discord.enable=false");
+
+		// 2b. RuneLite signs this jar (META-INF/RL.SF, RL.RSA, a SHA-256 per entry in MANIFEST.MF). Java refuses a
+		// signed jar whose entries changed (SecurityException: digest error), so the signature goes. Nothing in
+		// RuneLite checks its own signature at run time (only RuneLite's installer/launcher do, and we do not use them).
+		int dropped = jar.unsign();
+		System.out.println("unsign removed RuneLite's jar signature (" + dropped + " files; MANIFEST.MF keeps its main section)");
+
+		Map<String, ClassNode> classes = jar.classes();
+
+		// 3. splash window title
+		ClassNode splashClass = requireClass(classes, "net/runelite/client/ui/SplashScreen");
+		int titles = 0;
+		for (MethodNode mn : splashClass.methods)
+		{
+			for (AbstractInsnNode insn : mn.instructions)
+			{
+				if (insn instanceof LdcInsnNode && "RuneLite Launcher".equals(((LdcInsnNode) insn).cst))
+				{
+					((LdcInsnNode) insn).cst = title;
+					titles++;
+				}
+			}
+		}
+		if (titles != 1)
+		{
+			fail("brand: expected 1 \"RuneLite Launcher\" in SplashScreen, found " + titles);
+		}
+		changed.put(splashClass.name + ".class", write(splashClass));
+		System.out.println("splash title \"RuneLite Launcher\" -> \"" + title + "\"");
+
+		// 4. accent colour
+		if (accent != null)
+		{
+			ClassNode colors = requireClass(classes, "net/runelite/client/ui/ColorScheme");
+			MethodNode clinit = findMethod(colors, "<clinit>", "()V");
+			int recolored = 0;
+			for (AbstractInsnNode insn : clinit == null ? new InsnList() : clinit.instructions)
+			{
+				if (!(insn instanceof FieldInsnNode) || insn.getOpcode() != Opcodes.PUTSTATIC
+					|| !((FieldInsnNode) insn).name.startsWith("BRAND_ORANGE"))
+				{
+					continue;
+				}
+				// NEW Color; DUP; r; g; b; [alpha]; INVOKESPECIAL Color.<init>; PUTSTATIC
+				AbstractInsnNode init = prev(insn);
+				boolean alpha = init instanceof MethodInsnNode && ((MethodInsnNode) init).desc.equals("(IIII)V");
+				AbstractInsnNode b = prev(alpha ? prev(init) : init);
+				AbstractInsnNode g = prev(b);
+				AbstractInsnNode r = prev(g);
+				if (!(init instanceof MethodInsnNode) || !((MethodInsnNode) init).owner.equals("java/awt/Color")
+					|| intValue(r) != 220 || intValue(g) != 138 || intValue(b) != 0)
+				{
+					fail("brand: " + ((FieldInsnNode) insn).name + " is not new Color(220, 138, 0[, a]) any more");
+				}
+				clinit.instructions.set(r, pushInt(accent.getRed()));
+				clinit.instructions.set(g, pushInt(accent.getGreen()));
+				clinit.instructions.set(b, pushInt(accent.getBlue()));
+				recolored++;
+			}
+			if (recolored != 2)
+			{
+				fail("brand: expected BRAND_ORANGE and BRAND_ORANGE_TRANSPARENT in ColorScheme, recoloured " + recolored);
+			}
+			changed.put(colors.name + ".class", write(colors));
+			System.out.println("accent BRAND_ORANGE(_TRANSPARENT) 220,138,0 -> " + accent.getRed() + "," + accent.getGreen() + "," + accent.getBlue());
+		}
+
+		// 5. paint hook in Hooks.draw
+		ClassNode hooks = requireClass(classes, "net/runelite/client/callback/Hooks");
+		MethodNode draw = findMethod(hooks, "draw", "(Lnet/runelite/api/MainBufferProvider;Ljava/awt/Graphics;II)V");
+		if (draw == null)
+		{
+			fail("brand: no Hooks.draw(MainBufferProvider, Graphics, int, int)");
+		}
+		List<VarInsnNode> stores = new ArrayList<>();
+		for (AbstractInsnNode insn : draw.instructions)
+		{
+			if (insn instanceof MethodInsnNode && ((MethodInsnNode) insn).name.equals("getGraphics")
+				&& ((MethodInsnNode) insn).desc.equals("(Lnet/runelite/api/MainBufferProvider;)Ljava/awt/Graphics2D;")
+				&& next(insn) instanceof VarInsnNode && next(insn).getOpcode() == Opcodes.ASTORE)
+			{
+				stores.add((VarInsnNode) next(insn));
+			}
+		}
+		if (stores.size() != 1)
+		{
+			fail("brand: expected 1 'Graphics2D g = getGraphics(mainBufferProvider)' in Hooks.draw, found " + stores.size());
+		}
+		InsnList call = new InsnList();
+		call.add(new VarInsnNode(Opcodes.ALOAD, stores.get(0).var));
+		call.add(new MethodInsnNode(Opcodes.INVOKESTATIC, HOOK_CLASS, "paint", "(Ljava/awt/Graphics2D;)V", false));
+		draw.instructions.insert(stores.get(0), call);
+		draw.maxStack = Math.max(draw.maxStack, 1);
+		changed.put(hooks.name + ".class", write(hooks));
+		System.out.println("hook   Hooks.draw calls " + HOOK_CLASS.replace('/', '.') + ".paint(graphics) each frame");
+
+		Map<String, byte[]> added = new LinkedHashMap<>();
+		byte[] hook;
+		try (InputStream hs = Patcher.class.getResourceAsStream(HOOK_RESOURCE))
+		{
+			if (hs == null)
+			{
+				fail("brand: the patcher jar has no " + HOOK_RESOURCE + " (build it with patcher/build.sh)");
+			}
+			hook = readAll(hs);
+		}
+		ClassNode hookNode = new ClassNode();
+		new ClassReader(hook).accept(hookNode, 0);
+		if (!hookNode.name.equals(HOOK_CLASS) || findMethod(hookNode, "paint", "(Ljava/awt/Graphics2D;)V") == null)
+		{
+			fail("brand: " + HOOK_RESOURCE + " is not " + HOOK_CLASS);
+		}
+		added.put(HOOK_CLASS + ".class", hook);
+		String marker = "# Written by client241/patcher brand. RuneLite's client jar with GadScape's name, icons and login paint hook.\n"
+			+ "source.sha256=" + inSha + "\n"
+			+ "title=" + title + "\n"
+			+ "accent=" + (accent == null ? "none" : String.format("%06X", accent.getRGB() & 0xFFFFFF)) + "\n"
+			+ "hook=" + HOOK_CLASS.replace('/', '.') + "\n";
+		added.put(CLIENT_MARKER, marker.getBytes(StandardCharsets.US_ASCII));
+		byte[] outBytes = jar.write(changed, added);
+
+		// verify by reading back
+		Jar back = Jar.read(outBytes);
+		Map<String, ClassNode> check = back.classes();
+		MethodNode d2 = findMethod(check.get("net/runelite/client/callback/Hooks"), "draw", draw.desc);
+		boolean hooked = false;
+		for (AbstractInsnNode insn : d2.instructions)
+		{
+			hooked |= insn instanceof MethodInsnNode && ((MethodInsnNode) insn).owner.equals(HOOK_CLASS);
+		}
+		if (!hooked || !check.containsKey(HOOK_CLASS) || !new String(back.data.get(PROPERTIES), StandardCharsets.ISO_8859_1).contains("runelite.title=" + title + "\n"))
+		{
+			fail("verification: branded jar is missing the hook, the hook class or the title");
+		}
+		Path tmp = out.resolveSibling(out.getFileName() + ".tmp");
+		Files.write(tmp, outBytes);
+		Files.move(tmp, out, StandardCopyOption.REPLACE_EXISTING);
+		System.out.println("output " + out + " sha256 " + sha256(outBytes) + " (" + changed.size() + " entries changed, "
+			+ added.size() + " added)");
+	}
+
+	private static ClassNode requireClass(Map<String, ClassNode> classes, String name)
+	{
+		ClassNode cn = classes.get(name);
+		if (cn == null)
+		{
+			fail("brand: no class " + name + " in the jar");
+		}
+		return cn;
+	}
+
+	/** Replaces the value of key=... in a .properties text (exactly one line), or appends it. */
+	static String setProperty(String text, String key, String value)
+	{
+		String[] lines = text.split("\n", -1);
+		int hits = 0;
+		for (int i = 0; i < lines.length; i++)
+		{
+			if (lines[i].startsWith(key + "="))
+			{
+				lines[i] = key + "=" + value;
+				hits++;
+			}
+		}
+		if (hits > 1)
+		{
+			fail("brand: " + key + " is in runelite.properties " + hits + " times");
+		}
+		String joined = String.join("\n", lines);
+		if (hits == 0)
+		{
+			joined = joined + (joined.endsWith("\n") || joined.isEmpty() ? "" : "\n") + key + "=" + value + "\n";
+		}
+		return joined;
+	}
+
+	private static int intValue(AbstractInsnNode n)
+	{
+		if (n instanceof IntInsnNode)
+		{
+			return ((IntInsnNode) n).operand;
+		}
+		if (n != null && n.getOpcode() >= Opcodes.ICONST_M1 && n.getOpcode() <= Opcodes.ICONST_5)
+		{
+			return n.getOpcode() - Opcodes.ICONST_0;
+		}
+		if (n instanceof LdcInsnNode && ((LdcInsnNode) n).cst instanceof Integer)
+		{
+			return (Integer) ((LdcInsnNode) n).cst;
+		}
+		return Integer.MIN_VALUE;
+	}
+
+	private static AbstractInsnNode pushInt(int v)
+	{
+		if (v >= -1 && v <= 5)
+		{
+			return new InsnNode(Opcodes.ICONST_0 + v);
+		}
+		return new IntInsnNode(v <= Byte.MAX_VALUE ? Opcodes.BIPUSH : Opcodes.SIPUSH, v);
+	}
+
+	private static java.awt.image.BufferedImage readImage(Path p) throws IOException
+	{
+		java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(p.toFile());
+		if (img == null)
+		{
+			fail("not an image: " + p);
+		}
+		return img;
+	}
+
+	/** High-quality downscale (halving steps, then bicubic) into a w x h ARGB image, keeping the aspect ratio. */
+	static java.awt.image.BufferedImage scaled(java.awt.image.BufferedImage src, int w, int h)
+	{
+		java.awt.image.BufferedImage cur = src;
+		while (cur.getWidth() / 2 >= w && cur.getHeight() / 2 >= h)
+		{
+			cur = draw(cur, cur.getWidth() / 2, cur.getHeight() / 2, cur.getWidth() / 2, cur.getHeight() / 2);
+		}
+		double k = Math.min((double) w / cur.getWidth(), (double) h / cur.getHeight());
+		return draw(cur, w, h, (int) Math.round(cur.getWidth() * k), (int) Math.round(cur.getHeight() * k));
+	}
+
+	private static java.awt.image.BufferedImage draw(java.awt.image.BufferedImage src, int w, int h, int dw, int dh)
+	{
+		java.awt.image.BufferedImage dst = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		java.awt.Graphics2D g = dst.createGraphics();
+		g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_QUALITY);
+		g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+		g.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh, null);
+		g.dispose();
+		return dst;
+	}
+
+	private static byte[] png(java.awt.image.BufferedImage img) throws IOException
+	{
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		javax.imageio.ImageIO.write(img, "png", bos);
+		return bos.toByteArray();
+	}
+
+	private static byte[] readAll(InputStream in) throws IOException
+	{
+		return Jar.readAll(in);
 	}
 
 	private static void inspect(Path in) throws Exception
@@ -281,10 +671,177 @@ public final class Patcher
 		{
 			System.out.println("host   " + e.getMessage());
 		}
+		try
+		{
+			FcSite fc = findFriendsChat(classes);
+			System.out.println("fchat  " + fc.owner.name + ".<init> capacity " + fc.push.operand);
+		}
+		catch (PatchException e)
+		{
+			System.out.println("fchat  " + e.getMessage());
+		}
+		System.out.println("login  " + findLogin(classes));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
 	// matchers
+
+	private static final class FcSite
+	{
+		ClassNode owner;
+		IntInsnNode push;
+	}
+
+	private static FcSite findFriendsChat(Map<String, ClassNode> classes)
+	{
+		return findFriendsChat(classes, 500);
+	}
+
+	/**
+	 * The constructor of the class that implements net.runelite.api.FriendsChatManager passes its capacity to the
+	 * user-list superclass: {@code SIPUSH <capacity>; INVOKESPECIAL <super>.<init>(I)V} (500 in build 241).
+	 * Exactly one class and one such push are required.
+	 */
+	private static FcSite findFriendsChat(Map<String, ClassNode> classes, int expect)
+	{
+		List<FcSite> found = new ArrayList<>();
+		for (ClassNode cn : classes.values())
+		{
+			if (cn.interfaces == null || !cn.interfaces.contains("net/runelite/api/FriendsChatManager"))
+			{
+				continue;
+			}
+			for (MethodNode mn : cn.methods)
+			{
+				if (!mn.name.equals("<init>"))
+				{
+					continue;
+				}
+				for (AbstractInsnNode insn : mn.instructions)
+				{
+					AbstractInsnNode call = next(insn);
+					if (insn.getOpcode() == Opcodes.SIPUSH && call instanceof MethodInsnNode && call.getOpcode() == Opcodes.INVOKESPECIAL
+						&& ((MethodInsnNode) call).owner.equals(cn.superName) && ((MethodInsnNode) call).name.equals("<init>")
+						&& ((MethodInsnNode) call).desc.equals("(I)V"))
+					{
+						FcSite s = new FcSite();
+						s.owner = cn;
+						s.push = (IntInsnNode) insn;
+						found.add(s);
+					}
+				}
+			}
+		}
+		if (found.size() != 1)
+		{
+			fail("friends chat: expected exactly 1 'super(<capacity>)' in a FriendsChatManager constructor, found " + found.size());
+		}
+		FcSite s = found.get(0);
+		if (s.push.operand != expect && s.push.operand != DEFAULT_FC_CAPACITY && expect == 500)
+		{
+			fail("friends chat: capacity is " + s.push.operand + ", expected 500 (a different client build?)");
+		}
+		return s;
+	}
+
+	/**
+	 * Where the game keeps its login screen state, for the GadScape Login plugin (it sets the login index by
+	 * reflection and reads the response lines to show login errors). Read only. Returns an empty map when the code
+	 * does not look as expected; the plugin then leaves the game's own login screen alone.
+	 * <ul>
+	 *   <li>{@code client.getLoginIndex()} is {@code GETSTATIC owner.field I; LDC mult; IMUL; IRETURN} (either order):
+	 *   login.class, login.index.field, login.index.multiplier (the stored value times this is the index).</li>
+	 *   <li>A static method of that class taking three Strings stores them, in order, into three static String fields
+	 *   (the game's three login response lines): login.response.fields=f1,f2,f3. Every such method must agree.</li>
+	 * </ul>
+	 */
+	static Map<String, String> findLogin(Map<String, ClassNode> classes)
+	{
+		Map<String, String> out = new LinkedHashMap<>();
+		ClassNode client = classes.get("client");
+		MethodNode getter = client == null ? null : findMethod(client, "getLoginIndex", "()I");
+		if (getter == null)
+		{
+			return out;
+		}
+		FieldInsnNode field = null;
+		Integer mult = null;
+		int real = 0;
+		for (AbstractInsnNode insn : getter.instructions)
+		{
+			if (insn.getOpcode() < 0)
+			{
+				continue;
+			}
+			real++;
+			if (insn.getOpcode() == Opcodes.GETSTATIC && ((FieldInsnNode) insn).desc.equals("I"))
+			{
+				field = (FieldInsnNode) insn;
+			}
+			else if (insn instanceof LdcInsnNode && ((LdcInsnNode) insn).cst instanceof Integer)
+			{
+				mult = (Integer) ((LdcInsnNode) insn).cst;
+			}
+			else if (insn.getOpcode() != Opcodes.IMUL && insn.getOpcode() != Opcodes.IRETURN)
+			{
+				return out;
+			}
+		}
+		if (field == null || mult == null || real != 4 || (mult & 1) == 0)
+		{
+			return out;
+		}
+		ClassNode login = classes.get(field.owner);
+		if (login == null)
+		{
+			return out;
+		}
+		String responses = null;
+		for (MethodNode mn : login.methods)
+		{
+			if ((mn.access & Opcodes.ACC_STATIC) == 0 || !mn.desc.equals("(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"))
+			{
+				continue;
+			}
+			String[] byArg = new String[3];
+			int stores = 0;
+			for (AbstractInsnNode insn : mn.instructions)
+			{
+				if (insn.getOpcode() != Opcodes.PUTSTATIC)
+				{
+					continue;
+				}
+				FieldInsnNode put = (FieldInsnNode) insn;
+				AbstractInsnNode load = prev(insn);
+				if (!put.owner.equals(login.name) || !put.desc.equals("Ljava/lang/String;") || !(load instanceof VarInsnNode)
+					|| load.getOpcode() != Opcodes.ALOAD || ((VarInsnNode) load).var > 2)
+				{
+					stores = -100;
+					break;
+				}
+				byArg[((VarInsnNode) load).var] = put.name;
+				stores++;
+			}
+			if (stores != 3 || byArg[0] == null || byArg[1] == null || byArg[2] == null)
+			{
+				continue;
+			}
+			String r = byArg[0] + "," + byArg[1] + "," + byArg[2];
+			if (responses != null && !responses.equals(r))
+			{
+				return out; // two setters that disagree: do not guess
+			}
+			responses = r;
+		}
+		out.put("login.class", login.name);
+		out.put("login.index.field", field.name);
+		out.put("login.index.multiplier", String.valueOf(mult));
+		if (responses != null)
+		{
+			out.put("login.response.fields", responses);
+		}
+		return out;
+	}
 
 	private static final class RsaSite
 	{
@@ -659,6 +1216,36 @@ public final class Patcher
 			return j;
 		}
 
+		/**
+		 * Drops a jar signature: META-INF/*.SF, *.RSA, *.DSA, *.EC go, MANIFEST.MF keeps only its main section (the
+		 * per-entry digests go). Returns the number of signature files removed.
+		 */
+		int unsign()
+		{
+			int removed = 0;
+			for (java.util.Iterator<ZipEntry> it = entries.iterator(); it.hasNext(); )
+			{
+				String n = it.next().getName();
+				String u = n.toUpperCase(Locale.ROOT);
+				if (u.startsWith("META-INF/") && u.indexOf('/', 9) < 0
+					&& (u.endsWith(".SF") || u.endsWith(".RSA") || u.endsWith(".DSA") || u.endsWith(".EC")))
+				{
+					it.remove();
+					data.remove(n);
+					removed++;
+				}
+			}
+			byte[] mf = data.get("META-INF/MANIFEST.MF");
+			if (mf != null)
+			{
+				String text = new String(mf, StandardCharsets.UTF_8).replace("\r\n", "\n");
+				int end = text.indexOf("\n\n");
+				String main = end < 0 ? text : text.substring(0, end + 1);
+				data.put("META-INF/MANIFEST.MF", (main.endsWith("\n") ? main : main + "\n").concat("\n").replace("\n", "\r\n").getBytes(StandardCharsets.UTF_8));
+			}
+			return removed;
+		}
+
 		Map<String, ClassNode> classes()
 		{
 			Map<String, ClassNode> m = new HashMap<>();
@@ -674,11 +1261,14 @@ public final class Patcher
 			return m;
 		}
 
-		byte[] write(Map<String, byte[]> replaced, String addName, byte[] addData) throws IOException
+		byte[] write(Map<String, byte[]> replaced, Map<String, byte[]> added) throws IOException
 		{
-			if (data.containsKey(addName))
+			for (String a : added.keySet())
 			{
-				throw new IOException("jar already has " + addName + " (already patched?)");
+				if (data.containsKey(a))
+				{
+					throw new IOException("jar already has " + a + " (already patched?)");
+				}
 			}
 			for (String k : replaced.keySet())
 			{
@@ -699,16 +1289,19 @@ public final class Patcher
 					zout.write(b);
 					zout.closeEntry();
 				}
-				ZipEntry add = new ZipEntry(addName);
-				add.setTime(entries.get(0).getTime());
-				zout.putNextEntry(add);
-				zout.write(addData);
-				zout.closeEntry();
+				for (Map.Entry<String, byte[]> a : added.entrySet())
+				{
+					ZipEntry add = new ZipEntry(a.getKey());
+					add.setTime(entries.get(0).getTime());
+					zout.putNextEntry(add);
+					zout.write(a.getValue());
+					zout.closeEntry();
+				}
 			}
 			return bos.toByteArray();
 		}
 
-		private static byte[] readAll(InputStream in) throws IOException
+		static byte[] readAll(InputStream in) throws IOException
 		{
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			byte[] buf = new byte[65536];

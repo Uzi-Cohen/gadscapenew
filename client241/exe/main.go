@@ -1,12 +1,15 @@
-// GadScape build 241 TEST client, one file: Java 21 and the client (RuneLite 1.13.3 with the patched game client)
-// are packed inside this exe. The first run (and the first run of a newer exe) unpacks them to
-// %LOCALAPPDATA%\GadScape241Test; every run starts the client.
+// GadScape client, one file: Java 21 and the client (RuneLite 1.13.3 with the patched game client, GadScape's
+// branding and login screen) are packed inside this exe. The first run (and the first run of a newer exe) unpacks
+// them to %LOCALAPPDATA%\<dirName>; every run starts the client.
 //
-// The server address is the first line of GadScape-241-Test-server.txt next to the exe. The file is created with
-// 127.0.0.1 (this computer) when it is missing. RuneLite settings and the game cache stay in
-// %LOCALAPPDATA%\GadScape241Test\home, away from the player's normal RuneLite and OSRS.
+// The server address is the first line of <serverFile> next to the exe. The file is created with the build's default
+// server when it is missing. RuneLite settings and the game cache stay in %LOCALAPPDATA%\<dirName>\home, away from
+// the player's normal RuneLite and OSRS.
 //
-// Built by client241/exe/build.sh (see client241/README.md). Structure follows the map editor's launcher/.
+// The names differ per build channel (release: "GadScape", %LOCALAPPDATA%\GadScape, GadScape-server.txt; test:
+// "GadScape 241 Test", %LOCALAPPDATA%\GadScape241Test, GadScape-241-Test-server.txt) and are set by exe/build.sh
+// with -ldflags -X. Built by client241/exe/build.sh (see client241/README.md). Structure follows the map editor's
+// launcher/.
 package main
 
 import (
@@ -31,16 +34,17 @@ var jreZip []byte
 //go:embed payload/client.zip
 var clientZip []byte
 
-// set at build time: -X main.build=<hash of the payload>
-var build = "dev"
-
-const (
-	appName    = "GadScape 241 Test"
-	serverFile = "GadScape-241-Test-server.txt"
+// set at build time by exe/build.sh: -X main.build=<hash of the payload> -X main.appName=... and so on
+var (
+	build       = "dev"
+	appName     = "GadScape"
+	dirName     = "GadScape"
+	serverFile  = "GadScape-server.txt"
+	defaultHost = "127.0.0.1"
 )
 
 func main() {
-	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), "GadScape241Test")
+	dest := filepath.Join(os.Getenv("LOCALAPPDATA"), dirName)
 	startLog(dest)
 	logf("exe %s starting", build)
 	withProgress(func(p *progress) {
@@ -53,7 +57,7 @@ func main() {
 		if b, _ := os.ReadFile(filepath.Join(dest, "installed.txt")); strings.TrimSpace(string(b)) != build {
 			p.say("Installing...", -1)
 			if err := install(dest); err != nil {
-				fail("Couldn't install the GadScape 241 test client:\n" + err.Error() +
+				fail("Couldn't install the " + appName + " client:\n" + err.Error() +
 					"\n\nIf the client is already open, close it and try again.")
 			}
 		}
@@ -115,12 +119,12 @@ func ensureServerFile() string {
 	self, _ := os.Executable()
 	f := filepath.Join(filepath.Dir(self), serverFile)
 	if _, err := os.Stat(f); err != nil {
-		text := "# GadScape 241 TEST client: the first line that is not a comment is the server address\r\n" +
+		text := "# " + appName + " client: the first line that is not a comment is the server address\r\n" +
 			"# (a host name or IP, no port: the game always uses port 43594). 127.0.0.1 = this computer.\r\n" +
-			"127.0.0.1\r\n"
+			defaultHost + "\r\n"
 		if os.WriteFile(f, []byte(text), 0o644) != nil {
 			// the exe's folder is read-only: keep the file with the install instead
-			f = filepath.Join(os.Getenv("LOCALAPPDATA"), "GadScape241Test", serverFile)
+			f = filepath.Join(os.Getenv("LOCALAPPDATA"), dirName, serverFile)
 			if _, err := os.Stat(f); err != nil {
 				os.WriteFile(f, []byte(text), 0o644)
 			}
@@ -205,7 +209,7 @@ func unzipStrip(data []byte, dest string) error {
 
 // crashReport tells what stopped the client: the end of its output and of RuneLite's log.
 func crashReport(dest, home string, err error, ran time.Duration) string {
-	msg := fmt.Sprintf("The GadScape 241 test client closed %d seconds after starting", int(ran.Seconds()))
+	msg := fmt.Sprintf("The %s client closed %d seconds after starting", appName, int(ran.Seconds()))
 	if err != nil {
 		msg += " (" + err.Error() + ")"
 	}

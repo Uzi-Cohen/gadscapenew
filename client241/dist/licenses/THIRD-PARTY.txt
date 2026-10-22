@@ -1,15 +1,19 @@
-GadScape build 241 TEST client: what is in this package and under which terms
-==============================================================================
+GadScape client: what is in this package and under which terms
+==============================================================
 
-The GadScape launcher (lib/gadscape-launcher.jar) is GadScape's own code. Everything else is RuneLite 1.13.3
-and the libraries RuneLite ships with, redistributed unchanged except the game client (see the first row).
+The GadScape launcher (lib/gadscape-launcher.jar) and GadScape's plugins (lib/gadscape-plugins.jar: the GadScape
+login screen) are GadScape's own code. Everything else is RuneLite 1.13.3 and the libraries RuneLite ships with,
+redistributed unchanged except the two jars in the first rows.
 The license texts are in this folder; the file name is given after each entry.
 
 lib/injected-client-1.13.3-gadscape.jar
     RuneLite's injected-client 1.13.3: the Old School RuneScape game client (build 241), copyright Jagex Ltd.,
-    with RuneLite's injected code. Not open source. Changed by GadScape's patcher in two places (the login RSA
-    key and the server-address check) so it can connect to the GadScape TEST server. For testing only;
-    not affiliated with or endorsed by Jagex or RuneLite.
+    with RuneLite's injected code. Not open source. Changed by GadScape's patcher in three places (the login RSA
+    key, the server-address check and the friends chat size) so it can connect to the GadScape server.
+    Not affiliated with or endorsed by Jagex or RuneLite.
+lib/client-1.13.3-gadscape.jar
+    RuneLite's client-1.13.3.jar (BSD 2-Clause, below) with GadScape's name, icons, splash logo and accent colour,
+    and one added call in Hooks.draw that lets the GadScape login screen draw.
 
 RuneLite, BSD 2-Clause, Copyright (c) 2016-2017, Adam <Adam@sigterm.info>      RuneLite-BSD-2-Clause.txt
     client-1.13.3.jar, runelite-api-1.13.3-runtime.jar, http-api-1.2.26.jar      https://github.com/runelite/runelite
@@ -40,6 +44,8 @@ Logback 1.2.9 (logback-classic, logback-core), Copyright (C) 1999-2015 QOS.ch,  
     EPL 1.0 or LGPL 2.1 (licensee's choice; used here under EPL 1.0).
     Source code: https://github.com/qos-ch/logback/tree/v_1.2.9
 org.json (json-20090211), the JSON License, Copyright (c) 2002 JSON.org         org.json-JSON-License.txt
+Cinzel and Cinzel Decorative fonts (in gadscape-plugins.jar), SIL Open Font License 1.1,   Cinzel-OFL.txt
+    Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel)
 
 Source code of the open-source parts: the project links above (RuneLite's own jars also have -sources jars on
 https://repo.runelite.net). The exact jar addresses and SHA-256 hashes are in the GadScape repository,

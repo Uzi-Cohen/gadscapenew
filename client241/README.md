@@ -1,9 +1,21 @@
-# GadScape build 241 TEST client
+# GadScape client (build 241)
 
-This folder builds the client for testing the GadScape server on Old School build 241.
-It is the official **RuneLite 1.13.3** (the RuneLite release for build 241) with one jar changed:
-RuneLite's game client, `injected-client-1.13.3.jar`, gets two small patches so it can talk to our server.
+This folder builds the GadScape client for Old School build 241: the official **RuneLite 1.13.3** (the RuneLite
+release for build 241) made into GadScape:
+
+- RuneLite's game client, `injected-client-1.13.3.jar`, gets three small patches so it can talk to our server
+  (login key, server address check, friends chat size).
+- RuneLite's own `client-1.13.3.jar` is branded: window title "GadScape", the GadScape shield as window/tray icon
+  and splash logo, GadScape gold as accent colour, and one hook so GadScape's login screen can draw.
+- `gadscape-plugins.jar` adds GadScape's login screen (saved accounts with faces, Remember me), ported from the
+  211 client.
+- The launcher writes GadScape's default RuneLite settings (plugins that cannot work on a private server off, GPU on).
+
 Everything else is RuneLite as RuneLite ships it, so the Plugin Hub (and 117 HD) works.
+
+There are two **build channels**: **release** (the default: "GadScape", GadScape's live login key, default server
+gadscape.duckdns.org) and **test** (`build.sh --test`: "GadScape (test)", the TEST key, 127.0.0.1, its own folders, a
+TEST icon on the exe). They install side by side.
 
 The old client in `client/` (build 211) is not used or changed by any of this.
 
@@ -14,17 +26,20 @@ The old client in `client/` (build 211) is not used or changed by any of this.
 | `runelite-1.13.3.lock` | Every RuneLite 1.13.3 jar with its download address and SHA-256, copied from RuneLite's `bootstrap.json`. Also the JVM options RuneLite's own launcher uses (`jvm` lines). |
 | `tools/fetch-runelite.sh` | Downloads the jars in the lock and checks every hash. |
 | `tools/lock-from-bootstrap.py` | Makes a new lock from a `bootstrap.json` (for the next RuneLite version). |
-| `patcher/` | The patcher (plain Java + ASM 9.7.1 from Maven Central). Also makes TEST RSA keys. |
-| `test-rsa-public-modulus.hex` | The public half of the TEST RSA key. The patcher writes it into the client. |
-| `launcher/` | Starts RuneLite with the patched game client and serves its jav_config and world list. |
-| `dist/` | `run.sh`, `run.bat`, the `README.txt` and the `licenses/` folder that go into the portable folder. |
-| `exe/` | The Windows exe (Go): Java and the client packed into one file. |
+| `patcher/` | The patcher (plain Java + ASM 9.7.1 from Maven Central): `patch` (game client), `brand` (RuneLite's client jar; `patcher/hook/` is the paint hook it adds). Also makes TEST RSA keys. |
+| `release-rsa-public-modulus.hex` | The public half of GadScape's live login key (the 211 client's `RuneLite.MODULUS`). Release builds use it. |
+| `test-rsa-public-modulus.hex` | The public half of the TEST RSA key. Test builds use it. |
+| `branding/` | The GadScape shield (the 211 client's icon, `shield-256.png`), the splash logo (`splash-200.png`) and the Cinzel Decorative font (OFL) used for the exe splash. |
+| `plugins/` | `gadscape-plugins.jar`: the GadScape Login plugin (sources ported from `client/.../plugins/gadscapelogin`). |
+| `launcher/` | Starts RuneLite with the patched game client, serves its jav_config and world list, writes GadScape's default RuneLite settings. |
+| `dist/` | `run.sh`, `run.bat`, the `README.txt` (templates: build.sh fills in the channel's names) and the `licenses/` folder that go into the portable folder. |
+| `exe/` | The Windows exe (Go): Java and the client packed into one file. Release icon/splash in `exe/`, test ones in `exe/test-res/`. |
 | `devserver/TestServer.java` | A tiny stand-in server for testing the client alone (JS5 cache + login check). Development only. |
 | `build.sh` | Builds all of the above. |
 
-## The two patches
+## The game client patches (`patcher patch`)
 
-`patcher` changes exactly two things and stops with `PATCH FAILED` if either one is not found exactly once:
+`patcher patch` changes exactly three things and stops with `PATCH FAILED` if one is not found exactly once:
 
 1. **RSA key.** The client encrypts the login with Jagex's public key, built in one place as
    `new BigInteger("<256 hex digits>", 16)` next to `new BigInteger("10001", 16)` (class `ay`, in 1.13.3).
@@ -33,6 +48,13 @@ The old client in `client/` (build 211) is not used or changed by any of this.
    unless the address is jagex.com, *.runescape.com, 127.0.0.1 or 192.168.1.x. The one copy of that check the
    game calls (`to.ahl`, called from `client.init`, `client.aba` and `client.abu`) now always says yes, for every
    caller. (Two more copies, `to.ajp` and `to.aju`, are never called; they are left alone.)
+3. **Friends chat size.** The friends chat member list is built with room for 500 (`super(500)` in the constructor
+   of the class implementing `FriendsChatManager`, `rr` in 1.13.3); member 501 makes the client throw. GadScape's
+   211 client raised it to 2000 (`NRFriendsChatMixin`) because the server's auto-joined "help" channel has no member
+   cap; the patcher does the same (`--fc-capacity N`, 0 = leave it).
+
+It also records, without changing anything, where the game keeps its login page index and login response lines
+(`login.*` keys in `gadscape-patch.properties`), for the GadScape Login plugin.
 
 The patched jar also gets a small file, `gadscape-patch.properties`, so the launcher can refuse a stock
 injected-client. The patcher also refuses an input jar whose SHA-256 differs from the lock.
@@ -41,24 +63,68 @@ RuneLite 1.13.3 itself does **not** check the injected-client's hash or signatur
 own installer does, and we do not use it). It does have one check of its own: it only accepts a `--jav_config`
 address on *.runescape.com or *.jagex.com. The launcher handles that without changing RuneLite (see below).
 
+## RuneLite branding (`patcher brand`)
+
+`patcher brand` turns RuneLite's `client-1.13.3.jar` (RuneLite's BSD code, not Jagex's) into
+`client-1.13.3-gadscape.jar`; again every change must match exactly once:
+
+1. Window/tray icon (`ui/runelite_128.png`, `ui/runelite_16.png`) and splash logo (`ui/runelite_splash.png`) =
+   the GadScape shield (`branding/`).
+2. `runelite.properties`: `runelite.title=GadScape` (window title, tray, notifications), `runelite.discord.enable=false`.
+3. The splash window's title "RuneLite Launcher" (task bar) = "GadScape".
+4. `ColorScheme.BRAND_ORANGE(_TRANSPARENT)` = GadScape gold F0C450 (the 211 client's accent; `--accent none` keeps
+   RuneLite's orange).
+5. `Hooks.draw` (once per frame, every game state) calls `GadScapePaintHook.paint(graphics)`, a small class the
+   patcher adds. Stock RuneLite cannot draw on the login screen (overlays only render when logged in); the GadScape
+   Login plugin registers its painter there.
+6. RuneLite signs this jar; Java refuses a signed jar with changed entries, so the signature (`META-INF/RL.SF`,
+   `RL.RSA`, per-entry digests) is removed. Nothing in RuneLite checks its own signature at run time.
+
+## GadScape Login (`plugins/`)
+
+The 211 client's login screen, on RuneLite 1.13.3: full-window GadScape design, Remember me (passwords encrypted
+for this PC/user in `.runelite/gadscape-accounts.properties`), up to 10 saved accounts with a picture of each
+character's head, friendly error messages. It is an ordinary core plugin (RuneLite finds
+`net.runelite.client.plugins.*` on its classpath), listed as "GadScape Login"; turning it off brings back the game's
+own login screen. It fills the game's username/password and presses Enter for it, so the game logs in as usual.
+Differences from 211: RuneLite 1.13.3 has no chathead model, so the face picture is the top of the character model;
+the login page index and response lines come from the fields the patcher found (if those are missing the plugin
+does nothing and the game's own screen shows); build 241 shows "Incorrect username or password" on its own page
+(index 3), which the plugin reads as that answer.
+
 ## Build
 
 Needs: Linux with a Java 17+ JDK (`javac`, `jar`), `curl`, `zip`, `unzip`; Go 1.21+ for the exe. The scripts
 avoid GNU-only tools (`shasum -a 256` is used when `sha256sum` is missing), so macOS should work, but it is untested.
 
 ```
-client241/build.sh --jre-zip <Windows x64 Java 17+ JRE zip>
+client241/build.sh --jre-zip <Windows x64 Java 17+ JRE zip>          # release: GadScape
+client241/build.sh --test --jre-zip <Windows x64 Java 17+ JRE zip>   # test: GadScape (test)
 ```
 
-Options: `--runelite-jars DIR` (where the RuneLite jars are kept, default `client241/build/runelite-1.13.3`),
-`--modulus FILE` (default `test-rsa-public-modulus.hex`), `--out DIR` (default `client241/build/out`).
-Without `--jre-zip` everything except the exe is built. The editor's JRE zip (Temurin 21 JRE for Windows x64) works.
+Options: `--test` (test channel), `--runelite-jars DIR` (where the RuneLite jars are kept, default
+`client241/build/runelite-1.13.3`), `--modulus FILE` (default: `release-rsa-public-modulus.hex`, with `--test`
+`test-rsa-public-modulus.hex`), `--default-host HOST` (default: gadscape.duckdns.org, with `--test` 127.0.0.1),
+`--out DIR` (default `client241/build/out`). Without `--jre-zip` everything except the exe is built. The editor's
+JRE zip (Temurin 21 JRE for Windows x64) works.
 
-Output in `--out`:
+| | release (default) | test (`--test`) |
+|---|---|---|
+| Window title / world name | GadScape / GadScape | GadScape (test) / GadScape 241 Test |
+| Login key | `release-rsa-public-modulus.hex` (the live server's key) | `test-rsa-public-modulus.hex` |
+| Default server | gadscape.duckdns.org | 127.0.0.1 |
+| Portable folder, zip, exe | `GadScape/`, `GadScape.zip`, `GadScape.exe` | `GadScape-241-Test/`, `.zip`, `.exe` |
+| Home (Windows / Linux) | `%LOCALAPPDATA%\GadScape` / `~/.gadscape-client` | `%LOCALAPPDATA%\GadScape241Test` / `~/.gadscape-241-test` |
+| Exe server file | `GadScape-server.txt` | `GadScape-241-Test-server.txt` |
+| Exe icon / splash | GadScape shield | shield with a red TEST band, "TEST build (241)" |
+
+Output in `--out` (release names):
 
 - `injected-client-1.13.3-gadscape.jar` - the patched game client
-- `GadScape-241-Test/` and `GadScape-241-Test.zip` - portable folder: `run.bat`, `run.sh`, `server.txt`, jars
-- `GadScape-241-Test.exe` - one file for Windows, Java inside (about 70 MB)
+- `client-1.13.3-gadscape.jar` - RuneLite's client jar, branded
+- `channel-release.properties` - the channel values baked into the launcher jar and the exe
+- `GadScape/` and `GadScape.zip` - portable folder: `run.bat`, `run.sh`, `server.txt`, jars
+- `GadScape.exe` - one file for Windows, Java inside (about 70 MB)
 
 Nothing downloaded or built goes into git: `client241/.gitignore` ignores every `build/` folder (including the
 default `client241/build/`), `exe/payload/`, and all `*.jar`, `*.zip` and `*.exe` files.
@@ -71,9 +137,10 @@ size is deleted, so the next run downloads it again.
 
 ## Run it against a server
 
-**Windows exe:** double-click `GadScape-241-Test.exe`. The first time, it unpacks Java and the client to
-`%LOCALAPPDATA%\GadScape241Test` and creates `GadScape-241-Test-server.txt` next to the exe. The first line of
-that file that is not a comment is the server address (host name or IP). It starts as `127.0.0.1` (this computer).
+**Windows exe:** double-click `GadScape.exe` (test: `GadScape-241-Test.exe`). The first time, it unpacks Java and
+the client to `%LOCALAPPDATA%\GadScape` (test: `GadScape241Test`) and creates `GadScape-server.txt` (test:
+`GadScape-241-Test-server.txt`) next to the exe. The first line of that file that is not a comment is the server
+address (host name or IP). It starts as the channel's default server (release gadscape.duckdns.org, test 127.0.0.1).
 
 **Portable folder:** put the server address on the first line of `server.txt`, then `run.bat` (Windows, needs Java
 17+ in `java\` next to it or on PATH) or `./run.sh` (Linux). `./run.sh --host <address>` also works.
@@ -85,7 +152,7 @@ trailing `# comment` and `:port`; a port other than 43594 is ignored with a warn
 below). The file may be UTF-8 (with or without BOM) or UTF-16 (Notepad's "Unicode"). Lines starting with `#` are skipped.
 
 The game connects to that address on **port 43594** (with a retry on 443, as Jagex's client does). The world
-list has one world: world 1, "GadScape 241 Test", at that address.
+list has one world: world 1, "GadScape" (test: "GadScape 241 Test"), at that address.
 
 ### What the server needs
 
@@ -95,7 +162,9 @@ list has one world: world 1, "GadScape 241 Test", at that address.
   jav_config says `param=15=0` (a live build), and for that the game always uses 43594 and then 443. If another port
   is ever needed, `param=15=<non-zero>` makes the game use 40000+world without a bytecode patch, but it changes other
   client behaviour too, so test it first.
-- The TEST private key, so it can read the login block: start the server with
+- The private key matching the client's login key: release clients carry the live server's key
+  (`release-rsa-public-modulus.hex`, the same key the 211 client used: worlds.yml `rsaModulus` /
+  `rsaPrivateExponent` of the live server); test clients the TEST key, start the test server with
   `-Dgadscape.rsa.private=<path to private.key>` (see the next section).
 
 ## The TEST RSA key
@@ -118,19 +187,20 @@ into a new folder, copy its `public-modulus.hex` over `test-rsa-public-modulus.h
 RuneLite keeps everything under `<home>/.runelite` and the game keeps its cache in `<home>/.runelite/jagexcache`
 (RuneLite tells the game to). The launcher points `<home>` (Java's `user.home`) at its own folder:
 
-- Windows exe: `%LOCALAPPDATA%\GadScape241Test\home` (Java in `...\java`, the client in `...\app`,
-  logs `...\launcher.log`, `...\client-output.log`, `...\home\.runelite\logs\client.log`)
-- Portable folder on Windows: `%LOCALAPPDATA%\GadScape241Test\home`; on Linux: `~/.gadscape-241-test/home`
+- Windows exe: `%LOCALAPPDATA%\GadScape\home` (test: `GadScape241Test`; Java in `...\java`, the client in
+  `...\app`, logs `...\launcher.log`, `...\client-output.log`, `...\home\.runelite\logs\client.log`)
+- Portable folder on Windows: `%LOCALAPPDATA%\GadScape\home`; on Linux: `~/.gadscape-client/home` (test:
+  `%LOCALAPPDATA%\GadScape241Test\home`, `~/.gadscape-241-test/home`)
 - Another folder: `--home <dir>`
 
 `run.sh`, `run.bat` and the exe also start Java with `-Duser.home=<home>`, so what Java caches at startup (font
-cache, Java preferences) points at the test home too.
+cache, Java preferences) points at the client's home too.
 
 Checked on Linux: after logging in, installing 117 HD and closing, `~/.runelite`, `~/jagexcache`,
-`~/jagex_cl_oldschool_LIVE.dat` and `~/random.dat` did not exist; all of those were inside the test home, and no
+`~/jagex_cl_oldschool_LIVE.dat` and `~/random.dat` did not exist; all of those were inside the client's home, and no
 other file in the real home was created or changed (apart from the graphics driver's own shader cache,
 `~/.cache/mesa_shader_cache`, which `XDG_CACHE_HOME` moves). RuneLite's Discord integration is turned off (see below);
-before that it registered a `discord-409416265891971072` URL handler outside the test home
+before that it registered a `discord-409416265891971072` URL handler outside the client's home
 (`~/.local/share/applications` on Linux, `HKCU\Software\Classes` on Windows, replacing the one of a normal RuneLite).
 The exe was checked under Wine too: nothing in the Windows profile folder, everything in `%LOCALAPPDATA%\GadScape241Test`.
 
@@ -138,8 +208,11 @@ The exe was checked under Wine too: nothing in the Windows profile folder, every
 
 `gadscape.launcher.Launcher` runs inside the same Java process as RuneLite:
 
-1. Sets `user.home` to the test home (above).
-2. Checks there is exactly one injected-client on the classpath and that it is the patched one.
+1. Reads the build channel (`gadscape/launcher/channel.properties` in its jar, written by build.sh: title, world
+   name, default server, home folder names; without it the launcher is a test build) and sets `user.home` to the
+   client's home (above).
+2. Checks there is exactly one injected-client on the classpath and that it is the patched one, and that RuneLite's
+   client jar is there only once (a stock, unbranded one only gets a warning).
 3. Serves `jav_config.ws` and `worldlist.ws` on 127.0.0.1 (a free port). The jav_config has the same keys and
    params as Jagex's (`https://oldschool.runescape.com/jav_config.ws`, build 241) with `codebase=http://<server>/`,
    `param=17` = our world list, `param=12` = world 1, `param=25=241`. `param=9` defaults to the value the old server
@@ -153,9 +226,27 @@ The exe was checked under Wine too: nothing in the Windows profile folder, every
    (`-Drunelite.rtconf`). It is RuneLite's live config minus the two login blocks, `outdatedClientVersions` and
    `outdatedPluginVersions`, and the outage fields. Without this, once RuneLite releases 1.13.4 (or lists an
    installed Plugin Hub plugin such as 117 HD as outdated) the game would refuse every login with "RuneLite has been
-   updated! Please restart your client." It also sets two RuneLite properties: `runelite.discord.enable=false` and
-   `runelite.api.base` (step 5). RuneLite logs the result at startup ("Using local runtime config: ...").
-7. Starts RuneLite with `--disable-telemetry`.
+   updated! Please restart your client." It also sets three RuneLite properties: `runelite.discord.enable=false`,
+   `runelite.title` (the channel's window title) and `runelite.api.base` (step 5). RuneLite logs the result at
+   startup ("Using local runtime config: ...").
+7. Writes GadScape's default RuneLite settings (`Defaults.java`, `--no-defaults` skips it), once per profile:
+
+   | Setting | Why |
+   |---|---|
+   | HiScore off | looks players up on Jagex's OSRS hiscores |
+   | Chat Commands off | !kc, !pb, !lvl, !qp answer with real OSRS data for the same name |
+   | OSRS Wiki Crowdsourcing, XP Updater off | send gameplay to public services (also blocked, see below) |
+   | World Hopper, Default World off | use Jagex's world list; hopping there cannot log in |
+   | Discord, Twitch off | Discord registers a URL handler outside the client's home |
+   | Login Screen off | its paste/username keys act on the game's hidden login fields under GadScape's login screen |
+   | GPU on | smooth frame rate and draw distance (RuneLite falls back if the PC cannot do it) |
+
+   On a fresh home they go into `.runelite/settings.properties`, which RuneLite imports into its "default" profile on
+   first start (its own upgrade path); on an existing home into the profile RuneLite will use (the active one), under
+   RuneLite's lock files. `gadscape.defaultsVersion` records what was applied, so a player who turns a plugin back
+   on keeps it; a new entry is applied once when `Defaults.VERSION` goes up. Everything else keeps RuneLite's
+   defaults. "Hide roofs" is the game's own setting (a varbit the server keeps), so the client does not touch it.
+8. Starts RuneLite with `--disable-telemetry`.
 
 ## What the client sends where
 
@@ -202,8 +293,18 @@ connection, which is the same as logging in with no server running.
   A newer RuneLite means a new lock (`tools/lock-from-bootstrap.py`) and re-running the patcher, which stops
   loudly if Jagex changed the code it looks for.
 - RuneLite's own **World Hopper** lists Jagex's worlds (it reads RuneLite's world API, not our world list). Hopping
-  to one of those would fail to log in. Use the login screen's world switch instead.
-- The login screen still shows Jagex's "Jagex Account / Download Launcher" screens; use **Existing User**, then **Login**.
+  to one of those would fail to log in; it starts switched off (Defaults).
+- With the GadScape Login plugin off, the game's own screens show (terms, "Jagex Account / Download Launcher");
+  use **Accept**, **Existing User**, then **Login**.
+- RuneLite 1.13.3 ships two scripts of its own, 12/10003 and 12/10004 (10004 re-sends a private message after a
+  chat command consumed it). It only adds them when the cache has no such script; the 2746-based cache has Jagex's
+  Raids 4 scripts there, so RuneLite's are not used. Only "!kc"-style commands typed in a private message with the
+  Chat Commands plugin turned back on would hit this (the PM would not be sent).
+- Script overlays: RuneLite replaces 30 game scripts with its own versions (bank tags, chat timestamps, skill tab,
+  zoom, ...) only when the cache's script is byte-identical to the one RuneLite was built for. All 30 match the
+  openrs2 2746 cache (checked); they do not match the old 211-converted cacheU, which is why RuneLite logged
+  "Mismatch in overlaid cache archive hash" there. RuneLite 1.13.3's widget ids also follow 2746's interfaces
+  (for example 303:21, used by Opponent Information, exists in 2746 but not in the older 2740).
 - Port 43594 is fixed (the game's own rule for live builds). Running the test server next to the live server on the
   same machine would need another address.
 - macOS: `run.sh` uses `lib-macos` (x64 and Apple silicon) and `jvm-args-mac.txt` (RuneLite's macOS JVM options)
@@ -211,7 +312,7 @@ connection, which is the same as logging in with no server running.
 - The exe was tested under Wine on Linux, not on real Windows. Under Wine, Java crashed in `NetworkInterface`
   while seeding `SecureRandom` until Wine-only test settings were used (`-Djava.security.properties` putting
   SunMSCAPI first); that is a Wine gap, not something real Windows needs.
-- Shipping this means shipping RuneLite's injected-client (Jagex code) with changes. Keep it to testers. (Downloading
+- Shipping this means shipping RuneLite's injected-client (Jagex code) with changes. (Downloading
   the stock jar on the tester's computer and patching it there would avoid redistributing it; the lock, the hash check
   and the patcher are ready for that, but it is not built yet.)
 - Licenses: the portable folder, the zip and the exe carry `licenses/`: RuneLite's BSD license, the license texts
