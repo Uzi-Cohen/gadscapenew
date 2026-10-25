@@ -33,6 +33,8 @@ final class HeadCapture
 	private String account;
 	private int[] drawnLook;
 	private int changed;
+	/** The last chathead model that wasn't in the game cache yet (for the log). */
+	private int missingModel = -1;
 
 	HeadCapture(Client client, File dir)
 	{
@@ -131,9 +133,17 @@ final class HeadCapture
 			log.warn("GadScape face: couldn't build the chathead", e);
 			mesh = null;
 		}
-		if (mesh == null && ticks < 25)
+		if (mesh == null && ticks < 100)
 		{
-			return; // its models may still be downloading: give it a few more ticks
+			return; // its models may still be downloading from the server (a fresh cache): keep trying for a minute
+		}
+		if (mesh == null && new File(dir, fileName(user)).isFile())
+		{
+			// never replace a real face with the top of the body: keep the picture there is
+			log.warn("GadScape face: no chathead for {} after {} ticks (missing model {}), keeping the old picture", user, ticks, missingModel);
+			pending = null;
+			drawnLook = look(p.getPlayerComposition());
+			return;
 		}
 		if (mesh == null)
 		{
@@ -249,7 +259,8 @@ final class HeadCapture
 				ms[k] = client.loadModelData(part.models.get(k));
 				if (ms[k] == null)
 				{
-					return null; // not downloaded yet
+					missingModel = part.models.get(k);
+					return null; // not downloaded yet: asking for it starts the download, the next tick tries again
 				}
 			}
 			ModelData md = (ms.length == 1 ? ms[0] : client.mergeModels(ms)).cloneColors();
