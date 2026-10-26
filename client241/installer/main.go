@@ -104,6 +104,7 @@ func main() {
 }
 
 func run(w *kit.Window, dest string, cancelled <-chan struct{}) error {
+	fixPermissions(dest)
 	exe := filepath.Join(dest, "GadScape.exe")
 	inside := embeddedExe()
 	var want string
@@ -155,6 +156,8 @@ func run(w *kit.Window, dest string, cancelled <-chan struct{}) error {
 			logf("copying the setup: %v", err)
 		}
 	}
+	unblock(exe)
+	unblock(setup)
 	shortcuts(exe, dest)
 	deleteKey(oldInnoKey)
 	if err := registerUninstall(dest, setup, version, uint32(dirSizeKB(dest))); err != nil {
@@ -337,6 +340,34 @@ func unpackExe(w *kit.Window, part string, data []byte, cancelled <-chan struct{
 		w.Say(fmt.Sprintf("Installing GadScape...  %d%%", end*100/len(data)), end*100/len(data))
 	}
 	return f.Sync()
+}
+
+// fixPermissions gives this Windows user full control of the install folder and everything in it. An old
+// install can leave files there this user may not change (made by an installer that ran as administrator, or
+// by another account): installing over them then fails with "access is denied".
+func fixPermissions(dest string) {
+	user := os.Getenv("USERNAME")
+	if user == "" {
+		return
+	}
+	if d := os.Getenv("USERDOMAIN"); d != "" {
+		user = d + `\` + user
+	}
+	cmd := exec.Command("icacls", dest, "/grant", user+":(OI)(CI)F", "/T", "/C", "/Q")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	out, err := cmd.CombinedOutput()
+	logf("permissions on %s: %v %s", dest, err, strings.TrimSpace(string(out)))
+	for _, f := range []string{"GadScape.exe", "GadScape-Setup.exe", "GadScape-server.txt", "installed.txt"} {
+		p := filepath.Join(dest, f)
+		if fi, err := os.Stat(p); err == nil && fi.Mode().Perm()&0o200 == 0 {
+			os.Chmod(p, 0o644) // clears the read-only flag
+		}
+	}
+}
+
+// unblock removes the "downloaded from the internet" mark from a file, so Windows does not stop it.
+func unblock(path string) {
+	os.Remove(path + ":Zone.Identifier")
 }
 
 func mb(n int64) string { return fmt.Sprintf("%.0f MB", float64(n)/1e6) }
