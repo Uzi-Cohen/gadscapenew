@@ -12,7 +12,7 @@ package main
 
 import (
 	"crypto/sha256"
-	_ "embed"
+	"embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -30,6 +30,21 @@ import (
 
 //go:embed splash.png
 var splashPng []byte
+
+// payload/GadScape.exe, when the setup is built with the client inside (installer/build.sh --exe FILE): the setup
+// then installs that client and downloads nothing. Antivirus treats a small program that downloads an exe and
+// runs it as malware; a setup that carries the game, like the old GadScape setup, does not look like that.
+//
+//go:embed payload
+var payload embed.FS
+
+func embeddedExe() []byte {
+	b, err := payload.ReadFile("payload/GadScape.exe")
+	if err != nil {
+		return nil
+	}
+	return b
+}
 
 var (
 	appName    = "GadScape"
@@ -89,17 +104,30 @@ func main() {
 }
 
 func run(w *kit.Window, dest string, cancelled <-chan struct{}) error {
-	w.Say("Connecting to the GadScape server...", -1)
-	want, err := fetchHash(cancelled)
-	if err != nil {
-		return err
-	}
 	exe := filepath.Join(dest, "GadScape.exe")
+	inside := embeddedExe()
+	var want string
+	if inside != nil {
+		h := sha256.Sum256(inside)
+		want = hex.EncodeToString(h[:])
+	} else {
+		w.Say("Connecting to the GadScape server...", -1)
+		var err error
+		if want, err = fetchHash(cancelled); err != nil {
+			return err
+		}
+	}
 	if have, err := fileHash(exe); err == nil && have == want {
 		logf("GadScape.exe is already the newest (%s)", want)
 	} else {
 		part := exe + ".download"
-		if err := download(w, part, want, cancelled); err != nil {
+		var err error
+		if inside != nil {
+			err = unpackExe(w, part, inside, cancelled)
+		} else {
+			err = download(w, part, want, cancelled)
+		}
+		if err != nil {
 			os.Remove(part)
 			return err
 		}
@@ -283,6 +311,32 @@ func downloadOnce(w *kit.Window, part string, cancelled <-chan struct{}) error {
 			return rerr
 		}
 	}
+}
+
+// unpackExe writes the client this setup carries to part, with the progress bar.
+func unpackExe(w *kit.Window, part string, data []byte, cancelled <-chan struct{}) error {
+	f, err := os.Create(part)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	const step = 1 << 20
+	for off := 0; off < len(data); off += step {
+		select {
+		case <-cancelled:
+			return errCancelled
+		default:
+		}
+		end := off + step
+		if end > len(data) {
+			end = len(data)
+		}
+		if _, err := f.Write(data[off:end]); err != nil {
+			return err
+		}
+		w.Say(fmt.Sprintf("Installing GadScape...  %d%%", end*100/len(data)), end*100/len(data))
+	}
+	return f.Sync()
 }
 
 func mb(n int64) string { return fmt.Sprintf("%.0f MB", float64(n)/1e6) }
