@@ -50,7 +50,7 @@ fun Player.setTargetInMulti(inMulti: Boolean) = run { packetDispatcher.sendCompo
 fun Player.updateTargetData() = queueInterfaceUpdate(BHInterfaceUpdate.UPDATE_TARGET_ALL, this)
 fun Player.getBestEmblem() = BountyHunterEmblem.getBest(this, false)
 fun Player.getTargetBestEmblem() = if(getTarget().isPresent) getTarget().get().getBestEmblem() else Optional.empty()
-fun Player.hasSkipsAvailable() : Boolean = bountyHunterSkipCount < 3
+fun Player.hasSkipsAvailable() : Boolean = bountyHunterSkipCount < memberRank.bountyTargetSkips // 3, more for donators
 fun Player.resetBountySkipCounter() = run { bountyHunterSkipCount = 0 }
 fun Player.startBountySkipTimer() = run {
     if(this.variables.bountyHunterSkipTick == 0) {

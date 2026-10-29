@@ -17,8 +17,8 @@ public class DonatorSquire extends NPCPlugin {
             @Override
             public void buildDialogue() {
 
-                if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
-                    npc("You must be a Super Donator or higher to change your home teleport.");
+                if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
+                    npc("You must be a " + MemberRank.SUPER + " or higher to change your home teleport.");
                     return;
                 }
 
@@ -30,13 +30,13 @@ public class DonatorSquire extends NPCPlugin {
 
                 player(5, "Please switch my home teleport.");
 
-                options(6, "Choose a location", ContentConstants.SERVER_NAME + " Home", "Mage's Bank", "Ferox Enclave", "Donator Island", "Next")
+                options(6, "Choose a location", ContentConstants.SERVER_NAME + " Home", "Mage's Bank", "Ferox Enclave", HomeTeleport.DI.getName(), "Next")
                         .onOptionOne(() -> changeTeleport(player, 0))
                         .onOptionTwo(() -> changeTeleport(player, 1))
                         .onOptionThree(() -> changeTeleport(player, 2))
                         .onOptionFour(() -> changeTeleport(player, 3))
                         .onOptionFive(() -> setKey(7));
-                options(7, "Choose a location", "Super Donator Island", "Extreme Donator Island", "Respected Donator Island", "Platinum Donator Island", "Previous")
+                options(7, "Choose a location", HomeTeleport.DIE.getName(), HomeTeleport.RDI.getName(), HomeTeleport.LDI.getName(), HomeTeleport.UDI.getName(), "Previous")
                         .onOptionOne(() -> changeTeleport(player, 4))
                         .onOptionTwo(() -> changeTeleport(player, 5))
                         .onOptionThree(() -> changeTeleport(player, 6))

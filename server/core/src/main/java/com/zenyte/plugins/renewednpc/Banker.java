@@ -1,5 +1,6 @@
 package com.zenyte.plugins.renewednpc;
 
+import com.gadscape.game.content.currency.BloodCards;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.item.ItemOnNPCAction;
@@ -33,12 +34,8 @@ public class Banker extends NPCPlugin implements ItemOnNPCAction {
 
     @Override
     public void handleItemOnNPCAction(final Player player, final Item item, final int slot, final NPC npc) {
-        if (item.getId() == 995 || item.getId() == 13204) {
-            if (item.getId() == 995 && item.getAmount() < 1000) {
-                player.sendMessage("You need at least 1,000 coins to convert the coins into platinum token(s).");
-                return;
-            }
-            player.getDialogueManager().start(new CurrencyConversionD(player, item, slot));
+        // blood tokens <-> Blood cards (coins and platinum tokens are gone)
+        if (BloodCards.handle(player, item)) {
             return;
         }
         if (item.getDefinitions().isNoted()) {

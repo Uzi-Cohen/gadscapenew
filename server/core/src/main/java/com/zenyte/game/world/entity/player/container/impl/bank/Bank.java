@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.container.impl.bank;
 
+import com.gadscape.game.content.currency.BloodTokens;
 import com.zenyte.game.content.skills.thieving.CoinPouch;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
@@ -106,6 +107,11 @@ public abstract class Bank {
     }
 
     public ContainerResult add(final Item requestedItem, int tab) {
+        // coins are never banked again: they come in as blood tokens, or not at all (BloodTokens)
+        if (requestedItem != null && requestedItem.getId() == BloodTokens.COINS) {
+            final Item tokens = BloodTokens.asPayout(requestedItem);
+            return tokens == null ? BloodTokens.nothingAdded(requestedItem) : add(tokens, tab);
+        }
         tab = validateTab(tab);
         final Item item = new Item(requestedItem);
         final ItemDefinitions defs = item.getDefinitions();
@@ -160,11 +166,13 @@ public abstract class Bank {
     }
 
     public ContainerResult remove(final Item item) {
-        return remove(container.getSlotOf(item.getId()), item, false);
+        return remove(item, false);
     }
 
     public ContainerResult remove(final Item item, final boolean placeholder) {
-        return remove(container.getSlotOf(item.getId()), item, placeholder);
+        // a cost in coins is paid in blood tokens
+        final Item taken = BloodTokens.asCost(item);
+        return remove(container.getSlotOf(taken.getId()), taken, placeholder);
     }
 
     public ContainerResult remove(final int slot, final int amount, final boolean placeholder) {

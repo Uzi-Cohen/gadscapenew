@@ -529,7 +529,7 @@ public final class ClanManager implements ScheduledExternalizable {
      */
     private static int canTalk(@NotNull final Player player, @NotNull final Player clanOwner,
                                    @NotNull final ClanChannel channel) {
-        if(!player.isStaff() && (player.getAttributes().get("cc_last_talk") != null) && (long) player.getAttributes().get("cc_last_talk") >= (System.currentTimeMillis() - (player.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM) ? TimeUnit.TICKS.toMillis(2) : TimeUnit.TICKS.toMillis(5)))) {
+        if(!player.isStaff() && (player.getAttributes().get("cc_last_talk") != null) && (long) player.getAttributes().get("cc_last_talk") >= (System.currentTimeMillis() - (player.getMemberRank().equalToOrGreaterThan(MemberRank.DONATOR) ? TimeUnit.TICKS.toMillis(2) : TimeUnit.TICKS.toMillis(5)))) {
             player.sendMessage("Please wait a few moments before sending another message.");
             return 2;
         }

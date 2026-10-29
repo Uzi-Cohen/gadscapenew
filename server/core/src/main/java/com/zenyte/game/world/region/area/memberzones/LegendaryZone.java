@@ -16,8 +16,8 @@ public class LegendaryZone extends PolygonRegionArea {
 
     @Override
     public void enter(Player player) {
-        if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
-            player.sendMessage(Colour.RS_RED.wrap("This is a legendary members only zone."));
+        if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
+            player.sendMessage(Colour.RS_RED.wrap("This zone is for " + MemberRank.ROYAL + "s and up."));
             //tp them home
         }
     }

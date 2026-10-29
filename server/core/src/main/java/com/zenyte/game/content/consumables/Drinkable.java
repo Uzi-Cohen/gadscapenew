@@ -1,5 +1,6 @@
 package com.zenyte.game.content.consumables;
 
+import com.gadscape.game.content.kits.KitItems;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.world.entity.SoundEffect;
 import com.zenyte.game.world.entity.masks.Animation;
@@ -87,7 +88,7 @@ public interface Drinkable extends Consumable {
                 player.sendFilteredMessage("You quickly smash the empty vial using the trick a Barbarian taught you.");
                 inventory.deleteItem(slotId, new Item(id, 1));
             } else {
-                inventory.set(slotId, leftover);
+                inventory.set(slotId, KitItems.carry(item, leftover)); // a kit potion's next dose stays kit gear
             }
         } else {
             inventory.deleteItem(slotId, new Item(id, 1));

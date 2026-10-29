@@ -13,7 +13,19 @@ import com.zenyte.game.world.region.area.wilderness.WildernessArea;
 import org.apache.commons.lang3.StringUtils;
 
 public class Killstreaks {
+    /** Blood tokens (the old Blood money), GadScape's currency. */
     public static final int BLOODMONEY_ITEM_ID = 13_307;
+
+    /** Tokens for a kill on a victim carrying nothing. */
+    public static final int BASE_TOKENS_MIN = 100;
+    /** Tokens for a kill on a victim carrying {@link #FULL_REWARD_RISK} or more. */
+    public static final int BASE_TOKENS_MAX = 500;
+    /** Victim's carried value (blood tokens, premade-kit items left out) that gives the full base reward. */
+    public static final long FULL_REWARD_RISK = 50_000L;
+    /** Bonus per kill in the killer's current streak, percent. */
+    public static final int STREAK_BONUS_PERCENT_PER_KILL = 10;
+    /** Most the streak bonus adds, percent. */
+    public static final int STREAK_BONUS_PERCENT_MAX = 100;
 
     /**
      * Whether a victim died inside the active wilderness hot zone (double blood money). Set by core-restricted's
@@ -42,7 +54,7 @@ public class Killstreaks {
             resetKillstreak(victim, true);
         }
         if (!rewarded) {
-            PvpKillValidator.report(attacker, victim, result, "blood money");
+            PvpKillValidator.report(attacker, victim, result, "blood tokens");
             return;
         }
 
@@ -65,7 +77,7 @@ public class Killstreaks {
         PlayerAttributesKt.setPvpKillStreak(attacker, attackerCurrentStreak + 1);
 
         attacker.sendMessage(
-                "You have received <col=ff0000>" + totalBloodmoney + "</col> blood money. Your killstreak is now <col=ff0000>"
+                "You have received <col=ff0000>" + totalBloodmoney + "</col> blood tokens. Your killstreak is now <col=ff0000>"
                         + (attackerCurrentStreak + 1) + "</col>.");
         attacker.getInventory().addOrDrop(new Item(BLOODMONEY_ITEM_ID, totalBloodmoney));
 
@@ -102,9 +114,8 @@ public class Killstreaks {
 
         if (newKillstreak % 5 == 0) {
             World.sendMessage(MessageType.FILTERABLE, "<img=9><col=ff0000> " + player.getName()
-                    + " has a killstreak of " + newKillstreak +
-                    " and can be shutdown for " + getKillstreakBoost(newKillstreak)
-                    + " bonus Blood money!</col>");
+                    + " has a killstreak of " + newKillstreak + " and earns +" + getKillstreakBoost(newKillstreak)
+                    + "% blood tokens per kill!</col>");
         }
     }
 
@@ -118,72 +129,37 @@ public class Killstreaks {
         }
     }
 
+    /**
+     * Blood tokens for a rewarded kill, before the world/booster multipliers: 100 tokens for a victim carrying
+     * nothing, rising in a straight line to 500 at a carried value of 50,000 tokens or more (premade-kit items don't
+     * count, PvpKillValidator.carriedTokens), plus 10% per kill in the killer's current streak, at most +100%.
+     */
     private static int getTotalBloodmoneyForKill(Player attacker, Player victim) {
-        int victimStreak = PlayerAttributesKt.getPvpKillStreak(victim);
-        int yourStreak = PlayerAttributesKt.getPvpKillStreak(attacker);
-
-        int killstreakBoost = getKillstreakBoost(yourStreak);
-        int rankBoost = getRankBoost(attacker.getMemberRank());
-        int totalPercentBoost = killstreakBoost + rankBoost;
-
-        int shutdownBonus = getBloodmoneyForShutdown(victimStreak);
-
-        // Victims wilderness level
-        final int level = WildernessArea.getWildernessLevel(victim.getLocation()).orElse(0);
-        if (level == 0)
-            return 0;
-        return getBloodmoneyForKill((float) (totalPercentBoost * 1.2), level) + shutdownBonus;
-    }
-
-    private static final int getBloodmoneyForKill(float percentageBoost, int wildernessLevel) {
-        final int wildernessLevelBase = 10;
-        final int wildernessDivisions = (int) ((float) wildernessLevel / 10) * 3;
-
-        int wildernessBloodMoney = wildernessLevelBase + wildernessDivisions;
-        int amountToAdd = (int)((float)(wildernessBloodMoney) / 100 * percentageBoost);
-
-        wildernessBloodMoney += amountToAdd;
-
-        int finalAmount = Math.min(wildernessBloodMoney, 50);
-        return Utils.random( finalAmount - 4, finalAmount);
+        final long risk = Math.min(Math.max(0L, PvpKillValidator.carriedTokens(victim)), FULL_REWARD_RISK);
+        final long base = BASE_TOKENS_MIN + (BASE_TOKENS_MAX - BASE_TOKENS_MIN) * risk / FULL_REWARD_RISK;
+        final int streakBonus = getKillstreakBoost(PlayerAttributesKt.getPvpKillStreak(attacker));
+        return (int) (base * (100 + streakBonus) / 100);
     }
 
     /**
-     * Get's the percentage boost from killstreak
+     * The killstreak bonus, percent: 10% per kill in the streak, at most 100%.
      *
-     * @param killstreak - the killstreak boost
-     * @return - the percent of boost you get for specific killstreaks
+     * @param killstreak - the killstreak
      */
     private static int getKillstreakBoost(int killstreak) {
         if (killstreak <= 0) return 0;
-        if (killstreak >= 21) return 30;
-
-        int baseBoost = 5;
-        int currentStreak = killstreak;
-
-        // every 5 we add get 5%, with a maximum of 30
-        int currentBoost = Math.min((currentStreak / 5) * 5, 25);
-        baseBoost += currentBoost;
-
-        return baseBoost;
+        return Math.min(killstreak * STREAK_BONUS_PERCENT_PER_KILL, STREAK_BONUS_PERCENT_MAX);
     }
-
-    private static int getBloodmoneyForShutdown(int killstreak) {
-        if (killstreak <= 5) return 0;
-        return Math.min(((killstreak / 5) * 5) + 5, 30);
-    }
-
 
     private static int getRankBoost(MemberRank rank) {
         switch (rank) {
-            case PREMIUM: return 5;
-            case EXPANSION: return 10;
+            case DONATOR: return 5;
+            case SUPER: return 10;
             case EXTREME: return 15;
-            case RESPECTED: return 20;
-            case LEGENDARY: return 30;
-            case MYTHICAL: return 40;
+            case LEGENDARY: return 20;
+            case ROYAL: return 30;
             case AMASCUT:
-            case UBER: {
+            case DIVINE: {
                 return 50;
             }
         }

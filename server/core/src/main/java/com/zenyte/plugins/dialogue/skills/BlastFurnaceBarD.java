@@ -29,7 +29,7 @@ public class BlastFurnaceBarD extends SkillDialogue {
         final SmeltableBar bar = SmeltableBar.getDataByBar(data.getId());
         if (bar == null) return;
         int amt = player.getBlastFurnace().getBar(bar);
-        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL))
+        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE))
             amt = player.getInventory().hasSpaceFor(data.getDefinitions().getNotedId()) ? Math.min(amt, amount) : 0;
         else
             amt = amount > amt ? (Math.min(amt, inventorySpace)) : (Math.min(amount, inventorySpace));
@@ -39,7 +39,7 @@ public class BlastFurnaceBarD extends SkillDialogue {
             return;
         }
         player.getBlastFurnace().subBars(bar, amt);
-        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL))
+        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE))
             player.getInventory().addItem(data.getDefinitions().getNotedId(), amt);
         else
             player.getInventory().addItem(data.getId(), amt);

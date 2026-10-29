@@ -384,11 +384,11 @@ public final class FarmingSpot {
         if (type == PatchType.COMPOST_BIN) {
             setTime(-1);
         }
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE)) {
             setFlag(PatchFlag.ULTRACOMPOST);
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
             setFlag(PatchFlag.SUPERCOMPOST);
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
             setFlag(PatchFlag.COMPOST);
         }
     }
@@ -410,7 +410,7 @@ public final class FarmingSpot {
             return false;
         }
         final FarmingPatch patch = this.getPatch();
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE)) {
             return false;
         }
         if (patch == TROLL_STRONGHOLD_HERB || patch.getType() == PatchType.HESPORI_PATCH || patch == WEISS_HERB_PATCH) {

@@ -2,6 +2,7 @@ package com.gadscape.scripts.ground_items
 
 import com.gadscape.scripts.Script
 import com.zenyte.game.item.Item
+import com.zenyte.game.item.ItemId
 import com.zenyte.game.world.entity.Location
 import com.zenyte.game.world.flooritem.GlobalItem
 import com.zenyte.plugins.InitPlugin
@@ -24,6 +25,8 @@ abstract class GroundItemSpawnScript : Script, InitPlugin {
         x: Int, y: Int, z: Int = 0,
         respawnTime: Int = 30
     ) {
+        // coins are gone (blood tokens are the currency, BloodTokens in core): no coin spawns
+        if (this == ItemId.COINS_995) return
         val item = Item(this, amount)
         val location = Location(x, y, z)
         val globalItem = GlobalItem(item, location, respawnTime)

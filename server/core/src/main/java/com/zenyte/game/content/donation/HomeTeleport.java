@@ -8,14 +8,14 @@ import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.privilege.MemberRank;
 
 public enum HomeTeleport {
-    HOME(new Location(3211, 3423), "Regular Home", MemberRank.EXPANSION),
-    MAGE_BANK(new Location(2539, 4716), "Mage's Bank", MemberRank.EXPANSION),
-    FEROX_ENCLAVE(new Location(3150, 3636), "Ferox Enclave", MemberRank.EXPANSION),
-    DI(DonatorZoneTeleports.DI.getLocation(), "Donator Island", MemberRank.EXPANSION),
-    DIE(DonatorZoneTeleports.DIE.getLocation(), "Super Donator Island", MemberRank.EXPANSION),
-    RDI(DonatorZoneTeleports.RDI.getLocation(), "Extreme Donator Island", MemberRank.RESPECTED),
-    LDI(DonatorZoneTeleports.LDI.getLocation(), "Respected Donator Island", MemberRank.LEGENDARY),
-    UDI(DonatorZoneTeleports.UDI.getLocation(), "Platinum Donator Island", MemberRank.UBER),
+    HOME(new Location(3211, 3423), "Regular Home", MemberRank.SUPER),
+    MAGE_BANK(new Location(2539, 4716), "Mage's Bank", MemberRank.SUPER),
+    FEROX_ENCLAVE(new Location(3150, 3636), "Ferox Enclave", MemberRank.SUPER),
+    DI(DonatorZoneTeleports.DI.getLocation(), "Gad Donator Island", MemberRank.SUPER),
+    DIE(DonatorZoneTeleports.DIE.getLocation(), "Super Gad Donator Island", MemberRank.SUPER),
+    RDI(DonatorZoneTeleports.RDI.getLocation(), "Legendary Gad Donator Island", MemberRank.LEGENDARY),
+    LDI(DonatorZoneTeleports.LDI.getLocation(), "Royal Gad Donator Island", MemberRank.ROYAL),
+    UDI(DonatorZoneTeleports.UDI.getLocation(), "Divine Gad Donator Island", MemberRank.DIVINE),
     ;
 
     HomeTeleport(Location location, String name, MemberRank required) {

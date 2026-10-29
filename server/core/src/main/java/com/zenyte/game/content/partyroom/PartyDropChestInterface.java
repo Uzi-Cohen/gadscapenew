@@ -1,5 +1,6 @@
 package com.zenyte.game.content.partyroom;
 
+import com.gadscape.game.content.kits.KitItems;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.model.ui.Interface;
@@ -8,23 +9,28 @@ import com.zenyte.game.util.Colour;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.container.Container;
 import com.zenyte.game.world.entity.player.container.impl.Inventory;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
 /**
+ * The Party Drop Chest (interface 265, build 241 layout): buttons 1 / 5 / X / All are components 7-10 (varbit 7792 =
+ * 0, 1, 3, 2), the chest's contents (inventory 91, 216 slots) are drawn into component 11, the player's offer row
+ * (inventory 92, 8 slots) into component 16 and Confirm is component 17.
+ *
  * @author Kris | 25/12/2019
  * @see <a href="https://www.rune-server.ee/members/kris/">Rune-Server profile</a>
  */
 public class PartyDropChestInterface extends Interface {
     @Override
     protected void attach() {
-        put(4, "Add 1");
-        put(5, "Add 5");
-        put(6, "Add x");
-        put(7, "Add all");
-        put(14, "Accept");
-        put(8, "Chest public deposit container");
-        put(13, "Chest private deposit container");
+        put(7, "Add 1");
+        put(8, "Add 5");
+        put(9, "Add x");
+        put(10, "Add all");
+        put(17, "Accept");
+        put(11, "Chest public deposit container");
+        put(16, "Chest private deposit container");
     }
 
     @Override
@@ -63,8 +69,7 @@ public class PartyDropChestInterface extends Interface {
         bind("Add all", player -> player.getVarManager().sendBitInstant(7792, 2));
         bind("Accept", player -> {
             final FaladorPartyRoom partyroom = FaladorPartyRoom.getPartyRoom();
-            final Container container = partyroom.getPrivateContainer(player);
-            if (container.isEmpty()) {
+            if (partyroom.getPrivateContainer(player).isEmpty()) {
                 return;
             }
             if (partyroom.getVariables().isDisabled()) {
@@ -75,66 +80,100 @@ public class PartyDropChestInterface extends Interface {
                 player.sendMessage("You are not eligible to deposit items in the party chest right now.");
                 return;
             }
-            final int length = container.getContainerSize();
             final Container publicContainer = partyroom.getContainer();
-            final int minimumStackValue = partyroom.getVariables().getMinimumItemStackValueThreshold();
-            boolean unableToDeposit = false;
-            for (int i = 0; i < length; i++) {
-                final Item item = container.get(i);
-                if (item == null) {
-                    continue;
-                }
-                if (minimumStackValue > 0) {
-                    final long valueOfStack = (long) item.getSellPrice() * item.getAmount();
-                    if (valueOfStack < minimumStackValue) {
-                        unableToDeposit = true;
-                        player.sendMessage(Colour.RED.wrap(item.getAmount() + " x " + item.getName() + " could not be deposited: Value of stack under the threshold of " + minimumStackValue + "."));
-                        continue;
-                    }
-                }
-                publicContainer.deposit(null, container, i, item.getAmount());
-            }
-            container.setFullUpdate(true);
-            container.refresh(player);
-            publicContainer.setFullUpdate(true);
-            partyroom.forEachViewing(publicContainer::refresh);
-            if (!unableToDeposit && !container.isEmpty()) {
-                player.sendMessage("Not enough space in the drop chest.");
-            }
+            confirm(player, publicContainer, partyroom.getVariables().getMinimumItemStackValueThreshold(), () -> partyroom.forEachViewing(publicContainer::refresh));
         });
-        bind("Chest private deposit container", (player, slotId, itemId, option) -> {
-            final Container container = FaladorPartyRoom.getPartyRoom().getPrivateContainer(player);
-            final Item item = container.get(slotId);
-            if (item == null) {
-                return;
-            }
-            final Inventory inventory = player.getInventory();
-            final Container inventoryContainer = inventory.getContainer();
-            final PartyRoomOptionType optionType = getType(player, option);
-            if (optionType == PartyRoomOptionType.EXAMINE) {
-                player.sendMessage(item.getDefinitions().getExamine());
-                return;
-            }
-            if (optionType == PartyRoomOptionType.X) {
-                player.sendInputInt("How many would you like to withdraw?", value -> {
-                    if (container.get(slotId) != item) {
-                        return;
-                    }
-                    inventoryContainer.deposit(player, container, slotId, value);
-                    container.refresh(player);
-                    inventoryContainer.refresh(player);
-                    PartyDropInventoryInterface.refreshContainer(player);
-                });
-                return;
-            }
-            final int amount = optionType.getAmount();
-            inventoryContainer.deposit(player, container, slotId, amount);
-            container.refresh(player);
-            inventoryContainer.refresh(player);
-            PartyDropInventoryInterface.refreshContainer(player);
-        });
+        bind("Chest private deposit container", (player, slotId, itemId, option) -> withdraw(player, slotId, option));
     }
 
+    /**
+     * A click on the offer row: takes the item back (1 / 5 / X / All) or examines it.
+     */
+    static void withdraw(@NotNull final Player player, final int slotId, final int option) {
+        final Container container = FaladorPartyRoom.getPartyRoom().getPrivateContainer(player);
+        final Item item = container.get(slotId);
+        if (item == null) {
+            return;
+        }
+        final Inventory inventory = player.getInventory();
+        final Container inventoryContainer = inventory.getContainer();
+        final PartyRoomOptionType optionType = getType(player, option);
+        if (optionType == PartyRoomOptionType.EXAMINE) {
+            player.sendMessage(item.getDefinitions().getExamine());
+            return;
+        }
+        if (optionType == PartyRoomOptionType.X) {
+            player.sendInputInt("How many would you like to withdraw?", value -> {
+                if (container.get(slotId) != item) {
+                    return;
+                }
+                inventoryContainer.deposit(player, container, slotId, value);
+                container.refresh(player);
+                inventoryContainer.refresh(player);
+                PartyDropInventoryInterface.refreshContainer(player);
+            });
+            return;
+        }
+        final int amount = optionType.getAmount();
+        inventoryContainer.deposit(player, container, slotId, amount);
+        container.refresh(player);
+        inventoryContainer.refresh(player);
+        PartyDropInventoryInterface.refreshContainer(player);
+    }
+
+    /**
+     * Whether {@code item} may go into a party chest: tradeable and not a spawned premade-kit item.
+     */
+    static boolean isDepositable(@NotNull final Item item) {
+        return item.isTradable() && !KitItems.isKitItem(item);
+    }
+
+    /**
+     * Confirm: moves the player's offer row into {@code chest}. Every item is checked again here; untradeables and kit items
+     * go back to the inventory, stacks under {@code minimumStackValue} (0: no limit) stay in the offer row.
+     */
+    static void confirm(@NotNull final Player player, @NotNull final Container chest, final int minimumStackValue, @NotNull final Runnable refreshViewers) {
+        final Container container = FaladorPartyRoom.getPartyRoom().getPrivateContainer(player);
+        final Inventory inventory = player.getInventory();
+        final int length = container.getContainerSize();
+        boolean unableToDeposit = false;
+        for (int i = 0; i < length; i++) {
+            final Item item = container.get(i);
+            if (item == null) {
+                continue;
+            }
+            if (!isDepositable(item)) {
+                unableToDeposit = true;
+                container.set(i, null);
+                inventory.addOrDrop(item);
+                player.sendMessage(Colour.RED.wrap(item.getName() + " can't be put in the party chest."));
+                continue;
+            }
+            if (minimumStackValue > 0) {
+                final long valueOfStack = (long) item.getSellPrice() * item.getAmount();
+                if (valueOfStack < minimumStackValue) {
+                    unableToDeposit = true;
+                    player.sendMessage(Colour.RED.wrap(item.getAmount() + " x " + item.getName() + " could not be deposited: Value of stack under the threshold of " + minimumStackValue + "."));
+                    continue;
+                }
+            }
+            chest.deposit(null, container, i, item.getAmount());
+        }
+        container.setFullUpdate(true);
+        container.refresh(player);
+        inventory.refreshAll();
+        PartyDropInventoryInterface.refreshContainer(player);
+        chest.setFullUpdate(true);
+        refreshViewers.run();
+        if (!unableToDeposit && !container.isEmpty()) {
+            player.sendMessage("Not enough space in the drop chest.");
+        }
+    }
+
+    /**
+     * The op clicked on an offer or inventory item: op 1 is the amount the 1 / 5 / X / All buttons picked (varbit 7792),
+     * ops 2-5 are 1, 5, X and All, op 10 Examine (clientscripts 3612 / 3620).
+     */
     public static PartyRoomOptionType getType(Player player, int option) {
         PartyRoomOptionType optionType;
         switch (option) {
@@ -154,6 +193,9 @@ public class PartyDropChestInterface extends Interface {
                         optionType = PartyRoomOptionType.X;
                         break;
                 }
+                break;
+            case 2:
+                optionType = PartyRoomOptionType.ONE;
                 break;
             case 3:
                 optionType = PartyRoomOptionType.FIVE;

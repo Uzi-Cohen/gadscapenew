@@ -1,6 +1,7 @@
 package com.zenyte.game.content
 
 import com.gadscape.game.content.commands.DeveloperCommands
+import com.gadscape.game.item.CustomItemId
 import com.gadscape.scripts.npc.drops.table.DropTableContext
 import com.gadscape.scripts.npc.drops.table.always
 import com.gadscape.scripts.npc.drops.table.chance.immutable.StaticRollChance
@@ -133,7 +134,7 @@ class XamphurDropTable : NPCDropTableScript() {
         limit = 900
         static {
             PET_MYSTERY_BOX quantity 1 rarity 100
-            VOTE_SHARD quantity 5 rarity 100
+            CustomItemId.VOTE_TICKET quantity 5 rarity 100
             ENHANCED_CRYSTAL_KEY quantity 3 rarity 100
             MYSTERY_BOX quantity 1 rarity 100
             DWARF_CANNON_SET quantity 1 rarity 100

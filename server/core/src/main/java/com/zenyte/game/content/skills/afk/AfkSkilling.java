@@ -55,6 +55,10 @@ public class AfkSkilling {
     }
 
     public static boolean overTimeLimit(Player player) {
+        // Royal Gad Donators and up stay as long as they like
+        if (player.getMemberRank().hasUnlimitedAfk()) {
+            return false;
+        }
         return player.getNumericAttribute(AFK_TICKS).longValue() > TimeUnit.HOURS.toTicks(10);
     }
 }

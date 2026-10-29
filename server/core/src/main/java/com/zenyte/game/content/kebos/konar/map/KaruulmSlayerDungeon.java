@@ -52,7 +52,7 @@ public class KaruulmSlayerDungeon extends PolygonRegionArea implements CycleProc
         if (DiaryUtil.eligibleFor(DiaryReward.RADAS_BLESSING4, player)) {
             return true;
         }
-        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED))
+        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY))
             return true;
 
         final Item boots = player.getBoots();

@@ -80,15 +80,15 @@ public class GodwarsBossDoorObject implements ObjectAction {
     private int calculateRequiredKillcount(@NotNull final Player player) {
         int requiredKillcount = 10;
         final MemberRank rank = player.getMemberRank();
-        if (rank.equalToOrGreaterThan(MemberRank.UBER)) {
+        if (rank.equalToOrGreaterThan(MemberRank.DIVINE)) {
             requiredKillcount -= 10;
-        } else if (rank.equalToOrGreaterThan(MemberRank.RESPECTED)) {
+        } else if (rank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
             requiredKillcount -= 8;
         } else if (rank.equalToOrGreaterThan(MemberRank.EXTREME)) {
             requiredKillcount -= 6;
-        } else if (rank.equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (rank.equalToOrGreaterThan(MemberRank.SUPER)) {
             requiredKillcount -= 4;
-        } else if (rank.equalToOrGreaterThan(MemberRank.PREMIUM)) {
+        } else if (rank.equalToOrGreaterThan(MemberRank.DONATOR)) {
             requiredKillcount -= 2;
         }
         return requiredKillcount;

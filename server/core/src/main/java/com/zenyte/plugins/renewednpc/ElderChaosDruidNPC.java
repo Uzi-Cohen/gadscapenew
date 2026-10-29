@@ -95,8 +95,10 @@ public class ElderChaosDruidNPC extends NPCPlugin implements ItemOnNPCAction {
     private static void exchange(final Player player, final Item item, int count) {
         if (count <= 0)
             return;
-        final ContainerResult coinResult = player.getInventory().deleteItem(new Item(995, count * 50));
-        count = coinResult.getSucceededAmount() / 50;
+        // 50 coins a bone, paid in blood tokens (BloodTokens): only what the tokens held cover
+        count = Math.min(count, player.getInventory().getAmountOf(995) / 50);
+        if (count <= 0 || player.getInventory().deleteItem(new Item(995, count * 50)).isFailure())
+            return;
         final ContainerResult result = player.getInventory().deleteItem(item.getId(), count);
         count = result.getSucceededAmount();
         player.getInventory().addItem(new Item(item.getDefinitions().getUnnotedOrDefault(), count)).onFailure(remaining -> World.spawnFloorItem(remaining, player));

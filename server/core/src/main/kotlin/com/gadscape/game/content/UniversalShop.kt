@@ -1,5 +1,6 @@
 package com.gadscape.game.content
 
+import com.gadscape.game.content.currency.BloodTokens
 import com.gadscape.game.content.shop.ShopCurrencyHandler
 import com.gadscape.game.content.shop.UniversalShopCategory
 import com.gadscape.game.content.universalshop.UnivShopTable
@@ -239,7 +240,8 @@ object UniversalShop {
     fun sellPrice(category: UniversalShopCategory, itemId: Int): Int {
         val row = category.table.items.firstOrNull { it.id == itemId } ?: return -1
         if (!row.canSell || soldByAnotherCategory(category, itemId)) return -1
-        return row.sellPrice
+        // the coin tabs pay in blood tokens: the coin price divided by 1,000, rounded down (BloodTokens)
+        return if (getCategoryCurrency(category.uniqueIndex) == ShopCurrency.COINS) BloodTokens.shopSellPrice(row.sellPrice) else row.sellPrice
     }
 
     private fun soldByAnotherCategory(category: UniversalShopCategory, itemId: Int): Boolean =
@@ -263,8 +265,10 @@ object UniversalShop {
     }
 
     fun determinePrice(category: Int, item: Int): Int {
-        if(priceOverrides.containsKey(category to item) && priceOverrides[category to item] != null) return priceOverrides[category to item]!!
-        return DBRowDefinition.getRowColumnByIndexesInt(shopIdToTableId(category), item, 4)
+        val price = if(priceOverrides.containsKey(category to item) && priceOverrides[category to item] != null) priceOverrides[category to item]!!
+            else DBRowDefinition.getRowColumnByIndexesInt(shopIdToTableId(category), item, 4)
+        // the coin tabs are paid in blood tokens: the coin price divided by 1,000, at least 1 (BloodTokens)
+        return if (getCategoryCurrency(category) == ShopCurrency.COINS) BloodTokens.shopBuyPrice(price) else price
     }
 
     fun populateCategories() {

@@ -193,7 +193,7 @@ public class GrandExchange {
             player.getVarManager().sendBit(SLOT_VARPBIT, -1);
             return false;
         }
-        if (GameConstants.RESTRICTED_TRADE_ITEMS.contains(item.getId()) || item.getId() == 995 || item.getId() == 13224 || !item.getDefinitions().isGrandExchange()) {
+        if (GameConstants.RESTRICTED_TRADE_ITEMS.contains(item.getId()) || com.gadscape.game.content.currency.BloodTokens.isCurrency(item.getId()) || item.getId() == 13224 || !item.getDefinitions().isGrandExchange()) {
             player.sendMessage("This item cannot be sold.");
             player.getVarManager().sendBit(SLOT_VARPBIT, 1);
             player.getVarManager().sendBit(SLOT_VARPBIT, -1);

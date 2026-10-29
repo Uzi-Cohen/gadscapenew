@@ -78,11 +78,11 @@ public class MakeOverInterface extends Interface {
 
 
     private enum SkinColour {
-        BLACK(9, MemberRank.EXPANSION),
-        WHITE(10, MemberRank.EXPANSION),
+        BLACK(9, MemberRank.SUPER),
+        WHITE(10, MemberRank.SUPER),
         GREEN(8, MemberRank.EXTREME),
-        TURQOISE(11, MemberRank.RESPECTED),
-        PURPLE(12, MemberRank.LEGENDARY);
+        TURQOISE(11, MemberRank.LEGENDARY),
+        PURPLE(12, MemberRank.ROYAL);
         private static final SkinColour[] all = values();
         private static final Map<Integer, SkinColour> map = new HashMap<>(all.length);
 

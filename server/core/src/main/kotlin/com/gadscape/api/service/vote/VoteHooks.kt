@@ -1,5 +1,6 @@
 package com.gadscape.api.service.vote
 
+import com.gadscape.game.item.CustomItemId
 import com.google.common.eventbus.Subscribe
 import com.zenyte.game.item.Item
 import com.zenyte.game.util.Colour
@@ -15,19 +16,16 @@ import com.zenyte.plugins.events.LoginEvent
 object VoteHooks {
 
     /**
-     * Applies any votes that came in while the player was offline, now that they're
-     * genuinely online (packetDispatcher etc all wired up) and it's safe to grant
-     * the reward. See [com.gadscape.api.service.vote.pendingVotesToApplyOnNextLogin].
+     * Votes that came in while the player was offline wait on the vote screen (Claim on the site's row); tells the
+     * player about them. See [com.gadscape.api.service.vote.pendingVotesToApplyOnNextLogin].
      */
     @Subscribe
     @JvmStatic
     fun onPendingVotes(event: LoginEvent) {
         val player = event.player
-        val pending = player.pendingVotesToApplyOnNextLogin
-        if (pending.isEmpty()) return
-        val votes = pending.toList()
-        pending.clear()
-        votes.forEach { vote -> VotePlayerHandler.applyVoteReward(player, vote) }
+        val waiting = player.pendingVotesToApplyOnNextLogin.size
+        if (waiting == 0) return
+        player.sendMessage(Colour.RS_GREEN.wrap("You have $waiting vote${if (waiting == 1) "" else "s"} waiting to be claimed. Type ::vote to claim ${if (waiting == 1) "it" else "them"}."))
     }
 
     /**
@@ -40,11 +38,9 @@ object VoteHooks {
         if (player.getBooleanAttribute("registered")
             && System.currentTimeMillis() >= player.lastVoteClaimTime) {
             player.dialogue {
-                item(Item(32148), "${Colour.RS_RED.wrap("Vote For A Reward!")}<br>" +
+                item(Item(CustomItemId.VOTE_TICKET), "${Colour.RS_RED.wrap("Vote For A Reward!")}<br>" +
                         "It seems you have not voted today, vote now for ${Colour.DARK_BLUE.wrap("Vote Points")}, " +
-                        "along with a chance of receiving ${Colour.DARK_BLUE.wrap("50")} Store Credits " +
-                        "and an extra ${Colour.DARK_BLUE.wrap("50%")} blood money bonus per kill " +
-                        "(each claimed vote lasts 15 minutes)")
+                        "blood tokens, a vote mystery box every 3 votes and a ${Colour.DARK_BLUE.wrap("+20%")} PvM drop rate for 20 minutes per vote.")
             }
         }
     }

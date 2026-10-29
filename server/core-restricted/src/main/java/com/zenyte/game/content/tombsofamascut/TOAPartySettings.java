@@ -75,11 +75,11 @@ public class TOAPartySettings {
 	}
 
 	private int getBitIndex(final InvocationType invocation) {
-		return 1 << (invocation.getIndex() % 31);
+		return 1 << (invocation.getIndex() % 32);
 	}
 
 	private int getBitMapIndex(final InvocationType invocation) {
-		return invocation.getIndex() > 61 ? 2 : (invocation.getIndex() > 30 ? 1 : 0);
+		return invocation.getIndex() > 63 ? 2 : (invocation.getIndex() > 31 ? 1 : 0);
 	}
 
 	public String getMode() {

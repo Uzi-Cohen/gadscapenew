@@ -13,6 +13,8 @@ import com.gadscape.game.content.commands.CustomCommands;
 import com.gadscape.game.content.commands.DeveloperCommands;
 import com.gadscape.game.content.commands.PlayerCommands;
 import com.gadscape.game.content.crystal.CrystalCommands;
+import com.gadscape.game.content.donator.DonatorBenefits;
+import com.gadscape.game.content.donator.DonatorPerks;
 import com.gadscape.game.content.middleman.MiddleManCommands;
 import com.gadscape.tools.BotPrevention;
 import com.gadscape.tools.logging.GameLogMessage;
@@ -1070,6 +1072,45 @@ public final class GameCommands {
             SpellbookTeleport.EDGE_TELEPORT.teleport(p);
         });
 
+        new Command(PlayerPrivilege.PLAYER, "party", "Teleport to the Falador party room.", (p, args) -> {
+            if (p.isLocked()) {
+                return;
+            }
+            final Teleport teleport = new Teleport() {
+                @Override public TeleportType getType() {return TeleportType.REGULAR_TELEPORT;}
+                @Override public Location getDestination() {return new Location(3046, 3375, 0);}
+                @Override public int getLevel() {return 0;}
+                @Override public double getExperience() {return 0;}
+                @Override public int getRandomizationDistance() {return 2;}
+                @Override public Item[] getRunes() {return null;}
+                @Override public int getWildernessLevel() {return 0;}
+                @Override public boolean isCombatRestricted() {return RESTRICTED;}
+            };
+            teleport.teleport(p);
+        });
+
+        new Command(PlayerPrivilege.DEVELOPER, "dropparty", "Opens the staff party chest: Party drops its items in balloons around you.", (p, args) -> {
+            if (!com.zenyte.game.content.partyroom.DropParty.mayUse(p)) {
+                p.sendMessage("Only Managers and Sr. Developers can hold a drop party.");
+                return;
+            }
+            if (p.isLocked()) {
+                return;
+            }
+            if (!mgi.types.component.ComponentDefinitions.containsInterface(GameInterface.DROP_PARTY_CHEST.getId())) {
+                p.sendMessage("The staff party chest isn't in the game's cache yet.");
+                return;
+            }
+            GameInterface.DROP_PARTY_CHEST.open(p);
+        });
+
+        new Command(PlayerPrivilege.YOUTUBER, "giveaway", "Opens the YouTuber giveaway screen.",
+                (p, args) -> com.gadscape.game.content.giveaway.Giveaways.open(p))
+                .orAllowIf(com.gadscape.game.content.giveaway.Giveaways::mayGive);
+
+        new Command(PlayerPrivilege.ADMINISTRATOR, "giveawayitems", "Manages the giveaway prizes. Usage: ::giveawayitems [add id amount stock | remove id | stock id stock]",
+                (p, args) -> com.gadscape.game.content.giveaway.Giveaways.manage(p, args));
+
         new Command(PlayerPrivilege.PLAYER, "shops", "Opens the universal shop interface.", (p, args) -> {
             if (p.isLocked() || p.getActionManager().wasInCombatThisTick()) {
                 return;
@@ -1837,9 +1878,7 @@ public final class GameCommands {
             final String arguments = StringUtilities.compile(args, 0, args.length, '_');
             p.getPacketDispatcher().sendURL(page + arguments);
         });
-        new Command(PlayerPrivilege.PLAYER, "benefits", "Opens the donator ranks page.", (p, args) -> {
-            p.getPacketDispatcher().sendURL(GameConstants.SERVER_STORE_URL);
-        });
+        new Command(PlayerPrivilege.PLAYER, "benefits", "Shows the donator ranks and their perks.", (p, args) -> DonatorBenefits.open(p));
         new Command(PlayerPrivilege.DEVELOPER, "itemdef-p", (p, args) -> {
             final int id = parseInt(args[0]);
             final EnumDefinitions map = EnumDefinitions.get(id);
@@ -1994,9 +2033,12 @@ public final class GameCommands {
                     }, 0, 1);
                 }
         );
-        new Command(PlayerPrivilege.DEVELOPER, "spec", "Sets your special energy to 100 or requested value. " +
-                "Arguments: " +
-                "<Optional>amount", (p, args) -> {
+        new Command(PlayerPrivilege.PLAYER, "spec", "Restores your special attack (Legendary Gad Donators and up); " +
+                "developers: sets your special energy to 100 or requested value. Arguments: <Optional>amount", (p, args) -> {
+            if (!p.getPrivilege().eligibleTo(PlayerPrivilege.DEVELOPER)) {
+                DonatorPerks.restoreSpecial(p);
+                return;
+            }
             int amount = 100;
             if (args.length > 0) {
                 amount = parseInt(args[0]);
@@ -2010,7 +2052,15 @@ public final class GameCommands {
                 (p, args) -> com.gadscape.qa.ArchivePreview.handle(p, args));
         new Command(PlayerPrivilege.ADMINISTRATOR, "sound",
                 (p, args) -> p.getPacketDispatcher().sendSoundEffect(new SoundEffect(parseInt(args[0]), 1, 0, 0)));
-        new Command(PlayerPrivilege.FORUM_MODERATOR, new String[]{"heal", "hitpoints", "hp"}, "Sets your health to your" +
+        new Command(PlayerPrivilege.PLAYER, "hp", "Restores your health and prayer (Legendary Gad Donators and up); " +
+                "staff: same as ::heal.", (p, args) -> {
+            if (p.getPrivilege().eligibleTo(PlayerPrivilege.FORUM_MODERATOR)) {
+                process(p, ("heal " + String.join(" ", args)).trim());
+                return;
+            }
+            DonatorPerks.restoreHealth(p);
+        });
+        new Command(PlayerPrivilege.FORUM_MODERATOR, new String[]{"heal", "hitpoints"}, "Sets your health to your" +
                 " max " +
                 "or requested value. Argument: <Optional>amount", (p, args) -> {
             if(!isLiveEligible(p, PlayerPrivilege.ADMINISTRATOR, PlayerPrivilege.FORUM_MODERATOR))
@@ -2164,8 +2214,17 @@ public final class GameCommands {
                 }
             }
         });
-        new Command(PlayerPrivilege.FORUM_MODERATOR, "tele",
-                "Teleports you to the requested coordinates. Arguments: x y " + "<Optional>z", (p, args) -> {
+        new Command(PlayerPrivilege.PLAYER, "tele",
+                "::tele 1-5 takes you to a spot saved with ::settele (Divine Gad Donators); staff: teleports you to the " +
+                        "requested coordinates. Arguments: x y " + "<Optional>z", (p, args) -> {
+            if (args.length == 1 && DonatorPerks.isTeleportSlot(args[0])) {
+                DonatorPerks.teleport(p, Integer.parseInt(args[0]));
+                return;
+            }
+            if (!p.getPrivilege().eligibleTo(PlayerPrivilege.FORUM_MODERATOR)) {
+                p.sendMessage("Use ::tele 1-" + DonatorPerks.SAVED_TELEPORTS + " to go to a spot you saved with ::settele.");
+                return;
+            }
 
             if(!isLiveEligible(p, PlayerPrivilege.ADMINISTRATOR, PlayerPrivilege.FORUM_MODERATOR))
                 return;
@@ -2447,14 +2506,8 @@ public final class GameCommands {
             p.sendMessage("DropRate: " + (int) ((gameMode + donor + pin + pet + compCape) * 100D) + "%. Mode: " + (int) (gameMode * 100D) + "%. Donor: " + (int) (donor * 100D) + "%. Pin: " + (int) (pin * 100D) + "%. Pet: " + (int) (pet * 100D) +"%");
         });
 
-        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank. Available to staff and donators.",
-                (p, args) -> {
-                    if (!p.isStaff() && !p.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM)) {
-                        p.sendMessage("This command is only available to staff and donators.");
-                        return;
-                    }
-                    GameInterface.BANK.open(p);
-                });
+        new Command(PlayerPrivilege.PLAYER, new String[]{"b", "bank"}, "Opens the bank. Staff anywhere, Super Gad Donators and up " +
+                "outside the Wilderness, instances and combat.", (p, args) -> DonatorPerks.bank(p));
         new Command(PlayerPrivilege.DEVELOPER, "var", "Sends a varp of the requested id and value. Arguments: id " +
                 "value", (p
                 , args) -> p.getVarManager().sendVar(parseInt(args[0]), parseInt(args[1])));
@@ -2673,14 +2726,10 @@ public final class GameCommands {
                 }
                 bldr.append("</col></shad>: ");
             } else if (p.getPrivilege().equals(PlayerPrivilege.YOUTUBER)) {
+                // the YouTuber crown only: their Divine perks (Player.getMemberRank) don't show a donator crown
                 bldr.append("<col=ff0000><shad=000000>");
-                if (p.isMember()) {
-                    bldr.append("[").append(privilege.crown().getCrownTag()).append(gameMode.crown().getCrownTag()).append(member.crown().getCrownTag()).append(p.getName()).append("]");
-                    delay = Math.min(member.getYellDelay(), 66);
-                } else {
-                    bldr.append("[").append(privilege.crown().getCrownTag()).append(gameMode.crown().getCrownTag()).append(p.getName()).append("]");
-                    delay = 66;
-                }
+                bldr.append("[").append(privilege.crown().getCrownTag()).append(gameMode.crown().getCrownTag()).append(p.getName()).append("]");
+                delay = p.isMember() ? Math.min(member.getYellDelay(), 66) : 66;
                 bldr.append("</col></shad>: ");
             } else if (p.isMember()) {
                 bldr.append("<col=").append(member.getYellColor()).append("><shad=000000>");

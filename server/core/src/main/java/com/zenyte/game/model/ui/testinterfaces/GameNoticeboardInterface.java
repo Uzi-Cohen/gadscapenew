@@ -4,7 +4,8 @@ import com.gadscape.game.rev241.Gad211;
 import mgi.types.component.ComponentDefinitions;
 import com.gadscape.website.WebsiteService;
 import com.google.common.eventbus.Subscribe;
-import com.gadscape.api.service.user.UserPlayerAttributesKt;
+import com.gadscape.game.content.donator.DonatorRanks;
+import com.gadscape.game.content.donator.DonatorRanksKt;
 import com.gadscape.api.service.vote.VotePlayerAttributesKt;
 import com.zenyte.game.GameClock;
 import com.zenyte.game.GameConstants;
@@ -201,7 +202,7 @@ public final class GameNoticeboardInterface extends Interface {
                 "<col=ffffff>" + player.getMemberCrown().getCrownTag() + player.getMemberName().replace(" Member", "") + "</col>");
         player.getPacketDispatcher().sendComponentText(getInterface(), getComponent("Loyalty points"), "Loyalty " +
                 "points: <col=ffffff>" + player.getLoyaltyManager().getLoyaltyPoints() + "</col>");
-        final String totalDonated = "Total donated: <col=ffffff>$" + UserPlayerAttributesKt.getStoreTotalSpent(player) + "</col>";
+        final String totalDonated = "Total donated: <col=ffffff>" + DonatorRanks.formatUsd(DonatorRanksKt.getTotalDonatedCents(player)) + "</col>";
         player.log(LogLevel.INFO, totalDonated);
         player.getPacketDispatcher().sendComponentText(getInterface(), getComponent("Total donated"), totalDonated);
         player.getPacketDispatcher()

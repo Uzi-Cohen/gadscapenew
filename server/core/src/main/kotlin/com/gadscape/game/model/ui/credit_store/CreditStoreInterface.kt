@@ -27,8 +27,6 @@ import com.zenyte.game.world.entity.player.container.ContainerPolicy
 import com.zenyte.game.world.entity.player.container.impl.ContainerType
 import com.zenyte.game.world.entity.player.dialogue.dialogue
 import com.zenyte.game.world.entity.player.dialogue.options
-import com.zenyte.game.world.entity.player.privilege.Crown
-import com.zenyte.game.world.entity.player.privilege.MemberRank
 import com.zenyte.game.world.entity.player.typeVarbit
 import com.zenyte.game.world.entity.player.varp
 import com.zenyte.game.world.region.area.wilderness.WildernessArea
@@ -227,12 +225,8 @@ object CreditStoreModel {
                      */
                     "How does this work?" {
                         player.dialogue {
-                            val rank = "${Crown.PREMIUM.crownTag}<col=${MemberRank.PREMIUM.yellColor}>Premium</col>"
-
-                            plain("When you buy a D-Pin it $ value will be subtracted from your total spent,<br> each donator rank has a minimum total spent requirement to maintain it.")
-                            plain("For example the $rank rank requires a total spent of ${ApiMemberRank.PREMIUM.requiredDonatedAmount} to maintain it." +
-                                    "<br>So if you have ${ApiMemberRank.PREMIUM.requiredDonatedAmount} dollar total spent, and you buy a 10$ D-Pin," +
-                                    "<br>your total spent will be ${ApiMemberRank.PREMIUM.requiredDonatedAmount-10} dollars, and you will lose your Premium rank.").executeAction {
+                            plain("When you buy a D-Pin its $ value will be subtracted from your total spent.")
+                            plain("Your donator rank never goes down, so you keep your rank.").executeAction {
                                         checkout(player, false)
                             }
                         }

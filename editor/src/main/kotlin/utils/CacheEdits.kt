@@ -237,6 +237,23 @@ object CacheEdits {
         val lengthless = if (exported) withExportCache { Keyframes.lengthless(it) } else emptyMap()
         if (lengthless.values.any { it != null }) backup("animation-lengths")
         if (lengthless.isNotEmpty()) log(withExportCache { Keyframes.fixLengths(it) }.trim())
+        // party chest staff copy + giveaway screens, the Premade Kits tab, blood tokens / cards / donator items, the
+        // vote items, the store and vote screens (server: content/giveaway, kits, currency, store, vote); build 241 only
+        if (exported && cache.CachePaths.is241) {
+            for ((name, patch) in listOf<Pair<String, (com.displee.cache.CacheLibrary) -> String?>>(
+                    "Party/giveaway screens" to { PartyGiveawayPatch.apply(it) },
+                    "Premade Kits tab" to { KitsPatch.apply(it) },
+                    "Blood tokens and donator items" to { CurrencyDonatorPatch.apply(it) },
+                    "Vote pets and Voter's outfit" to { VoteItemsPatch.apply(it) },
+                    "Store screen" to { StorePatch.apply(it) },
+                    "Vote screen, vote ticket and vote mystery box" to { VotePatch.apply(it) })) {
+                try {
+                    withExportCache { patch(it) }?.let(log)
+                } catch (e: Exception) {
+                    log("$name: not added to the cache (${e.message}); the map is sent without it.")
+                }
+            }
+        }
         true
     } catch (e: Exception) {
         log("Stopping: the cache has animation frame sets the game can't play (or keyframe sets it can't find, or skeletal " +

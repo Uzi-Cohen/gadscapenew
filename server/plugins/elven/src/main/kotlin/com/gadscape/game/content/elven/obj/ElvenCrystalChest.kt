@@ -58,7 +58,7 @@ class ElvenCrystalChest : ObjectAction {
         } else {
             player.inventory.deleteItem(itemId, 1)
         }
-        if (player.memberRank.equalToOrGreaterThan(MemberRank.EXPANSION) && Utils.random(getChance(player)) == 0) {
+        if (player.memberRank.equalToOrGreaterThan(MemberRank.SUPER) && Utils.random(getChance(player)) == 0) {
             player.sendMessage(Colour.RS_GREEN.wrap("You find double the loot from the elven crystal chest."))
             rollLoot(itemId, player)
         }
@@ -79,12 +79,11 @@ class ElvenCrystalChest : ObjectAction {
     private fun getChance(player: Player): Int {
         val rank = player.memberRank
         return when {
-            rank.equalToOrGreaterThan(MemberRank.UBER) -> 3
-            rank.equalToOrGreaterThan(MemberRank.MYTHICAL) -> 3
-            rank.equalToOrGreaterThan(MemberRank.LEGENDARY) ->  4
-            rank.equalToOrGreaterThan(MemberRank.RESPECTED) -> 6
+            rank.equalToOrGreaterThan(MemberRank.DIVINE) -> 3
+            rank.equalToOrGreaterThan(MemberRank.ROYAL) ->  4
+            rank.equalToOrGreaterThan(MemberRank.LEGENDARY) -> 6
             rank.equalToOrGreaterThan(MemberRank.EXTREME) ->  6
-            rank.equalToOrGreaterThan(MemberRank.EXPANSION) -> 9
+            rank.equalToOrGreaterThan(MemberRank.SUPER) -> 9
             else -> return 9
         }
     }

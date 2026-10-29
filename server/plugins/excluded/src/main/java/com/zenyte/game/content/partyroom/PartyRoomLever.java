@@ -1,7 +1,5 @@
 package com.zenyte.game.content.partyroom;
 
-import com.zenyte.game.item.Item;
-import com.zenyte.game.item.ItemId;
 import com.zenyte.game.util.Direction;
 import com.zenyte.game.world.World;
 import com.zenyte.game.world.entity.SoundEffect;
@@ -25,7 +23,6 @@ public class PartyRoomLever implements ObjectAction {
     @Override
     public void handleObjectAction(Player player, WorldObject object, String name, int optionId, String option) {
         player.faceDirection(Direction.EAST);
-        pullLever(player, object);
         if (FaladorPartyRoom.getPartyRoom().getVariables().isDisabled()) {
             player.sendMessage("The party room has been disabled.");
             return;
@@ -34,49 +31,21 @@ public class PartyRoomLever implements ObjectAction {
 
             @Override
             public void buildDialogue() {
-                options(TITLE, new DialogueOption("Balloon Bonanza.", key(100)), new DialogueOption("Nightly Dance.", key(200)), new DialogueOption("No action."));
-                plain(100, "Balloon Bonanze costs 1000 coins.");
-                if (player.getInventory().containsItem(ItemId.COINS_995, 1000)) {
-                    options("Continue?", new DialogueOption("Yes.", () -> {
-                        if (!player.getPrivilege().eligibleTo(FaladorPartyRoom.getPartyRoom().getVariables().getMinimumPrivilegeToDropBalloons())) {
-                            setKey(115);
-                            return;
-                        }
-                        if (!player.getInventory().containsItem(ItemId.COINS_995, 1000)) {
-                            player.sendMessage("You need at least 1000 coins to pull the lever for a balloon bonanza.");
-                            return;
-                        }
-                        player.getInventory().deleteItem(new Item(ItemId.COINS_995, 1000));
-                        pullLever(player, object);
-                        final PartyRoomVariables variables = FaladorPartyRoom.getPartyRoom().getVariables();
-                        variables.pull();
-                        final long seconds = TimeUnit.TICKS.toSeconds(variables.getCountdown());
-                        player.sendMessage("You pull the lever. The balloons will begin to drop in " + seconds + " seconds.");
-                    }), new DialogueOption("No."));
-                    plain(115, "You are not eligible to perform Balloon Bonanza right now.");
-                }
-                plain(200, "Nightly Dance costs 500 coins.");
-                if (player.getInventory().containsItem(ItemId.COINS_995, 500)) {
-                    options("Continue?", new DialogueOption("Yes.", () -> {
-                        if (!player.getPrivilege().eligibleTo(FaladorPartyRoom.getPartyRoom().getVariables().getMinimumPrivilegeToDropBalloons())) {
-                            setKey(215);
-                            return;
-                        }
-                        if (FaladorPartyRoom.getPartyRoom().isDancing()) {
-                            setKey(250);
-                            return;
-                        }
-                        if (!player.getInventory().containsItem(ItemId.COINS_995, 500)) {
-                            player.sendMessage("You need at least 500 coins to pull the lever for a Nightly Dance.");
-                            return;
-                        }
-                        player.getInventory().deleteItem(new Item(ItemId.COINS_995, 1000));
-                        pullLever(player, object);
-                        FaladorPartyRoom.getPartyRoom().startKnightsDance();
-                    }), new DialogueOption("No."));
-                    plain(215, "You are not eligible to perform Nightly Dance right now.");
-                    plain(250, "The party room knights are already here!");
-                }
+                options("Drop the chest's items in balloons?", new DialogueOption("Yes.", () -> {
+                    final PartyRoomVariables variables = FaladorPartyRoom.getPartyRoom().getVariables();
+                    if (variables.isDisabled()) {
+                        player.sendMessage("The party room has been disabled.");
+                        return;
+                    }
+                    if (!player.getPrivilege().eligibleTo(variables.getMinimumPrivilegeToDropBalloons())) {
+                        player.sendMessage("You are not eligible to drop the balloons right now.");
+                        return;
+                    }
+                    pullLever(player, object);
+                    variables.pull();
+                    final long seconds = TimeUnit.TICKS.toSeconds(variables.getCountdown());
+                    player.sendMessage("You pull the lever. The balloons will begin to drop in " + seconds + " seconds.");
+                }), new DialogueOption("No."));
             }
         });
     }

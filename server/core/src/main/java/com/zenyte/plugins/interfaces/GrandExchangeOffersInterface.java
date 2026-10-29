@@ -160,7 +160,7 @@ public final class GrandExchangeOffersInterface implements UserInterface {
                         player.sendMessage("This item is untradeable.");
                         return;
                     }
-                    if (item.getId() == 995 || item.getId() == 13224 || !item.getDefinitions().isGrandExchange()) {
+                    if (com.gadscape.game.content.currency.BloodTokens.isCurrency(item.getId()) || item.getId() == 13224 || !item.getDefinitions().isGrandExchange()) {
                         player.sendMessage("This item cannot be sold.");
                         return;
                     }

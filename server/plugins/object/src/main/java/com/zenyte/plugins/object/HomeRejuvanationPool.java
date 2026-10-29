@@ -72,19 +72,17 @@ public class HomeRejuvanationPool implements ObjectAction {
 
     private int getUsageCooldownDurationInSeconds(final Player player) {
         final MemberRank memberRank = player.getMemberRank();
-        if (memberRank.equalToOrGreaterThan(MemberRank.UBER)) {
+        if (memberRank.equalToOrGreaterThan(MemberRank.DIVINE)) {
             return 0;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.MYTHICAL)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.ROYAL)) {
             return 0;
         } else if (memberRank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
-            return 0;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.RESPECTED)) {
             return 30;
         } else if (memberRank.equalToOrGreaterThan(MemberRank.EXTREME)) {
             return 60;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.SUPER)) {
             return 90;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.PREMIUM)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.DONATOR)) {
             return 120;
         }
         return 180;

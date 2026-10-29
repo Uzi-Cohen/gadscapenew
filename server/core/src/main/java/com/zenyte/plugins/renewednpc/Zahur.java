@@ -110,7 +110,7 @@ public class Zahur extends NPCPlugin {
         player.getDialogueManager().finish();
         final Inventory inventory = player.getInventory();
         final long cost = calculateSecondariesCost(player, npc);
-        final boolean free = player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL);
+        final boolean free = player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE);
         if (cost == -1) {
             return;
         }
@@ -267,7 +267,7 @@ public class Zahur extends NPCPlugin {
             herbs.put(herb, item);
         }
         final int price = getPrice(player);
-        int amount = player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL) ? Integer.MAX_VALUE : price == 0 ? vialsOfWater : Math.min(coins / price, vialsOfWater);
+        int amount = player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE) ? Integer.MAX_VALUE : price == 0 ? vialsOfWater : Math.min(coins / price, vialsOfWater);
         for (final Map.Entry<Herb, Item> entry : herbs.entrySet()) {
             if (entry == null) {
                 continue;
@@ -415,17 +415,17 @@ public class Zahur extends NPCPlugin {
     }
 
     private int getPrice(final Player player) {
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE)) {
             return 0;
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
             return 50;
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
             return 75;
         } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXTREME)) {
             return 100;
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
             return 125;
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.DONATOR)) {
             return 150;
         }
         return 200;

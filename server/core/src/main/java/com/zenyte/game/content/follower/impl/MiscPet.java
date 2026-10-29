@@ -1,5 +1,6 @@
 package com.zenyte.game.content.follower.impl;
 
+import com.gadscape.game.item.CustomItemId;
 import com.zenyte.game.content.boons.impl.NoPetDebt;
 import com.zenyte.game.content.event.christmas2019.SnowImpFollowerD;
 import com.zenyte.game.content.follower.Follower;
@@ -112,7 +113,13 @@ public enum MiscPet implements Pet {
     CHAMELEON_7(30155, 15165),
     CHAMELEON_8(30155, 15166),
     CHAMELEON_9(30155, 15167),
-    CHAMELEON_10(30155, 15158);
+    CHAMELEON_10(30155, 15158),
+    // vote-only pets (Vote Shop), follower NPCs 17000-17004 from the editor's VoteItemsPatch; add new pets after these
+    LIL_MITHRIL(CustomItemId.PET_LIL_MITHRIL, 17000),
+    FROSTBITE(CustomItemId.PET_FROSTBITE, 17001),
+    BEASTIE(CustomItemId.PET_BEASTIE, 17002),
+    ABBY(CustomItemId.PET_ABBY, 17003),
+    RUNEY(CustomItemId.PET_RUNEY, 17004);
 
     public static final MiscPet[] VALUES = values();
     private final int itemId;

@@ -13,6 +13,10 @@ public class InstanceConstants {
     public static final int ZAROS_INSTANCE_COST = 300_000;
 
     public static final int getInstanceCost(final Player player, int cost) {
+        // donator perk (Extreme Gad Donators and up): private instances without the fee
+        if (player.getMemberRank().hasFreeInstances()) {
+            return 0;
+        }
         if (player.getCombatAchievements().hasTierCompleted(CATierType.ELITE)) {
             cost -= 25_000;
         }

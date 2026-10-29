@@ -69,11 +69,11 @@ public class Probita extends NPCPlugin implements ItemOnNPCAction {
                             npc("Here's an overview of your insured pet(s).").executeAction(() -> GameInterface.PET_INSURANCE.open(player));
                         }
                         player(15, "I have a pet that I'd like to insure.");
-                        final boolean canInsureForFree = player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION) && player.getPetInsurance().getInsuredPets().size() >= 2;
+                        final boolean canInsureForFree = player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER) && player.getPetInsurance().getInsuredPets().size() >= 2;
                         if (canInsureForFree) {
                             npc("Great! There is no fee for you to insure any more pets, as you have insured at least two of them with me and are a Super Donator or higher. Just hand me the pet so I can register it.");
                             npc("Once you've insured the pet, you can reclaim it here unlimited times for a reclamation " +
-                                    "fee of " + (player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED) ? "nothing." : (StringFormatUtil.format(PetInsurance.RECLAIM_PRICE.getAmount()) + " coins."))).executeAction(() -> {
+                                    "fee of " + (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY) ? "nothing." : (StringFormatUtil.format(PetInsurance.RECLAIM_PRICE.getAmount()) + " coins."))).executeAction(() -> {
                                 if (basePetItemId == -1) {
                                     setKey(70);
                                     return;
@@ -82,7 +82,7 @@ public class Probita extends NPCPlugin implements ItemOnNPCAction {
                             });
                         } else {
                             npc("Great! The insurance fee is " + StringFormatUtil.format(PetInsurance.INSURANCE_PRICE.getAmount()) + " coins. Just hand<br><br>me the pet so I can register it.");
-                            npc("My insurance fee is " + StringFormatUtil.format(PetInsurance.INSURANCE_PRICE.getAmount()) + " coins. Once you've paid that, the pet's insured forever, and you can reclaim it here unlimited times for a reclamation fee of " + (player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED) ? "nothing." : (StringFormatUtil.format(PetInsurance.RECLAIM_PRICE.getAmount()) + " coins."))).executeAction(() -> {
+                            npc("My insurance fee is " + StringFormatUtil.format(PetInsurance.INSURANCE_PRICE.getAmount()) + " coins. Once you've paid that, the pet's insured forever, and you can reclaim it here unlimited times for a reclamation fee of " + (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY) ? "nothing." : (StringFormatUtil.format(PetInsurance.RECLAIM_PRICE.getAmount()) + " coins."))).executeAction(() -> {
                                 if (basePetItemId == -1) {
                                     setKey(70);
                                     return;
@@ -167,7 +167,7 @@ public class Probita extends NPCPlugin implements ItemOnNPCAction {
                     npc("You've already insured that pet.");
                     return;
                 }
-                final boolean canInsureForFree = player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION) && player.getPetInsurance().getInsuredPets().size() >= 2;
+                final boolean canInsureForFree = player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER) && player.getPetInsurance().getInsuredPets().size() >= 2;
                 if (!canInsureForFree && !player.getInventory().containsItem(PetInsurance.INSURANCE_PRICE)) {
                     npc("I'm afraid you don't have enough gold to insure the <col=00080>" + basePetName + "</col> pet.");
                     return;

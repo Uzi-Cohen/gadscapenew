@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.container;
 
+import com.gadscape.game.content.currency.BloodTokens;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.world.entity.player.Player;
 import com.zenyte.game.world.entity.player.container.impl.ContainerType;
@@ -132,6 +133,15 @@ public class Container extends _Container<Item> {
 	 * @return the total amount of this item(by id) in this container.
 	 */
 	public int getAmountOf(final int id) {
+		// coins are gone: content asking for coins is told the blood tokens held, in coins (BloodTokens)
+		if (id == BloodTokens.COINS) {
+			return BloodTokens.asCoins(getRawAmountOf(BloodTokens.TOKEN));
+		}
+		return getRawAmountOf(id);
+	}
+
+	/** The amount of [id] actually held, without the coins-as-tokens answer of {@link #getAmountOf(int)}. */
+	public int getRawAmountOf(final int id) {
 		int amount = 0;
 		for (final Entry<Item> entry : items.int2ObjectEntrySet()) {
 			final Item value = entry.getValue();
@@ -310,6 +320,9 @@ public class Container extends _Container<Item> {
 	 * @return true if the amount of the item in the container is at least equal to the amount in the parameter.
 	 */
 	public boolean contains(final int id, final int amount) {
+		if (id == BloodTokens.COINS) {
+			return contains(BloodTokens.TOKEN, BloodTokens.costInTokens(amount));
+		}
 		long currentAmount = 0;
 		for (final Entry<Item> entry : items.int2ObjectEntrySet()) {
 			final Item value = entry.getValue();
@@ -332,6 +345,9 @@ public class Container extends _Container<Item> {
 	 * @return true if the amount of the item in the container is at least equal to the amount of the item in the parameter.
 	 */
 	public boolean contains(final Item item) {
+		if (item.getId() == BloodTokens.COINS) {
+			return contains(BloodTokens.TOKEN, BloodTokens.costInTokens(item.getAmount()));
+		}
 		long currentAmount = 0;
 		for (final Entry<Item> entry : items.int2ObjectEntrySet()) {
 			final Item value = entry.getValue();
@@ -428,6 +444,11 @@ public class Container extends _Container<Item> {
 	 *         transaction, the payload of the transaction and more.
 	 */
 	public ContainerResult add(final Item requestedItem) {
+		// coins are never held again: they come in as blood tokens (or not at all, BloodTokens.coinPayoutsAsTokens)
+		if (requestedItem != null && requestedItem.getId() == BloodTokens.COINS) {
+			final Item tokens = BloodTokens.asPayout(requestedItem);
+			return tokens == null ? BloodTokens.nothingAdded(requestedItem) : add(tokens);
+		}
 		final Item item = requestedItem == null ? null : new Item(requestedItem.getId(), requestedItem.getAmount(), requestedItem.getAttributesCopy());
 		final ContainerResult result = new ContainerResult(item, ContainerState.ADD);
 		final ItemDefinitions definitions = item == null ? null : item.getDefinitions();
@@ -604,6 +625,10 @@ public class Container extends _Container<Item> {
 	 *         transaction, the payload of the transaction and more.
 	 */
 	public ContainerResult remove(final Item requestedItem) {
+		// a cost in coins is paid in blood tokens (the result is in tokens)
+		if (requestedItem != null && requestedItem.getId() == BloodTokens.COINS) {
+			return remove(BloodTokens.asCost(requestedItem));
+		}
 		final Item item = requestedItem == null ? null : new Item(requestedItem.getId(), requestedItem.getAmount(), requestedItem.getAttributesCopy());
 		final ContainerResult result = new ContainerResult(item, ContainerState.REMOVE);
 		final ItemDefinitions definitions = item == null ? null : item.getDefinitions();

@@ -66,19 +66,17 @@ public class CoalBag extends ItemPlugin implements ItemOnItemAction {
 
     public static int getCoalBagCapacity(Player player){
         switch (player.getMemberRank()) {
-            case PREMIUM:
+            case DONATOR:
                 return 56;
-            case EXPANSION:
+            case SUPER:
                 return 100;
             case EXTREME:
                 return 175;
-            case RESPECTED:
-                return 250;
             case LEGENDARY:
+                return 250;
+            case ROYAL:
                 return 500;
-            case MYTHICAL:
-                return 600;
-            case UBER:
+            case DIVINE:
             case AMASCUT:
                 return 750;
         }

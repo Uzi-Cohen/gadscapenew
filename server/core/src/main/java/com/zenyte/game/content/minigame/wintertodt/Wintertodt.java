@@ -228,11 +228,11 @@ public class Wintertodt {
         final Item crate = new Item(RewardCrate.SUPPLY_CRATE, 1);
         int rolls = (points + pointsPerRoll) / pointsPerRoll; // base rolls is always 2 for 500+ points
         rolls++; // add another extra roll, we're an rsps
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
             // emerald+ members get an extra roll
             rolls++;
         }
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
             // dragonstone+ members get another extra roll
             rolls++;
         }

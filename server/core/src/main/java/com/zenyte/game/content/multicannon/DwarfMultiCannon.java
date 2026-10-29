@@ -416,12 +416,12 @@ public final class DwarfMultiCannon {
 
 	public static int getCannonBallsMax(Player player) {
 		int maxBalls = switch (player.getMemberRank()) {
-			case UBER, AMASCUT -> 100;
-			case LEGENDARY, MYTHICAL -> 90;
-			case RESPECTED -> 70;
+			case DIVINE, AMASCUT -> 100;
+			case ROYAL -> 90;
+			case LEGENDARY -> 70;
 			case EXTREME -> 60;
-			case EXPANSION -> 50;
-			case PREMIUM -> 40;
+			case SUPER -> 50;
+			case DONATOR -> 40;
 			default -> 30;
 		};
 		if (player.getCombatAchievements().hasTierCompleted(CATierType.MEDIUM)) {

@@ -335,6 +335,8 @@ public final class Skills extends SkillConstants implements TempPlayerStatePlugi
 			exp *= 1.1F;
 
 		exp *= player.getExperienceRate(skill);
+		// vote streak: +1% skilling XP per day in a row with a claimed vote (not combat skills or Slayer)
+		exp *= com.gadscape.game.content.vote.VotePerks.skillingXpMultiplier(player, skill);
 		if (GameConstants.BOOSTED_XP) {
 			exp *= (1.0F + GameConstants.BOOSTED_XP_MODIFIER / 100.0);
 		}

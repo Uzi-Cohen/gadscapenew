@@ -56,19 +56,17 @@ public class HomeBoxOfRestorationObject implements ObjectAction {
 
     private int getDelay(final Player player) {
         final MemberRank memberRank = player.getMemberRank();
-        if (memberRank.equalToOrGreaterThan(MemberRank.UBER)) {
+        if (memberRank.equalToOrGreaterThan(MemberRank.DIVINE)) {
             return 0;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.MYTHICAL)) {
-            return 1;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.ROYAL)) {
             return 2;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.RESPECTED)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
             return 4;
         } else if (memberRank.equalToOrGreaterThan(MemberRank.EXTREME)) {
             return 5;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.SUPER)) {
             return 6;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.PREMIUM)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.DONATOR)) {
             return 7;
         }
         return 10;

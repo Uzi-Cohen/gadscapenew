@@ -590,13 +590,12 @@ public abstract class RaidArea extends DynamicArea implements RoomController, Dr
 
     private static float getDeathPointsDecrease(Player player) {
         return switch (player.getMemberRank()) {
-            case PREMIUM -> 0.35F;
-            case EXPANSION -> 0.33F;
+            case DONATOR -> 0.35F;
+            case SUPER -> 0.33F;
             case EXTREME -> 0.3F;
-            case RESPECTED -> 0.28F;
-            case LEGENDARY -> 0.25F;
-            case MYTHICAL -> 0.23F;
-            case UBER, AMASCUT -> 0.2F;
+            case LEGENDARY -> 0.28F;
+            case ROYAL -> 0.25F;
+            case DIVINE, AMASCUT -> 0.2F;
             default -> 0.4F;
         };
     }

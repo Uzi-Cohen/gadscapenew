@@ -275,7 +275,7 @@ public enum SpellbookTeleport implements TeleportSpell, Teleport {
 		        ARCEUUS_HOME_TELEPORT.teleport(player);
 		        return;
             } else {
-				if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+				if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
 					HOME_TELEPORT_INSTANT.teleport(player);
 					return;
 				}

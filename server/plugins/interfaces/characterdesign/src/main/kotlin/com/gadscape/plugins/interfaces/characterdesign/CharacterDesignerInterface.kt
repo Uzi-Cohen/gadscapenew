@@ -132,11 +132,11 @@ enum class CharacterCreatorColour(val id: Int, val count: Int) {
 }
 
 private enum class SkinColour(val index: Int, val rank: MemberRank) {
-    BLACK(9, MemberRank.EXPANSION),
-    WHITE(10, MemberRank.EXPANSION),
+    BLACK(9, MemberRank.SUPER),
+    WHITE(10, MemberRank.SUPER),
     GREEN(8, MemberRank.EXTREME),
-    TURQOISE(11, MemberRank.RESPECTED),
-    PURPLE(12, MemberRank.LEGENDARY);
+    TURQOISE(11, MemberRank.LEGENDARY),
+    PURPLE(12, MemberRank.ROYAL);
 
     companion object {
         private val all: Array<SkinColour> = values()

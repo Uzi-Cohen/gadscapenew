@@ -31,12 +31,12 @@ public class LarransKeyDropProcessor extends DropProcessor {
     public static final Map<MemberRank, Float> RANK_DROP_BOOST = new HashMap<>();
 
     static {
-        RANK_DROP_BOOST.put(MemberRank.PREMIUM, 10F);
-        RANK_DROP_BOOST.put(MemberRank.EXPANSION, 15F);
+        RANK_DROP_BOOST.put(MemberRank.DONATOR, 10F);
+        RANK_DROP_BOOST.put(MemberRank.SUPER, 15F);
         RANK_DROP_BOOST.put(MemberRank.EXTREME, 20F);
-        RANK_DROP_BOOST.put(MemberRank.RESPECTED, 25F);
-        RANK_DROP_BOOST.put(MemberRank.LEGENDARY, 30F);
-        RANK_DROP_BOOST.put(MemberRank.MYTHICAL, 40F);
+        RANK_DROP_BOOST.put(MemberRank.LEGENDARY, 25F);
+        RANK_DROP_BOOST.put(MemberRank.ROYAL, 30F);
+        RANK_DROP_BOOST.put(MemberRank.DIVINE, 40F);
     }
 
     @Override

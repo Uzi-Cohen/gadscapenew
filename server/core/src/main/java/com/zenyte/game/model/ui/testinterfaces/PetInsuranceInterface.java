@@ -115,7 +115,7 @@ public class PetInsuranceInterface extends Interface {
                     }
                 }
             }
-            if (!player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED)) {
+            if (!player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
                 if (!player.getInventory().containsItem(PetInsurance.RECLAIM_PRICE)) {
                     player.getDialogueManager().start(new NPCChat(player, 5906, "I'm afraid you don't have enough gold to reclaim the <col=00080>" + Objects.requireNonNull(NPCDefinitions.get(pet.petId())).getName() + "</col> pet."));
                     return;
@@ -124,12 +124,12 @@ public class PetInsuranceInterface extends Interface {
             player.getDialogueManager().start(new Dialogue(player) {
                 @Override
                 public void buildDialogue() {
-                    options("Would you like to reclaim the <col=00080>" + NPCDefinitions.getOrThrow(pet.petId()).getName() + "</col> pet for " + (player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED) ? "free?" : (StringFormatUtil.format(PetInsurance.RECLAIM_PRICE.getAmount()) + " coins?")), "Yes.", "Nevermind.").onOptionOne(() -> {
+                    options("Would you like to reclaim the <col=00080>" + NPCDefinitions.getOrThrow(pet.petId()).getName() + "</col> pet for " + (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY) ? "free?" : (StringFormatUtil.format(PetInsurance.RECLAIM_PRICE.getAmount()) + " coins?")), "Yes.", "Nevermind.").onOptionOne(() -> {
                         if (!player.getInventory().checkSpace()) {
                             setKey(5);
                         } else {
                             setKey(10);
-                            if (!player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED)) {
+                            if (!player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
                                 player.getInventory().deleteItem(PetInsurance.RECLAIM_PRICE);
                             }
                             player.getInventory().addItem(pet.itemId(), 1);

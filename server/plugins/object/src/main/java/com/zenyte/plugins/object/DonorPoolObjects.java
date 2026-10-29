@@ -24,8 +24,8 @@ public class DonorPoolObjects implements ObjectAction {
         }
 
         if(object.getId() == Gad211.loc(50099) && option.equalsIgnoreCase("Drink")) {
-            if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER)) {
-                player.sendMessage("Only Platinum Donators can use this.");
+            if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE)) {
+                player.sendMessage("Only " + MemberRank.DIVINE + "s can use this.");
                 return;
             }
             if(player.getVariables().getTime(TickVariable.OVERLOAD) > 0) {
@@ -40,8 +40,8 @@ public class DonorPoolObjects implements ObjectAction {
         }
 
         if(object.getId() == Gad211.loc(50100) && option.equalsIgnoreCase("Drink")) {
-            if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
-                player.sendMessage("Only Respected Donators or higher can use this.");
+            if(!player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
+                player.sendMessage("Only " + MemberRank.ROYAL + "s or higher can use this.");
                 return;
             }
 

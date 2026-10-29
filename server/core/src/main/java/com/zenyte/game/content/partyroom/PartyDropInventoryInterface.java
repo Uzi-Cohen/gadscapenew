@@ -52,8 +52,8 @@ public class PartyDropInventoryInterface extends Interface implements SwitchPlug
                     if (inventory.getItem(slotId) != item) {
                         return;
                     }
-                    if (!item.isTradable()) {
-                        player.sendMessage("You can't trade that.");
+                    if (!PartyDropChestInterface.isDepositable(item)) {
+                        player.sendMessage("You can't put that in the party chest.");
                         return;
                     }
                     container.deposit(player, inventoryContainer, slotId, value);
@@ -62,8 +62,8 @@ public class PartyDropInventoryInterface extends Interface implements SwitchPlug
                 });
                 return;
             }
-            if (!item.isTradable()) {
-                player.sendMessage("You can't trade that.");
+            if (!PartyDropChestInterface.isDepositable(item)) {
+                player.sendMessage("You can't put that in the party chest.");
                 return;
             }
             final int amount = optionType.getAmount();

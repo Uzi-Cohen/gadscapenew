@@ -96,17 +96,17 @@ public class Birdhouse {
             return 50;
         }
         final MemberRank memberRank = player.getMemberRank();
-        if (memberRank.equalToOrGreaterThan(MemberRank.MYTHICAL)) {
+        if (memberRank.equalToOrGreaterThan(MemberRank.DIVINE)) {
             return 20;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.ROYAL)) {
             return 25;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.RESPECTED)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
             return 30;
         } else if (memberRank.equalToOrGreaterThan(MemberRank.EXTREME)) {
             return 35;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.SUPER)) {
             return 40;
-        } else if (memberRank.equalToOrGreaterThan(MemberRank.PREMIUM)) {
+        } else if (memberRank.equalToOrGreaterThan(MemberRank.DONATOR)) {
             return 45;
         }
         return 50;

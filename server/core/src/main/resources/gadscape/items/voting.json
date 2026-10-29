@@ -1,0 +1,6 @@
+[
+  {"_source": "voting: the vote ticket (CustomItemId.VOTE_TICKET) replaces the vote shard (login turns shards into tickets); use it on a player for vote points. Made by the editor's VotePatch",
+   "id": 50020, "name": "Vote ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A ticket earned by voting. Use it on a player to give them a vote point."},
+  {"_source": "voting: the vote mystery box (CustomItemId.VOTE_MYSTERY_BOX), every 3rd claimed vote; Open (VoteMysteryBox). Made by the editor's VotePatch",
+   "id": 50021, "name": "Vote mystery box", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A reward for loyal voters. Who knows what's inside?"}
+]

@@ -52,7 +52,7 @@ public class Smelting extends Action {
 			materials[i] = new Item(data.getMaterials()[i].getId(), data.getMaterials()[i].getAmount());
 		}
 		final int coalInCoalBag = getAmountOfCoalInCoalBag(player);
-		final boolean hasCoalPerk = player.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM);
+		final boolean hasCoalPerk = player.getMemberRank().equalToOrGreaterThan(MemberRank.DONATOR);
 		int notedCoalAmt = player.getInventory().getAmountOf(COAL.getDefinitions().getNotedId());
 		boolean useNoted = hasCoalPerk && notedCoalAmt > 0;
 
@@ -160,7 +160,7 @@ public class Smelting extends Action {
 			final Skills skills = player.getSkills();
 			Item[] items = new Item[data.getMaterials().length];
 			int coalToRemove = 0;
-			final boolean hasCoalPerk = player.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM);
+			final boolean hasCoalPerk = player.getMemberRank().equalToOrGreaterThan(MemberRank.DONATOR);
 			int notedCoalAmt = player.getInventory().getAmountOf(COAL.getDefinitions().getNotedId());
 			int coalAmt = inventory.getAmountOf(COAL.getId());
 			boolean useNoted = hasCoalPerk && notedCoalAmt > 0;

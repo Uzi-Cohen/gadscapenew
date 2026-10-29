@@ -1,6 +1,7 @@
 package com.zenyte.game.content.killstreak;
 
-import com.gadscape.game.model.item.ItemValueExtKt;
+import com.gadscape.game.content.currency.BloodTokens;
+import com.gadscape.game.content.kits.KitItems;
 import com.zenyte.game.content.skills.prayer.Prayer;
 import com.zenyte.game.item.Item;
 import com.zenyte.game.item.ItemId;
@@ -25,8 +26,8 @@ import java.util.List;
 public final class PvpKillValidator {
     private static final Logger log = LoggerFactory.getLogger(PvpKillValidator.class);
 
-    /** Minimum value (coins) the victim must lose on death for the kill to count. */
-    public static final long MIN_VICTIM_RISK = 100_000L;
+    /** Minimum value (blood tokens, was 100,000 coins) the victim must lose on death for the kill to count. */
+    public static final long MIN_VICTIM_RISK = 100L;
     /** Minimum time played by the victim, in game ticks (6000 ticks = 1 hour). */
     public static final int MIN_VICTIM_PLAYTIME_TICKS = 6_000;
 
@@ -127,9 +128,10 @@ public final class PvpKillValidator {
     }
 
     /**
-     * Approximate value the player loses on a PvP death right now: everything carried (inventory, equipment, looting
-     * bag) minus the 3 most valuable items when unskulled, +1 with Protect Item (OSRS kept-items rule). Item values
-     * are the server's GE/sell prices (ItemDefinitions.getSellPrice).
+     * Approximate value the player loses on a PvP death right now, in blood tokens: everything carried (inventory,
+     * equipment, looting bag) minus the 3 most valuable items when unskulled, +1 with Protect Item (OSRS kept-items
+     * rule). Item values are the server's GE/sell prices divided by 1,000 (BloodTokens.tokenValue); premade-kit
+     * items vanish on death, so they risk nothing.
      */
     public static long riskOf(final Player player) {
         final List<Long> unitValues = new ArrayList<>();
@@ -140,12 +142,7 @@ public final class PvpKillValidator {
         for (final Item item : player.getEquipment().getContainer().getItems().values()) {
             total += add(unitValues, item);
         }
-        if (player.getInventory().containsAnyOf(ItemId.LOOTING_BAG, ItemId.LOOTING_BAG_22586)) {
-            for (final Item item : player.getLootingBag().getContainer().getItems().values()) {
-                if (item == null) continue;
-                total += (long) ItemValueExtKt.getItemValue(item.getId()) * item.getAmount();
-            }
-        }
+        total += lootingBagValue(player);
         int kept = player.getVariables().isSkulled() ? 0 : 3;
         if (player.getPrayerManager().isActive(Prayer.PROTECT_ITEM)) {
             kept++;
@@ -157,10 +154,41 @@ public final class PvpKillValidator {
         return Math.max(0L, total);
     }
 
+    /**
+     * Everything the player carries (inventory, equipment, looting bag), in blood tokens, kept items not taken off
+     * and premade-kit items left out. The PK reward scales with it (Killstreaks).
+     */
+    public static long carriedTokens(final Player player) {
+        long total = 0L;
+        for (final Item item : player.getInventory().getContainer().getItems().values()) {
+            total += value(item);
+        }
+        for (final Item item : player.getEquipment().getContainer().getItems().values()) {
+            total += value(item);
+        }
+        return total + lootingBagValue(player);
+    }
+
+    private static long lootingBagValue(final Player player) {
+        long total = 0L;
+        if (player.getInventory().containsAnyOf(ItemId.LOOTING_BAG, ItemId.LOOTING_BAG_22586)) {
+            for (final Item item : player.getLootingBag().getContainer().getItems().values()) {
+                total += value(item);
+            }
+        }
+        return total;
+    }
+
+    /** [item]'s stack value in blood tokens; 0 for premade-kit items. */
+    private static long value(final Item item) {
+        if (item == null || KitItems.isKitItem(item)) return 0L;
+        return BloodTokens.tokenValue(item);
+    }
+
     /** Adds one entry per unit (capped, stacks are never all kept) and returns the stack value. */
     private static long add(final List<Long> unitValues, final Item item) {
-        if (item == null) return 0L;
-        final long unit = ItemValueExtKt.getItemValue(item.getId());
+        if (item == null || KitItems.isKitItem(item)) return 0L;
+        final long unit = BloodTokens.tokenValue(item.getId());
         final int units = Math.min(item.getAmount(), 4);
         for (int i = 0; i < units; i++) {
             unitValues.add(unit);

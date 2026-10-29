@@ -42,18 +42,18 @@ public class GiantMoleInstance extends DynamicArea implements EntityAttackPlugin
     @Override
     public void leave(Player player, boolean logout) {
         if (logout) {
-            player.forceLocation(player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER) ? OUTSIDE_TILE_UBER : OUTSIDE_TILE);
+            player.forceLocation(player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE) ? OUTSIDE_TILE_UBER : OUTSIDE_TILE);
         }
     }
 
     @Override
     public void onLogout(final @NotNull Player player) {
-        player.setLocation(player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER) ? OUTSIDE_TILE_UBER : OUTSIDE_TILE);
+        player.setLocation(player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE) ? OUTSIDE_TILE_UBER : OUTSIDE_TILE);
     }
 
     @Override
     public Location onLoginLocation() {
-        return player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER) ? OUTSIDE_TILE_UBER : OUTSIDE_TILE;
+        return player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE) ? OUTSIDE_TILE_UBER : OUTSIDE_TILE;
     }
 
     @Override

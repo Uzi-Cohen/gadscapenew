@@ -34,7 +34,9 @@ public class KrakenBossEntrance implements ObjectAction {
                 player.setLocation(KrakenInstance.INSIDE_TILE);
             } else if (optionId == 2) {
                 final Item price = new Item(995, 25000);
-                if (!player.getBank().containsItem(price) && !player.getInventory().containsItem(price)) {
+                // free for Extreme Gad Donators and up
+                final boolean free = player.getMemberRank().hasFreeInstances();
+                if (!free && !player.getBank().containsItem(price) && !player.getInventory().containsItem(price)) {
                     player.getDialogueManager().start(new PlainChat(player, "You don\'t have enough gold in both your inventory and bank to start this instance."));
                     return;
                 }
@@ -42,11 +44,14 @@ public class KrakenBossEntrance implements ObjectAction {
 
                     @Override
                     public void buildDialogue() {
-                        options("Enter a private Kraken boss cave?", "Pay " + StringFormatUtil.format(price.getAmount()) + " coins.", "Cancel.").onOptionOne(() -> {
+                        options("Enter a private Kraken boss cave?", free ? "Enter (free for your donator rank)." : "Pay " + StringFormatUtil.format(price.getAmount()) + " coins.", "Cancel.").onOptionOne(() -> {
                             try {
                                 final AllocatedArea area = MapBuilder.findEmptyChunk(8, 8);
                                 final KrakenInstance instance = new KrakenInstance(player, false, area, 282, 1250);
                                 instance.constructRegion();
+                                if (free) {
+                                    return;
+                                }
                                 if (player.getInventory().containsItem(price)) {
                                     player.getInventory().deleteItem(price);
                                 } else if (player.getBank().containsItem(price)) {

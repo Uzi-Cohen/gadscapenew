@@ -16,7 +16,7 @@ import com.zenyte.plugins.dialogue.skills.BarbarianSmithingD;
 import com.zenyte.plugins.dialogue.skills.BluriteSmithingD;
 import com.zenyte.plugins.interfaces.SmithingInterface;
 
-import static com.zenyte.game.world.entity.player.privilege.MemberRank.PREMIUM;
+import static com.zenyte.game.world.entity.player.privilege.MemberRank.DONATOR;
 
 public class AnvilObject implements ObjectAction {
 
@@ -48,7 +48,7 @@ public class AnvilObject implements ObjectAction {
 
         boolean skipLevelCheck = false;
 
-        if (player.getMemberRank().equalToOrGreaterThan(PREMIUM) && object.getLocation().equals(3358, 8156, 2)) {
+        if (player.getMemberRank().equalToOrGreaterThan(DONATOR) && object.getLocation().equals(3358, 8156, 2)) {
             skipLevelCheck = true;
         }
 

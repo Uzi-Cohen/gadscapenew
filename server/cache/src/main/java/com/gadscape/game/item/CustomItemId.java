@@ -206,6 +206,39 @@ public class CustomItemId
 	public static final int FOUNDERS_CAPE = 33246;
 	public static final int SMOLDERING_DEMON = 33250;
 
+	// Blood tokens (item 13307, the old Blood money) are the only currency; the editor's CurrencyDonatorPatch writes
+	// these items (ids 50000-50099) into the cache.
+	/** Stackable, tradeable: 1,000 blood tokens. */
+	public static final int BLOOD_CARD = 50000;
+	public static final int GAD_DONATOR_TICKET = 50001;
+	public static final int SUPER_GAD_DONATOR_TICKET = 50002;
+	public static final int EXTREME_GAD_DONATOR_TICKET = 50003;
+	public static final int LEGENDARY_GAD_DONATOR_TICKET = 50004;
+	public static final int ROYAL_GAD_DONATOR_TICKET = 50005;
+	public static final int DIVINE_GAD_DONATOR_TICKET = 50006;
+	/** $1, stackable. */
+	public static final int DONATOR_PIN_1 = 50007;
+	public static final int DONATOR_BOND_10 = 50008;
+	public static final int DONATOR_BOND_20 = 50009;
+	public static final int DONATOR_BOND_50 = 50010;
+	public static final int DONATOR_BOND_100 = 50011;
+	public static final int DONATOR_BOND_250 = 50012;
+	public static final int DONATOR_BOND_1000 = 50013;
+
+	// voting: the vote ticket (replaces the vote shard) and the vote mystery box
+	public static final int VOTE_TICKET = 50020;
+	public static final int VOTE_MYSTERY_BOX = 50021;
+	// vote-only pets (items; their follower NPCs are 17000-17004 in the same order)
+	public static final int PET_LIL_MITHRIL = 50040;
+	public static final int PET_FROSTBITE = 50041;
+	public static final int PET_BEASTIE = 50042;
+	public static final int PET_ABBY = 50043;
+	public static final int PET_RUNEY = 50044;
+	// vote-only cosmetics
+	public static final int VOTERS_CROWN = 50045;
+	public static final int VOTERS_SCEPTRE = 50046;
+	public static final int VOTERS_CAPE = 50047;
+
 	public static final int BLACK_GREEN_ANKOU_SET = Gad211.obj(2749);
 	public static final int BLACK_PURPLE_ANKOU_SET = Gad211.obj(2750);
 	public static final int BLACK_WHITE_ANKOU_SET = Gad211.obj(2751);

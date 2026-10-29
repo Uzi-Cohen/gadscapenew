@@ -14,13 +14,12 @@ import java.util.List;
  * @since September 13 2020
  */
 public enum TearsOfGuthixMemberPerk {
-    PREMIUM(MemberRank.PREMIUM, 10),
-    EXPANSION(MemberRank.EXPANSION, 20),
+    DONATOR(MemberRank.DONATOR, 10),
+    SUPER(MemberRank.SUPER, 20),
     EXTREME(MemberRank.EXTREME, 25),
-    RESPECTED(MemberRank.RESPECTED, 30),
-    LEGENDARY(MemberRank.LEGENDARY, 45),
-    MYTHICAL(MemberRank.MYTHICAL, 55),
-    UBER(MemberRank.UBER, 70);
+    LEGENDARY(MemberRank.LEGENDARY, 30),
+    ROYAL(MemberRank.ROYAL, 45),
+    DIVINE(MemberRank.DIVINE, 70);
     private static final List<TearsOfGuthixMemberPerk> PERKS = ObjectLists.unmodifiable(new ObjectArrayList<>(values()));
     /**
      * The member rank a player must have to receive the bonus time.

@@ -51,7 +51,7 @@ public class VoteHandler {
             mod += 2.0;
         if(player.getBoonManager().hasBoon(IVoted.class))
             mod += 2.0;
-        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER))
+        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE))
             mod += 2.0;
         return Math.max(1, Math.min(mod, 4.0));
     }

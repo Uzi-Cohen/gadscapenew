@@ -7,9 +7,15 @@ enum class ShopCurrency(
     override val isPhysical: Boolean = true
 ) : CurrencyPalette {
     BLOOD_MONEY(13307) {
-        override fun toString(): String = "Blood Money"
+        override fun toString(): String = "blood tokens"
     },
-    COINS(995),
+    /**
+     * Coins are gone: a coin shop is paid in blood tokens (13307), its prices divided by 1,000 (at least 1), see
+     * Shop.getBuyPrice / getSellPrice and com.gadscape.game.content.currency.BloodTokens.
+     */
+    COINS(13307) {
+        override fun toString(): String = "blood tokens"
+    },
     TOKKUL(6529),
     GOLD_NUGGETS(12012) {
         override fun toString(): String = "golden nuggets"

@@ -1,5 +1,6 @@
 package com.zenyte.game.model.item;
 
+import com.gadscape.game.content.kits.KitItems;
 import com.gadscape.game.model.item.degrading.Degradeable;
 import com.gadscape.game.world.entity.player.FakePlayer;
 import com.gadscape.tools.logging.GameLogMessage;
@@ -195,6 +196,13 @@ public enum ItemActionHandler {
             player.getInventory().deleteItem(slotId, item);
             player.setFollower(new Follower(pet.petId(), player));
             player.setAnimation(PetWrapper.DROP_ANIMATION);
+            return;
+        }
+        if (KitItems.isKitItem(item)) {
+            // kit gear is free: it never reaches the floor, so nobody else can pick it up
+            player.getInventory().deleteItem(slotId, item);
+            player.getPacketDispatcher().sendSoundEffect(OTHER_SOUND);
+            player.sendMessage("The kit item vanishes as it leaves your hands.");
             return;
         }
         final Degradeable degradableItem = DegradableItem.ITEMS.get(item.getId());

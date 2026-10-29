@@ -3,21 +3,23 @@ package com.gadscape.api.service.user
 import com.gadscape.api.model.User
 import com.gadscape.api.util.toMemberRank
 import com.gadscape.api.util.toPrivilege
+import com.gadscape.game.content.donator.DonatorRanks
 import com.zenyte.game.util.Colour
 import com.zenyte.game.world.entity.player.Player
-import com.zenyte.game.world.entity.player.privilege.MemberRank
 
 
 fun Player.onSetUser(value: User?) {
     playerInformation.userIdentifier = value?.id?.toInt()?:-1
-    val previousRank = memberRank
-    memberRank = value?.memberRank?.toMemberRank() ?: MemberRank.NONE
+    // the saved rank: a YouTuber's Divine perks (Player.getMemberRank) must not be written into it
+    val previousRank = storedMemberRank
+    // ranks never go down: the store API's rank only ever raises the saved one
+    value?.memberRank?.toMemberRank()?.let { memberRank = DonatorRanks.upgraded(previousRank, it) }
     val previousPrivilege = privilege
     privilege = value?.privilege?.toPrivilege() ?: previousPrivilege
     if (isLoggedIn) {
         sendDeveloperMessage(if (value == null) "User set to null, oh no?" else "User updated")
         try {
-            if (previousRank != memberRank && attributes.remove("HOME_TELEPORT") != null)
+            if (previousRank != storedMemberRank && attributes.remove("HOME_TELEPORT") != null)
                 sendMessage(Colour.RED.wrap("Your saved home teleport was removed because of the rank change! Talk to Squire to set it again."))
             updateDonationInfoOnPlayerDetailsTab()
         } catch(ignored: Exception) {

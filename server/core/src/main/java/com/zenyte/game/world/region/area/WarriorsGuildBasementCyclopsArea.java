@@ -57,6 +57,6 @@ public final class WarriorsGuildBasementCyclopsArea extends PolygonRegionArea im
 	}
 
 	public static boolean shouldKeepToken(@NotNull final Player player) {
-		return SkillcapePerk.ATTACK.isEffective(player) || (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION) && Utils.random(9) == 0);
+		return SkillcapePerk.ATTACK.isEffective(player) || (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER) && Utils.random(9) == 0);
 	}
 }

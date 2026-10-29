@@ -16,7 +16,7 @@ public final class GiantMoleUberEntrance implements ObjectAction {
 
     @Override
     public void handleObjectAction(Player player, WorldObject object, String name, int optionId, String option) {
-        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER))
+        if(player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE))
             createInstance(player);
         else
             player.sendMessage("You change your mind after hearing the screams from inside.");

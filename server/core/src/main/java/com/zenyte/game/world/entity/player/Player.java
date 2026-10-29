@@ -1804,7 +1804,9 @@ public class Player extends AbstractEntity implements UsernameProvider {
         double pin = getBooleanAttribute("drop_rate_pin_claimed") ? 0.05D : 0.0D;
         double pet = getBoonManager().hasBoon(AnimalTamer.class) && getPetId() != -1 ? 0.02D : 0.0D;
         double compCape = getCompletionistCapeDRBoost();
-        return ((gameMode + donor + pin + pet + compCape) * 100.0D);
+        // +20% for 20 minutes per claimed vote
+        double vote = com.gadscape.game.content.vote.VotePerks.dropRateBonus(this);
+        return ((gameMode + donor + pin + pet + compCape + vote) * 100.0D);
     }
 
     @NotNull
@@ -3111,7 +3113,8 @@ public class Player extends AbstractEntity implements UsernameProvider {
                 if (ticks == 1) {
                     performDeathAnimation();
                 } else if (ticks == 4) {
-
+                    // kit gear vanishes on death for everyone, staff who keep their items included
+                    com.gadscape.game.content.kits.KitItems.onDeath(Player.this);
                     if (privilege.inherits(PlayerPrivilege.ADMINISTRATOR) && !DeveloperCommands.INSTANCE.getAdminsLoseItemsOnDeath())
                         sendMessage(Colour.RED.wrap("You do not lose items upon death as you're a " + privilege.getPrettyName()));
                     else if(privilege.is(PlayerPrivilege.FORUM_MODERATOR))
@@ -4208,6 +4211,10 @@ public class Player extends AbstractEntity implements UsernameProvider {
     }
 
     public Crown getMemberCrown() {
+        // YouTubers show their YouTuber crown, not the Divine (or bought) donator crown
+        if (privilege == PlayerPrivilege.YOUTUBER) {
+            return Crown.NONE;
+        }
         return getMemberRank().crown();
     }
 
@@ -4734,6 +4741,15 @@ public class Player extends AbstractEntity implements UsernameProvider {
         if (getBooleanAttribute("amascut_donator")) {
             return MemberRank.AMASCUT;
         }
+        // YouTubers get every Divine perk; the saved rank stays what they bought (getStoredMemberRank)
+        if (privilege == PlayerPrivilege.YOUTUBER && memberRank.ordinal() < MemberRank.DIVINE.ordinal()) {
+            return MemberRank.DIVINE;
+        }
+        return memberRank;
+    }
+
+    /** The donator rank as saved (bought), without the YouTuber's Divine perks. */
+    public MemberRank getStoredMemberRank() {
         return memberRank;
     }
 

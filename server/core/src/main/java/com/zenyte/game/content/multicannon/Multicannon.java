@@ -230,7 +230,7 @@ public final class Multicannon extends WorldObject {
             t.autoRetaliate(player);
         }, PROJECTILE.getTime(center, t));
         if(cannon.getCannonballs() == 1) {
-            if(player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED) && cannon.getCannon().getLocation().withinDistance(player.getLocation(), 20))
+            if(player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY) && cannon.getCannon().getLocation().withinDistance(player.getLocation(), 20))
                 player.getDwarfMulticannon().loadCannon();
         }
         return true;

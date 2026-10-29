@@ -272,6 +272,16 @@ public enum GameInterface {
     CREDIT_STORE(5101),
     CREDIT_PACKAGES(5102),
     BLACKJACK(5103),
+    // staff drop party chest and YouTuber giveaway (cache patch: editor utils.PartyGiveawayPatch, ids in PartyGiveawayUi)
+    DROP_PARTY_CHEST(5240),
+    GIVEAWAY(5241),
+    GIVEAWAY_CONFIRM(5242),
+    // premade kits side tab, in the music tab's slot (cache patch: editor utils.KitsPatch, ids in KitsUi)
+    PREMADE_KITS_TAB(5250, InterfacePosition.MUSIC_TAB),
+    // vote screen, ::vote (cache patch: editor utils.VotePatch, ids in VoteUi)
+    VOTE_SCREEN(5260),
+    // in-game store, ::donate (cache patch: editor utils.StorePatch, ids in StoreUi)
+    STORE(5265),
 
     TOURNAMENT_SUPPLIES(100),
     PVM_ARENA_HUD(208, MINIGAME_OVERLAY),

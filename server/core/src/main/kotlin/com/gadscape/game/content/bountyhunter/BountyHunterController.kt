@@ -133,7 +133,7 @@ object BountyHunterController {
     @JvmStatic fun updateTargetAttributes(p: Player, target: Player?, overrideCooldown: Boolean) {
         if(target == null) {
             if(!overrideCooldown)
-                p.setBountyCooldown(30)
+                p.setBountyCooldown(p.memberRank.bountyTargetCooldownSeconds) // 30s, less for donators
         }
         p.updateTargetData()
     }
@@ -537,7 +537,7 @@ object BountyHunterController {
         }
 
         p.bountyHunterSkipCount++
-        p.sendMessage(Colour.BLUE.wrap("You have skipped your current bounty hunter target. (${p.bountyHunterSkipCount} of 3 allowed over 30m)"))
+        p.sendMessage(Colour.BLUE.wrap("You have skipped your current bounty hunter target. (${p.bountyHunterSkipCount} of ${p.memberRank.bountyTargetSkips} allowed over 30m)"))
         unassignTarget(p, false)
     }
 

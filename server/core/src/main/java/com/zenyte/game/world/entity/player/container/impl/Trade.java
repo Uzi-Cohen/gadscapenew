@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.container.impl;
 
+import com.gadscape.game.content.kits.KitItems;
 import com.gadscape.game.world.entity.player.container.impl.TradeExtKt;
 import com.gadscape.tools.logging.GameLogMessage;
 import com.gadscape.tools.logging.GameLogger;
@@ -118,6 +119,10 @@ public class Trade {
             item = new Item(item.getId(), player.getInventory().getAmountOf(item.getId()), item.getAttributes());
         }
 
+        if (KitItems.isKitItem(item)) {
+            player.sendMessage("Kit gear can't be traded.");
+            return;
+        }
         if (!player.getPrivilege().eligibleTo(PlayerPrivilege.ADMINISTRATOR) && !this.partner.getPrivilege().eligibleTo(PlayerPrivilege.ADMINISTRATOR) && !item.isTradable()) {
             player.sendMessage("You can't trade that.");
             return;

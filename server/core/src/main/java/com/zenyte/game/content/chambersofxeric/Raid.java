@@ -393,19 +393,17 @@ public final class Raid {
 
     private static final float getRaidsBoost(Player player) {
         switch (player.getMemberRank()) {
-            case PREMIUM:
+            case DONATOR:
                 return 1.47F;
-            case EXPANSION:
+            case SUPER:
                 return 1.5F;
             case EXTREME:
                 return 1.53F;
-            case RESPECTED:
-                return 1.56F;
             case LEGENDARY:
+                return 1.56F;
+            case ROYAL:
                 return 1.6F;
-            case MYTHICAL:
-                return 1.65F;
-            case UBER:
+            case DIVINE:
             case AMASCUT:
                 return 1.7F;
         }

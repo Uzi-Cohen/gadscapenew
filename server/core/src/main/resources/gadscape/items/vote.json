@@ -1,0 +1,15 @@
+[
+  {"_source": "vote: vote-only pets (Vote Shop), made by the editor's VoteItemsPatch; follower NPCs 17000-17004 (MiscPet)",
+   "id": 50040, "name": "Lil' Mithril", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A tiny mithril dragon. Only voters have one."},
+  {"id": 50041, "name": "Frostbite", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A tiny frost dragon. Only voters have one."},
+  {"id": 50042, "name": "Beastie", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A tiny dark beast. Only voters have one."},
+  {"id": 50043, "name": "Abby", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A tiny abyssal demon. Only voters have one."},
+  {"id": 50044, "name": "Runey", "tradable": true, "weight": 0.0, "slot": -1, "examine": "A tiny rune dragon. Only voters have one."},
+  {"_source": "vote: the Voter's outfit, cosmetic only (no stats), made by the editor's VoteItemsPatch from Royal crown / Royal sceptre / Attack cape(t)",
+   "id": 50045, "name": "Voter's crown", "tradable": true, "weight": 0.0, "slot": 0, "equipmentType": "DEFAULT", "exact": true,
+   "equipmentDefinition": {"bonuses": "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0"}, "examine": "A crown for the most loyal voters."},
+  {"id": 50046, "name": "Voter's sceptre", "tradable": true, "weight": 0.0, "slot": 3, "equipmentType": "DEFAULT", "exact": true,
+   "equipmentDefinition": {"bonuses": "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0"}, "examine": "A sceptre for the most loyal voters."},
+  {"id": 50047, "name": "Voter's cape", "tradable": true, "weight": 0.0, "slot": 1, "equipmentType": "DEFAULT", "exact": true,
+   "equipmentDefinition": {"bonuses": "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0"}, "examine": "A cape for the most loyal voters."}
+]

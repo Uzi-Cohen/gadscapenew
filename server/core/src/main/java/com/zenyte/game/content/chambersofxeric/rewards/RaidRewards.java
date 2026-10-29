@@ -303,6 +303,9 @@ public final class RaidRewards {
 		else
 			length =(int) Math.ceil(points / MAXIMUM_POINT_ROLL);
 
+		// donator ranks: the party's average extra purple chance (MemberRank.getCoxPurplePercent)
+		final float donatorBoost = 1.0F + (float) raid.getPlayers().stream()
+				.mapToInt(p -> p.getMemberRank().getCoxPurplePercent()).average().orElse(0) / 100.0F;
 		boolean specialLoot = false;
 		for (int i = 0; i < length; i++) {
 			// Special loot has been achieved, stop rolls
@@ -314,7 +317,7 @@ public final class RaidRewards {
 			}
 			final int totalPoints = getTotalPoints();
 			final float currentPoints = Math.min(MAXIMUM_POINT_ROLL, points);
-			final float percentage = currentPoints / MAXIMUM_POINT_ROLL_TOTAL;
+			final float percentage = currentPoints / MAXIMUM_POINT_ROLL_TOTAL * donatorBoost;
 			points -= currentPoints;
 			if (Utils.getRandom().nextDouble() > percentage) {
 				continue;

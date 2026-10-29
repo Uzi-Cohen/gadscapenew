@@ -59,7 +59,7 @@ public class ShopInventoryInterface extends Interface {
             }
             if (op.is(ItemOption.VALUE)) {
                 final int price = shop.getSellPrice(player, item.getId());
-                if ((item.getId() == 995 || !item.isTradable()) && !shop.getName().toLowerCase().contains("grace's graceful clothing") && !shop.getName().toLowerCase().contains("prospector percy's nugget shop")) {
+                if ((com.gadscape.game.content.currency.BloodTokens.isCurrency(item.getId()) || !item.isTradable()) && !shop.getName().toLowerCase().contains("grace's graceful clothing") && !shop.getName().toLowerCase().contains("prospector percy's nugget shop")) {
                     player.sendMessage("You can't sell this item.");
                 } else if (price <= -1) {
                     player.sendMessage("You can't sell this item to this shop.");

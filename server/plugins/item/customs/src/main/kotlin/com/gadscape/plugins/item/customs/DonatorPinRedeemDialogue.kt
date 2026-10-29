@@ -63,4 +63,6 @@ fun Bond.getShade() = when (this) {
     Bond.DONATOR_PIN_25 -> "<shad=FC02E7>"
     Bond.DONATOR_PIN_50 -> "<shad=006d62>"
     Bond.DONATOR_PIN_100 -> "<shad=600000>"
+    // the $1 pin and the bonds are redeemed through DonatorPinBondItemAction (GadDonatorItems)
+    else -> "<shad=2188ff>"
 }

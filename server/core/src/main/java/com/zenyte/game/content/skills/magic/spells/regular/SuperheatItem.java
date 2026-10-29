@@ -75,7 +75,7 @@ public final class SuperheatItem implements ItemSpell {
             state.remove();
             Item[] items = new Item[data.getMaterials().length];
             int coalToRemove = 0;
-            final boolean hasCoalPerk = player.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM);
+            final boolean hasCoalPerk = player.getMemberRank().equalToOrGreaterThan(MemberRank.DONATOR);
             int notedCoalAmt = player.getInventory().getAmountOf(Smelting.COAL.getDefinitions().getNotedId());
             int coalAmt = player.getInventory().getAmountOf(Smelting.COAL.getId());
             boolean useNoted = hasCoalPerk && notedCoalAmt > 0;

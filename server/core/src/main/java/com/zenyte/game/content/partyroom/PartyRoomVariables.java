@@ -45,10 +45,6 @@ public class PartyRoomVariables {
      */
     private PlayerPrivilege minimumPrivilegeToDropBalloons;
     /**
-     * The minimum player privilege to perform the Nightly Dance.
-     */
-    private PlayerPrivilege minimumPrivilegeToPerformDance;
-    /**
      * The minimum player privilege to deposit items into the party chest.
      */
     private PlayerPrivilege minimumPrivilegeToDepositItems;
@@ -131,7 +127,6 @@ public class PartyRoomVariables {
         this.balloonQuantityCap = 2000;
         this.minimumItemStackValueThreshold = 0;
         this.minimumPrivilegeToDropBalloons = PlayerPrivilege.PLAYER;
-        this.minimumPrivilegeToPerformDance = PlayerPrivilege.PLAYER;
         this.minimumPrivilegeToDepositItems = PlayerPrivilege.PLAYER;
         for (final PartyRoomVariables.PartyRoomSpeed speed : PartyRoomSpeed.values) {
             this.countdownTickSpeedMap.put(speed, speed.delay);
@@ -148,7 +143,7 @@ public class PartyRoomVariables {
 
     private static final String[] buildMenuArray() {
         final PartyRoomVariables variables = FaladorPartyRoom.getPartyRoom().getVariables();
-        return new String[] {"Status: " + (variables.disabled ? Colour.RED : Colour.RS_GREEN).wrap(variables.disabled ? "Disabled" : "Enabled"), "Currently queued balloons: " + (variables.queuedBalloonsQuantity <= 0 ? Colour.RED : Colour.RS_GREEN).wrap(Integer.toString(variables.queuedBalloonsQuantity)), "Currently countdown: " + (variables.countdown <= 0 ? Colour.RED : Colour.RS_GREEN).wrap(Integer.toString(variables.countdown)), "Global NPC announcements: " + (!variables.announcements ? Colour.RED : Colour.RS_GREEN).wrap(variables.announcements ? "Enabled" : "Disabled"), "Entrance doors closeable: " + (!variables.doorsCloseable ? Colour.RED : Colour.RS_GREEN).wrap(variables.doorsCloseable ? "Enabled" : "Disabled"), "Party chest closeable: " + (!variables.chestCloseable ? Colour.RED : Colour.RS_GREEN).wrap(variables.chestCloseable ? "Enabled" : "Disabled"), "Maximum queueable balloons amount: " + Colour.RS_GREEN.wrap(variables.balloonQuantityCap + " (Default: " + defaultVariables.balloonQuantityCap + ")"), "Minimum item stack value to deposit: " + Colour.RS_GREEN.wrap(variables.minimumItemStackValueThreshold + " (Default: " + defaultVariables.minimumItemStackValueThreshold + ")"), "Minimum privilege to Balloon Bonanza: " + Colour.RS_GREEN.wrap(variables.minimumPrivilegeToDropBalloons + " (Default: " + defaultVariables.minimumPrivilegeToDropBalloons + ")"), "Minimum privilege to Nightly Dance: " + Colour.RS_GREEN.wrap(variables.minimumPrivilegeToPerformDance + " (Default: " + defaultVariables.minimumPrivilegeToPerformDance + ")"), "Minimum privilege to deposit items: " + Colour.RS_GREEN.wrap(variables.minimumPrivilegeToDepositItems + " (Default: " + defaultVariables.minimumPrivilegeToDepositItems + ")"), "Fast balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.FAST) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.FAST) + ")"), "Medium balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.SLOW) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.SLOW) + ")"), "Very slow balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + ")"), "Medium balloon value threshold: " + Colour.RS_GREEN.wrap(variables.countdownThresholdMap.get(PartyRoomSpeed.MEDIUM) + " coins (Default: " + defaultVariables.countdownThresholdMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow balloon value threshold: " + Colour.RS_GREEN.wrap(variables.countdownThresholdMap.get(PartyRoomSpeed.SLOW) + " coins (Default: " + defaultVariables.countdownThresholdMap.get(PartyRoomSpeed.SLOW) + ")"), "Very slow balloon value threshold: " + Colour.RS_GREEN.wrap(variables.countdownThresholdMap.get(PartyRoomSpeed.VERY_SLOW) + " coins (Default: " + defaultVariables.countdownThresholdMap.get(PartyRoomSpeed.VERY_SLOW) + ")"), "Fast announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.FAST) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.FAST) + ")"), "Medium announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.SLOW) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.SLOW) + ")"), "Very slow announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + ")"), "Fast balloon value threshold: " + Colour.RS_GREEN.wrap(variables.announcementThresholdMap.get(PartyRoomSpeed.FAST) + " coins (Default: " + defaultVariables.announcementThresholdMap.get(PartyRoomSpeed.FAST) + ")"), "Medium balloon value threshold: " + Colour.RS_GREEN.wrap(variables.announcementThresholdMap.get(PartyRoomSpeed.MEDIUM) + " coins (Default: " + defaultVariables.announcementThresholdMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow balloon value threshold: " + Colour.RS_GREEN.wrap(variables.announcementThresholdMap.get(PartyRoomSpeed.SLOW) + " coins (Default: " + defaultVariables.announcementThresholdMap.get(PartyRoomSpeed.SLOW) + ")"), Colour.RED.wrap("Reset all settings to default")};
+        return new String[] {"Status: " + (variables.disabled ? Colour.RED : Colour.RS_GREEN).wrap(variables.disabled ? "Disabled" : "Enabled"), "Currently queued balloons: " + (variables.queuedBalloonsQuantity <= 0 ? Colour.RED : Colour.RS_GREEN).wrap(Integer.toString(variables.queuedBalloonsQuantity)), "Currently countdown: " + (variables.countdown <= 0 ? Colour.RED : Colour.RS_GREEN).wrap(Integer.toString(variables.countdown)), "Global NPC announcements: " + (!variables.announcements ? Colour.RED : Colour.RS_GREEN).wrap(variables.announcements ? "Enabled" : "Disabled"), "Entrance doors closeable: " + (!variables.doorsCloseable ? Colour.RED : Colour.RS_GREEN).wrap(variables.doorsCloseable ? "Enabled" : "Disabled"), "Party chest closeable: " + (!variables.chestCloseable ? Colour.RED : Colour.RS_GREEN).wrap(variables.chestCloseable ? "Enabled" : "Disabled"), "Maximum queueable balloons amount: " + Colour.RS_GREEN.wrap(variables.balloonQuantityCap + " (Default: " + defaultVariables.balloonQuantityCap + ")"), "Minimum item stack value to deposit: " + Colour.RS_GREEN.wrap(variables.minimumItemStackValueThreshold + " (Default: " + defaultVariables.minimumItemStackValueThreshold + ")"), "Minimum privilege to Balloon Bonanza: " + Colour.RS_GREEN.wrap(variables.minimumPrivilegeToDropBalloons + " (Default: " + defaultVariables.minimumPrivilegeToDropBalloons + ")"), "Minimum privilege to deposit items: " + Colour.RS_GREEN.wrap(variables.minimumPrivilegeToDepositItems + " (Default: " + defaultVariables.minimumPrivilegeToDepositItems + ")"), "Fast balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.FAST) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.FAST) + ")"), "Medium balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.SLOW) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.SLOW) + ")"), "Very slow balloon drop speed: " + Colour.RS_GREEN.wrap(variables.countdownTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + " ticks (Default: " + defaultVariables.countdownTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + ")"), "Medium balloon value threshold: " + Colour.RS_GREEN.wrap(variables.countdownThresholdMap.get(PartyRoomSpeed.MEDIUM) + " coins (Default: " + defaultVariables.countdownThresholdMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow balloon value threshold: " + Colour.RS_GREEN.wrap(variables.countdownThresholdMap.get(PartyRoomSpeed.SLOW) + " coins (Default: " + defaultVariables.countdownThresholdMap.get(PartyRoomSpeed.SLOW) + ")"), "Very slow balloon value threshold: " + Colour.RS_GREEN.wrap(variables.countdownThresholdMap.get(PartyRoomSpeed.VERY_SLOW) + " coins (Default: " + defaultVariables.countdownThresholdMap.get(PartyRoomSpeed.VERY_SLOW) + ")"), "Fast announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.FAST) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.FAST) + ")"), "Medium announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.SLOW) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.SLOW) + ")"), "Very slow announcement speed: " + Colour.RS_GREEN.wrap(variables.announcementTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + " ticks (Default: " + defaultVariables.announcementTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW) + ")"), "Fast balloon value threshold: " + Colour.RS_GREEN.wrap(variables.announcementThresholdMap.get(PartyRoomSpeed.FAST) + " coins (Default: " + defaultVariables.announcementThresholdMap.get(PartyRoomSpeed.FAST) + ")"), "Medium balloon value threshold: " + Colour.RS_GREEN.wrap(variables.announcementThresholdMap.get(PartyRoomSpeed.MEDIUM) + " coins (Default: " + defaultVariables.announcementThresholdMap.get(PartyRoomSpeed.MEDIUM) + ")"), "Slow balloon value threshold: " + Colour.RS_GREEN.wrap(variables.announcementThresholdMap.get(PartyRoomSpeed.SLOW) + " coins (Default: " + defaultVariables.announcementThresholdMap.get(PartyRoomSpeed.SLOW) + ")"), Colour.RED.wrap("Reset all settings to default")};
     }
 
     public static final void openEditMode(@NotNull final Player player) {
@@ -209,17 +204,6 @@ public class PartyRoomVariables {
                     player.sendInputString(title, value -> {
                         final Optional<PlayerPrivilege> privilege = getPrivilege(value);
                         if (privilege.isPresent()) {
-                            variables.minimumPrivilegeToPerformDance = privilege.get();
-                        } else {
-                            player.sendMessage("Privilege by the name of " + value + " not found.");
-                        }
-                        openEditMode(player);
-                    });
-                    return;
-                case 10: 
-                    player.sendInputString(title, value -> {
-                        final Optional<PlayerPrivilege> privilege = getPrivilege(value);
-                        if (privilege.isPresent()) {
                             variables.minimumPrivilegeToDepositItems = privilege.get();
                         } else {
                             player.sendMessage("Privilege by the name of " + value + " not found.");
@@ -227,91 +211,91 @@ public class PartyRoomVariables {
                         openEditMode(player);
                     });
                     return;
-                case 11: 
+                case 10: 
                     player.sendInputInt(title, value -> {
                         variables.countdownTickSpeedMap.put(PartyRoomSpeed.FAST, Math.min(variables.countdownTickSpeedMap.get(PartyRoomSpeed.MEDIUM), value));
                         openEditMode(player);
                     });
                     return;
-                case 12: 
+                case 11: 
                     player.sendInputInt(title, value -> {
                         variables.countdownTickSpeedMap.put(PartyRoomSpeed.MEDIUM, Math.max(Math.min(variables.countdownTickSpeedMap.get(PartyRoomSpeed.SLOW), value), variables.countdownTickSpeedMap.get(PartyRoomSpeed.FAST)));
                         openEditMode(player);
                     });
                     return;
-                case 13: 
+                case 12: 
                     player.sendInputInt(title, value -> {
                         variables.countdownTickSpeedMap.put(PartyRoomSpeed.SLOW, Math.max(Math.min(variables.countdownTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW), value), variables.countdownTickSpeedMap.get(PartyRoomSpeed.MEDIUM)));
                         openEditMode(player);
                     });
                     return;
-                case 14: 
+                case 13: 
                     player.sendInputInt(title, value -> {
                         variables.countdownTickSpeedMap.put(PartyRoomSpeed.VERY_SLOW, Math.max(variables.countdownTickSpeedMap.get(PartyRoomSpeed.SLOW), value));
                         openEditMode(player);
                     });
                     return;
-                case 15: 
+                case 14: 
                     player.sendInputInt(title, value -> {
                         variables.countdownThresholdMap.put(PartyRoomSpeed.MEDIUM, Math.max(Math.min(variables.countdownThresholdMap.get(PartyRoomSpeed.SLOW), value), variables.countdownThresholdMap.get(PartyRoomSpeed.FAST)));
                         openEditMode(player);
                     });
                     return;
-                case 16: 
+                case 15: 
                     player.sendInputInt(title, value -> {
                         variables.countdownThresholdMap.put(PartyRoomSpeed.SLOW, Math.max(Math.min(variables.countdownThresholdMap.get(PartyRoomSpeed.VERY_SLOW), value), variables.countdownThresholdMap.get(PartyRoomSpeed.MEDIUM)));
                         openEditMode(player);
                     });
                     return;
-                case 17: 
+                case 16: 
                     player.sendInputInt(title, value -> {
                         variables.countdownThresholdMap.put(PartyRoomSpeed.MEDIUM, Math.max(value, variables.countdownThresholdMap.get(PartyRoomSpeed.FAST)));
                         openEditMode(player);
                     });
                     return;
-                case 18: 
+                case 17: 
                     player.sendInputInt(title, value -> {
                         variables.announcementTickSpeedMap.put(PartyRoomSpeed.FAST, Math.min(variables.announcementTickSpeedMap.get(PartyRoomSpeed.MEDIUM), value));
                         openEditMode(player);
                     });
                     return;
-                case 19: 
+                case 18: 
                     player.sendInputInt(title, value -> {
                         variables.announcementTickSpeedMap.put(PartyRoomSpeed.MEDIUM, Math.max(Math.min(variables.announcementTickSpeedMap.get(PartyRoomSpeed.SLOW), value), variables.announcementTickSpeedMap.get(PartyRoomSpeed.FAST)));
                         openEditMode(player);
                     });
                     return;
-                case 20: 
+                case 19: 
                     player.sendInputInt(title, value -> {
                         variables.announcementTickSpeedMap.put(PartyRoomSpeed.SLOW, Math.max(Math.min(variables.announcementTickSpeedMap.get(PartyRoomSpeed.VERY_SLOW), value), variables.announcementTickSpeedMap.get(PartyRoomSpeed.MEDIUM)));
                         openEditMode(player);
                     });
                     return;
-                case 21: 
+                case 20: 
                     player.sendInputInt(title, value -> {
                         variables.announcementTickSpeedMap.put(PartyRoomSpeed.VERY_SLOW, Math.max(variables.announcementTickSpeedMap.get(PartyRoomSpeed.SLOW), value));
                         openEditMode(player);
                     });
                     return;
-                case 22: 
+                case 21: 
                     player.sendInputInt(title, value -> {
                         variables.announcementThresholdMap.put(PartyRoomSpeed.FAST, Math.max(value, variables.announcementThresholdMap.get(PartyRoomSpeed.MEDIUM)));
                         openEditMode(player);
                     });
                     return;
-                case 23: 
+                case 22: 
                     player.sendInputInt(title, value -> {
                         variables.announcementThresholdMap.put(PartyRoomSpeed.MEDIUM, Math.max(Math.min(variables.announcementThresholdMap.get(PartyRoomSpeed.FAST), value), variables.announcementThresholdMap.get(PartyRoomSpeed.SLOW)));
                         openEditMode(player);
                     });
                     return;
-                case 24: 
+                case 23: 
                     player.sendInputInt(title, value -> {
                         variables.announcementThresholdMap.put(PartyRoomSpeed.SLOW, Math.max(Math.min(variables.announcementThresholdMap.get(PartyRoomSpeed.MEDIUM), value), variables.announcementThresholdMap.get(PartyRoomSpeed.VERY_SLOW)));
                         openEditMode(player);
                     });
                     return;
-                case 25: 
+                case 24: 
                     variables.setDefaults();
                     break;
                 }
@@ -406,14 +390,6 @@ public class PartyRoomVariables {
 
     public void setMinimumPrivilegeToDropBalloons(PlayerPrivilege minimumPrivilegeToDropBalloons) {
         this.minimumPrivilegeToDropBalloons = minimumPrivilegeToDropBalloons;
-    }
-
-    public PlayerPrivilege getMinimumPrivilegeToPerformDance() {
-        return minimumPrivilegeToPerformDance;
-    }
-
-    public void setMinimumPrivilegeToPerformDance(PlayerPrivilege minimumPrivilegeToPerformDance) {
-        this.minimumPrivilegeToPerformDance = minimumPrivilegeToPerformDance;
     }
 
     public PlayerPrivilege getMinimumPrivilegeToDepositItems() {

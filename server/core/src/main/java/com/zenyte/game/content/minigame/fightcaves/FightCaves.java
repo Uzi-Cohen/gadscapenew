@@ -304,7 +304,7 @@ public class FightCaves extends DynamicArea implements LogoutRestrictionPlugin, 
     public void leave() {
         player.blockIncomingHits();
         player.setLocation(ENTRANCE);
-        final boolean boosted = player.getMemberRank().equalToOrGreaterThan(MemberRank.PREMIUM);
+        final boolean boosted = player.getMemberRank().equalToOrGreaterThan(MemberRank.DONATOR);
         int wave = monsters.isEmpty() ? this.wave : Math.max(1, this.wave - 1);
         //Forcibly set the wave to 63 if jad has died.
         if (this.wave == 63) {

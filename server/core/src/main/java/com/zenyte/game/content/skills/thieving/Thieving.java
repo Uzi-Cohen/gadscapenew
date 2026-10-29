@@ -26,7 +26,7 @@ public final class Thieving {
 		if (SkillcapePerk.THIEVING.isEffective(player)) {
 			chance *= 1.1F;
 		}
-		if (player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED)) {
+		if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
 			chance *= 1.05F;
 		}
 		if (DiaryUtil.eligibleFor(DiaryReward.ARDOUGNE_CLOAK3, player)) {

@@ -24,7 +24,7 @@ public class MarkOfGrace {
 			random *= 0.8;
 		}
 		int amt = 1;
-		final int endRarity = player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION) ? ((int) (0.9F * rarity)) : rarity;
+		final int endRarity = player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER) ? ((int) (0.9F * rarity)) : rarity;
 		if (Utils.random(endRarity) < random) {
 			if (player.isMember()) {
 				final Inventory inventory = player.getInventory();

@@ -139,7 +139,7 @@ public class PresetManagerInterface extends Interface implements SwitchPlugin {
         player.getPacketDispatcher().sendClientScript(BUILD_PRESET_INTERFACE_BASE_CLIENTSCRIPT);
         refresh(player, presetManager.getTotalPresets() == 0 ? OptionalInt.empty() : OptionalInt.of(presetManager.getDefaultPreset()), true);
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Inventory"), 0, 28, AccessMask.CLICK_OP10, AccessMask.DRAG_DEPTH1, AccessMask.DRAG_TARGETABLE);
-        player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Preset"), 0, 50, AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP4, AccessMask.CLICK_OP5, AccessMask.CLICK_OP6);
+        player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Preset"), 0, Math.max(50, presetManager.getMaximumPresets()), AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3, AccessMask.CLICK_OP4, AccessMask.CLICK_OP5, AccessMask.CLICK_OP6);
         refreshPresetsList(player);
         refreshSize(player);
         final int interfaceId = getInterface().getId();

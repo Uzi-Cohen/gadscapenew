@@ -1,5 +1,7 @@
 package com.zenyte.game.model.ui.testinterfaces;
 
+import com.gadscape.game.content.kits.KitsTab;
+import com.gadscape.game.content.kits.PremadeKits;
 import com.zenyte.game.GameInterface;
 import com.zenyte.game.model.music.MusicSlots;
 import com.zenyte.game.model.ui.Interface;
@@ -33,6 +35,11 @@ public class MusicPlayerInterface extends Interface {
 
     @Override
     public void open(Player player) {
+        // The Premade Kits tab takes this slot when the cache has it (KitsPatch); music keeps playing by area.
+        if (PremadeKits.INSTANCE.getAvailable()) {
+            KitsTab.INSTANCE.open(player);
+            return;
+        }
         player.getInterfaceHandler().sendInterface(getInterface());
         player.getPacketDispatcher().sendComponentSettings(getInterface(), getComponent("Play song"), 0,
                 MusicSlots.get().size(), AccessMask.CLICK_OP1, AccessMask.CLICK_OP2, AccessMask.CLICK_OP3,

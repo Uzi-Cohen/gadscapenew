@@ -3,6 +3,7 @@ package com.zenyte.game.content.preset;
 import com.google.common.eventbus.Subscribe;
 import com.zenyte.game.model.ui.testinterfaces.PresetManagerInterface;
 import com.zenyte.game.world.entity.player.Player;
+import com.zenyte.game.world.entity.player.privilege.MemberRank;
 import com.zenyte.plugins.events.InitializationEvent;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.annotations.NotNull;
@@ -92,25 +93,9 @@ public class PresetManager {
         return availablePresets;
     }
 
+    /** Presets on top of everyone's 4: the rank's total (Roat's custom kits) minus those. */
     public static int getSlotsAmount(Player player) {
-        switch (player.getMemberRank()) {
-            case PREMIUM:
-                return 5;
-            case EXPANSION:
-                return 10;
-            case EXTREME:
-                return 15;
-            case RESPECTED:
-                return 20;
-            case LEGENDARY:
-                return 30;
-            case MYTHICAL:
-                return 40;
-            case UBER:
-            case AMASCUT:
-                return 50;
-        }
-        return 0;
+        return Math.max(0, player.getMemberRank().getPresets() - MemberRank.NONE.getPresets());
     }
 
     public void setDefaultPreset(final int slot) {

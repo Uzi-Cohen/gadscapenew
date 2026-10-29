@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.npc;
 
+import com.gadscape.game.content.currency.BloodTokens;
 import com.gadscape.game.content.commands.DeveloperCommands;
 import com.gadscape.game.content.custom.SlayerHelmetEffects;
 import com.gadscape.game.world.entity.FastCollisionCheckKt;
@@ -1314,7 +1315,7 @@ public class NPC extends AbstractEntity {
             return;
         }
 
-        int rate = player.getNumericTemporaryAttributeOrDefault("superior rate", player.getMemberRank().equalToOrGreaterThan(MemberRank.RESPECTED) ? 89 : 99).intValue();
+        int rate = player.getNumericTemporaryAttributeOrDefault("superior rate", player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY) ? 89 : 99).intValue();
         if (World.hasBoost(XamphurBoost.BONUS_SLAYER_SUPERIOR)) {
             rate = Math.max(50, rate / 2);
         }
@@ -1373,7 +1374,7 @@ public class NPC extends AbstractEntity {
         }
 
         chance *= 0.5F;
-        if (Utils.random(chance - 1) == 0) {
+        if (BloodTokens.npcCoinDrops && Utils.random(chance - 1) == 0) {
             killer.sendMessage(Colour.RS_GREEN.wrap("The " + getName(killer).toLowerCase() + " drops you some extra coins."));
             dropItem(killer, new Item(995, Utils.random(50_000, 500_000)));
         }
@@ -1445,6 +1446,11 @@ public class NPC extends AbstractEntity {
 
 
     public void dropItem(final Player killer, final Item item, final Location tile, final boolean guaranteedDrop, boolean bypassGround) {
+        // Coins are gone (blood tokens are the currency): monsters drop none, and nothing takes their place.
+        // The one switch is BloodTokens.npcCoinDrops.
+        if (item != null && item.getId() == BloodTokens.COINS && !BloodTokens.npcCoinDrops) {
+            return;
+        }
         try {
             invalidateItemCharges(item);
             killer.getCollectionLog().add(item);

@@ -357,13 +357,13 @@ public final class PestControlInstance extends DynamicArea implements DeathPlugi
                 }
                 int points = type.getPointsPerGame();
                 final MemberRank rank = player.getMemberRank();
-                if (rank.equalToOrGreaterThan(MemberRank.MYTHICAL)) {
+                if (rank.equalToOrGreaterThan(MemberRank.DIVINE)) {
                     points += 5;
-                } else if (rank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+                } else if (rank.equalToOrGreaterThan(MemberRank.ROYAL)) {
                     points += 4;
                 } else if (rank.equalToOrGreaterThan(MemberRank.EXTREME)) {
                     points += 3;
-                } else if (rank.equalToOrGreaterThan(MemberRank.PREMIUM)) {
+                } else if (rank.equalToOrGreaterThan(MemberRank.DONATOR)) {
                     points += 1;
                 }
                 if (player.getCombatAchievements().hasTierCompleted(CATierType.HARD)) {

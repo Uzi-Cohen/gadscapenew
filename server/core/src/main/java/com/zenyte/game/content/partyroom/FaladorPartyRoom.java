@@ -1,10 +1,8 @@
 package com.zenyte.game.content.partyroom;
 
 import com.zenyte.game.item.Item;
-import com.zenyte.game.task.WorldTasksManager;
 import com.zenyte.game.util.Utils;
 import com.zenyte.game.world.World;
-import com.zenyte.game.world.entity.ForceTalk;
 import com.zenyte.game.world.entity.ImmutableLocation;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.SoundEffect;
@@ -86,35 +84,6 @@ public class FaladorPartyRoom extends FaladorArea implements CycleProcessPlugin,
         return Optional.empty();
     }
 
-    private boolean dancing;
-    private static final ForceTalk[] song = new ForceTalk[] {new ForceTalk("We're Knights of the Party Room"), new ForceTalk("We dance round and round like a loon"), new ForceTalk("Quite often we like to sing"), new ForceTalk("Unfortunately we make a din"), new ForceTalk("We're Knights of the Party Room"), new ForceTalk("Do you like our helmet plumes?"), new ForceTalk("Everyone's happy now we can move"), new ForceTalk("Like a party animal in the groove")};
-
-    void startKnightsDance() {
-        if (dancing) {
-            return;
-        }
-        dancing = true;
-        final PartyRoomDancingKnight[] knights = new PartyRoomDancingKnight[6];
-        for (int i = 0; i < 6; i++) {
-            final PartyRoomDancingKnight knight = new PartyRoomDancingKnight(i);
-            knight.spawn();
-            knights[i] = knight;
-        }
-        final PartyRoomDancingKnight singingKnight = knights[2];
-        for (int i = 0; i < song.length; i++) {
-            final ForceTalk lyrics = song[i];
-            WorldTasksManager.schedule(() -> singingKnight.setForceTalk(lyrics), 4 + (i * 4));
-            if (i == song.length - 1) {
-                WorldTasksManager.schedule(() -> {
-                    for (final PartyRoomDancingKnight knight : knights) {
-                        knight.finish();
-                    }
-                    dancing = false;
-                }, 8 + (i * 4));
-            }
-        }
-    }
-
     /**
      * The tiles in this party room mapped down.
      */
@@ -173,7 +142,7 @@ public class FaladorPartyRoom extends FaladorArea implements CycleProcessPlugin,
     private static final SoundEffect balloonPopSound = new SoundEffect(3252, 12, 30);
 
     public final void pop(@NotNull final Player player, @NotNull final PartyBalloon balloon) {
-        if (variables.isDisabled()) {
+        if (!balloon.isStaff() && variables.isDisabled()) {
             player.sendMessage("The party room is disabled right now.");
             return;
         }
@@ -184,6 +153,14 @@ public class FaladorPartyRoom extends FaladorArea implements CycleProcessPlugin,
     }
 
     public void roll(@NotNull final PartyBalloon balloon) {
+        roll(balloon, container, () -> forEachViewing(container::refresh));
+    }
+
+    /**
+     * Rolls a popped balloon: one in four drops a random item of {@code container} under one of the players who popped it.
+     * Shared with the staff drop party ({@link DropParty}), which rolls its own container.
+     */
+    static void roll(@NotNull final PartyBalloon balloon, @NotNull final Container container, @NotNull final Runnable onChange) {
         if (container.isEmpty()) {
             return;
         }
@@ -200,11 +177,11 @@ public class FaladorPartyRoom extends FaladorArea implements CycleProcessPlugin,
                 player.sendFilteredMessage("As an Iron " + (player.getAppearance().isMale() ? "man" : "woman") + ", you cannot receive items from the balloons.");
                 return;
             }
-            selectAndRemoveRandomItem().ifPresent(item -> World.spawnFloorItem(item, player, 100, 200));
+            selectAndRemoveRandomItem(container, onChange).ifPresent(item -> World.spawnFloorItem(item, player, 100, 200));
         });
     }
 
-    private Optional<Item> selectAndRemoveRandomItem() {
+    private static Optional<Item> selectAndRemoveRandomItem(@NotNull final Container container, @NotNull final Runnable onChange) {
         if (container.isEmpty()) {
             return Optional.empty();
         }
@@ -225,7 +202,7 @@ public class FaladorPartyRoom extends FaladorArea implements CycleProcessPlugin,
         container.shift();
         final Item removedItem = new Item(item.getId(), result.getSucceededAmount());
         container.setFullUpdate(true);
-        forEachViewing(container::refresh);
+        onChange.run();
         return Optional.of(removedItem);
     }
 
@@ -362,9 +339,5 @@ public class FaladorPartyRoom extends FaladorArea implements CycleProcessPlugin,
 
     public void setPartyPeteCountdown(boolean partyPeteCountdown) {
         this.partyPeteCountdown = partyPeteCountdown;
-    }
-
-    public boolean isDancing() {
-        return dancing;
     }
 }

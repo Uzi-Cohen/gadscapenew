@@ -153,7 +153,7 @@ public class BlastFurnaceObjectAction implements ObjectAction {
                         }
                         player.getBlastFurnace().setDispenser(3);
                         player.getBlastFurnace().setEarlyCool(true);
-                        if (player.getInventory().hasFreeSlots() || player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL)) {
+                        if (player.getInventory().hasFreeSlots() || player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE)) {
                             player.getDialogueManager().start(new BlastFurnaceBarD(player, barsArray));
                         } else {
                             player.sendMessage("You don't have any inventory space to grab bars!");
@@ -166,7 +166,7 @@ public class BlastFurnaceObjectAction implements ObjectAction {
                 Item[] barsArray = player.getBlastFurnace().constructBarArray();
                 ArrayUtils.reverse(barsArray);
                 if (barsArray.length != 0) {
-                    if (player.getInventory().hasFreeSlots() || player.getMemberRank().equalToOrGreaterThan(MemberRank.MYTHICAL))
+                    if (player.getInventory().hasFreeSlots() || player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE))
                         player.getDialogueManager().start(new BlastFurnaceBarD(player, barsArray));
                     else
                         player.sendMessage("You don't have any inventory space to grab bars!");

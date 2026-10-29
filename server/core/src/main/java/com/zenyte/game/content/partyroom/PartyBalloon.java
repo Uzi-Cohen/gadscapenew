@@ -14,9 +14,19 @@ import java.util.Set;
  */
 public class PartyBalloon extends WorldObject {
     public PartyBalloon(int id, int x, int y, int plane) {
+        this(id, x, y, plane, false);
+    }
+
+    /**
+     * @param staff a staff drop party balloon ({@link DropParty}): it carries the staff chest's items, not the Falador chest's.
+     */
+    public PartyBalloon(int id, int x, int y, int plane, boolean staff) {
         super(id, 10, Utils.random(3), x, y, plane);
         assert id >= 115 && id <= 122;
+        this.staff = staff;
     }
+
+    private final boolean staff;
 
     private int ticks = 300;
     private boolean dead;
@@ -34,7 +44,13 @@ public class PartyBalloon extends WorldObject {
         if (!usernames.isEmpty()) {
             dead = true;
             //The loot will appear one tick later, anyone who clicked the balloon initially will be eligible.
-            WorldTasksManager.schedule(() -> FaladorPartyRoom.getPartyRoom().roll(this));
+            WorldTasksManager.schedule(() -> {
+                if (staff) {
+                    DropParty.roll(this);
+                } else {
+                    FaladorPartyRoom.getPartyRoom().roll(this);
+                }
+            });
             return true;
         }
         if (ticks-- == 300) {
@@ -44,6 +60,10 @@ public class PartyBalloon extends WorldObject {
             return false;
         }
         return true;
+    }
+
+    public boolean isStaff() {
+        return staff;
     }
 
     public Set<String> getUsernames() {

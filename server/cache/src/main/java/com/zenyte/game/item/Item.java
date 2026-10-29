@@ -22,6 +22,8 @@ public class Item extends _Item {
 
 	private static final int[] alchemyRestrictedItems = new int[] {
 			ItemId.COINS_995,
+			ItemId.BLOOD_MONEY,
+			com.gadscape.game.item.CustomItemId.BLOOD_CARD,
 			ItemId.LOOTING_BAG,
 			ItemId.LOOTING_BAG_22586,
 			ItemId.RUNE_POUCH,

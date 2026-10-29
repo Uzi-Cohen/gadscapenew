@@ -604,9 +604,9 @@ public class PrayerManager {
 
 		int resistance = 60 + (player.getBonuses().getBonus(Bonuses.Bonus.PRAYER) * 2);
 		if (!WildernessArea.isWithinWilderness(player)) {
-			if (player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER))
+			if (player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE))
 				resistance = (int) ((double) resistance * 1.5D);
-			else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+			else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
 				resistance = (int) ((double) resistance * 1.25D);
 			}
 		}

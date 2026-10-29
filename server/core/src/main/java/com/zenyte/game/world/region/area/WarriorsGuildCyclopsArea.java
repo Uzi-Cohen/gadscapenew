@@ -55,9 +55,9 @@ public final class WarriorsGuildCyclopsArea extends DeathPlateau implements Cann
 
 	public static int getChance(final Player player) {
 		final MemberRank memberRank = player.getMemberRank();
-		if (memberRank.equalToOrGreaterThan(MemberRank.MYTHICAL)) {
+		if (memberRank.equalToOrGreaterThan(MemberRank.DIVINE)) {
 			return 25;
-		} else if (memberRank.equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+		} else if (memberRank.equalToOrGreaterThan(MemberRank.ROYAL)) {
 			return 20;
 		} else if (memberRank.equalToOrGreaterThan(MemberRank.EXTREME)) {
 			return 15;

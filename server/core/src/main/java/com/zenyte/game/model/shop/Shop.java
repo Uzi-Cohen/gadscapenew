@@ -1,5 +1,6 @@
 package com.zenyte.game.model.shop;
 
+import com.gadscape.game.content.currency.BloodTokens;
 import com.gadscape.game.content.shop.ShopCurrencyHandler;
 import com.zenyte.game.GameConstants;
 import com.zenyte.game.GameInterface;
@@ -428,6 +429,13 @@ public final class Shop {
      * @return the current buy price of the item.
      */
     int getBuyPrice(final Player player, final int id) {
+        final int price = getRawBuyPrice(player, id);
+        // coin shops are paid in blood tokens: the coin price divided by 1,000, at least 1 (BloodTokens)
+        return currency == ShopCurrency.COINS ? BloodTokens.shopBuyPrice(price) : price;
+    }
+
+    /** The buy price as the shop data has it (coins for a coin shop). */
+    private int getRawBuyPrice(final Player player, final int id) {
         float modifier = 1.0F;
         if (player != null) {
             if (this.name.startsWith("Culinaromancer's Chest")) {
@@ -454,6 +462,13 @@ public final class Shop {
      * @return the sell price of the item.
      */
     int getSellPrice(final Player player, final int id) {
+        final int price = getRawSellPrice(player, id);
+        // coin shops pay in blood tokens: the coin price divided by 1,000, rounded down (BloodTokens)
+        return currency == ShopCurrency.COINS ? BloodTokens.shopSellPrice(price) : price;
+    }
+
+    /** The sell price as the shop data has it (coins for a coin shop). */
+    private int getRawSellPrice(final Player player, final int id) {
         if (this.policy == ShopPolicy.NO_SELLING) return -1;
         final int unnotedId = ItemDefinitions.getOrThrow(id).getUnnotedOrDefault();
         final int notedId = ItemDefinitions.getOrThrow(id).getNotedOrDefault();
@@ -616,7 +631,7 @@ public final class Shop {
             return;
         }
 
-        if ((id == 995 || !item.isTradable()) && !name.toLowerCase().contains("grace's graceful clothing") && !name.toLowerCase().contains("prospector percy's nugget shop")) {
+        if ((BloodTokens.isCurrency(id) || !item.isTradable()) && !name.toLowerCase().contains("grace's graceful clothing") && !name.toLowerCase().contains("prospector percy's nugget shop")) {
             player.sendMessage("You can't sell this item.");
             return;
         }
@@ -723,8 +738,8 @@ public final class Shop {
             if (item == null) {
                 stockItems.remove(slot);
             } else if (stockItems.get(slot) == null) {
-                stockItems.put(slot, new StockItem(item.getId(), item.getAmount(), getBuyPrice(null, item.getId()),
-                        getSellPrice(null, item.getId()), DEFAULT_RESTOCK_TIMER));
+                stockItems.put(slot, new StockItem(item.getId(), item.getAmount(), getRawBuyPrice(null, item.getId()),
+                        getRawSellPrice(null, item.getId()), DEFAULT_RESTOCK_TIMER));
             }
             super.set(slot, item);
         }

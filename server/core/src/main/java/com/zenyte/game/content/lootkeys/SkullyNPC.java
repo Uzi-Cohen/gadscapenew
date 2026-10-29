@@ -361,7 +361,8 @@ public class SkullyNPC extends NPCPlugin {
             });
             return;
         }
-        if (player.getInventory().deleteItem(ItemId.COINS_995, UNLOCK_COST).getSucceededAmount() != UNLOCK_COST) {
+        // paid in blood tokens (BloodTokens): the result counts tokens
+        if (player.getInventory().deleteItem(ItemId.COINS_995, UNLOCK_COST).isFailure()) {
             return;
         }
         final LootkeySettings existing = player.getLootkeySettings();

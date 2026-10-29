@@ -1,0 +1,21 @@
+[
+  {"_source": "currency: blood tokens (the old Blood money) are GadScape's only currency; the editor's CurrencyDonatorPatch renames and recolours it",
+   "id": 13307, "name": ["Blood tokens", "Blood money"], "override": true, "examine": "The currency of GadScape."},
+  {"_source": "currency: Blood card (CustomItemId.BLOOD_CARD), 1,000 blood tokens; made and cashed at a bank",
+   "id": 50000, "name": "Blood card", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth 1,000 blood tokens. A bank turns it back into tokens."},
+  {"_source": "currency: donator rank tickets (Redeem sets the rank like a website DONATOR_RANK claim)",
+   "id": 50001, "name": "Gad Donator ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Redeem it to become a Gad Donator."},
+  {"id": 50002, "name": "Super Gad Donator ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Redeem it to become a Super Gad Donator."},
+  {"id": 50003, "name": "Extreme Gad Donator ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Redeem it to become an Extreme Gad Donator."},
+  {"id": 50004, "name": "Legendary Gad Donator ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Redeem it to become a Legendary Gad Donator."},
+  {"id": 50005, "name": "Royal Gad Donator ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Redeem it to become a Royal Gad Donator."},
+  {"id": 50006, "name": "Divine Gad Donator ticket", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Redeem it to become a Divine Gad Donator."},
+  {"_source": "currency: donator pin ($1, stackable) and bonds; Redeem adds the value to the donated total, Combine makes pins into a bond",
+   "id": 50007, "name": "Donator pin", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $1 towards your donator total. Combine pins into a bond."},
+  {"id": 50008, "name": "Donator bond ($10)", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $10 towards your donator total."},
+  {"id": 50009, "name": "Donator bond ($20)", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $20 towards your donator total."},
+  {"id": 50010, "name": "Donator bond ($50)", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $50 towards your donator total."},
+  {"id": 50011, "name": "Donator bond ($100)", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $100 towards your donator total."},
+  {"id": 50012, "name": "Donator bond ($250)", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $250 towards your donator total."},
+  {"id": 50013, "name": "Donator bond ($1000)", "tradable": true, "weight": 0.0, "slot": -1, "examine": "Worth $1000 towards your donator total."}
+]

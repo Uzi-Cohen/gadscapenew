@@ -95,11 +95,11 @@ public class Farming {
             return existingSpot.get();
         }
         final FarmingSpot spot = new FarmingSpot(player, patch);
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.UBER)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.DIVINE)) {
             spot.setFlag(PatchFlag.ULTRACOMPOST);
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
             spot.setFlag(PatchFlag.SUPERCOMPOST);
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
             spot.setFlag(PatchFlag.COMPOST);
         }
         spots.add(spot);

@@ -54,8 +54,6 @@ public class Slayer {
     private static final short[] BANNED_SLOT_VARBITS = new short[] {3209, 3210, 3211, 3212, 4441, 5023};
     private static final long FULL_EXTENSION_UNLOCK_HASH;
     public static final int LUMBRIDGE_ELITE_DIARY_COMPLETED_BIT = 4538;
-    private static final int POINTS_REQUIRED_FOR_BLOCKING = 100;
-    private static final int POINTS_REQUIRED_FOR_CANCELLATION = 30;
     private static final int POINTS_REQUIRED_FOR_STORE_TASK = 50;
     private static final int SLAYER_POINTS_BIT = 4068;
     private static final int TASK_AMOUNT_VAR = 261;
@@ -236,8 +234,10 @@ public class Slayer {
             return;
         }
         final int points = getSlayerPoints();
-        if (points < POINTS_REQUIRED_FOR_BLOCKING) {
-            player.sendMessage("You do not have enough Slayer Points to block your task. You need " + POINTS_REQUIRED_FOR_BLOCKING + " Slayer Points.");
+        // 100 points, less for donators (MemberRank)
+        final int blockCost = player.getMemberRank().getBlockTaskCost();
+        if (points < blockCost) {
+            player.sendMessage("You do not have enough Slayer Points to block your task. You need " + blockCost + " Slayer Points.");
             return;
         }
         final IntAVLTreeSet availableSlots = getAvailableBlockSlots();
@@ -252,7 +252,7 @@ public class Slayer {
             task = (RegularTask) assignment.getTask();
         }
         bannedTasks.put(availableSlots.firstInt(), task);
-        addSlayerPoints(-POINTS_REQUIRED_FOR_BLOCKING);
+        addSlayerPoints(-blockCost);
         assignment = null;
         lastAssignmentName = null;
         refreshCurrentAssignment();
@@ -265,13 +265,15 @@ public class Slayer {
             return;
         }
         final int points = getSlayerPoints();
-        if (points < POINTS_REQUIRED_FOR_CANCELLATION) {
-            player.sendMessage("You do not have enough Slayer Points to cancel your task. You need " + POINTS_REQUIRED_FOR_CANCELLATION + " Slayer Points.");
+        // 30 points, less for donators (MemberRank)
+        final int cancelCost = player.getMemberRank().getCancelTaskCost();
+        if (points < cancelCost) {
+            player.sendMessage("You do not have enough Slayer Points to cancel your task. You need " + cancelCost + " Slayer Points.");
             return;
         }
         assignment = null;
         lastAssignmentName = null;
-        addSlayerPoints(-POINTS_REQUIRED_FOR_CANCELLATION);
+        addSlayerPoints(-cancelCost);
         player.sendMessage("Your Slayer assignment has been cancelled.");
         refreshCurrentAssignment();
     }
@@ -381,6 +383,7 @@ public class Slayer {
         if(World.hasBoost(XamphurBoost.SLAYER_POINTS_X2)) {
             amount *= 2;
         }
+        amount += amount * player.getMemberRank().getSlayerPointsPercent() / 100;
         addSlayerPoints(amount);
         player.sendMessage(Colour.RED.wrap("You've completed " + completedInARow + " task" + (completedInARow == 1 ? "" : "s") + " and received " + amount + " points, giving you a total of " + getSlayerPoints() + "; return to a Slayer master."));
 

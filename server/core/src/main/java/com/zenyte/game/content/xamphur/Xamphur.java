@@ -12,6 +12,7 @@ import com.zenyte.game.world.entity.EntityHitBar;
 import com.zenyte.game.world.entity.Location;
 import com.zenyte.game.world.entity.masks.Animation;
 import com.zenyte.game.world.entity.masks.Graphics;
+import com.gadscape.game.content.vote.VotePerks;
 import com.zenyte.game.world.entity.masks.Hit;
 import com.zenyte.game.world.entity.masks.HitType;
 import com.zenyte.game.world.entity.npc.NPC;
@@ -115,6 +116,15 @@ public class Xamphur extends NPC implements CombatScript {
 
         if (hit.getSource() instanceof Player player && handNpcs.size() > 0) {
             player.sendMessage("Your hit is ineffective, you must defeat the hands first.");
+        }
+
+        // only players who claimed a vote in the last 12 hours can hurt the vote boss
+        if (hit.getSource() instanceof Player voter && !VotePerks.mayFightXamphur(voter)) {
+            hit.setDamage(0);
+            if (voter.getNumericTemporaryAttribute("xamphur_voter_warned").longValue() + 6000L < System.currentTimeMillis()) {
+                voter.getTemporaryAttributes().put("xamphur_voter_warned", System.currentTimeMillis());
+                voter.sendMessage("Only players who claimed a vote in the last 12 hours can harm Xamphur. Type ::vote to vote.");
+            }
         }
     }
 

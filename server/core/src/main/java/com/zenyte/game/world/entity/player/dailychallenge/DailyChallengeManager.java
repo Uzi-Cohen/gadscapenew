@@ -160,9 +160,9 @@ public class DailyChallengeManager {
     }
 
     private int getMaximumChallenges() {
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
             return 5;
-        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        } else if (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
             return 4;
         }
         return 3;

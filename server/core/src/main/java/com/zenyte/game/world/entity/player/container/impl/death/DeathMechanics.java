@@ -1,5 +1,6 @@
 package com.zenyte.game.world.entity.player.container.impl.death;
 
+import com.gadscape.game.content.kits.KitItems;
 import com.gadscape.api.service.user.UserPlayerHandler;
 import com.gadscape.game.content.commands.DeveloperCommands;
 import com.gadscape.game.model.item.ItemValueExtKt;
@@ -92,6 +93,8 @@ public class DeathMechanics {
     }
 
     public void death(final Entity killer, final Location tile) {
+        // kit gear vanishes on every death: never kept, never dropped to the killer
+        KitItems.onDeath(player);
         if (safe()) {
             return;
         }
@@ -261,6 +264,7 @@ public class DeathMechanics {
     }
 
     public void service(@NotNull final ItemRetrievalService.RetrievalServiceType type, final Entity killer, boolean runHcimDeathHandlingCheck) {
+        KitItems.onDeath(player);
         if (safe()) {
             return;
         }

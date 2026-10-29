@@ -30,7 +30,7 @@ public final class WildernessResourceAreaGate implements ObjectAction {
     public void handleObjectAction(final Player player, final WorldObject object, final String name, final int optionId, final String option) {
         if (option.equals("Open")) {
             if (!player.inArea("Wilderness Resource Area")) {
-                if (DiaryUtil.eligibleFor(DiaryReward.WILDERNESS_SWORD4, player) || player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+                if (DiaryUtil.eligibleFor(DiaryReward.WILDERNESS_SWORD4, player) || player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
                     enter(player, object);
                 } else {
                     player.getDialogueManager().start(new Dialogue(player) {

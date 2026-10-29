@@ -29,7 +29,16 @@ enum class Bond(val id: Int, val credits: Int, val amount: Int) {
     DONATOR_PIN_10(32070, 130, 10),
     DONATOR_PIN_25(32071, 325, 25),
     DONATOR_PIN_50(32072, 650, 50),
-    DONATOR_PIN_100( 32073, 1300, 100);
+    DONATOR_PIN_100( 32073, 1300, 100),
+    // the stackable $1 Donator pin and the Donator bonds (CustomItemId 50007-50013, editor CurrencyDonatorPatch);
+    // after the old pins so a website PIN reward by value still finds those first
+    DONATOR_PIN_1(50007, 13, 1),
+    DONATOR_BOND_10(50008, 130, 10),
+    DONATOR_BOND_20(50009, 260, 20),
+    DONATOR_BOND_50(50010, 650, 50),
+    DONATOR_BOND_100(50011, 1300, 100),
+    DONATOR_BOND_250(50012, 3250, 250),
+    DONATOR_BOND_1000(50013, 13000, 1000);
 
     companion object {
         operator fun get(id: Int) = entries.find { it.id == id}

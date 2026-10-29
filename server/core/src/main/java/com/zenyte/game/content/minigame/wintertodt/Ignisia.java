@@ -68,10 +68,10 @@ public class Ignisia extends NPCPlugin {
     private void tradeItem(final Player player, final Item itemToTrade) {
         final Item crate = new Item(RewardCrate.SUPPLY_CRATE);
         int rolls = 1;
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.EXPANSION)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.SUPER)) {
             rolls++;
         }
-        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.LEGENDARY)) {
+        if (player.getMemberRank().equalToOrGreaterThan(MemberRank.ROYAL)) {
             rolls++;
         }
         crate.setAttribute("rolls", rolls);

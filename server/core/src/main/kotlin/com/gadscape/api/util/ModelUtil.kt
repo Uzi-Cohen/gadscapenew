@@ -5,16 +5,10 @@ import com.gadscape.api.model.ApiPrivilege
 import com.zenyte.game.world.entity.player.privilege.MemberRank
 import com.zenyte.game.world.entity.player.privilege.PlayerPrivilege
 
+/** The old store API's rank -> the donator rank its dollar amount buys now. */
 internal fun ApiMemberRank.toMemberRank() = when(this) {
-    ApiMemberRank.NONE -> MemberRank.NONE
-    ApiMemberRank.PREMIUM -> MemberRank.PREMIUM
-    ApiMemberRank.EXPANSION -> MemberRank.EXPANSION
-    ApiMemberRank.EXTREME -> MemberRank.EXTREME
-    ApiMemberRank.RESPECTED -> MemberRank.RESPECTED
-    ApiMemberRank.LEGENDARY -> MemberRank.LEGENDARY
-    ApiMemberRank.MYTHICAL -> MemberRank.MYTHICAL
-    ApiMemberRank.UBER -> MemberRank.UBER
     ApiMemberRank.AMASCUT -> MemberRank.AMASCUT
+    else -> MemberRank.forTotalCents(requiredDonatedAmount * 100L)
 }
 
 internal fun ApiPrivilege.toPrivilege() = when(this) {
