@@ -435,6 +435,10 @@ object ItemCopy {
         fun stats(id: Int): String? = null
         /** The format (211 / 241) its items are in, when it is one format; null = mixed or unknown. */
         fun format(): Int? = null
+        /** Textures the items need that the live cache doesn't have (id -> the texture file, build 241 or rev 211 layout). */
+        fun textures(): Map<Int, ByteArray> = emptyMap()
+        /** A sprite a bundled texture draws from (the sprite file, as the cache holds it). */
+        fun sprite(id: Int): ByteArray? = null
     }
 
     /** Another cache, of either format (open it read-only: [cache.CacheIO.openReadOnly]). */
@@ -448,6 +452,7 @@ object ItemCopy {
     /** An item bundle: items/<id>.dat, models/<id>.dat and stats/<id>.json (server stats) in a zip, made by [exportBundle]. */
     class BundleSource(zip: java.io.File) : Source {
         val items = java.util.TreeMap<Int, ByteArray>(); private val models = HashMap<Int, ByteArray>(); private val statsJson = HashMap<Int, String>()
+        private val texFiles = java.util.TreeMap<Int, ByteArray>(); private val spriteFiles = HashMap<Int, ByteArray>()
         init {
             java.util.zip.ZipInputStream(zip.inputStream()).use { z ->
                 while (true) {
@@ -456,7 +461,10 @@ object ItemCopy {
                     val parts = e.name.trim('/').split('/')
                     if (parts.size != 2) continue
                     val id = parts[1].substringBefore('.').toIntOrNull() ?: continue
-                    when (parts[0]) { "items" -> items[id] = b; "models" -> models[id] = b; "stats" -> statsJson[id] = String(b, Charsets.UTF_8) }
+                    when (parts[0]) {
+                        "items" -> items[id] = b; "models" -> models[id] = b; "stats" -> statsJson[id] = String(b, Charsets.UTF_8)
+                        "textures" -> texFiles[id] = b; "sprites" -> spriteFiles[id] = b
+                    }
                 }
             }
             require(items.isNotEmpty()) { "That zip has no items in it (it should have an items folder)." }
@@ -465,6 +473,8 @@ object ItemCopy {
         override fun item(id: Int) = items[id]?.let { ItemFull.decode(id, it) }
         override fun model(id: Int) = models[id]
         override fun stats(id: Int) = statsJson[id]
+        override fun textures(): Map<Int, ByteArray> = texFiles
+        override fun sprite(id: Int) = spriteFiles[id]
         /** The real items (not the noted ones), which are what gets imported. */
         fun mainIds() = items.keys.filter { item(it)?.isNoted == false }
     }
@@ -574,6 +584,44 @@ object ItemCopy {
             modelMap[m] = to
             return to
         }
+        // textures a bundle carries (a recoloured copy of a stock texture, say) come first, with the sprites they draw
+        // from: each keeps its own id when it is free here, and the same one already here is not written twice. An id
+        // that is taken by something else gets a free id, and the items' texture swaps (settings 41) follow it.
+        val spriteMap = HashMap<Int, Int>(); val texMap = HashMap<Int, Int>()
+        var newSprites = 0; var newTextures = 0
+        fun sprite(id: Int): Int {
+            spriteMap[id]?.let { return it }
+            val raw = other.sprite(id) ?: return id
+            val here = lib.data(8, id, 0)
+            val to = when {
+                here == null -> { lib.put(8, id, 0, raw); newSprites++; id }
+                here.contentEquals(raw) -> id
+                else -> { var n = id + 1; while (lib.index(8).contains(n)) n++; lib.put(8, n, 0, raw); newSprites++; n }
+            }
+            spriteMap[id] = to; return to
+        }
+        for ((tid, raw) in other.textures()) {
+            try {
+                val t = TextureCodec.decodeAny(tid, raw, rev)
+                t.sprites = IntArray(t.sprites.size) { k -> sprite(t.sprites[k]) }
+                val bytes = TextureCodec.encode(t, rev)
+                val here = lib.data(9, 0, tid)
+                val to = when {
+                    here == null -> { lib.put(9, 0, tid, bytes); newTextures++; tid }
+                    here.contentEquals(bytes) -> tid
+                    else -> {
+                        val used = lib.index(9).archive(0)?.fileIds()?.toSet() ?: emptySet()
+                        var n = (used.maxOrNull() ?: tid) + 1
+                        while (n in used) n++
+                        lib.put(9, 0, n, bytes); newTextures++; n
+                    }
+                }
+                texMap[tid] = to
+                if (to != tid) notes.add("texture $tid is taken here, so it was added as texture $to")
+            } catch (e: Exception) { notes.add("texture $tid couldn't be imported (${e.message})") }
+        }
+        if (newSprites > 0) lib.index(8).update()
+        if (newTextures > 0) lib.index(9).update()
         val added = ArrayList<Int>()
         val already = ArrayList<Int>()
         val from = other.format()
@@ -602,6 +650,8 @@ object ItemCopy {
             it.femaleModel0 = model(src.femaleModel0); it.femaleModel1 = model(src.femaleModel1); it.femaleModel2 = model(src.femaleModel2)
             it.maleHead = model(src.maleHead); it.maleHead2 = model(src.maleHead2); it.femaleHead = model(src.femaleHead); it.femaleHead2 = model(src.femaleHead2)
             it.placeholderLink = -1; it.placeholderTemplate = -1; it.boughtLink = -1; it.boughtTemplate = -1
+            if (texMap.isNotEmpty() && it.retextureTo.isNotEmpty())
+                it.retextureTo = ShortArray(it.retextureTo.size) { k -> val t = it.retextureTo[k].toInt() and 0xFFFF; (texMap[t] ?: t).toShort() }
             val hadNote = src.noteLinked
             it.noteLinked = -1
             if (hadNote >= 0) {
@@ -630,7 +680,8 @@ object ItemCopy {
             } catch (e: Exception) { notes.add("couldn't save its server stats: ${e.message}") }
         }
         val head = if (added.isEmpty() && already.isNotEmpty()) "Nothing new to copy." else
-            "Copied ${added.size} item(s)" + (if (added.isEmpty()) "" else " as id ${added.joinToString(", ")}") + ", with $newModels new model(s)."
+            "Copied ${added.size} item(s)" + (if (added.isEmpty()) "" else " as id ${added.joinToString(", ")}") + ", with $newModels new model(s)" +
+                    (if (newTextures > 0) " and $newTextures new texture(s) ($newSprites sprite(s))" else "") + "."
         return Result(head + (if (notes.isEmpty()) "" else " " + notes.distinct().take(8).joinToString("; ") + "."), added, already)
     }
 }
